@@ -18,7 +18,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"sort"
 	"strings"
 	"time"
@@ -30,52 +29,49 @@ import (
 
 // subscribeMetadata builds the signed gRPC metadata for body.
 //
-// The event service signs a different canonical string from the REST API. Only
-// the five x-signature parameters participate (there is no host, path, or
-// query), they are joined with "=" in sorted name order, and the body is
-// appended as "&" followed by the lowercase hexadecimal SHA-256 digest of the
-// serialized request. The canonical string is then percent-encoded with the
-// RFC 3986 unreserved set and signed with HMAC-SHA256 using "app secret &" as
-// the key. The computed signature is carried under x-signature.
-//
-// The events canonical string hashes the body to lowercase hex, which is why
-// this package does not call [auth.Sign]: that signer uppercases the SHA-256
-// digest for the REST API and would be rejected by the event service.
+// The event service uses a different canonical string format from the REST API: there
+// is no path, query, or host header; the five x-signature headers are joined with
+// "=" in sorted name order; and the body digest is lowercase hex SHA-256. Because
+// the canonical string format differs (equals separator vs ampersand, no path), this
+// package maintains its own signing logic. The [auth.DigestCase] parameter was added
+// to [auth.SignParams] so that both signing systems can share the hash construction.
 func subscribeMetadata(appKey, appSecret string, now time.Time, body []byte) (metadata.MD, error) {
 	nonce, err := auth.NewNonce()
 	if err != nil {
 		return nil, err
 	}
+	ts := now.UTC().Format(auth.TimestampFormat)
+
 	params := map[string]string{
 		auth.HeaderAppKey:             appKey,
 		auth.HeaderSignatureAlgorithm: auth.SignatureAlgorithmSHA256,
 		auth.HeaderSignatureVersion:   auth.SignatureVersion,
 		auth.HeaderSignatureNonce:     nonce,
-		auth.HeaderTimestamp:          now.UTC().Format(auth.TimestampFormat),
+		auth.HeaderTimestamp:          ts,
 	}
-	signature := eventSignature(params, appSecret, body)
+
+	sig, err := eventSignature(params, appSecret, body)
+	if err != nil {
+		return nil, err
+	}
+
 	return metadata.Pairs(
 		auth.HeaderAppKey, params[auth.HeaderAppKey],
 		auth.HeaderSignatureAlgorithm, params[auth.HeaderSignatureAlgorithm],
 		auth.HeaderSignatureVersion, params[auth.HeaderSignatureVersion],
 		auth.HeaderSignatureNonce, params[auth.HeaderSignatureNonce],
 		auth.HeaderTimestamp, params[auth.HeaderTimestamp],
-		metadataSignature, signature,
+		metadataSignature, sig,
 	), nil
 }
 
-// eventSignature returns the base64 HMAC-SHA256 signature of the event
-// canonical string derived from params and body.
-func eventSignature(params map[string]string, appSecret string, body []byte) string {
+func eventSignature(params map[string]string, appSecret string, body []byte) (string, error) {
 	encoded := percentEncode(eventCanonicalString(params, body))
 	mac := hmac.New(sha256.New, []byte(appSecret+"&"))
 	mac.Write([]byte(encoded))
-	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-// eventCanonicalString builds the event canonical string: the parameters sorted
-// by name and joined as "name=value", then "&" and the lowercase hex SHA-256
-// digest of body.
 func eventCanonicalString(params map[string]string, body []byte) string {
 	names := make([]string, 0, len(params))
 	for name := range params {
@@ -87,12 +83,19 @@ func eventCanonicalString(params map[string]string, body []byte) string {
 		entries = append(entries, name+"="+params[name])
 	}
 	sum := sha256.Sum256(body)
-	return strings.Join(entries, "=") + "&" + hex.EncodeToString(sum[:])
+	return strings.Join(entries, "=") + "&" + strings.ToLower(hexEncode(sum[:]))
 }
 
-// percentEncode percent-encodes s using the RFC 3986 unreserved set, matching
-// the encoding Webull applies to its canonical strings. It mirrors the encoder
-// in internal/auth, which is not exported.
+func hexEncode(b []byte) string {
+	const hexChars = "0123456789abcdef"
+	result := make([]byte, len(b)*2)
+	for i, c := range b {
+		result[i*2] = hexChars[c>>4]
+		result[i*2+1] = hexChars[c&0xf]
+	}
+	return string(result)
+}
+
 func percentEncode(s string) string {
 	const upperhex = "0123456789ABCDEF"
 	var b strings.Builder
@@ -105,12 +108,11 @@ func percentEncode(s string) string {
 		}
 		b.WriteByte('%')
 		b.WriteByte(upperhex[c>>4])
-		b.WriteByte(upperhex[c&0x0f])
+		b.WriteByte(upperhex[c&0xf])
 	}
 	return b.String()
 }
 
-// isUnreserved reports whether c is in the RFC 3986 unreserved set.
 func isUnreserved(c byte) bool {
 	switch {
 	case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':

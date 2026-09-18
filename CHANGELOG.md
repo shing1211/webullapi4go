@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-18
+
+Market data fundamentals: capital flows, industry comparisons, earnings and dividend
+calendars, SEC filings, and financial statements.
+
+### Added
+
+- `data.GetCapitalFlow`: capital-flow data (large/medium/small in/out flows) for
+  the trailing N trading days per symbol.
+- `data.GetIndustryComparison`: industry-relative performance metrics (e.g. EPS_TTM)
+  with per-company ranks and values.
+- `data.GetEarningsCalendar`: upcoming and historical earnings-release dates, EPS
+  actual vs. estimate, and revenue actual vs. estimate per fiscal period.
+- `data.GetDividendCalendar`: dividend and split events with declare/ex-div/record/pay
+  dates and per-share amounts.
+- `data.GetFilings`: SEC filings list (8-K, 10-K, 10-Q, etc.) with titles, URLs,
+  and publish dates.
+- `data.GetIncomeStatement`: multi-period income statement data (revenue, net income,
+  EPS, etc.).
+- `data.GetBalanceSheet`: multi-period balance sheet data (total assets, liabilities,
+  equity, etc.).
+- `data.GetCashFlow`: multi-period cash flow statement data (operating, investing,
+  financing cash flows).
+- `data.GetFinancialIndicators`: key financial ratios and metrics (ROA, ROE, EPS,
+  net margin, debt ratio).
+- `data.GetFinancialAlert`: upcoming earnings-release alert with expected date and
+  estimated vs. last-year EPS.
+- `data.GetForecastEPS`: analyst consensus EPS forecasts for the next 5 quarters.
+- `internal/auth`: added `DigestCase` (`DigestUpper`/`DigestLower`) to `SignParams`
+  so callers can control the casing of the body digest hex output; the REST path
+  remains unchanged.
+- `examples/data-fundamentals`: Runnable program demonstrating all fundamentals
+  endpoints for AAPL.
+
 ## [0.3.0] - 2026-09-18
 
 Trading events over gRPC.

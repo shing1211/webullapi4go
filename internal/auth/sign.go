@@ -87,15 +87,33 @@ func (a Algorithm) hashFunc() func() hash.Hash {
 	return sha1.New
 }
 
-// bodyDigest returns the uppercase hexadecimal digest of body for a. HMAC-SHA1
-// uses MD5 and HMAC-SHA256 uses SHA-256, matching Webull's composers.
-func (a Algorithm) bodyDigest(body []byte) string {
+// DigestCase selects the hex case for the body digest. The zero value is
+// [DigestUpper], which preserves the original behavior (uppercase hex for all
+// algorithms). The events API requires lowercase hex.
+type DigestCase int
+
+const (
+	DigestUpper DigestCase = iota
+	DigestLower
+)
+
+// bodyDigest returns the hexadecimal digest of body for a. HMAC-SHA1 uses MD5
+// and HMAC-SHA256 uses SHA-256, matching Webull's composers. The case of the
+// hex digits follows c (default [DigestUpper]).
+func (a Algorithm) bodyDigest(body []byte, c DigestCase) string {
+	var sum []byte
 	if a == HMAC_SHA256 {
-		sum := sha256.Sum256(body)
-		return strings.ToUpper(hex.EncodeToString(sum[:]))
+		h := sha256.Sum256(body)
+		sum = h[:]
+	} else {
+		h := md5.Sum(body)
+		sum = h[:]
 	}
-	sum := md5.Sum(body)
-	return strings.ToUpper(hex.EncodeToString(sum[:]))
+	hexStr := hex.EncodeToString(sum)
+	if c == DigestLower {
+		return strings.ToLower(hexStr)
+	}
+	return strings.ToUpper(hexStr)
 }
 
 // Names of the headers that participate in the signature. Any other header,
@@ -149,6 +167,10 @@ type SignParams struct {
 	// which preserves the original HTTP behavior; gRPC events use
 	// [HMAC_SHA256].
 	Algorithm Algorithm
+	// DigestCase selects the hex case of the body digest. The zero value is
+	// [DigestUpper], which produces uppercase hex to match the published REST
+	// API. The gRPC events API requires lowercase hex; pass [DigestLower].
+	DigestCase DigestCase
 }
 
 // Sign computes the base64-encoded signature for p using the algorithm in
@@ -189,10 +211,10 @@ func StringToSign(p SignParams) (string, error) {
 		// when present, is appended with "&".
 		str3 = strings.Join(entries, "=")
 		if len(p.Body) > 0 {
-			str3 += "&" + p.Algorithm.bodyDigest(p.Body)
+			str3 += "&" + p.Algorithm.bodyDigest(p.Body, p.DigestCase)
 		}
 	} else if len(p.Body) > 0 {
-		str3 = p.Path + "&" + strings.Join(entries, "&") + "&" + p.Algorithm.bodyDigest(p.Body)
+		str3 = p.Path + "&" + strings.Join(entries, "&") + "&" + p.Algorithm.bodyDigest(p.Body, p.DigestCase)
 	} else {
 		str3 = p.Path + "&" + strings.Join(entries, "&")
 	}

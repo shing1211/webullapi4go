@@ -46,7 +46,9 @@ func TestEventCanonicalStringGolden(t *testing.T) {
 	if got := percentEncode(wantCanonical); got != wantEncoded {
 		t.Errorf("percentEncode() = %q, want %q", got, wantEncoded)
 	}
-	if got := eventSignature(params, "test-app-secret", body); got != wantSignature {
+	if got, err := eventSignature(params, "test-app-secret", body); err != nil {
+		t.Fatalf("eventSignature() error = %v", err)
+	} else if got != wantSignature {
 		t.Errorf("eventSignature() = %q, want %q", got, wantSignature)
 	}
 }

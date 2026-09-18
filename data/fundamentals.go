@@ -16,6 +16,7 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 )
 
@@ -24,6 +25,16 @@ const (
 	pathCompanyProfile = "/market-data/fundamentals/company-profiles/get"
 	pathAnalystTarget  = "/market-data/fundamentals/analysis/target-prices/get"
 	pathAnalystRating  = "/market-data/fundamentals/analysis/ratings/get"
+	pathCapitalFlow    = "/market-data/fundamentals/capital-flows/get"
+	pathIndustryComp   = "/market-data/fundamentals/industry-comparisons/get"
+	pathEarningsCal    = "/market-data/fundamentals/earnings-calendars/list"
+	pathDividendCal    = "/market-data/fundamentals/dividend-calendars/list"
+	pathFilings        = "/market-data/fundamentals/filings/list"
+	pathIncomeStmt     = "/market-data/fundamentals/income-statements/get"
+	pathBalanceSheet   = "/market-data/fundamentals/balance-sheets/get"
+	pathCashFlow       = "/market-data/fundamentals/cash-flows/get"
+	pathIndicators     = "/market-data/fundamentals/indicators/get"
+	pathFinancialAlert = "/market-data/fundamentals/financial-alerts/get"
 )
 
 // CompanyProfile describes a company's static profile.
@@ -138,4 +149,277 @@ func (c *Client) GetAnalystRating(ctx context.Context, symbol string, category S
 		return nil, err
 	}
 	return &out, nil
+}
+
+// CapitalFlowEntry describes one trading day's capital flow breakdown.
+type CapitalFlowEntry struct {
+	Date      string `json:"date"`
+	LargeIn   string `json:"large_in"`
+	LargeOut  string `json:"large_out"`
+	MediumIn  string `json:"medium_in"`
+	MediumOut string `json:"medium_out"`
+	SmallIn   string `json:"small_in"`
+	SmallOut  string `json:"small_out"`
+}
+
+// GetCapitalFlow retrieves the capital flow breakdown for symbol over the most
+// recent count trading days (default 5, maximum 5). Results are sorted in
+// ascending chronological order.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/capital-flow.md
+func (c *Client) GetCapitalFlow(ctx context.Context, symbol string, category StockCategory, count int) ([]CapitalFlowEntry, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	if count > 0 {
+		q.Set("count", fmt.Sprintf("%d", count))
+	}
+	var out []CapitalFlowEntry
+	if err := c.get(ctx, pathCapitalFlow, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// IndustryComparisonItem is one entry in an industry comparison.
+type IndustryComparisonItem struct {
+	Symbol string `json:"symbol"`
+	Name   string `json:"name"`
+	Rank   int    `json:"rank"`
+	Value  string `json:"value"`
+}
+
+// IndustryComparison holds industry comparison data for a single fiscal period.
+type IndustryComparison struct {
+	FiscalYear   int                      `json:"fiscal_year"`
+	FiscalPeriod int                      `json:"fiscal_period"`
+	IndustryName string                   `json:"industry_name"`
+	Type         string                   `json:"type"`
+	Data         []IndustryComparisonItem `json:"data"`
+}
+
+// GetIndustryComparison retrieves peer comparison data for the industry that
+// symbol belongs to. sortBy defaults to EPS_TTM.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/industry-comparison.md
+func (c *Client) GetIndustryComparison(ctx context.Context, symbol string, category StockCategory, sortBy string) (*IndustryComparison, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	if sortBy != "" {
+		q["sort_by"] = []string{sortBy}
+	}
+	var out IndustryComparison
+	if err := c.get(ctx, pathIndustryComp, q, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// EarningsCalendarEntry is one earnings announcement.
+type EarningsCalendarEntry struct {
+	FiscalYear          int    `json:"fiscal_year"`
+	FiscalPeriod        int    `json:"fiscal_period"`
+	Currency            string `json:"currency"`
+	ExpectedPublishDate string `json:"expected_publish_date"`
+	EPSActual           string `json:"eps_actual"`
+	EPSEst              string `json:"eps_est"`
+	RevActual           string `json:"rev_actual"`
+	RevEst              string `json:"rev_est"`
+}
+
+// GetEarningsCalendar retrieves the earnings calendar for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/earnings-calendar.md
+func (c *Client) GetEarningsCalendar(ctx context.Context, symbol string, category StockCategory) ([]EarningsCalendarEntry, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []EarningsCalendarEntry
+	if err := c.get(ctx, pathEarningsCal, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DividendCalendarEntry is one dividend event.
+type DividendCalendarEntry struct {
+	Symbol      string `json:"symbol"`
+	Market      string `json:"market"`
+	Currency    string `json:"currency"`
+	Amount      string `json:"amount"`
+	DivType     string `json:"div_type"`
+	DeclareDate string `json:"declare_date"`
+	ExDivDate   string `json:"ex_div_date"`
+	RecordDate  string `json:"record_date"`
+	PayDate     string `json:"pay_date"`
+}
+
+// GetDividendCalendar retrieves the dividend calendar for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/dividend-calendar.md
+func (c *Client) GetDividendCalendar(ctx context.Context, symbol string, category StockCategory) ([]DividendCalendarEntry, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []DividendCalendarEntry
+	if err := c.get(ctx, pathDividendCal, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FilingEntry is one SEC filing.
+type FilingEntry struct {
+	Title       string `json:"title"`
+	URL         string `json:"url"`
+	PublishDate string `json:"publish_date"`
+}
+
+// FilingsResponse wraps the filings list.
+type FilingsResponse struct {
+	Symbol   string        `json:"symbol"`
+	Category string        `json:"category"`
+	Filings  []FilingEntry `json:"filings"`
+}
+
+// GetFilings retrieves SEC filings for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/filings.md
+func (c *Client) GetFilings(ctx context.Context, symbol string, category StockCategory) (*FilingsResponse, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out FilingsResponse
+	if err := c.get(ctx, pathFilings, q, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// FinancialsItem is one period's financial data entry. Field names are preserved
+// from the API response.
+type FinancialsItem map[string]string
+
+// GetIncomeStatement retrieves the income statement for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/income-statement.md
+func (c *Client) GetIncomeStatement(ctx context.Context, symbol string, category StockCategory) ([]FinancialsItem, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []FinancialsItem
+	if err := c.get(ctx, pathIncomeStmt, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetBalanceSheet retrieves the balance sheet for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/balance-sheet.md
+func (c *Client) GetBalanceSheet(ctx context.Context, symbol string, category StockCategory) ([]FinancialsItem, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []FinancialsItem
+	if err := c.get(ctx, pathBalanceSheet, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetCashFlow retrieves the cash flow statement for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/cash-flow-statement.md
+func (c *Client) GetCashFlow(ctx context.Context, symbol string, category StockCategory) ([]FinancialsItem, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []FinancialsItem
+	if err := c.get(ctx, pathCashFlow, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FinancialIndicator holds key financial ratios and metrics.
+type FinancialIndicator struct {
+	ROA       string `json:"roa"`
+	ROE       string `json:"roe"`
+	EPS       string `json:"eps"`
+	NetMargin string `json:"net_margin"`
+	DebtRatio string `json:"debt_ratio"`
+}
+
+// GetFinancialIndicators retrieves financial indicators for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/financial-indicators.md
+func (c *Client) GetFinancialIndicators(ctx context.Context, symbol string, category StockCategory) (*FinancialIndicator, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out FinancialIndicator
+	if err := c.get(ctx, pathIndicators, q, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// FinancialAlert holds upcoming earnings-release alert information.
+type FinancialAlert struct {
+	Symbol             string `json:"symbol"`
+	Category           string `json:"category"`
+	ExpectedReportDate string `json:"expected_report_date"`
+	EstimatedEPS       string `json:"estimated_eps"`
+	LastYearEPS        string `json:"last_year_eps"`
+}
+
+// GetFinancialAlert retrieves upcoming earnings-release alert for symbol.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/financial-alert.md
+func (c *Client) GetFinancialAlert(ctx context.Context, symbol string, category StockCategory) (*FinancialAlert, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out FinancialAlert
+	if err := c.get(ctx, pathFinancialAlert, q, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ForecastEPSEntry is one quarter's EPS forecast data.
+type ForecastEPSEntry struct {
+	FiscalYear   int    `json:"fiscal_year"`
+	FiscalPeriod int    `json:"fiscal_period"`
+	Actual       string `json:"actual"`
+	Est          string `json:"est"`
+	Reported     bool   `json:"reported"`
+}
+
+// GetForecastEPS retrieves forecast EPS data for symbol for the most recent
+// 5 quarters.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/forecast-eps.md
+func (c *Client) GetForecastEPS(ctx context.Context, symbol string, category StockCategory) ([]ForecastEPSEntry, error) {
+	q := url.Values{
+		"symbol":   {symbol},
+		"category": {string(category)},
+	}
+	var out []ForecastEPSEntry
+	if err := c.get(ctx, "/market-data/fundamentals/forecast-eps/get", q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

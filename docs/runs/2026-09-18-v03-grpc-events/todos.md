@@ -10,4 +10,4 @@ Single source of truth. Statuses: `todo`, `doing`, `blocked`, `review`, `done`.
 | T15.4 | Typed JSON payloads + reconnect/resubscribe | backend | done | T15.3 | live OrderEvent decoded; reconnect tests pass |
 | T15.5 | Docs/events.md + example + README/CHANGELOG | docs | done | T15.4 | events docs + example; mkdocs --strict OK |
 | T15.6 | Nightly read-only live CI job | devops | done | T15.3 | nightly-live.yml valid; mutation off |
-| T15.7 | Release v0.3.0 | release | doing | T15.5, T15.6 | tag on both remotes |
+| T15.7 | Release v0.3.0 | release | done | T15.5, T15.6 | `99d505a`; tag v0.3.0 on both remotes |

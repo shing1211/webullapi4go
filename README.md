@@ -9,19 +9,21 @@ and positions, v0.2.2 adds the stock-order lifecycle (preview, place, replace,
 cancel) and order queries, v0.2.3 adds market-specific order rules for US, HK,
 and CN, including Hong Kong BCAN party IDs, v0.2.4 adds single-leg options
 orders, and v0.2.5 adds US combo orders. The v0.3 release adds real-time Trading
-events over gRPC.
+events over gRPC. The v0.4 release adds Market Data fundamentals: capital flows,
+industry comparisons, earnings and dividend calendars, SEC filings, and financial
+statements.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.3)
+## Feature matrix (v0.4)
 
 | Area | Status | Details |
 |------|--------|---------|
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
+| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements), futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
 | Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5) |
 | Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC with HMAC-SHA256 signing, typed JSON payloads, and auto-reconnect/re-subscribe (v0.3.0) |
@@ -311,10 +313,11 @@ MQTT on port 1883).
 | Version | Scope | Status |
 |---------|-------|--------|
 | v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | In progress |
+| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | Done |
 | v0.3 | Trading events over gRPC | Done |
-| v0.4 | Display Solution | Planned |
-| v0.5 | Broker API | Planned |
+| v0.4 | Market Data fundamentals: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements | Done |
+| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Planned |
+| v0.6 | Broker API | Planned |
 | v1.0 | Stable public API, full documentation, semver guarantees | Planned |
 
 ## Links
