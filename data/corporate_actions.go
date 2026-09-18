@@ -17,19 +17,17 @@ package data
 import (
 	"context"
 	"net/url"
-	"strconv"
-	"strings"
 )
 
-// pathCorpActionsList is the corporate actions by-symbol endpoint.
+// pathCorpActionsList is the Display Solution endpoint for corporate actions by symbol.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/corp-action-using-get
 const pathCorpActionsList = "/market-data/instruments/stocks/corporate-actions/list"
 
-// pathCorpActionsMarket is the corporate actions bulk-by-market endpoint.
+// pathCorpActionsMarket is the Display Solution endpoint for corporate actions by market.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/corp-market-using-get
-const pathCorpActionsMarket = "/market-data/instruments/stocks/corporate-actions/market"
+const pathCorpActionsMarket = "/market-data/instruments/stocks/corporate-actions/list-by-market"
 
 // CorporateActionQuery parameterizes [Client.GetCorporateActions].
 type CorporateActionQuery struct {
@@ -37,70 +35,79 @@ type CorporateActionQuery struct {
 	Market        string
 	StartDate     string
 	EndDate       string
+	EventTypes    []string
 	PageSize      int
 	PaginationKey string
 }
 
-// CorporateAction represents a corporate action event such as a dividend or stock split.
-// Field names and types are best-effort; live probe needed to confirm all fields.
-type CorporateAction struct {
-	// Symbol is the security symbol, for example "AAPL".
-	Symbol string `json:"symbol"`
-	// EventType is the type of corporate action, for example "DIVIDEND", "SPLIT".
-	EventType string `json:"event_type"`
-	// DeclarationDate is the announcement date, as a date string.
-	DeclarationDate string `json:"declaration_date"`
-	// ExDate is the ex-dividend or ex-split date.
-	ExDate string `json:"ex_date"`
-	// PayDate is the payment date.
-	PayDate string `json:"pay_date"`
-	// RecordDate is the record date for determining shareholders eligible for the action.
-	RecordDate string `json:"record_date"`
-	// Amount is the per-share amount for dividends, or the ratio for splits.
-	Amount string `json:"amount"`
-	// Currency is the currency of the amount, for example "USD".
-	Currency string `json:"currency"`
-	// Frequency is the dividend frequency, for example "QUARTERLY", "ANNUAL".
-	Frequency string `json:"frequency"`
-	// Fields not yet confirmed by live probe.
-	Extra map[string]string `json:"-"`
+// corpActionResponse is the raw API response wrapper.
+type corpActionResponse struct {
+	Data          []CorporateAction `json:"data"`
+	PaginationKey string            `json:"pagination_key"`
 }
 
-// GetCorporateActions retrieves corporate action events for one or more symbols.
+// CorporateAction represents a corporate action event such as a dividend or stock split.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/corp-action-using-get
-func (c *Client) GetCorporateActions(ctx context.Context, q CorporateActionQuery) ([]CorporateAction, error) {
-	query := url.Values{}
-	if len(q.Symbols) > 0 {
-		query.Set("symbols", strings.Join(q.Symbols, ","))
-	}
-	if q.Market != "" {
-		query.Set("market", q.Market)
-	}
-	if q.StartDate != "" {
-		query.Set("start_date", q.StartDate)
-	}
-	if q.EndDate != "" {
-		query.Set("end_date", q.EndDate)
-	}
-	if q.PageSize > 0 {
-		query.Set("page_size", strconv.Itoa(q.PageSize))
-	}
-	if q.PaginationKey != "" {
-		query.Set("pagination_key", q.PaginationKey)
-	}
-
-	var out []CorporateAction
-	if err := c.get(ctx, pathCorpActionsList, query, &out); err != nil {
-		return nil, err
-	}
-	return out, nil
+type CorporateAction struct {
+	InstrumentID int64  `json:"instrument_id"`
+	Symbol       string `json:"symbol"`
+	ExchangeCode string `json:"exchange_code"`
+	EventType    string `json:"event_type"`
+	EventAction  string `json:"event_action"`
+	EventID      int64  `json:"event_id"`
+	Source       string `json:"source"`
+	RatioOld     string `json:"ratio_old"`
+	RatioNew     string `json:"ratio_new"`
+	EventDate    string `json:"event_date"`
+	UpdateTime   string `json:"update_time"`
+	CreateTime   string `json:"create_time"`
 }
 
-// GetCorporateActionsByMarket retrieves corporate action events for all securities in a market.
+// GetCorporateActions retrieves corporate action events for one or more symbols
+// using the Display Solution API.
+//
+// category is required and must be one of: "US_STOCK", "HK_STOCK", "CN_STOCK".
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/corp-action-using-get
+func (c *Client) GetCorporateActions(ctx context.Context, q CorporateActionQuery) ([]CorporateAction, string, error) {
+	query := url.Values{}
+	if len(q.Symbols) > 0 {
+		query.Set("symbol", q.Symbols[0])
+	}
+	if q.Market != "" {
+		query.Set("category", q.Market)
+	}
+	if q.StartDate != "" {
+		query.Set("start_date", q.StartDate)
+	}
+	if q.EndDate != "" {
+		query.Set("end_date", q.EndDate)
+	}
+	if len(q.EventTypes) > 0 {
+		query.Set("event_types", joinStrings(q.EventTypes, ","))
+	}
+	if q.PageSize > 0 {
+		query.Set("page_size", itoa(q.PageSize))
+	}
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+
+	var out corpActionResponse
+	if err := c.DisplayService().Get(ctx, pathCorpActionsList, query, &out); err != nil {
+		return nil, "", err
+	}
+	return out.Data, out.PaginationKey, nil
+}
+
+// GetCorporateActionsByMarket retrieves corporate action events for all securities
+// in a market using the Display Solution API.
+//
+// Currently only "US" market is supported.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/corp-market-using-get
-func (c *Client) GetCorporateActionsByMarket(ctx context.Context, q CorporateActionQuery) ([]CorporateAction, error) {
+func (c *Client) GetCorporateActionsByMarket(ctx context.Context, q CorporateActionQuery) ([]CorporateAction, string, error) {
 	query := url.Values{}
 	if q.Market != "" {
 		query.Set("market", q.Market)
@@ -111,16 +118,57 @@ func (c *Client) GetCorporateActionsByMarket(ctx context.Context, q CorporateAct
 	if q.EndDate != "" {
 		query.Set("end_date", q.EndDate)
 	}
+	if len(q.EventTypes) > 0 {
+		query.Set("event_types", joinStrings(q.EventTypes, ","))
+	}
 	if q.PageSize > 0 {
-		query.Set("page_size", strconv.Itoa(q.PageSize))
+		query.Set("page_size", itoa(q.PageSize))
 	}
 	if q.PaginationKey != "" {
 		query.Set("pagination_key", q.PaginationKey)
 	}
 
-	var out []CorporateAction
-	if err := c.get(ctx, pathCorpActionsMarket, query, &out); err != nil {
-		return nil, err
+	var out corpActionResponse
+	if err := c.DisplayService().Get(ctx, pathCorpActionsMarket, query, &out); err != nil {
+		return nil, "", err
 	}
-	return out, nil
+	return out.Data, out.PaginationKey, nil
+}
+
+func joinStrings(vals []string, sep string) string {
+	if len(vals) == 0 {
+		return ""
+	}
+	if len(vals) == 1 {
+		return vals[0]
+	}
+	result := vals[0]
+	for _, v := range vals[1:] {
+		result += sep + v
+	}
+	return result
+}
+
+func itoa(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	if i < 0 {
+		return "-" + uitoa(uint(-i))
+	}
+	return uitoa(uint(i))
+}
+
+func uitoa(val uint) string {
+	if val == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for val > 0 {
+		i--
+		buf[i] = byte('0' + val%10)
+		val /= 10
+	}
+	return string(buf[i:])
 }

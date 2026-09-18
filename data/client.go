@@ -39,8 +39,10 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/display"
 )
 
 // Client exposes the Webull Market Data HTTP API. It is a thin, typed layer on
@@ -51,6 +53,9 @@ import (
 // [client.Client]; callers close that client themselves.
 type Client struct {
 	core *client.Client
+
+	displayOnce sync.Once
+	displaySvc  *display.Service
 }
 
 // New returns a market-data client bound to c. The underlying client is owned
@@ -59,6 +64,21 @@ func New(c *client.Client) *Client { return &Client{core: c} }
 
 // Core returns the underlying public client.
 func (c *Client) Core() *client.Client { return c.core }
+
+// DisplayService returns the [display.Service] for Display Solution API calls.
+// It is created lazily on first use using the same app credentials as the
+// underlying [client.Client].
+func (c *Client) DisplayService() *display.Service {
+	c.displayOnce.Do(func() {
+		sandbox := c.core.Environment() == client.Sandbox
+		c.displaySvc = display.NewService(
+			c.core.AppKey(),
+			c.core.AppSecret(),
+			display.WithSandbox(sandbox),
+		)
+	})
+	return c.displaySvc
+}
 
 // do performs a signed request and decodes the JSON response into out. path is
 // the API path without a query string; query, when non-empty, is appended as an

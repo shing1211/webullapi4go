@@ -89,6 +89,12 @@ func (c *Client) Endpoints() Endpoints { return c.cfg.Endpoints }
 // HTTPClient returns the HTTP client used for REST calls.
 func (c *Client) HTTPClient() *http.Client { return c.cfg.HTTPClient }
 
+// AppKey returns the configured Webull app key.
+func (c *Client) AppKey() string { return c.cfg.AppKey }
+
+// AppSecret returns the configured Webull app secret.
+func (c *Client) AppSecret() string { return c.cfg.AppSecret }
+
 // Close releases resources owned by the client, in particular the idle
 // connections held by the underlying HTTP transport. It does not close
 // connections that are still in use, and may be called more than once.
