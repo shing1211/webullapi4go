@@ -5,10 +5,9 @@ layer over the core [client](api.md#client), so request signing, access-token
 handling, retries, rate limiting, and error classification are shared with the
 rest of the SDK.
 
-The v0.2.1 foundation covers read-only account and asset access: listing
-accounts, reading an account's balance, and listing open positions. Order
-placement, replacement, cancellation, and order queries arrive in later v0.2
-patches.
+The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
+release adds the stock-order lifecycle — preview, place, replace, cancel — and
+order queries. Options orders and combo orders arrive in later v0.2 patches.
 
 ## Authentication
 
@@ -81,18 +80,207 @@ last price, unrealized P/L, and, for multi-leg option positions, the `Legs`
 slice. Numeric fields such as quantities and prices are strings, preserving the
 precision of the wire values.
 
-## API version
+## Order lifecycle
 
-Requests under `/trading/` default to the v3 API version, sent as the
-`x-version: v3` header. Market Data paths still default to `v2`. The default can
-be overridden globally with `client.WithAPIVersion` or per prefix with
-`client.WithAPIVersionFor`; the longest matching prefix wins.
+!!! warning "Placing an order mutates the account"
+
+    `PlaceOrder`, `ReplaceOrder`, and `CancelOrder` change the state of a real
+    brokerage account. The sandbox is still a real trading account: an order
+    placed there is an order. Always preview first, use the guardrails, keep
+    orders small and non-marketable, and gate any placement behind an explicit
+    opt-in such as `WEBULL_ORDER_PLACE=1`. Never send a market order from an
+    automated test or example.
+
+A stock order moves through five operations:
+
+1. **Preview** (`PreviewOrder`) — validate the request and estimate its cost.
+   Read-only.
+2. **Place** (`PlaceOrder`) — submit the order and receive its identifiers.
+3. **Replace** (`ReplaceOrder`) — change the working terms of an order, matched
+   by client order ID.
+4. **Cancel** (`CancelOrder`) — cancel a working order, matched by client order
+   ID.
+5. **Query** (`GetOpenOrders`, `GetOrderHistory`, `GetOrderDetail`) — inspect
+   working orders, historical orders, and a single order's detail.
+
+| Method | Endpoint | Returns |
+|--------|----------|---------|
+| `PreviewOrder(ctx, req)` | `POST /trading/orders/preview` | `*PreviewResult` |
+| `PlaceOrder(ctx, req)` | `POST /trading/orders/place` | `*PlaceOrderResult` |
+| `ReplaceOrder(ctx, req)` | `POST /trading/orders/replace` | `*ReplaceOrderResult` |
+| `CancelOrder(ctx, req)` | `POST /trading/orders/cancel` | `*CancelOrderResult` |
+| `GetOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
+| `GetOpenOrdersPage(ctx, accountID, key)` | `GET /trading/orders/open-orders/list` | `*OrderPage` |
+| `GetAllOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
+| `GetOrderHistory(ctx, q)` | `GET /trading/orders/historical-orders/list` | `[]OrderGroup` |
+| `GetOrderHistoryPage(ctx, q)` | `GET /trading/orders/historical-orders/list` | `*OrderPage` |
+| `GetAllOrderHistory(ctx, q)` | `GET /trading/orders/historical-orders/list` | `[]OrderGroup` |
+| `GetOrderDetail(ctx, accountID, clientOrderID)` | `GET /trading/orders/get` | `*OrderGroup` |
+
+The order endpoints take a `PlaceOrderRequest`, which carries the `AccountID`
+and one or more `OrderRequest` values. The modify endpoints take a
+`ReplaceOrderRequest` or `CancelOrderRequest`. Requests are validated before any
+network call, so a malformed request never reaches the API.
+
+The v3 modify and query endpoints identify an order by its **client order ID**,
+not the system order ID: reuse the `ClientOrderID` supplied at placement time.
+`PlaceOrderResult.OrderID` is informational.
+
+```go
+req := trade.PlaceOrderRequest{
+	AccountID: accountID,
+	NewOrders: []trade.OrderRequest{
+		{
+			ClientOrderID:         "demo-aapl-buy-1",
+			ComboType:             trade.ComboTypeNormal,
+			InstrumentType:        trade.InstrumentTypeEquity,
+			Market:                trade.MarketUS,
+			Symbol:                "AAPL",
+			OrderType:             trade.OrderTypeLimit,
+			Side:                  trade.OrderSideBuy,
+			Quantity:              "1",
+			EntrustType:           trade.EntrustTypeQty,
+			TimeInForce:           trade.TimeInForceDay,
+			SupportTradingSession: trade.TradingSessionCore,
+			LimitPrice:            "1.00", // far below market, so it will not fill
+		},
+	},
+}
+
+preview, err := trading.PreviewOrder(ctx, req)
+if err != nil {
+	return err
+}
+log.Printf("estimated cost=%s fee=%s",
+	preview.EstimatedCost, preview.EstimatedTransactionFee)
+
+placed, err := trading.PlaceOrder(ctx, req)
+if err != nil {
+	return err
+}
+log.Printf("placed order_id=%s", placed.OrderID)
+
+cancelled, err := trading.CancelOrder(ctx, trade.CancelOrderRequest{
+	AccountID:     accountID,
+	ClientOrderID: placed.ClientOrderID,
+})
+if err != nil {
+	return err
+}
+log.Printf("cancelled order_id=%s", cancelled.OrderID)
+```
+
+To change a working order instead of cancelling it:
+
+```go
+_, err := trading.ReplaceOrder(ctx, trade.ReplaceOrderRequest{
+	AccountID: accountID,
+	ModifyOrders: []trade.ModifyOrderRequest{
+		{
+			ClientOrderID: "demo-aapl-buy-1",
+			LimitPrice:    "1.50",
+		},
+	},
+})
+```
+
+Only the fields set on each `ModifyOrderRequest` are changed. `ClientOrderID` is
+required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
+`StopPrice`, `TriggerPriceType`, `TrailingType`, `TrailingStopStep`,
+`TrailingLimitPriceOffset`, and `ExpireDate` are optional.
+
+## Order types
+
+`OrderRequest.OrderType` is the execution instruction. The SDK accepts the stock
+order types below; the required price fields are the ones `Validate` checks
+before a request is sent. The authoritative per-market validity matrix (which
+type is allowed for a given market and instrument) is enforced by the API;
+market-specific rules are documented in a later v0.2 patch.
+
+| Order type | Extra fields the SDK requires | Notes |
+|------------|-------------------------------|-------|
+| `LIMIT` | `limit_price` | Executes at the limit price or better |
+| `MARKET` | none | Executes at the best available price. Never place one from a test or example |
+| `STOP_LOSS` | `stop_price` | Becomes a market order once the stop triggers |
+| `STOP_LOSS_LIMIT` | `stop_price`, `limit_price` | Becomes a limit order once the stop triggers |
+| `TOUCH_MKT` | `stop_price` | Becomes a market order when the trigger price is touched |
+| `TOUCH_LMT` | `stop_price`, `limit_price` | Becomes a limit order when the trigger price is touched |
+| `TRAILING_STOP_LOSS` | `trailing_type`, `trailing_stop_step` | Trails the market by a fixed amount or percentage |
+| `TRAILING_STOP_LOSS_LIMIT` | `trailing_type`, `trailing_stop_step` | Trailing stop that submits a limit order |
+| `ENHANCED_LIMIT` | none | Hong Kong enhanced limit order |
+| `AT_AUCTION` | none | Hong Kong at-auction order |
+| `AT_AUCTION_LIMIT` | none | Hong Kong at-auction limit order |
+| `MARKET_ON_OPEN` | none | Executes at the opening price |
+| `MARKET_ON_CLOSE` | none | Executes at the closing price |
+
+`TriggerPriceType` selects the market price a touch or stop order triggers on:
+`PRICE` (last trade), `PRICE_BID` (best bid), or `PRICE_ASK` (best ask).
+`TrailingType` is `AMOUNT` for a fixed price spread or `PERCENTAGE` for a
+percentage where `"0.01"` is 1%.
+
+## Time in force
+
+| Value | Meaning | Notes |
+|-------|---------|-------|
+| `DAY` | Expires at the end of the trading day | Default choice for a non-marketable test order |
+| `GTC` | Remains active until filled or cancelled | |
+| `GTD` | Expires on `expire_date` | `expire_date` (yyyy-MM-dd) is required; currently US only |
+
+## Combo types
+
+`OrderRequest.ComboType` identifies the role an order plays within a combo
+order. A plain stock order is `NORMAL`. The other values exist for the combo
+orders that arrive in a later v0.2 patch; they are accepted by validation but
+the combo leg-count rules are not enforced yet.
+
+| Value | Role |
+|-------|------|
+| `NORMAL` | A standard single order |
+| `MASTER` | The primary order that triggers its siblings |
+| `STOP_PROFIT` | A take-profit sub-order |
+| `STOP_LOSS` | A stop-loss sub-order |
+| `OTO` | The follow-up order of a one-triggers-the-other pair |
+| `OCO` | One of a pair where filling either cancels the other |
+| `OTOCO` | One of the order set triggered by an OTOCO master |
+
+`OTO`, `OCO`, and `OTOCO` are equity-only. `PlaceOrderRequest.ClientComboOrderID`
+optionally groups the orders of a combo; the server generates one when a combo
+order omits it.
+
+## Validation rules
+
+Every order method validates its request and returns a typed error with code
+`invalid_config` on the first problem, before any network call. The rules are:
+
+- **`PlaceOrderRequest`** — `account_id` is required; `new_orders` must contain
+  at least one order; no two orders may reuse a `client_order_id`.
+- **`OrderRequest`** — `client_order_id`, `combo_type`, `instrument_type`,
+  `market`, `symbol`, `order_type`, `side`, `entrust_type`, and `time_in_force`
+  are required. `instrument_type` is `EQUITY`, `OPTION`, or `FUTURES` and
+  `market` is `US`, `HK`, or `CN`.
+- **`client_order_id`** — 1 to 32 characters from `[A-Za-z0-9_-]`, and unique
+  per account. Generate a fresh identifier for each new order.
+- **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a
+  positive decimal; when it is `AMOUNT`, `total_cash_amount` is required and
+  must be a positive decimal. Sizes are strings so precision is preserved;
+  `AMOUNT` supports US fractional share trading.
+- **Prices and expiry** — the conditional fields in the order-type table above
+  are required; `expire_date` is required when `time_in_force` is `GTD`.
+- **`ReplaceOrderRequest`** — `account_id` is required; `modify_orders` must
+  contain at least one order; each `client_order_id` must be valid and unique
+  within the request.
+- **`CancelOrderRequest`** — `account_id` and a valid `client_order_id` are
+  required.
+- **`OrderHistoryQuery`** — `account_id` is required; `start_time` and
+  `end_time` must be RFC3339 timestamps; the API allows at most six months of
+  look-back and defaults to the last seven days. Following the pagination
+  cursor is bounded by `trade.MaxOrderQueryPages` (100).
 
 ## Order guardrails
 
-The client accepts advisory order guardrails. They are configuration in the
-foundation release and are enforced by the order methods before an order is
-built:
+The client accepts advisory order guardrails. They are enforced by
+`PreviewOrder` and `PlaceOrder` before an order is built, so an over-limit order
+never leaves the process:
 
 ```go
 trading := trade.New(cl,
@@ -106,6 +294,67 @@ trading := trade.New(cl,
 string; an empty string disables the cap (the default). Passing a value that is
 not a non-negative, finite number panics at configuration time.
 
+The notional cap compares `total_cash_amount` for `AMOUNT` orders and
+`quantity` times `limit_price` for orders that carry both. When the notional
+cannot be computed — for example a `MARKET` order with no limit price — the
+notional cap is skipped, but the quantity cap still applies. The guardrails
+apply to preview and place; `ReplaceOrder` is not bounded by them, so re-check
+modified sizes yourself.
+
+## Order queries
+
+The query methods return `OrderGroup` values: a client order together with its
+child orders. A `NORMAL` order has a single entry in `OrderGroup.Orders`; combo
+orders carry their legs there. Each `Order` reports its `Status` (`PENDING`,
+`SUBMITTED`, `CANCELLED`, `FILLED`, `FAILED`, or `PARTIAL_FILLED`), quantities
+and prices as decimal strings, and timestamps in ISO8601 UTC form.
+
+The list endpoints are cursor paginated. The plain getters return the first page;
+the `Page` variants return one page with its `PaginationKey`; the `All` variants
+follow the cursor to exhaustion.
+
+```go
+open, err := trading.GetOpenOrders(ctx, accountID)
+if err != nil {
+	return err
+}
+for _, group := range open {
+	for _, order := range group.Orders {
+		log.Printf("open %s %s status=%s filled=%s/%s",
+			order.Symbol, order.Side, order.Status,
+			order.FilledQuantity, order.TotalQuantity)
+	}
+}
+
+history, err := trading.GetOrderHistory(ctx, trade.OrderHistoryQuery{
+	AccountID: accountID,
+	StartTime: "2025-01-05T22:59:59.012Z", // optional; defaults to last 7 days
+	EndTime:   "2025-01-06T22:59:59.012Z", // optional; defaults to now
+})
+if err != nil {
+	return err
+}
+_ = history
+
+detail, err := trading.GetOrderDetail(ctx, accountID, "demo-aapl-buy-1")
+if err != nil {
+	return err
+}
+if detail.Orders[0].Commission != nil {
+	log.Printf("commission=%s", detail.Orders[0].Commission.ActualCommission)
+}
+```
+
+`GetOrderDetail` is the only query that returns the `Commission` and `Fees`
+breakdowns.
+
+## API version
+
+Requests under `/trading/` default to the v3 API version, sent as the
+`x-version: v3` header. Market Data paths still default to `v2`. The default can
+be overridden globally with `client.WithAPIVersion` or per prefix with
+`client.WithAPIVersionFor`; the longest matching prefix wins.
+
 ## Sandbox
 
 Use the sandbox while developing. Set the environment and credentials, and
@@ -118,15 +367,28 @@ export WEBULL_ENVIRONMENT="sandbox"
 export WEBULL_ACCOUNT_ID="your-sandbox-account-id"
 ```
 
-The runnable [`examples/account`](https://github.com/shing1211/webullapi4go/tree/main/examples/account)
+The runnable
+[`examples/account`](https://github.com/shing1211/webullapi4go/tree/main/examples/account)
 program lists accounts and prints the balance and positions for
 `WEBULL_ACCOUNT_ID`, or for the first account when it is unset. It is read-only.
+
+The
+[`examples/order`](https://github.com/shing1211/webullapi4go/tree/main/examples/order)
+program previews a small AAPL limit buy and, only when `WEBULL_ORDER_PLACE=1` is
+set, places it far below the market and immediately cancels it. Without that
+variable it is preview-only and mutates nothing. The example never submits a
+market order:
+
+```sh
+WEBULL_ORDER_PLACE=1 go run ./examples/order
+```
 
 Credentials, account IDs, and tokens are per-account secrets and must never be
 committed. Only the sandbox host `api.sandbox.webull.hk` belongs in committed
 material. The sandbox integration test is gated by
 `WEBULL_TRADE_SANDBOX=1` together with `WEBULL_TRADE_APP_KEY`,
-`WEBULL_TRADE_APP_SECRET`, and `WEBULL_TRADE_ACCOUNT_ID`; see
+`WEBULL_TRADE_APP_SECRET`, and `WEBULL_TRADE_ACCOUNT_ID`; the mutating
+place/cancel test additionally requires `WEBULL_TRADE_MUTATE=1`. See
 [Sandbox](sandbox.md) for the environment table and known limitations.
 
 ## Related

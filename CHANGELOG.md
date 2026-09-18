@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-18
+
+Stock-order lifecycle and queries for the `trade` package.
+
+### Added
+
+- `trade` order methods: `PreviewOrder` and `PlaceOrder` (with guardrail
+  enforcement), `ReplaceOrder`, and `CancelOrder`. Requests are validated before
+  any network call and the v3 modify endpoints identify an order by its client
+  order ID.
+- `trade` order queries: `GetOpenOrders`, `GetOpenOrdersPage`,
+  `GetAllOpenOrders`, `GetOrderHistory`, `GetOrderHistoryPage`,
+  `GetAllOrderHistory`, and `GetOrderDetail`. Pagination follows the cursor to
+  exhaustion, bounded by `trade.MaxOrderQueryPages`.
+- Order domain types and enums: `OrderRequest`, `PlaceOrderRequest`,
+  `PlaceOrderResult`, `PreviewResult`, `ModifyOrderRequest`,
+  `ReplaceOrderRequest`, `ReplaceOrderResult`, `CancelOrderRequest`,
+  `CancelOrderResult`, `OrderGroup`, `OrderPage`, `Order`, `OrderLeg`,
+  `OrderLegDetail`, `OrderCommission`, `OrderFee`, `OrderHistoryQuery`,
+  `OrderSide`, `OrderType`, `TimeInForce`, `ComboType`, `EntrustType`,
+  `TradingSession`, `TriggerPriceType`, `TrailingType`, `OrderStatus`, and
+  `PartyID`.
+- `OrderRequest.Validate`, `PlaceOrderRequest.Validate`,
+  `ReplaceOrderRequest.Validate`, and `CancelOrderRequest.Validate`, returning
+  typed `invalid_config` errors for the first problem found.
+- Runnable `examples/order` program that previews a non-marketable AAPL limit
+  buy and, only when `WEBULL_ORDER_PLACE=1` is set, places and cancels it.
+- Expanded trading documentation covering the order lifecycle, order-type,
+  time-in-force, and combo-type tables, validation rules, guardrails, queries,
+  and the explicit warning that placing orders mutates a real account.
+
 ## [0.2.1] - 2026-09-18
 
 Trading HTTP foundation: read-only accounts and assets.
@@ -62,6 +93,7 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.2
 [0.2.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.1
 [0.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.1.0

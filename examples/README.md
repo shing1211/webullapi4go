@@ -21,6 +21,7 @@ which reads:
 | `WEBULL_REGION` | Region, for example `hk` or `us` (optional, defaults to `hk`) |
 | `WEBULL_ENVIRONMENT` | `sandbox` / `uat` or `prod` / `production` (optional, defaults to production) |
 | `WEBULL_ACCOUNT_ID` | Trading account to inspect in the `account` example (optional) |
+| `WEBULL_ORDER_PLACE` | Example only: set to `1` in `order` to opt in to placing a real order (optional, off by default) |
 
 Credentials are never hard-coded and must never be committed. Webull publishes
 shared sandbox test accounts in its
@@ -108,6 +109,33 @@ go run ./examples/account
 The account is taken from `WEBULL_ACCOUNT_ID`; when it is unset, the first
 account returned by the API is used. Trading requests require an access token,
 which the example obtains with `EnsureToken`.
+
+## order
+
+Previews a small AAPL limit buy and, only when `WEBULL_ORDER_PLACE=1` is set,
+places it far below the market and immediately cancels it. Previewing is
+read-only; placing an order mutates the account, so the example is preview-only
+by default and never sends a market order.
+
+```sh
+# Preview only (mutates nothing)
+go run ./examples/order
+
+# Place and immediately cancel a non-marketable limit order (mutating)
+WEBULL_ORDER_PLACE=1 go run ./examples/order
+```
+
+```powershell
+# Windows PowerShell
+$env:WEBULL_ORDER_PLACE = "1"
+go run ./examples/order
+```
+
+Use it against a sandbox account only. The account is taken from
+`WEBULL_ACCOUNT_ID`; when it is unset, the first account returned by the API is
+used. The example configures the `WithMaxOrderQuantity("10")` and
+`WithMaxOrderNotional("2500.00")` guardrails, which `PreviewOrder` and
+`PlaceOrder` enforce before any network call.
 
 ## Sandbox limitations
 

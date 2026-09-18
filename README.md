@@ -3,9 +3,10 @@
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.com/apis/docs/).
 It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
 region. The v0.1 release covers authentication, a core signed REST client, the
-Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2.1
-release adds the Trading HTTP foundation: account listing, balances, and
-positions.
+Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2
+release adds the Trading HTTP API: v0.2.1 introduced account listing, balances,
+and positions, and v0.2.2 adds the stock-order lifecycle (preview, place,
+replace, cancel) and order queries.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
@@ -19,7 +20,7 @@ positions.
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
 | Market Data (HTTP) | Supported | Instruments, company profile, analyst data, futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Partial | Accounts, balances, and positions supported in v0.2.1. Orders, options, and combo orders land in later v0.2 patches |
+| Trading (HTTP) | Partial | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2). Options and combo orders land in later v0.2 patches |
 | Trading events (gRPC) | Not yet | Planned for v0.3 |
 | Display Solution | Not yet | Planned for v0.4 |
 | Broker API | Not yet | Planned for v0.5 |
@@ -252,7 +253,7 @@ MQTT on port 1883).
 | `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
 | `data` | Market Data HTTP endpoints (typed requests and responses) |
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
-| `trade` | Trading HTTP endpoints (accounts, balances, positions; orders in later patches) |
+| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock orders, and order queries) |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
 | `pkg/types` | Shared public domain types (markets, instrument types) |
 | `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
@@ -262,7 +263,7 @@ MQTT on port 1883).
 | Version | Scope | Status |
 |---------|-------|--------|
 | v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), then orders, market rules, options, combo orders | In progress |
+| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), then market rules, options, combo orders | In progress |
 | v0.3 | Trading events over gRPC | Planned |
 | v0.4 | Display Solution | Planned |
 | v0.5 | Broker API | Planned |

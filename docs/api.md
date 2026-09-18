@@ -89,13 +89,26 @@ Requests require an access token and default to the v3 API version under
 `/trading/`.
 
 - Accounts and assets: `ListAccounts`, `GetBalance`, `GetPositions`
+- Order lifecycle: `PreviewOrder`, `PlaceOrder`, `ReplaceOrder`, `CancelOrder`
+- Order queries: `GetOpenOrders`, `GetOpenOrdersPage`, `GetAllOpenOrders`,
+  `GetOrderHistory`, `GetOrderHistoryPage`, `GetAllOrderHistory`,
+  `GetOrderDetail`
+- Order request and response types: `OrderRequest`, `PlaceOrderRequest`,
+  `PlaceOrderResult`, `PreviewResult`, `ModifyOrderRequest`,
+  `ReplaceOrderRequest`, `ReplaceOrderResult`, `CancelOrderRequest`,
+  `CancelOrderResult`, `OrderGroup`, `OrderPage`, `Order`, `OrderLeg`,
+  `OrderLegDetail`, `OrderCommission`, `OrderFee`, `OrderHistoryQuery`
+- Enumerations: `OrderSide`, `OrderType`, `TimeInForce`, `ComboType`,
+  `EntrustType`, `TradingSession`, `TriggerPriceType`, `TrailingType`,
+  `OrderStatus`
 - Types: `Account`, `AccountType`, `AccountClass`, `AssetsBalance`,
   `AssetsCurrencyAssets`, `Position`, `PositionLeg`, `Market`, `InstrumentType`,
-  `OptionType`, `OptionStrategy`
-- Options: `WithMaxOrderNotional`, `WithMaxOrderQuantity` (order guardrails)
+  `OptionType`, `OptionStrategy`, `PartyID`
+- Options: `WithMaxOrderNotional`, `WithMaxOrderQuantity` (order guardrails,
+  enforced by `PreviewOrder` and `PlaceOrder`)
+- Bounds: `MaxOrderQueryPages`
 
-Order placement, replacement, cancellation, and order queries are added in later
-v0.2 patches.
+Options orders and combo orders are added in later v0.2 patches.
 
 ## `gen/webull/marketdata/v1`
 
