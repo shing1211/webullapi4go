@@ -52,6 +52,7 @@ nav:
   - Getting Started: getting-started.md
   - Authentication: authentication.md
   - Market Data: market-data.md
+  - Fundamentals: fundamentals.md
   - Streaming: streaming.md
   - Trading:
       - Overview: trading.md

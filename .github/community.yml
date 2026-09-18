@@ -1,0 +1,45 @@
+# GitHub Community configuration
+#
+# This file configures the GitHub Discussions forum for webullapi4go.
+# It defines categories, a welcome message, and code of conduct links.
+#
+# Reference: https://docs.github.com/en/discussions/managing-discussions-for-your-community
+
+version: 1
+
+discussion_category:
+  - name: Q&A
+    description: Questions about how to use the SDK or how to implement a specific feature.
+    emoji: 🙋
+  - name: Ideas
+    description: Proposed new features or improvements for the SDK.
+    emoji: 💡
+  - name: General
+    description: General discussion about webullapi4go, the Webull API, or related topics.
+    emoji: 👋
+  - name: Announcements
+    description: Release announcements and project news from maintainers.
+    emoji: 📣
+
+welcome:
+  discuss: |
+    Welcome to **webullapi4go**! 👋
+
+    This is the discussion board for the idiomatic Go SDK for the Webull OpenAPI.
+
+    **Before posting:**
+    - Read the [documentation](https://shing1211.github.io/webullapi4go/) and the [API reference](https://pkg.go.dev/github.com/shing1211/webullapi4go).
+    - Search existing discussions to see if your question or idea has already been covered.
+    - For bugs, please open an [issue](https://github.com/shing1211/webullapi4go/issues/new/choose) using the Bug Report template.
+
+    When asking for help, include:
+    - What you were trying to do
+    - What you expected to happen vs. what actually happened
+    - A minimal, reproducible code example if reporting a bug
+    - Your Go version and SDK version (tag or commit hash)
+
+    Happy coding!
+  footer: |
+    This project is released under the Apache-2.0 license.
+    See [CODE_OF_CONDUCT.md](https://github.com/shing1211/webullapi4go/blob/main/CODE_OF_CONDUCT.md)
+    for community guidelines.
