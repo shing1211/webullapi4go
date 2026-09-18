@@ -20,6 +20,6 @@ Single source of truth. Statuses: `todo`, `doing`, `blocked`, `review`, `done`.
 | T12.1 | Options `SINGLE` orders | backend | done | T10.2 | rules + tests; live option preview OK |
 | T12.2 | Docs + release v0.2.4 | docs/release | done | T12.1 | `b08b83c`; tag v0.2.4 on both remotes |
 | T13.1 | Combo orders (TP/SL, OTO, OCO, OTOCO) | backend | done | T10.1 | composition rules + tests; live combo preview OK |
-| T13.2 | Docs + release v0.2.5 | docs/release | doing | T13.1 | tag pushed |
-| T14.1 | Refactor news SSE through client pipeline | backend | todo | v0.1 | tests + gated live |
-| T14.2 | Release v0.2.6 | release | todo | T14.1 | tag pushed |
+| T13.2 | Docs + release v0.2.5 | docs/release | done | T13.1 | `fb76828`; tag v0.2.5 on both remotes |
+| T14.1 | Refactor news SSE through client pipeline | backend | done | v0.1 | `client.DoStream`; news routed through client; tests pass |
+| T14.2 | Release v0.2.6 | release | doing | T14.1 | tag pushed |

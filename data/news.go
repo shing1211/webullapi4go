@@ -19,15 +19,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 
-	"github.com/shing1211/webullapi4go/internal/auth"
 	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/transport"
 )
 
 // pathNewsSummaries is the news-summary endpoint. Unlike the other market-data
@@ -35,14 +30,6 @@ import (
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/news-summary.md
 const pathNewsSummaries = "/market-data/news/summaries/get"
-
-// Headers set by [Client.openStream] that mirror the core request pipeline.
-// The version and signature headers do not participate in the signature.
-const (
-	streamHeaderSignature = "x-signature"
-	streamHeaderVersion   = "x-version"
-	streamVersionV2       = "v2"
-)
 
 // NewsCategorySymbols groups the security symbols of one category in a news
 // summary request.
@@ -105,7 +92,7 @@ type NewsSummaryStream struct {
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/news-summary.md
 func (c *Client) GetNewsSummary(ctx context.Context, params NewsSummaryParam) (*NewsSummaryStream, error) {
-	resp, err := c.openStream(ctx, http.MethodPost, pathNewsSummaries, nil, params)
+	resp, err := c.core.DoStream(ctx, http.MethodPost, pathNewsSummaries, params)
 	if err != nil {
 		return nil, err
 	}
@@ -155,102 +142,4 @@ func (s *NewsSummaryStream) Close() error {
 		return nil
 	}
 	return s.body.Close()
-}
-
-// openStream builds, signs, and sends a request whose response is consumed as a
-// raw stream rather than decoded as JSON. It mirrors the core request pipeline
-// in package client because [client.Client.Do] always buffers and JSON-decodes
-// the response body, which is incompatible with an SSE stream.
-func (c *Client) openStream(ctx context.Context, method, path string, query url.Values, body any) (*http.Response, error) {
-	cfg := c.core.Config()
-	trans, err := transport.New(cfg.Endpoints.HTTP, c.core.HTTPClient(), cfg.UserAgent)
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeInvalidConfig, "invalid HTTP endpoint", err)
-	}
-
-	bodyBytes, err := marshalStreamBody(body)
-	if err != nil {
-		return nil, err
-	}
-	req, err := trans.NewRequest(ctx, method, path, query, bodyBytes)
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeInvalidConfig, "building request", err)
-	}
-	req.Host = streamSigningHost(req.URL)
-
-	signingHeaders, err := auth.NewSigningHeaders(cfg.AppKey, req.Host, time.Now())
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
-	}
-	for name, values := range signingHeaders {
-		if strings.EqualFold(name, auth.HeaderHost) {
-			continue
-		}
-		for _, v := range values {
-			req.Header.Add(name, v)
-		}
-	}
-	req.Header.Set(streamHeaderVersion, streamVersionV2)
-	if len(bodyBytes) > 0 {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	signature, err := auth.Sign(auth.SignParams{
-		Method:    method,
-		Path:      req.URL.Path,
-		Query:     req.URL.Query(),
-		Headers:   signingHeaders,
-		Body:      bodyBytes,
-		AppSecret: cfg.AppSecret,
-	})
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
-	}
-	req.Header.Set(streamHeaderSignature, signature)
-
-	c.core.EnableTokenInjection()
-	resp, err := c.core.HTTPClient().Do(req)
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeTransport, method+" "+path, err)
-	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		data, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if readErr != nil {
-			return nil, errs.Wrap(errs.CodeTransport, "reading response body", readErr)
-		}
-		return nil, errs.FromHTTPStatus(resp.StatusCode, data)
-	}
-	return resp, nil
-}
-
-// marshalStreamBody encodes body exactly as the core pipeline does: compact
-// JSON without HTML escaping, a []byte sent verbatim, and nil meaning no body.
-func marshalStreamBody(body any) ([]byte, error) {
-	if body == nil {
-		return nil, nil
-	}
-	if raw, ok := body.([]byte); ok {
-		return raw, nil
-	}
-	data, err := auth.MarshalBody(body)
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeInvalidConfig, "encoding request body", err)
-	}
-	return data, nil
-}
-
-// streamSigningHost returns the host to sign for u as "hostname[:port]", omitting
-// the port when it is the default for the scheme. It matches the core pipeline
-// so that a request signed here verifies against the server the same way.
-func streamSigningHost(u *url.URL) string {
-	host := u.Hostname()
-	port := u.Port()
-	if port == "" {
-		return host
-	}
-	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
-		return host
-	}
-	return net.JoinHostPort(host, port)
 }

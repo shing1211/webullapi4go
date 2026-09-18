@@ -72,6 +72,14 @@ preserve precision. Timestamps are Unix milliseconds where documented; bar times
 come back as strings. `GetBars` issues a one-symbol batch request because the
 historical single-symbol endpoint has been retired.
 
+`GetNewsSummary` is the one HTTP Market Data method that replies with a
+Server-Sent Events stream rather than a JSON body. It flows through the same
+core client pipeline as every other request — the access token, the `x-version`
+header (news stays on `v2`), and the configured rate limiter and circuit breaker
+are applied, and the request is signed identically. Streamed requests are never
+retried, because the long-lived connection cannot be safely replayed. Read
+events with `NewsSummaryStream.Next` and close the stream when finished.
+
 ## MQTT streaming
 
 Real-time quotes, snapshots, and ticks are delivered over MQTT. The `stream`

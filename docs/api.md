@@ -23,6 +23,10 @@ Constructor and transport:
 
 - `client.New(opts ...Option) (*Client, error)`
 - `Client.Do(ctx, method, path, body, out) error` — the single signed-request entry point
+- `Client.DoStream(ctx, method, path, body) (*http.Response, error)` — signed
+  streaming request that returns the open response for endpoints such as
+  Server-Sent Events; applies the rate limiter and circuit breaker, is never
+  retried, and the caller closes the response body
 - `Client.Close() error`
 - Accessors: `Config`, `Region`, `Environment`, `Endpoints`, `HTTPClient`
 

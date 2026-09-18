@@ -138,39 +138,10 @@ func isIdempotent(method string) bool {
 // execute builds, signs, sends, and decodes a single request. It is the part of
 // the request path that is replayed on retry.
 func (c *Client) execute(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	req, err := c.transport.NewRequest(ctx, method, reqPath, query, bodyBytes)
+	req, err := c.buildSignedRequest(ctx, method, reqPath, query, bodyBytes)
 	if err != nil {
-		return errs.Wrap(errs.CodeInvalidConfig, "building request", err)
+		return err
 	}
-
-	// The host that is signed must be the host that is actually sent. Setting
-	// req.Host makes the value explicit even when a custom (non-default) port
-	// is in play.
-	host := signingHost(req.URL)
-	req.Host = host
-
-	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, time.Now())
-	if err != nil {
-		return errs.Wrap(errs.CodeAuth, "building signing headers", err)
-	}
-	applySigningHeaders(req.Header, signingHeaders)
-	req.Header.Set(headerVersion, c.apiVersionFor(reqPath))
-	if len(bodyBytes) > 0 {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	signature, err := auth.Sign(auth.SignParams{
-		Method:    method,
-		Path:      reqPath,
-		Query:     query,
-		Headers:   signingHeaders,
-		Body:      bodyBytes,
-		AppSecret: c.cfg.AppSecret,
-	})
-	if err != nil {
-		return errs.Wrap(errs.CodeAuth, "signing request", err)
-	}
-	req.Header.Set(headerSignature, signature)
 
 	resp, err := c.transport.Do(req)
 	if err != nil {
@@ -192,6 +163,49 @@ func (c *Client) execute(ctx context.Context, method, reqPath string, query url.
 		return errs.Wrap(errs.CodeAPI, "decoding response body", err)
 	}
 	return nil
+}
+
+// buildSignedRequest constructs the outgoing request for one API call and
+// attaches its signing headers. It is shared by [Client.Do] and
+// [Client.DoStream] so that a streamed request is built and signed exactly like
+// a buffered one: the x-version header follows the same per-path defaults, the
+// host that is signed is the host that is sent, and the exact bytes that are
+// signed are the bytes that are transmitted.
+func (c *Client) buildSignedRequest(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte) (*http.Request, error) {
+	req, err := c.transport.NewRequest(ctx, method, reqPath, query, bodyBytes)
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeInvalidConfig, "building request", err)
+	}
+
+	// The host that is signed must be the host that is actually sent. Setting
+	// req.Host makes the value explicit even when a custom (non-default) port
+	// is in play.
+	host := signingHost(req.URL)
+	req.Host = host
+
+	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, time.Now())
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
+	}
+	applySigningHeaders(req.Header, signingHeaders)
+	req.Header.Set(headerVersion, c.apiVersionFor(reqPath))
+	if len(bodyBytes) > 0 {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	signature, err := auth.Sign(auth.SignParams{
+		Method:    method,
+		Path:      reqPath,
+		Query:     query,
+		Headers:   signingHeaders,
+		Body:      bodyBytes,
+		AppSecret: c.cfg.AppSecret,
+	})
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
+	}
+	req.Header.Set(headerSignature, signature)
+	return req, nil
 }
 
 // splitPathQuery separates an optional query string from path and parses it.

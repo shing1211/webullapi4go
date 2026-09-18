@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-09-18
+
+Route the news Server-Sent Events stream through the core client pipeline.
+No public API changes.
+
+### Added
+
+- `client.DoStream`, a signed streaming request that returns the raw, open
+  response for endpoints that stream their result. It applies the same signing,
+  per-path API version, token, rate limiter, and circuit breaker as
+  `client.Do`, but never retries and leaves the successful response body for
+  the caller to read and close.
+
+### Changed
+
+- The `data` package news summary (`GetNewsSummary`) now uses
+  `client.DoStream` instead of its own private stream path, so the access token,
+  API version, and resilience policies apply to it exactly as to buffered
+  requests. Its removed private helpers are not part of the public API.
+
 ## [0.2.5] - 2026-09-18
 
 US combo orders for the `trade` package.
@@ -182,7 +202,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.6
 [0.2.5]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.5
 [0.2.4]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.4
 [0.2.3]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.3
