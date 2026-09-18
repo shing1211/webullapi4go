@@ -74,6 +74,9 @@ The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
   `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments`
 - Derivatives and news: `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`,
   `GetNewsSummary`
+- Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` (paths unconfirmed)
+- Crypto data: `GetCryptoBars`, `GetCryptoTick`, `GetCryptoDepth`, `GetCryptoSnapshot` (paths unconfirmed)
+- Screener v2: `GetScreenerV2` (POST, path unconfirmed)
 - Fundamentals: `GetCapitalFlow`, `GetIndustryComparison`,
   `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`,
   `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`,
