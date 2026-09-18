@@ -51,8 +51,13 @@ const (
 )
 
 // OrderType is the execution instruction for an order. The set of types that is
-// valid for an order depends on the market and instrument; that matrix is
-// enforced in later releases.
+// valid for an order depends on the market and instrument. For equity orders
+// the market matrix is enforced by [OrderRequest.Validate]: US accepts LIMIT,
+// MARKET, STOP_LOSS, STOP_LOSS_LIMIT, MARKET_ON_OPEN, MARKET_ON_CLOSE,
+// TOUCH_MKT, TOUCH_LMT, TRAILING_STOP_LOSS, and TRAILING_STOP_LOSS_LIMIT; HK
+// accepts ENHANCED_LIMIT, AT_AUCTION, AT_AUCTION_LIMIT, STOP_LOSS,
+// STOP_LOSS_LIMIT, TOUCH_MKT, TOUCH_LMT, TRAILING_STOP_LOSS, and
+// TRAILING_STOP_LOSS_LIMIT; CN accepts only LIMIT.
 type OrderType string
 
 // Order types accepted by the trading API.
@@ -134,15 +139,17 @@ const (
 )
 
 // TradingSession is the US trading session an order may execute in.
+// support_trading_session is only valid for US orders; setting it on a non-US
+// order is rejected by [OrderRequest.Validate].
 type TradingSession string
 
 // Trading-session values accepted by the trading API.
 const (
-	// TradingSessionY includes extended hours. Deprecated by the API; prefer
-	// TradingSessionAll.
+	// TradingSessionY includes extended hours. Deprecated by the API and
+	// rejected by [OrderRequest.Validate]; use TradingSessionAll.
 	TradingSessionY TradingSession = "Y"
-	// TradingSessionN restricts to regular hours. Deprecated by the API;
-	// prefer TradingSessionCore.
+	// TradingSessionN restricts to regular hours. Deprecated by the API and
+	// rejected by [OrderRequest.Validate]; use TradingSessionCore.
 	TradingSessionN TradingSession = "N"
 	// TradingSessionNight restricts to night trading.
 	TradingSessionNight TradingSession = "NIGHT"
@@ -220,7 +227,9 @@ type OrderLeg struct {
 }
 
 // PartyID identifies a party to a Hong Kong order for regulatory reporting.
-// It is relevant only for Hong Kong stock orders.
+// At least one is required for a Hong Kong equity order, and each entry must
+// carry PartyIDSource "D" and PartyRole "3". A no_party_ids list on a non-HK
+// order is rejected by [OrderRequest.Validate].
 type PartyID struct {
 	// PartyID is the broker client identifier, for example "ABC123.2568".
 	PartyID string `json:"party_id"`
@@ -382,6 +391,9 @@ func (r OrderRequest) validate(prefix string) error {
 	}
 	if r.TrailingType != "" && !r.TrailingType.valid() {
 		return fail("trailing_type %q must be AMOUNT or PERCENTAGE", r.TrailingType)
+	}
+	if err := r.validateMarketRules(fail); err != nil {
+		return err
 	}
 
 	switch r.EntrustType {
@@ -638,7 +650,8 @@ func (t OrderType) valid() bool {
 // needsLimitPrice reports whether t requires limit_price.
 func (t OrderType) needsLimitPrice() bool {
 	switch t {
-	case OrderTypeLimit, OrderTypeStopLossLimit, OrderTypeTouchLmt:
+	case OrderTypeLimit, OrderTypeStopLossLimit, OrderTypeTouchLmt,
+		OrderTypeEnhancedLimit, OrderTypeAtAuctionLimit:
 		return true
 	default:
 		return false

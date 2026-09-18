@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-09-18
+
+Market-specific order validation and Hong Kong BCAN support for the `trade`
+package.
+
+### Added
+
+- Market-specific equity order-type validation: US accepts limit, market, stop,
+  stop-limit, market-on-open, market-on-close, touch, and trailing stop orders;
+  HK accepts enhanced limit, at-auction, at-auction limit, stop, stop-limit,
+  touch, and trailing stop orders; CN accepts only `LIMIT`.
+- Hong Kong BCAN: `HK` equity orders now require at least one `no_party_ids`
+  entry with a non-blank `party_id`, `party_id_source` `"D"`, and `party_role`
+  `"3"`. A `no_party_ids` list on a non-HK-equity order is rejected.
+- US `support_trading_session` validation (`CORE`, `ALL`, `NIGHT`, `ALL_DAY`).
+  The deprecated `Y` and `N` aliases and use on a non-US order are rejected.
+- At-auction price rules: `AT_AUCTION` rejects `limit_price` and
+  `AT_AUCTION_LIMIT` requires it.
+- A-share (`CN`) documentation noting that only `LIMIT` is accepted and that
+  A-share trading is disabled by default until enabled by Webull support.
+- Table-driven tests covering the market matrix, Hong Kong BCAN, US trading
+  sessions, and the at-auction price rules.
+
+### Changed
+
+- The trading documentation adds a "Market rules" section, and the `OrderType`,
+  `TradingSession`, and `PartyID` GoDoc describe the enforced rules.
+
 ## [0.2.2] - 2026-09-18
 
 Stock-order lifecycle and queries for the `trade` package.
@@ -93,7 +121,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.3
 [0.2.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.2
 [0.2.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.1
 [0.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.1.0

@@ -193,9 +193,9 @@ required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
 
 `OrderRequest.OrderType` is the execution instruction. The SDK accepts the stock
 order types below; the required price fields are the ones `Validate` checks
-before a request is sent. The authoritative per-market validity matrix (which
-type is allowed for a given market and instrument) is enforced by the API;
-market-specific rules are documented in a later v0.2 patch.
+before a request is sent. The per-market validity matrix (which type is allowed
+for a given market and instrument) is also enforced locally; see
+[Market rules](#market-rules).
 
 | Order type | Extra fields the SDK requires | Notes |
 |------------|-------------------------------|-------|
@@ -207,9 +207,9 @@ market-specific rules are documented in a later v0.2 patch.
 | `TOUCH_LMT` | `stop_price`, `limit_price` | Becomes a limit order when the trigger price is touched |
 | `TRAILING_STOP_LOSS` | `trailing_type`, `trailing_stop_step` | Trails the market by a fixed amount or percentage |
 | `TRAILING_STOP_LOSS_LIMIT` | `trailing_type`, `trailing_stop_step` | Trailing stop that submits a limit order |
-| `ENHANCED_LIMIT` | none | Hong Kong enhanced limit order |
-| `AT_AUCTION` | none | Hong Kong at-auction order |
-| `AT_AUCTION_LIMIT` | none | Hong Kong at-auction limit order |
+| `ENHANCED_LIMIT` | `limit_price` | Hong Kong enhanced limit order |
+| `AT_AUCTION` | none, and `limit_price` must be empty | Hong Kong at-auction order |
+| `AT_AUCTION_LIMIT` | `limit_price` | Hong Kong at-auction limit order |
 | `MARKET_ON_OPEN` | none | Executes at the opening price |
 | `MARKET_ON_CLOSE` | none | Executes at the closing price |
 
@@ -217,6 +217,78 @@ market-specific rules are documented in a later v0.2 patch.
 `PRICE` (last trade), `PRICE_BID` (best bid), or `PRICE_ASK` (best ask).
 `TrailingType` is `AMOUNT` for a fixed price spread or `PERCENTAGE` for a
 percentage where `"0.01"` is 1%.
+
+## Market rules
+
+`OrderRequest.Validate` enforces the market-specific rules below before any
+network call. A violation is an `invalid_config` error that names the offending
+field.
+
+### Equity order types by market
+
+The accepted equity order types depend on `OrderRequest.Market`:
+
+| Market | Accepted order types |
+|--------|----------------------|
+| `US` | `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_LIMIT`, `MARKET_ON_OPEN`, `MARKET_ON_CLOSE`, `TOUCH_MKT`, `TOUCH_LMT`, `TRAILING_STOP_LOSS`, `TRAILING_STOP_LOSS_LIMIT` |
+| `HK` | `ENHANCED_LIMIT`, `AT_AUCTION`, `AT_AUCTION_LIMIT`, `STOP_LOSS`, `STOP_LOSS_LIMIT`, `TOUCH_MKT`, `TOUCH_LMT`, `TRAILING_STOP_LOSS`, `TRAILING_STOP_LOSS_LIMIT` |
+| `CN` | `LIMIT` |
+
+An order type outside its market's row is rejected. The matrix applies to equity
+orders; option and futures order types are validated by their own rules.
+
+### Hong Kong BCAN party IDs
+
+Every Hong Kong equity order must carry at least one `no_party_ids` entry. Each
+entry is a `trade.PartyID`, and all three fields are required:
+
+| Field | Required value |
+|-------|----------------|
+| `party_id` | The broker client identifier (BCAN), for example `ABC123.2568`; non-blank |
+| `party_id_source` | `"D"` |
+| `party_role` | `"3"` |
+
+`no_party_ids` is rejected on a non-HK-equity order: a US or CN order, or a
+non-equity HK order, must leave it empty.
+
+```go
+NoPartyIDs: []trade.PartyID{{
+	PartyID:       "ABC123.2568",
+	PartyIDSource: "D",
+	PartyRole:     "3",
+}},
+```
+
+The BCAN is per-account and must never be committed. Read it from the
+environment, as the sandbox test does with `WEBULL_TRADE_PARTY_ID`.
+
+### US trading sessions
+
+`support_trading_session` is optional and valid only on US orders; setting it on
+a non-US order is rejected. The accepted values are:
+
+| Value | Meaning |
+|-------|---------|
+| `CORE` | Regular trading hours |
+| `ALL` | Extended hours |
+| `NIGHT` | Night trading |
+| `ALL_DAY` | Overnight, 8:00 p.m. ET to 8:00 p.m. ET the next day |
+
+The deprecated aliases `Y` (use `ALL`) and `N` (use `CORE`) are rejected.
+
+### At-auction price rules
+
+Hong Kong at-auction orders differ in whether they carry a price:
+
+- `AT_AUCTION` must **not** set `limit_price`; a limit price is rejected.
+- `AT_AUCTION_LIMIT` **must** set `limit_price`.
+
+### A-share orders are disabled by default
+
+`CN` (A-share Stock Connect) accepts only `LIMIT`, and A-share trading is
+disabled on the account by default: it must be enabled by Webull support before
+any A-share order is accepted. The SDK validates the request shape but cannot
+enable the entitlement.
 
 ## Time in force
 
@@ -258,6 +330,10 @@ Every order method validates its request and returns a typed error with code
   `market`, `symbol`, `order_type`, `side`, `entrust_type`, and `time_in_force`
   are required. `instrument_type` is `EQUITY`, `OPTION`, or `FUTURES` and
   `market` is `US`, `HK`, or `CN`.
+- **Market rules** — the equity order-type matrix, the Hong Kong BCAN
+  `no_party_ids` requirement, the US-only `support_trading_session`, and the
+  at-auction price rules are enforced per market; see
+  [Market rules](#market-rules).
 - **`client_order_id`** — 1 to 32 characters from `[A-Za-z0-9_-]`, and unique
   per account. Generate a fresh identifier for each new order.
 - **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a
