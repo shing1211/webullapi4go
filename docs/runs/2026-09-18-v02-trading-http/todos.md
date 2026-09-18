@@ -22,4 +22,4 @@ Single source of truth. Statuses: `todo`, `doing`, `blocked`, `review`, `done`.
 | T13.1 | Combo orders (TP/SL, OTO, OCO, OTOCO) | backend | done | T10.1 | composition rules + tests; live combo preview OK |
 | T13.2 | Docs + release v0.2.5 | docs/release | done | T13.1 | `fb76828`; tag v0.2.5 on both remotes |
 | T14.1 | Refactor news SSE through client pipeline | backend | done | v0.1 | `client.DoStream`; news routed through client; tests pass |
-| T14.2 | Release v0.2.6 | release | doing | T14.1 | tag pushed |
+| T14.2 | Release v0.2.6 | release | done | T14.1 | `df6040d`; tag v0.2.6 on both remotes |
