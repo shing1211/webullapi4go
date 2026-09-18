@@ -7,8 +7,8 @@ Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2
 release adds the Trading HTTP API: v0.2.1 introduced account listing, balances,
 and positions, v0.2.2 adds the stock-order lifecycle (preview, place, replace,
 cancel) and order queries, v0.2.3 adds market-specific order rules for US, HK,
-and CN, including Hong Kong BCAN party IDs, and v0.2.4 adds single-leg options
-orders.
+and CN, including Hong Kong BCAN party IDs, v0.2.4 adds single-leg options
+orders, and v0.2.5 adds US combo orders.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
@@ -22,7 +22,7 @@ orders.
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
 | Market Data (HTTP) | Supported | Instruments, company profile, analyst data, futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Partial | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4). Combo orders land in a later v0.2 patch |
+| Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5) |
 | Trading events (gRPC) | Not yet | Planned for v0.3 |
 | Display Solution | Not yet | Planned for v0.4 |
 | Broker API | Not yet | Planned for v0.5 |
@@ -255,7 +255,7 @@ MQTT on port 1883).
 | `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
 | `data` | Market Data HTTP endpoints (typed requests and responses) |
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
-| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock and single-leg options orders, and order queries) |
+| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg options, and US combo orders, and order queries) |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
 | `pkg/types` | Shared public domain types (markets, instrument types) |
 | `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
@@ -265,7 +265,7 @@ MQTT on port 1883).
 | Version | Scope | Status |
 |---------|-------|--------|
 | v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), then combo orders | In progress |
+| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | In progress |
 | v0.3 | Trading events over gRPC | Planned |
 | v0.4 | Display Solution | Planned |
 | v0.5 | Broker API | Planned |

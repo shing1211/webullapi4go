@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-09-18
+
+US combo orders for the `trade` package.
+
+### Added
+
+- US combo-order groups: `PlaceOrderRequest` now validates the whole order set as
+  a combo group when any order uses a non-NORMAL `combo_type`. Supported groups
+  are take-profit/stop-loss (`MASTER` with optional `STOP_PROFIT` and
+  `STOP_LOSS`), `OTO`, `OCO`, and `OTOCO`. Combo orders are US equity only.
+- Composition and leg-count rules: one request must contain a single group kind,
+  every order must be a US equity order, and `client_combo_order_id` is required.
+  OTO and OTOCO require exactly one `MASTER` plus one to six legs, OCO requires
+  two to six legs with no `MASTER`, and take-profit/stop-loss allows at most one
+  `MASTER`, one `STOP_PROFIT`, and one `STOP_LOSS`.
+- Per-role order-type rules: a take-profit/stop-loss `MASTER` is `MARKET` or
+  `LIMIT`; an OTO/OTOCO `MASTER` and an OTO leg add `STOP_LOSS` and
+  `STOP_LOSS_LIMIT`; take-profit/stop-loss, OCO, and OTOCO legs are `LIMIT`,
+  `STOP_LOSS`, or `STOP_LOSS_LIMIT`.
+- Sell-to-close take-profit/stop-loss groups: a group with no `MASTER` must use
+  side `SELL` for every sub-order.
+- Table-driven tests for the combo composition, leg-count, order-type, and
+  sell-to-close rules, plus a combo preview test.
+- A "Combo types" section in the trading documentation covering the group kinds,
+  the composition and leg-count rules, the sell-to-close form, and a
+  MASTER/STOP_PROFIT/STOP_LOSS example.
+
+### Changed
+
+- `PlaceOrderRequest.Validate` now runs the combo-group validation after the
+  per-order checks.
+
 ## [0.2.4] - 2026-09-18
 
 Single-leg options orders for the `trade` package.
@@ -150,7 +182,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.5
 [0.2.4]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.4
 [0.2.3]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.3
 [0.2.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.2

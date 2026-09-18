@@ -439,9 +439,10 @@ func (r OrderRequest) validate(prefix string) error {
 }
 
 // Validate reports whether r is well formed: the account is set, at least one
-// order is present, every order passes [OrderRequest.Validate], and no two
-// orders reuse a client order identifier. It returns a typed [errs.Error] with
-// [errs.CodeInvalidConfig] on the first problem found.
+// order is present, every order passes [OrderRequest.Validate], no two orders
+// reuse a client order identifier, and, when any order uses a non-NORMAL
+// combo_type, the set forms a valid US-equity combo group. It returns a typed
+// [errs.Error] with [errs.CodeInvalidConfig] on the first problem found.
 func (r PlaceOrderRequest) Validate() error {
 	if strings.TrimSpace(r.AccountID) == "" {
 		return errs.New(errs.CodeInvalidConfig, "account_id is required")
@@ -460,6 +461,9 @@ func (r PlaceOrderRequest) Validate() error {
 				fmt.Sprintf("new_orders[%d]: client_order_id %q is duplicated within the request", i, order.ClientOrderID))
 		}
 		seen[order.ClientOrderID] = struct{}{}
+	}
+	if err := r.validateComboRules(); err != nil {
+		return err
 	}
 	return nil
 }

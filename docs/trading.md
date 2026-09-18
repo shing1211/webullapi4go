@@ -8,8 +8,8 @@ rest of the SDK.
 The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
 release adds the stock-order lifecycle — preview, place, replace, cancel — and
 order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
-release adds single-leg options orders; combo orders arrive in a later v0.2
-patch.
+release adds single-leg options orders, and the v0.2.5 release adds US combo
+orders.
 
 ## Authentication
 
@@ -389,9 +389,7 @@ log.Printf("estimated cost=%s", preview.EstimatedCost)
 ## Combo types
 
 `OrderRequest.ComboType` identifies the role an order plays within a combo
-order. A plain stock order is `NORMAL`. The other values exist for the combo
-orders that arrive in a later v0.2 patch; they are accepted by validation but
-the combo leg-count rules are not enforced yet.
+order. A plain stock order is `NORMAL`.
 
 | Value | Role |
 |-------|------|
@@ -403,9 +401,94 @@ the combo leg-count rules are not enforced yet.
 | `OCO` | One of a pair where filling either cancels the other |
 | `OTOCO` | One of the order set triggered by an OTOCO master |
 
-`OTO`, `OCO`, and `OTOCO` are equity-only. `PlaceOrderRequest.ClientComboOrderID`
-optionally groups the orders of a combo; the server generates one when a combo
-order omits it.
+### Combo orders (US only)
+
+Combo orders are supported for US equity orders only. When any order in a
+`PlaceOrderRequest` uses a non-NORMAL `combo_type`, the whole request must form
+one valid combo group, and `client_combo_order_id` must be set to group it. A
+request whose orders are all `NORMAL` is unaffected.
+
+`PlaceOrderRequest.Validate` enforces the following composition rules before any
+network call, and returns an `invalid_config` error naming the first problem:
+
+- Every order in a combo request uses a non-NORMAL `combo_type`; a `NORMAL`
+  order cannot be mixed with combo orders.
+- Every order is a US equity order (`instrument_type` `EQUITY`, `market` `US`).
+- `client_combo_order_id` is non-empty.
+- The orders form exactly one group kind; roles from different groups cannot be
+  mixed.
+
+| Group | Composition | Leg order types |
+|-------|-------------|-----------------|
+| Take-profit/stop-loss (buy-to-open) | Exactly one `MASTER`, with an optional `STOP_PROFIT` and an optional `STOP_LOSS` | `MASTER`: `LIMIT`, `MARKET`; `STOP_PROFIT`: `LIMIT`; `STOP_LOSS`: `STOP_LOSS` |
+| Take-profit/stop-loss (sell-to-close) | One `STOP_PROFIT` and/or one `STOP_LOSS`, side `SELL`, no `MASTER` | `STOP_PROFIT`: `LIMIT`; `STOP_LOSS`: `STOP_LOSS` |
+| `OTO` | Exactly one `MASTER` plus 1–6 `OTO` orders | `MASTER` and `OTO`: `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_LIMIT` |
+| `OCO` | 2–6 `OCO` orders, no `MASTER` | `OCO`: `LIMIT`, `STOP_LOSS`, `STOP_LOSS_LIMIT` |
+| `OTOCO` | Exactly one `MASTER` plus 1–6 `OTOCO` orders | `MASTER`: `LIMIT`, `MARKET`, `STOP_LOSS`, `STOP_LOSS_LIMIT`; `OTOCO`: `LIMIT`, `STOP_LOSS`, `STOP_LOSS_LIMIT` |
+
+A take-profit/stop-loss group with no `MASTER` is the sell-to-close form, used
+to attach a profit target and a stop to an existing long position: every
+sub-order uses side `SELL`, and the two sub-orders are alternatives that cancel
+each other.
+
+The example previews a buy-to-open take-profit/stop-loss group on `AAPL`: a
+limit `MASTER` far below the market so it will not fill, a `STOP_PROFIT` above
+it, and a `STOP_LOSS` below it. Placing it follows the same pattern as a stock
+order and mutates the account.
+
+```go
+combo := trade.PlaceOrderRequest{
+	AccountID:          accountID,
+	ClientComboOrderID: "demo-aapl-tpsl",
+	NewOrders: []trade.OrderRequest{
+		{
+			ClientOrderID:  "demo-aapl-tpsl-master",
+			ComboType:      trade.ComboTypeMaster,
+			InstrumentType: trade.InstrumentTypeEquity,
+			Market:         trade.MarketUS,
+			Symbol:         "AAPL",
+			OrderType:      trade.OrderTypeLimit,
+			Side:           trade.OrderSideBuy,
+			Quantity:       "1",
+			EntrustType:    trade.EntrustTypeQty,
+			TimeInForce:    trade.TimeInForceDay,
+			LimitPrice:     "1.00", // far below market, so it will not fill
+		},
+		{
+			ClientOrderID:  "demo-aapl-tpsl-profit",
+			ComboType:      trade.ComboTypeStopProfit,
+			InstrumentType: trade.InstrumentTypeEquity,
+			Market:         trade.MarketUS,
+			Symbol:         "AAPL",
+			OrderType:      trade.OrderTypeLimit,
+			Side:           trade.OrderSideSell,
+			Quantity:       "1",
+			EntrustType:    trade.EntrustTypeQty,
+			TimeInForce:    trade.TimeInForceDay,
+			LimitPrice:     "999.00",
+		},
+		{
+			ClientOrderID:  "demo-aapl-tpsl-loss",
+			ComboType:      trade.ComboTypeStopLoss,
+			InstrumentType: trade.InstrumentTypeEquity,
+			Market:         trade.MarketUS,
+			Symbol:         "AAPL",
+			OrderType:      trade.OrderTypeStopLoss,
+			Side:           trade.OrderSideSell,
+			Quantity:       "1",
+			EntrustType:    trade.EntrustTypeQty,
+			TimeInForce:    trade.TimeInForceDay,
+			StopPrice:      "1.00",
+		},
+	},
+}
+
+preview, err := trading.PreviewOrder(ctx, combo)
+if err != nil {
+	return err
+}
+log.Printf("estimated cost=%s", preview.EstimatedCost)
+```
 
 ## Validation rules
 
@@ -426,6 +509,9 @@ Every order method validates its request and returns a typed error with code
   exactly one leg, an allowed order type, and a `BUY`/`SELL` side (sell-side
   only `DAY`); `option_strategy` and `legs` are rejected on a non-option order.
   See [Options orders](#options-orders).
+- **Combo rules** — when any order uses a non-NORMAL `combo_type`, the request
+  must be one valid US-equity combo group with a `client_combo_order_id`; see
+  [Combo orders (US only)](#combo-orders-us-only).
 - **`client_order_id`** — 1 to 32 characters from `[A-Za-z0-9_-]`, and unique
   per account. Generate a fresh identifier for each new order.
 - **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a
