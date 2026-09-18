@@ -109,4 +109,5 @@ limitations.
 
 - [Getting Started](getting-started.md) — install and credentials.
 - [Authentication](authentication.md) — signing and tokens.
+- [Fundamentals](fundamentals.md) — capital flows, industry comparisons, earnings/dividend calendars, SEC filings, and financial statements.
 - [Streaming](streaming.md) — real-time pushes and reconnection.

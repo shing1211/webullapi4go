@@ -650,4 +650,5 @@ place/cancel test additionally requires `WEBULL_TRADE_MUTATE=1`. See
 - [Getting Started](getting-started.md) — install and credentials.
 - [Authentication](authentication.md) — signing and tokens.
 - [Sandbox](sandbox.md) — environments, test credentials, limitations.
+- [Trading Events](events.md) — real-time order, position, and option status over gRPC; the counterpart to the trading HTTP API.
 - [`trade` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/trade) — full API.

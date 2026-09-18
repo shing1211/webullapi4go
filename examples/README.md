@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.3 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.4 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -153,6 +153,17 @@ account must belong to the App Key. The stream reconnects and re-subscribes
 automatically after a transient drop. In the sandbox, placement events may not
 be pushed for a resting order; a cancellation produces the observed
 `CANCEL_SUCCESS` event.
+
+## data-fundamentals
+
+Fetches all available fundamental data for `AAPL` on the `US` market:
+company profile, analyst target and rating, capital flow, industry comparison,
+earnings and dividend calendars, SEC filings, income statement, balance sheet,
+cash flow, financial indicators, financial alert, and forecast EPS.
+
+```sh
+go run ./examples/data-fundamentals
+```
 
 ## Sandbox limitations
 

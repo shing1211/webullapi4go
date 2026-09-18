@@ -122,5 +122,8 @@ and error handling are shared across every request. For streaming, see
 
 - [Authentication](authentication.md) — how requests are signed and tokens are managed.
 - [Market Data](market-data.md) — HTTP queries and the available endpoint groups.
+- [Fundamentals](fundamentals.md) — capital flows, industry comparisons, earnings/dividend calendars, SEC filings, and financial statements.
 - [Streaming](streaming.md) — real-time MQTT and MQTT-over-WebSocket pushes.
+- [Trading](trading.md) — accounts, balances, positions, and the order lifecycle.
+- [Trading Events](events.md) — order, position, and option events over gRPC.
 - [Errors](errors.md) — typed errors and how to branch on them.

@@ -68,6 +68,10 @@ The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
   `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments`
 - Derivatives and news: `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`,
   `GetNewsSummary`
+- Fundamentals: `GetCapitalFlow`, `GetIndustryComparison`,
+  `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`,
+  `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`,
+  `GetFinancialIndicators`, `GetFinancialAlert`, `GetForecastEPS`
 
 The package also exposes its query and response types (for example
 `SnapshotQuery`, `BarQuery`, `Watchlist`) and the `StockCategory`,

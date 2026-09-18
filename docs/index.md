@@ -8,7 +8,9 @@ The v0.1 surface covers authentication, a core signed REST client, the Market
 Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2 releases
 add the Trading HTTP API for accounts, balances, positions, and the stock,
 options, and combo order lifecycle. The v0.3.0 release adds Trading events over
-gRPC. The module is licensed under Apache-2.0.
+gRPC. The v0.4.0 release adds Market Data fundamentals: capital flows, industry
+comparisons, earnings and dividend calendars, SEC filings, and financial
+statements. The module is licensed under Apache-2.0.
 
 ## Feature matrix
 
@@ -16,10 +18,10 @@ gRPC. The module is licensed under Apache-2.0.
 |------|--------|
 | Authentication | Supported |
 | Market Data (HTTP) | Supported |
+| Market Data Fundamentals | Supported (v0.4.0: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements) |
 | Market Data (MQTT streaming) | Supported |
 | Trading (HTTP) | Supported |
 | Trading events (gRPC) | Supported (v0.3.0: order, position, and option streams) |
-| Display Solution | Not yet (v0.4) |
 | Broker API | Not yet (v0.5) |
 
 ## Install
@@ -83,6 +85,7 @@ export WEBULL_ENVIRONMENT="sandbox"
 - [Getting Started](getting-started.md) — install, credentials, sandbox, first call.
 - [Authentication](authentication.md) — request signing and token lifecycle.
 - [Market Data](market-data.md) — HTTP queries.
+- [Fundamentals](fundamentals.md) — capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements.
 - [Streaming](streaming.md) — real-time MQTT pushes.
 - [Trading](trading.md) — accounts, balances, positions, and orders.
 - [Trading Events](events.md) — order, position, and option events over gRPC.

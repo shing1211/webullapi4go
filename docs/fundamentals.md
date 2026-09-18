@@ -188,5 +188,6 @@ for _, f := range forecast {
 ## Related
 
 - [Market Data](market-data.md) — snapshot, bars, quotes, streaming.
+- [Trading Events](events.md) — order, position, and option events over gRPC; earnings-driven orders pair well with the earnings calendar.
 - [Getting Started](getting-started.md) — install and credentials.
 - [Authentication](authentication.md) — signing and tokens.
