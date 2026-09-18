@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-19
+
+Display Solution integration, Corporate Actions, Fund Data, Crypto Data, and Screener v2 stubs.
+
+### Added
+
+- `display` package: Display Solution authentication service — HMAC-SHA1 signed
+  client-token fetch, `Authorization: Bearer` header, lazy initialization, HK
+  sandbox/prod hosts.
+- `data.GetCorporateActionsList`, `data.GetCorporateActionsMarket`: Corporate
+  actions by symbol or by market (Display Solution). Paths confirmed via live probe.
+- `data.GetStockProfilesList`: Batch instrument profiles (POST, Display Solution).
+- `data.GetLogosBatch`: Batch company logos (POST, Display Solution).
+- `data.GetFundNav`, `data.GetFundInfo`, `data.GetFundDividends`, `data.GetFundList`:
+  Fund NAV, info, dividends, and fund list. **Paths are best-effort; require US
+  sandbox credentials to verify.**
+- `data.GetCryptoBars`, `data.GetCryptoTick`, `data.GetCryptoDepth`,
+  `data.GetCryptoSnapshot`: Crypto OHLCV, tick, depth, and snapshot. Paths corrected
+  to `/market-data/` with `category=CRYPTO` query param. **HK sandbox returns 417
+  (CRYPTO category unsupported); US credentials required to verify response schemas.**
+- `data.GetScreenerV2`: Screener v2 POST query. **Path is best-effort; requires
+  US sandbox credentials to verify.**
+- `brokerfd` package: Broker FD HTTP stub with `GetAccountsSummary` and `GetPositions`.
+  **All paths are best-effort; returns 404 in HK sandbox.**
+- `examples/probe`: Live probe binary for systematic endpoint testing.
+
+### Changed
+
+- `data.GetCorporateActions`: signature changed from `(ctx, query) (data, error)`
+  to `(ctx, query) (data, paginationKey, error)` to match the paginated API response.
+
+### Fixed
+
+- `data/crypto_data.go`: paths changed from `/market-data/crypto/{symbol}/bars` to
+  `/market-data/bars` with `category=CRYPTO&symbol=` query params.
+
 ## [0.4.0] - 2026-09-18
 
 Market data fundamentals: capital flows, industry comparisons, earnings and dividend
