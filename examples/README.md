@@ -1,0 +1,109 @@
+# Examples
+
+Runnable examples for the v0.1 API surface of `webullapi4go`. Each example is a
+small `main` program in its own directory, so they all compile together:
+
+```sh
+go build ./...
+go vet ./...
+```
+
+## Credentials
+
+Every example constructs its client with
+[`client.WithEnv()`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client#WithEnv),
+which reads:
+
+| Variable | Purpose |
+|----------|---------|
+| `WEBULL_APP_KEY` | Webull OpenAPI app key (required) |
+| `WEBULL_APP_SECRET` | Webull OpenAPI app secret (required) |
+| `WEBULL_REGION` | Region, for example `hk` or `us` (optional, defaults to `hk`) |
+| `WEBULL_ENVIRONMENT` | `sandbox` / `uat` or `prod` / `production` (optional, defaults to production) |
+
+Credentials are never hard-coded and must never be committed. Webull publishes
+shared sandbox test accounts in its
+[getting-started guide](https://developer.webull.com/apis/docs/getting-started);
+supply the values at run time through your shell or a secret manager. Only the
+sandbox host `api.sandbox.webull.hk` belongs in committed material.
+
+Most development happens against the sandbox:
+
+```sh
+# macOS / Linux
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+export WEBULL_ENVIRONMENT="sandbox"
+```
+
+```powershell
+# Windows PowerShell
+$env:WEBULL_APP_KEY = "your-sandbox-app-key"
+$env:WEBULL_APP_SECRET = "your-sandbox-app-secret"
+$env:WEBULL_ENVIRONMENT = "sandbox"
+```
+
+See [Sandbox](../docs/sandbox.md) in the documentation site for the full
+environment table and known limitations.
+
+## auth
+
+Creates or reuses an access token and prints its status and expiry.
+
+```sh
+go run ./examples/auth
+```
+
+Use this first to confirm credentials work. In the sandbox the token is `NORMAL`
+immediately; in production the call waits for the Webull App 2FA verification
+window (up to five minutes by default).
+
+## marketdata
+
+Fetches a snapshot and recent daily bars for `AAPL` on the `US` market, then
+prints the fields.
+
+```sh
+go run ./examples/marketdata
+```
+
+The sandbox only serves a limited symbol set (currently `AAPL`). Bars are
+requested through the batch endpoint because the historical single-symbol
+endpoint has been retired.
+
+## streaming
+
+Connects to the streaming broker over MQTT-over-WebSocket, subscribes to
+`AAPL` `QUOTE`, `SNAPSHOT`, and `TICK` pushes, prints each message, and shuts
+down on Ctrl+C (or `SIGTERM`).
+
+```sh
+go run ./examples/streaming
+```
+
+WebSocket is used because plain MQTT on port `1883` is blocked on some networks;
+the example targets `wss://data-api.sandbox.webull.hk:8883/mqtt` in the sandbox.
+The stream also needs an access token, which the example obtains with
+`EnsureToken`.
+
+## watchlist
+
+Lists the authenticated user's watchlists. This example is read-only.
+
+```sh
+go run ./examples/watchlist
+```
+
+## Sandbox limitations
+
+While trying these examples against the sandbox, expect a few restrictions:
+
+- Market data is limited to `AAPL`.
+- Footprint returns `403 Insufficient permission` without a paid entitlement.
+- Option contracts for `AAPL` may not exist (`417 Invalid Symbol`).
+- Order-book depth can be empty outside regular trading hours.
+- Plain MQTT on `:1883` may be blocked; use MQTT over WebSocket on `:8883/mqtt`.
+- The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
+  5 concurrent connections per App Key.
+
+See [Troubleshooting](../docs/troubleshooting.md) for symptoms and fixes.

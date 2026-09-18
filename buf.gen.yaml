@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  # Codegen requires protoc-gen-go on PATH:
+  #   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.1
+  - local: protoc-gen-go
+    out: gen
+    opt:
+      - paths=source_relative

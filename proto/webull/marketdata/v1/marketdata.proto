@@ -1,0 +1,146 @@
+// Copyright 2026 shing1211
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Webull MQTT market-data payload schemas.
+//
+// These schemas are derived from Webull's public streaming documentation. They
+// describe the protobuf payloads carried by the market-data MQTT topics:
+//
+//   - quote    -> Quote
+//   - snapshot -> Snapshot
+//   - tick     -> Tick
+//
+// The `notice` topic is JSON, not protobuf, and therefore has no schema here.
+//
+// Numeric values are transmitted as strings to preserve the exact decimal
+// representation published by Webull; callers should parse them with a decimal
+// library (or strconv) rather than assuming they fit an integer type.
+syntax = "proto3";
+
+package webull.marketdata.v1;
+
+option go_package = "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1;marketdatav1";
+
+// Basic is the identity/timestamp envelope shared by every market-data payload.
+message Basic {
+  // Symbol as published by Webull, e.g. "AAPL".
+  string symbol = 1;
+  // Webull internal instrument identifier.
+  string instrument_id = 2;
+  // Source event timestamp, as published by Webull.
+  string timestamp = 3;
+}
+
+// Quote is the payload for the `quote` topic: the current best bid/ask ladder.
+message Quote {
+  Basic basic = 1;
+  // Ask side of the book, ordered from best (closest to the spread) outward.
+  repeated AskBid asks = 2;
+  // Bid side of the book, ordered from best (closest to the spread) outward.
+  repeated AskBid bids = 3;
+}
+
+// AskBid is a single price level with its aggregated size and, when available,
+// the order- and broker-level breakdown that makes up that level.
+message AskBid {
+  // Price of this level, as a decimal string.
+  string price = 1;
+  // Aggregated size resting at this level, as a decimal string.
+  string size = 2;
+  // Individual orders contributing to this level.
+  repeated Order order = 3;
+  // Broker attribution contributing to this level.
+  repeated Broker broker = 4;
+}
+
+// Order is one market-participant order at a price level.
+message Order {
+  // Market participant identifier (exchange/broker MPID).
+  string mpid = 1;
+  // Order size, as a decimal string.
+  string size = 2;
+}
+
+// Broker is broker attribution for part of a price level.
+message Broker {
+  // Broker bid identifier/flag.
+  string bid = 1;
+  // Broker display name.
+  string name = 2;
+}
+
+// Snapshot is the payload for the `snapshot` topic: a full quote summary for an
+// instrument, including the regular session and the extended/overnight sessions.
+message Snapshot {
+  Basic basic = 1;
+  // Regular-session last trade time.
+  string trade_time = 2;
+  // Regular-session last trade price.
+  string price = 3;
+  // Regular-session open.
+  string open = 4;
+  // Regular-session high.
+  string high = 5;
+  // Regular-session low.
+  string low = 6;
+  // Previous close.
+  string pre_close = 7;
+  // Regular-session cumulative volume.
+  string volume = 8;
+  // Regular-session net change.
+  string change = 9;
+  // Regular-session net change ratio.
+  string change_ratio = 10;
+  // Extended-hours last trade time.
+  string ext_trade_time = 11;
+  // Extended-hours last trade price.
+  string ext_price = 12;
+  // Extended-hours high.
+  string ext_high = 13;
+  // Extended-hours low.
+  string ext_low = 14;
+  // Extended-hours cumulative volume.
+  string ext_volume = 15;
+  // Extended-hours net change.
+  string ext_change = 16;
+  // Extended-hours net change ratio.
+  string ext_change_ratio = 17;
+  // Overnight-session last trade time.
+  string ovn_trade_time = 18;
+  // Overnight-session last trade price.
+  string ovn_price = 19;
+  // Overnight-session high.
+  string ovn_high = 20;
+  // Overnight-session low.
+  string ovn_low = 21;
+  // Overnight-session cumulative volume.
+  string ovn_volume = 22;
+  // Overnight-session net change.
+  string ovn_change = 23;
+  // Overnight-session net change ratio.
+  string ovn_change_ratio = 24;
+}
+
+// Tick is the payload for the `tick` topic: a single trade print.
+message Tick {
+  Basic basic = 1;
+  // Trade time.
+  string time = 2;
+  // Trade price.
+  string price = 3;
+  // Trade size.
+  string volume = 4;
+  // Aggressor side, e.g. "B"/"S" (buy/sell) as published by Webull.
+  string side = 5;
+}

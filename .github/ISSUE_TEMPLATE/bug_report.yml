@@ -1,0 +1,109 @@
+name: Bug report
+description: Report a problem with the SDK
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Before you continue:
+
+        - Do NOT include App Keys, App Secrets, tokens, or any other credentials.
+        - For security vulnerabilities, use private reporting instead: [SECURITY.md](https://github.com/shing1211/webullapi4go/blob/main/SECURITY.md).
+        - Questions and usage help belong in [Discussions](https://github.com/shing1211/webullapi4go/discussions).
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I have searched existing issues and Discussions for this problem.
+          required: true
+        - label: This report contains no credentials or secrets.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: SDK version
+      description: The released version or commit SHA you are using.
+      placeholder: v0.1.0 or 3b103b8
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`.
+      placeholder: go1.26.0 windows/amd64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Sandbox
+        - Production
+        - Unit tests / offline
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and the actual behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal, self-contained reproduction. Redact any credentials.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      description: Paste relevant output. Redact secrets before posting.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help, such as related issues or workarounds.
+    validations:
+      required: false

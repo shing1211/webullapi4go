@@ -1,0 +1,79 @@
+name: Feature request
+description: Suggest an idea or new capability for the SDK
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape the SDK.
+
+        - Do NOT include App Keys, App Secrets, tokens, or any other credentials.
+        - Check the [roadmap](https://github.com/shing1211/webullapi4go/blob/main/docs/runs/2026-09-18-webull-sdk-bootstrap/plan.md) and [Discussions](https://github.com/shing1211/webullapi4go/discussions) first; your idea may already be planned or under discussion.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I have searched existing issues and Discussions for this request.
+          required: true
+        - label: This request contains no credentials or secrets.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what is missing or painful today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like the SDK to do? Include a sketch of the API if you have one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or other approaches you have tried.
+    validations:
+      required: false
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Related Webull endpoint (if any)
+      description: The endpoint path or documentation reference this request maps to.
+      placeholder: /market-data/...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Auth / tokens
+        - HTTP transport / signing
+        - Market data (HTTP)
+        - Market data (MQTT streaming)
+        - Resilience (retry / rate limit / circuit breaker)
+        - Region / endpoint config
+        - Docs / examples
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help, such as links or related projects.
+    validations:
+      required: false

@@ -1,0 +1,227 @@
+// Copyright 2026 shing1211
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package client
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/shing1211/webullapi4go/internal/resilience/breaker"
+	"github.com/shing1211/webullapi4go/internal/resilience/ratelimit"
+	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+)
+
+// Option mutates a [Config] during [New]. Options are applied in order on top
+// of [DefaultConfig], so a later option overrides an earlier one.
+type Option func(*Config)
+
+// WithAppKey sets the Webull OpenAPI app key.
+func WithAppKey(appKey string) Option {
+	return func(c *Config) {
+		c.AppKey = appKey
+		c.appKeySet = true
+	}
+}
+
+// WithAppSecret sets the Webull OpenAPI app secret.
+func WithAppSecret(appSecret string) Option {
+	return func(c *Config) {
+		c.AppSecret = appSecret
+		c.appSecretSet = true
+	}
+}
+
+// WithCredentials sets both the app key and the app secret.
+func WithCredentials(appKey, appSecret string) Option {
+	return func(c *Config) {
+		c.AppKey, c.AppSecret = appKey, appSecret
+		c.appKeySet, c.appSecretSet = true, true
+	}
+}
+
+// WithRegion sets the deployment region.
+func WithRegion(r Region) Option {
+	return func(c *Config) {
+		c.Region = r
+		c.regionSet = true
+	}
+}
+
+// WithEnvironment sets the deployment environment.
+func WithEnvironment(env Environment) Option {
+	return func(c *Config) {
+		c.Environment = env
+		c.environmentSet = true
+	}
+}
+
+// WithSandbox switches the client to the sandbox environment.
+func WithSandbox() Option {
+	return WithEnvironment(Sandbox)
+}
+
+// WithEndpoints overrides the service endpoints resolved from the region and
+// environment.
+func WithEndpoints(e Endpoints) Option {
+	return func(c *Config) {
+		c.Endpoints = e
+		c.endpointsOverride = true
+	}
+}
+
+// WithBaseURL overrides only the REST base URL, for example
+// "https://api.sandbox.webull.hk" or a local test server. It takes precedence
+// over the address resolved from the region and environment.
+func WithBaseURL(baseURL string) Option {
+	return func(c *Config) {
+		c.Endpoints.HTTP = baseURL
+		c.endpointsOverride = true
+	}
+}
+
+// WithHTTPClient sets the HTTP client used for REST calls. When omitted, [New]
+// creates one with the configured timeout.
+func WithHTTPClient(hc *http.Client) Option {
+	return func(c *Config) { c.HTTPClient = hc }
+}
+
+// WithTimeout sets the per-request timeout used when [New] creates the HTTP
+// client.
+func WithTimeout(d time.Duration) Option {
+	return func(c *Config) { c.Timeout = d }
+}
+
+// WithUserAgent sets the User-Agent header sent with every request.
+func WithUserAgent(ua string) Option {
+	return func(c *Config) { c.UserAgent = ua }
+}
+
+// RetryConfig configures the retries performed by [Client.Do] for transient
+// failures. Zero-valued duration and attempt fields fall back to the SDK
+// defaults ([DefaultRetryAttempts], [DefaultRetryBaseDelay],
+// [DefaultRetryMaxDelay]); a nil IsRetryable falls back to the SDK classifier.
+// To disable retries entirely use [WithoutRetry].
+type RetryConfig struct {
+	// MaxAttempts is the total number of attempts, including the first. One
+	// disables retrying while keeping the retry machinery active.
+	MaxAttempts int
+	// BaseDelay is the delay before the first retry and the base of the
+	// exponential backoff.
+	BaseDelay time.Duration
+	// MaxDelay caps the computed delay.
+	MaxDelay time.Duration
+	// Jitter randomizes each delay by plus or minus 20 percent.
+	Jitter bool
+	// RetryNonIdempotent allows retrying methods that are not idempotent
+	// (for example POST). It is disabled by default so that only GET and HEAD
+	// requests are retried.
+	RetryNonIdempotent bool
+	// IsRetryable reports whether an error is transient. When nil the SDK
+	// classifier retries transport failures, HTTP 429, and HTTP 5xx.
+	IsRetryable func(error) bool
+}
+
+// WithRetry replaces the default retry policy. Only idempotent requests are
+// retried unless [RetryConfig.RetryNonIdempotent] is set.
+func WithRetry(cfg RetryConfig) Option {
+	if cfg.MaxAttempts == 0 {
+		cfg.MaxAttempts = DefaultRetryAttempts
+	}
+	if cfg.BaseDelay == 0 {
+		cfg.BaseDelay = DefaultRetryBaseDelay
+	}
+	if cfg.MaxDelay == 0 {
+		cfg.MaxDelay = DefaultRetryMaxDelay
+	}
+	if cfg.IsRetryable == nil {
+		cfg.IsRetryable = retry.DefaultIsRetryable
+	}
+	return func(c *Config) {
+		c.retry = retry.NewWithConfig(retry.Config{
+			MaxAttempts: cfg.MaxAttempts,
+			BaseDelay:   cfg.BaseDelay,
+			MaxDelay:    cfg.MaxDelay,
+			Jitter:      cfg.Jitter,
+			IsRetryable: cfg.IsRetryable,
+		})
+		c.retryNonIdempotent = cfg.RetryNonIdempotent
+	}
+}
+
+// WithoutRetry disables retries. Requests are attempted exactly once.
+func WithoutRetry() Option {
+	return func(c *Config) {
+		c.retry = nil
+		c.retryNonIdempotent = false
+	}
+}
+
+// defaultRetrier returns the SDK's default retry policy: up to
+// [DefaultRetryAttempts] attempts for transient errors.
+func defaultRetrier() *retry.Retrier {
+	return retry.NewWithConfig(retry.Config{
+		MaxAttempts: DefaultRetryAttempts,
+		BaseDelay:   DefaultRetryBaseDelay,
+		MaxDelay:    DefaultRetryMaxDelay,
+		Jitter:      true,
+		IsRetryable: retry.DefaultIsRetryable,
+	})
+}
+
+// RateLimiter throttles outgoing requests. [Client.Do] calls Wait before every
+// attempt, passing the request path as the key so implementations can apply
+// per-endpoint limits. Wait must return ctx.Err() when ctx is done.
+type RateLimiter interface {
+	Wait(ctx context.Context, key string) error
+}
+
+// WithRateLimiter sets the rate limiter consulted before every request
+// attempt. A nil limiter disables rate limiting (the default).
+func WithRateLimiter(l RateLimiter) Option {
+	return func(c *Config) { c.rateLimiter = l }
+}
+
+// NewRateLimiter returns a keyed token-bucket limiter that allows rate tokens
+// per second with the given burst, applied independently per request path.
+// NewRateLimiter panics if rate or burst is not positive.
+func NewRateLimiter(rate float64, burst int) RateLimiter {
+	return ratelimit.NewKeyed(func() *ratelimit.Limiter {
+		return ratelimit.New(rate, burst)
+	})
+}
+
+// CircuitBreaker gates outgoing requests. Allow reports whether a call may
+// proceed; RecordSuccess and RecordFailure report its outcome.
+type CircuitBreaker interface {
+	Allow() bool
+	RecordSuccess()
+	RecordFailure()
+}
+
+// WithBreaker sets the circuit breaker consulted before every request attempt.
+// A nil breaker disables circuit breaking (the default).
+func WithBreaker(b CircuitBreaker) Option {
+	return func(c *Config) { c.breaker = b }
+}
+
+// NewBreaker returns a circuit breaker that opens after threshold consecutive
+// server or transport failures and probes again after cooldown.
+func NewBreaker(threshold int, cooldown time.Duration) CircuitBreaker {
+	return breaker.New(
+		breaker.WithThreshold(threshold),
+		breaker.WithCooldown(cooldown),
+	)
+}

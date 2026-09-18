@@ -1,0 +1,77 @@
+# MkDocs configuration for the webullapi4go documentation site.
+#
+# The site is built from docs/ and published to GitHub Pages by
+# .github/workflows/pages.yml. Only public documentation belongs here;
+# internal run artifacts under docs/runs/ are excluded below.
+
+site_name: webullapi4go
+site_description: Idiomatic Go SDK for the Webull OpenAPI.
+site_url: https://shing1211.github.io/webullapi4go/
+repo_url: https://github.com/shing1211/webullapi4go
+repo_name: shing1211/webullapi4go
+copyright: Copyright &copy; webullapi4go contributors &mdash; Apache-2.0
+
+docs_dir: docs
+
+# Internal run artifacts (docs/runs/**) are workspace-only and must never be
+# published. docs/adr/README.md is the on-GitHub ADR guide; the published site
+# uses docs/adr/index.md instead, and the two cannot both own the adr/ index.
+# `exclude_docs` requires MkDocs >= 1.5.
+exclude_docs: |
+  runs/
+  adr/README.md
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Authentication: authentication.md
+  - Market Data: market-data.md
+  - Streaming: streaming.md
+  - Sandbox: sandbox.md
+  - Errors: errors.md
+  - API Reference: api.md
+  - Troubleshooting: troubleshooting.md
+  - Architecture Decisions:
+      - Overview: adr/index.md
+      - "0001: Record architecture decisions": adr/0001-record-architecture-decisions.md
+      - "0002: gRPC event protobuf strategy": adr/0002-grpc-event-protobuf-strategy.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+plugins:
+  - search
