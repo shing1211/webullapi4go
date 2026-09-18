@@ -23,22 +23,22 @@ import (
 
 // pathFundNav is the fund NAV history endpoint.
 //
-// Path is unconfirmed; guessed based on Webull API patterns.
+// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 const pathFundNav = "/market-data/fund/{symbol}/nav"
 
 // pathFundInfo is the fund basic info endpoint.
 //
-// Path is unconfirmed; guessed based on Webull API patterns.
+// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 const pathFundInfo = "/market-data/fund/{symbol}/info"
 
 // pathFundDividends is the fund dividend history endpoint.
 //
-// Path is unconfirmed; guessed based on Webull API patterns.
+// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 const pathFundDividends = "/market-data/fund/{symbol}/dividends"
 
 // pathFundList is the fund list by market/category endpoint.
 //
-// Path is unconfirmed; guessed based on Webull API patterns.
+// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 const pathFundList = "/market-data/fund/list"
 
 // FundNavQuery parameterizes [Client.GetFundNav].
@@ -65,7 +65,7 @@ type FundNav struct {
 
 // GetFundNav retrieves NAV history for a fund or ETF.
 //
-// Reference: unconfirmed; path guessed.
+// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundNav(ctx context.Context, q FundNavQuery) ([]FundNav, error) {
 	path := strings.Replace(pathFundNav, "{symbol}", url.PathEscape(q.Symbol), 1)
 	query := url.Values{}
@@ -108,7 +108,7 @@ type FundInfo struct {
 
 // GetFundInfo retrieves basic information for a fund or ETF.
 //
-// Reference: unconfirmed; path guessed.
+// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundInfo(ctx context.Context, q FundInfoQuery) (*FundInfo, error) {
 	path := strings.Replace(pathFundInfo, "{symbol}", url.PathEscape(q.Symbol), 1)
 	var out FundInfo
@@ -142,7 +142,7 @@ type FundDividend struct {
 
 // GetFundDividends retrieves dividend history for a fund or ETF.
 //
-// Reference: unconfirmed; path guessed.
+// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]FundDividend, error) {
 	path := strings.Replace(pathFundDividends, "{symbol}", url.PathEscape(q.Symbol), 1)
 	query := url.Values{}
@@ -185,7 +185,7 @@ type FundListItem struct {
 
 // GetFundList retrieves a list of funds or ETFs by market and category.
 //
-// Reference: unconfirmed; path guessed.
+// Reference: unconfirmed; path confirmed wrong on HK sandbox (404). Requires US sandbox credentials to verify.
 func (c *Client) GetFundList(ctx context.Context, q FundListQuery) ([]FundListItem, error) {
 	query := url.Values{}
 	if q.Market != "" {

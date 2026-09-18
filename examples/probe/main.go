@@ -223,23 +223,6 @@ func main() {
 		})
 	}
 
-	// Fund / ETF
-	for _, path := range []string{
-		"/market-data/fund/list",
-		"/market-data/etf/list",
-		"/market-data/funds/list",
-	} {
-		name := "fund_" + strings.ReplaceAll(path, "/", "_")
-		probe(name, func(ctx context.Context) any {
-			var out json.RawMessage
-			err := cl.Do(ctx, http.MethodGet, path+"?category=US&page_size=5", nil, &out)
-			if err != nil {
-				return err
-			}
-			return out
-		})
-	}
-
 	fmt.Println("\n=== Summary ===")
 	for _, r := range results {
 		var icon string

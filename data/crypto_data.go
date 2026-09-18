@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package data provides market data HTTP endpoints for the Webull OpenAPI.
+// Crypto endpoints use category=CRYPTO and symbol=<ticker> as query parameters
+// on /market-data/bars, /market-data/tick, etc. HK sandbox does not support
+// the CRYPTO category (returns 417). US sandbox credentials are required to
+// verify response schemas.
 package data
 
 import (
