@@ -16,16 +16,15 @@ package data
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strconv"
 )
 
 const (
-	pathCryptoBars     = "/market-data/crypto/%s/bars"
-	pathCryptoTick     = "/market-data/crypto/%s/tick"
-	pathCryptoDepth    = "/market-data/crypto/%s/depth"
-	pathCryptoSnapshot = "/market-data/crypto/%s/snapshot"
+	pathCryptoBars     = "/market-data/bars"
+	pathCryptoTick     = "/market-data/tick"
+	pathCryptoDepth    = "/market-data/depth"
+	pathCryptoSnapshot = "/market-data/snapshot"
 )
 
 type CryptoBarsQuery struct {
@@ -110,8 +109,9 @@ type CryptoSnapshot struct {
 }
 
 func (c *Client) GetCryptoBars(ctx context.Context, q CryptoBarsQuery) ([]CryptoBar, error) {
-	path := fmt.Sprintf(pathCryptoBars, url.PathEscape(q.Symbol))
 	query := url.Values{}
+	query.Set("category", "CRYPTO")
+	query.Set("symbol", q.Symbol)
 	if q.Interval != "" {
 		query.Set("timespan", string(q.Interval))
 	}
@@ -119,42 +119,46 @@ func (c *Client) GetCryptoBars(ctx context.Context, q CryptoBarsQuery) ([]Crypto
 		query.Set("count", strconv.Itoa(q.Count))
 	}
 	var out []CryptoBar
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathCryptoBars, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
 func (c *Client) GetCryptoTick(ctx context.Context, q CryptoTickQuery) ([]CryptoTick, error) {
-	path := fmt.Sprintf(pathCryptoTick, url.PathEscape(q.Symbol))
 	query := url.Values{}
+	query.Set("category", "CRYPTO")
+	query.Set("symbol", q.Symbol)
 	if q.Count > 0 {
 		query.Set("count", strconv.Itoa(q.Count))
 	}
 	var out []CryptoTick
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathCryptoTick, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
 func (c *Client) GetCryptoDepth(ctx context.Context, q CryptoDepthQuery) (*CryptoDepth, error) {
-	path := fmt.Sprintf(pathCryptoDepth, url.PathEscape(q.Symbol))
 	query := url.Values{}
+	query.Set("category", "CRYPTO")
+	query.Set("symbol", q.Symbol)
 	if q.Count > 0 {
 		query.Set("count", strconv.Itoa(q.Count))
 	}
 	var out CryptoDepth
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathCryptoDepth, query, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
 }
 
 func (c *Client) GetCryptoSnapshot(ctx context.Context, q CryptoSnapshotQuery) (*CryptoSnapshot, error) {
-	path := fmt.Sprintf(pathCryptoSnapshot, url.PathEscape(q.Symbol))
+	query := url.Values{}
+	query.Set("category", "CRYPTO")
+	query.Set("symbol", q.Symbol)
 	var out CryptoSnapshot
-	if err := c.get(ctx, path, nil, &out); err != nil {
+	if err := c.get(ctx, pathCryptoSnapshot, query, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

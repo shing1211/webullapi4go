@@ -117,32 +117,20 @@ func main() {
 		return v
 	})
 
-	// === Track A: Crypto param sweep ===
-	// The path /market-data/crypto/bars returns 400 (path exists, params wrong).
-	// Try every combination of ticker formats, categories, and intervals.
-	fmt.Println("\n--- Crypto Param Sweep ---")
+	// === Track A: Crypto bars — corrected path ===
+	// The correct path is /market-data/bars with category=CRYPTO&symbol=BTCUSD (query params, not path params).
+	fmt.Println("\n--- Crypto Bars (Corrected Path) ---")
 
-	cryptoTickers := []string{
-		"BTCUSD",
-		"BTC-USD",
-		"BTC_USD",
-		"BTC",
-		"ETHUSD",
-		"ETH-USD",
-		"ETH",
-	}
-	cryptoCategories := []string{"CRYPTO", "US", "", "ETF", "FUND"}
-	intervals := []string{"1d", "1m", "1h"}
+	cryptoSymbols := []string{"BTCUSD", "ETHUSD", "BTC-USD", "ETH-USD"}
+	cryptoCategories := []string{"CRYPTO", "US_CRYPTO"}
+	cryptoIntervals := []string{"d1", "m1", "h1"}
 
-	for _, ticker := range cryptoTickers {
+	for _, sym := range cryptoSymbols {
 		for _, cat := range cryptoCategories {
-			for _, interval := range intervals {
-				q := fmt.Sprintf("ticker=%s&interval=%s&count=5", ticker, interval)
-				if cat != "" {
-					q += "&category=" + cat
-				}
-				path := "/market-data/crypto/bars?" + q
-				name := fmt.Sprintf("crypto_bars_%s_%s_%s", ticker, interval, cat)
+			for _, interval := range cryptoIntervals {
+				q := fmt.Sprintf("category=%s&symbol=%s&timespan=%s&count=5", cat, sym, interval)
+				path := "/market-data/bars?" + q
+				name := fmt.Sprintf("crypto_bars_%s_%s_%s", sym, interval, cat)
 				probe(name, func(ctx context.Context) any {
 					var out json.RawMessage
 					err := cl.Do(ctx, http.MethodGet, path, nil, &out)
@@ -155,11 +143,11 @@ func main() {
 		}
 	}
 
-	// Also try with type=ETF in query for crypto (some endpoints use this)
-	for _, ticker := range []string{"BTCUSD", "ETHUSD"} {
-		for _, interval := range []string{"1d", "1m"} {
-			path := fmt.Sprintf("/market-data/crypto/bars?ticker=%s&type=ETF&interval=%s&count=5", ticker, interval)
-			name := fmt.Sprintf("crypto_bars_%s_%s_typeETF", ticker, interval)
+	// Try symbols= (plural) as the webullpay.com doc shows
+	for _, sym := range []string{"BTCUSD", "ETHUSD"} {
+		for _, cat := range []string{"CRYPTO", "US_CRYPTO"} {
+			path := fmt.Sprintf("/market-data/bars?category=%s&symbols=%s&timespan=d1&count=5", cat, sym)
+			name := fmt.Sprintf("crypto_bars_plural_%s_%s", sym, cat)
 			probe(name, func(ctx context.Context) any {
 				var out json.RawMessage
 				err := cl.Do(ctx, http.MethodGet, path, nil, &out)
@@ -171,11 +159,12 @@ func main() {
 		}
 	}
 
-	// Also try /market-data/crypto/{ticker}/bars style path
-	for _, ticker := range []string{"BTCUSD", "ETHUSD", "BTC-USD"} {
-		for _, interval := range []string{"1d", "1m"} {
+	// Also try the old path patterns (they return 400 but we keep them to confirm)
+	fmt.Println("\n--- Crypto Bars (Legacy Paths — expecting 400) ---")
+	for _, ticker := range []string{"BTCUSD", "ETHUSD"} {
+		for _, interval := range []string{"d1", "m1"} {
 			path := fmt.Sprintf("/market-data/crypto/%s/bars?interval=%s&count=5", ticker, interval)
-			name := fmt.Sprintf("crypto_%s_bars_%s", ticker, interval)
+			name := fmt.Sprintf("crypto_legacy_%s_bars_%s", ticker, interval)
 			probe(name, func(ctx context.Context) any {
 				var out json.RawMessage
 				err := cl.Do(ctx, http.MethodGet, path, nil, &out)
