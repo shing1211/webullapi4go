@@ -55,6 +55,7 @@ nav:
   - Streaming: streaming.md
   - Trading:
       - Overview: trading.md
+  - Trading Events: events.md
   - Sandbox: sandbox.md
   - Errors: errors.md
   - API Reference: api.md

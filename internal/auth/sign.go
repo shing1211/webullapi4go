@@ -20,10 +20,12 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"hash"
 	"net/http"
 	"net/url"
 	"sort"
@@ -33,13 +35,68 @@ import (
 
 // Signature algorithm and version identifiers published by Webull.
 const (
-	// SignatureAlgorithm is the value of the x-signature-algorithm header.
+	// SignatureAlgorithm is the value of the x-signature-algorithm header for
+	// the default [HMAC_SHA1] algorithm.
 	SignatureAlgorithm = "HMAC-SHA1"
-	// SignatureVersion is the value of the x-signature-version header.
+	// SignatureAlgorithmSHA256 is the value of the x-signature-algorithm header
+	// for the [HMAC_SHA256] algorithm used by the gRPC events API.
+	SignatureAlgorithmSHA256 = "HMAC-SHA256"
+	// SignatureVersion is the value of the x-signature-version header. It is
+	// shared by every supported algorithm.
 	SignatureVersion = "1.0"
 	// TimestampFormat is the ISO-8601 UTC layout of the x-timestamp header.
 	TimestampFormat = "2006-01-02T15:04:05Z"
 )
+
+// Algorithm selects a Webull request-signing algorithm. The zero value is
+// [HMAC_SHA1], so a [SignParams] with no Algorithm set preserves the original
+// HTTP signing behavior.
+type Algorithm int
+
+const (
+	// HMAC_SHA1 is Webull's original request-signing algorithm: the body is
+	// hashed with MD5 and the canonical string is signed with HMAC-SHA1.
+	HMAC_SHA1 Algorithm = iota
+	// HMAC_SHA256 hashes the body with SHA-256 and signs the canonical string
+	// with HMAC-SHA256. It is required by the gRPC events API.
+	HMAC_SHA256
+)
+
+// String returns the x-signature-algorithm header value for a. Any value other
+// than [HMAC_SHA256] reports the default [HMAC_SHA1], so an out-of-range
+// Algorithm never produces an invalid header.
+func (a Algorithm) String() string {
+	if a == HMAC_SHA256 {
+		return SignatureAlgorithmSHA256
+	}
+	return SignatureAlgorithm
+}
+
+// Version returns the x-signature-version header value for a. Every supported
+// algorithm currently publishes version "1.0".
+func (a Algorithm) Version() string {
+	return SignatureVersion
+}
+
+// hashFunc returns the constructor of the hash used by the HMAC, defaulting to
+// SHA-1 for an out-of-range Algorithm.
+func (a Algorithm) hashFunc() func() hash.Hash {
+	if a == HMAC_SHA256 {
+		return sha256.New
+	}
+	return sha1.New
+}
+
+// bodyDigest returns the uppercase hexadecimal digest of body for a. HMAC-SHA1
+// uses MD5 and HMAC-SHA256 uses SHA-256, matching Webull's composers.
+func (a Algorithm) bodyDigest(body []byte) string {
+	if a == HMAC_SHA256 {
+		sum := sha256.Sum256(body)
+		return strings.ToUpper(hex.EncodeToString(sum[:]))
+	}
+	sum := md5.Sum(body)
+	return strings.ToUpper(hex.EncodeToString(sum[:]))
+}
 
 // Names of the headers that participate in the signature. Any other header,
 // including x-signature and x-version, is ignored.
@@ -83,37 +140,44 @@ type SignParams struct {
 	// [signingHeaderNames] participate; all others are ignored.
 	Headers http.Header
 	// Body is the exact byte sequence that will be transmitted as the request
-	// body. It must be nil or empty for a bodyless request.
+	// body. It must be nil or empty for a bodyless request. For the gRPC case
+	// it is the serialized protobuf message.
 	Body []byte
 	// AppSecret is the Webull app secret used as the HMAC key.
 	AppSecret string
+	// Algorithm selects the signing algorithm. The zero value is [HMAC_SHA1],
+	// which preserves the original HTTP behavior; gRPC events use
+	// [HMAC_SHA256].
+	Algorithm Algorithm
 }
 
-// Sign computes the base64-encoded HMAC-SHA1 signature for p.
+// Sign computes the base64-encoded signature for p using the algorithm in
+// p.Algorithm (default [HMAC_SHA1]).
 //
 // The canonical string is built from the signing headers, the query
-// parameters and an MD5 digest of the body; see [StringToSign]. The HMAC key
-// is the app secret followed by "&".
+// parameters and a digest of the body; see [StringToSign]. The HMAC key is the
+// app secret followed by "&".
 func Sign(p SignParams) (string, error) {
 	encoded, err := StringToSign(p)
 	if err != nil {
 		return "", err
 	}
-	mac := hmac.New(sha1.New, []byte(p.AppSecret+"&"))
+	mac := hmac.New(p.Algorithm.hashFunc(), []byte(p.AppSecret+"&"))
 	mac.Write([]byte(encoded))
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-// StringToSign returns the percent-encoded canonical string that is fed to
-// HMAC-SHA1 by [Sign]. It is exposed for debugging and tests.
+// StringToSign returns the percent-encoded canonical string that is fed to the
+// HMAC by [Sign]. It is exposed for debugging and tests.
 //
 // It implements Webull's algorithm: the participating query parameters and
 // signing headers are merged, sorted by name and joined with "&" to form the
-// header string; a non-empty body contributes the uppercase hex MD5 of the
-// body. The two are joined with the path and then every byte except the
-// RFC 3986 unreserved set (A-Z, a-z, 0-9, "-", "_", ".", "~") is
-// percent-encoded with uppercase hex digits, matching Python's
-// urllib.parse.quote(s, safe="").
+// header string; a non-empty body contributes the uppercase hex digest of the
+// body (MD5 for [HMAC_SHA1], SHA-256 for [HMAC_SHA256]). The two are joined
+// with the path and then every byte except the RFC 3986 unreserved set (A-Z,
+// a-z, 0-9, "-", "_", ".", "~") is percent-encoded with uppercase hex digits,
+// matching Python's urllib.parse.quote(s, safe=""). A pathless request (the
+// gRPC form) omits the path and joins the entries with "=" instead.
 func StringToSign(p SignParams) (string, error) {
 	if p.AppSecret == "" {
 		return "", ErrAppSecretRequired
@@ -125,10 +189,10 @@ func StringToSign(p SignParams) (string, error) {
 		// when present, is appended with "&".
 		str3 = strings.Join(entries, "=")
 		if len(p.Body) > 0 {
-			str3 += "&" + bodyDigest(p.Body)
+			str3 += "&" + p.Algorithm.bodyDigest(p.Body)
 		}
 	} else if len(p.Body) > 0 {
-		str3 = p.Path + "&" + strings.Join(entries, "&") + "&" + bodyDigest(p.Body)
+		str3 = p.Path + "&" + strings.Join(entries, "&") + "&" + p.Algorithm.bodyDigest(p.Body)
 	} else {
 		str3 = p.Path + "&" + strings.Join(entries, "&")
 	}
@@ -158,12 +222,6 @@ func canonicalEntries(p SignParams) []string {
 		entries = append(entries, name+"="+strings.Join(vs, "&"))
 	}
 	return entries
-}
-
-// bodyDigest returns the uppercase hexadecimal MD5 digest of body.
-func bodyDigest(body []byte) string {
-	sum := md5.Sum(body)
-	return strings.ToUpper(hex.EncodeToString(sum[:]))
 }
 
 // percentEncode percent-encodes s using the RFC 3986 unreserved set, leaving
@@ -202,19 +260,31 @@ func isUnreserved(c byte) bool {
 	return false
 }
 
-// NewSigningHeaders builds the standard header set that participates in a
-// signature for appKey and host, using now (converted to UTC) for the
-// timestamp and a fresh random nonce. Pass an empty host to omit the host
-// header.
+// NewSigningHeaders builds the standard [HMAC_SHA1] header set that
+// participates in a signature for appKey and host, using now (converted to
+// UTC) for the timestamp and a fresh random nonce. Pass an empty host to omit
+// the host header.
+//
+// It is equivalent to [NewSigningHeadersWithAlgorithm] with [HMAC_SHA1].
 func NewSigningHeaders(appKey, host string, now time.Time) (http.Header, error) {
+	return NewSigningHeadersWithAlgorithm(appKey, host, now, HMAC_SHA1)
+}
+
+// NewSigningHeadersWithAlgorithm builds the standard header set that
+// participates in a signature for appKey and host, using now (converted to
+// UTC) for the timestamp and a fresh random nonce, and selecting alg for the
+// x-signature-algorithm header. Pass an empty host to omit the host header.
+// The returned header set must be the same one passed to [Sign] so that the
+// canonical string and the transmitted headers agree.
+func NewSigningHeadersWithAlgorithm(appKey, host string, now time.Time, alg Algorithm) (http.Header, error) {
 	nonce, err := NewNonce()
 	if err != nil {
 		return nil, err
 	}
 	h := make(http.Header, len(signingHeaderNames))
 	h.Set(HeaderAppKey, appKey)
-	h.Set(HeaderSignatureAlgorithm, SignatureAlgorithm)
-	h.Set(HeaderSignatureVersion, SignatureVersion)
+	h.Set(HeaderSignatureAlgorithm, alg.String())
+	h.Set(HeaderSignatureVersion, alg.Version())
 	h.Set(HeaderSignatureNonce, nonce)
 	h.Set(HeaderTimestamp, now.UTC().Format(TimestampFormat))
 	if host != "" {

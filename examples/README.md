@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.2 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.3 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -21,6 +21,7 @@ which reads:
 | `WEBULL_REGION` | Region, for example `hk` or `us` (optional, defaults to `hk`) |
 | `WEBULL_ENVIRONMENT` | `sandbox` / `uat` or `prod` / `production` (optional, defaults to production) |
 | `WEBULL_ACCOUNT_ID` | Trading account to inspect in the `account` example (optional) |
+| `WEBULL_TRADE_ACCOUNT_ID` | Trading account to subscribe to in the `events` example (optional) |
 | `WEBULL_ORDER_PLACE` | Example only: set to `1` in `order` to opt in to placing a real order (optional, off by default) |
 
 Credentials are never hard-coded and must never be committed. Webull publishes
@@ -137,6 +138,22 @@ used. The example configures the `WithMaxOrderQuantity("10")` and
 `WithMaxOrderNotional("2500.00")` guardrails, which `PreviewOrder` and
 `PlaceOrder` enforce before any network call.
 
+## events
+
+Connects to the Webull gRPC trade-event stream, subscribes to order events, and
+prints each decoded `OrderEvent` until Ctrl+C. The event service signs each
+`Subscribe` call with HMAC-SHA256, so no access token is required.
+
+```sh
+go run ./examples/events
+```
+
+The subscription is scoped to `WEBULL_TRADE_ACCOUNT_ID` when it is set; the
+account must belong to the App Key. The stream reconnects and re-subscribes
+automatically after a transient drop. In the sandbox, placement events may not
+be pushed for a resting order; a cancellation produces the observed
+`CANCEL_SUCCESS` event.
+
 ## Sandbox limitations
 
 While trying these examples against the sandbox, expect a few restrictions:
@@ -148,5 +165,8 @@ While trying these examples against the sandbox, expect a few restrictions:
 - Plain MQTT on `:1883` may be blocked; use MQTT over WebSocket on `:8883/mqtt`.
 - The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
   5 concurrent connections per App Key.
+- The gRPC event stream may not push a placement event for a resting order; only
+  `CANCEL_SUCCESS` has been observed. The subscribed account must belong to the
+  App Key.
 
 See [Troubleshooting](../docs/troubleshooting.md) for symptoms and fixes.

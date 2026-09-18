@@ -4,6 +4,10 @@ modules:
 lint:
   use:
     - STANDARD
+  # The events proto is vendored verbatim from Webull's Apache-2.0 Python SDK and
+  # must stay byte-identical, so it cannot be reformatted to satisfy STANDARD.
+  ignore:
+    - proto/webull/trade/events/v1
 breaking:
   use:
     - FILE

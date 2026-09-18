@@ -8,14 +8,15 @@ release adds the Trading HTTP API: v0.2.1 introduced account listing, balances,
 and positions, v0.2.2 adds the stock-order lifecycle (preview, place, replace,
 cancel) and order queries, v0.2.3 adds market-specific order rules for US, HK,
 and CN, including Hong Kong BCAN party IDs, v0.2.4 adds single-leg options
-orders, and v0.2.5 adds US combo orders.
+orders, and v0.2.5 adds US combo orders. The v0.3 release adds real-time Trading
+events over gRPC.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.2)
+## Feature matrix (v0.3)
 
 | Area | Status | Details |
 |------|--------|---------|
@@ -23,7 +24,7 @@ orders, and v0.2.5 adds US combo orders.
 | Market Data (HTTP) | Supported | Instruments, company profile, analyst data, futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
 | Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5) |
-| Trading events (gRPC) | Not yet | Planned for v0.3 |
+| Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC with HMAC-SHA256 signing, typed JSON payloads, and auto-reconnect/re-subscribe (v0.3.0) |
 | Display Solution | Not yet | Planned for v0.4 |
 | Broker API | Not yet | Planned for v0.5 |
 
@@ -168,6 +169,43 @@ func main() {
 }
 ```
 
+### Trading events over gRPC
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/events"
+)
+
+func main() {
+	cl, err := client.New(client.WithEnv())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = cl.Close() }()
+
+	ev, err := events.New(cl, events.WithSubscribeTypes(events.SubscribeOrder))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = ev.Close() }()
+
+	ev.OnConnect(func() { log.Println("subscribed") })
+	ev.OnOrder(func(o *events.OrderEvent) {
+		log.Printf("%s %s %s", o.OrderID, o.OrderStatus, o.SceneType)
+	})
+
+	if err := ev.Run(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 More runnable programs live in [`examples/`](examples/README.md).
 
 ## Configuration
@@ -210,6 +248,12 @@ Streaming is configured with `stream.WithSessionID`, `WithMQTTURL`,
 Trading is configured with `trade.WithMaxOrderNotional` and
 `trade.WithMaxOrderQuantity`, advisory order guardrails that the order methods
 enforce before an order is built.
+
+Trading events are configured with `events.WithSubscribeTypes`,
+`events.WithAccounts`, `events.WithGRPCEndpoint`, `events.WithGRPCPort`,
+`events.WithTLS`, `events.WithDialTimeout`, `events.WithGRPCDialOption`,
+`events.WithAutoReconnect`, `events.WithReconnectBaseDelay`,
+`events.WithReconnectMaxDelay`, and `events.WithMaxReconnectAttempts`.
 
 ## Sandbox testing
 
@@ -256,7 +300,9 @@ MQTT on port 1883).
 | `data` | Market Data HTTP endpoints (typed requests and responses) |
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
 | `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg options, and US combo orders, and order queries) |
+| `events` | Trading events over gRPC: order, position, and option streams with typed payloads and reconnect |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
+| `gen/webull/trade/events/v1` | Generated protobuf types for the gRPC event service |
 | `pkg/types` | Shared public domain types (markets, instrument types) |
 | `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
 
@@ -266,7 +312,7 @@ MQTT on port 1883).
 |---------|-------|--------|
 | v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
 | v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | In progress |
-| v0.3 | Trading events over gRPC | Planned |
+| v0.3 | Trading events over gRPC | Done |
 | v0.4 | Display Solution | Planned |
 | v0.5 | Broker API | Planned |
 | v1.0 | Stable public API, full documentation, semver guarantees | Planned |
@@ -278,6 +324,7 @@ MQTT on port 1883).
 - `data` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/data
 - `stream` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/stream
 - `trade` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/trade
+- `events` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/events
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](docs/adr/index.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)

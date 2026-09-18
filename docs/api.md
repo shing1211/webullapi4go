@@ -8,7 +8,9 @@ The generated reference documentation lives on pkg.go.dev:
 | Market Data (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/data |
 | Market Data (streaming) | https://pkg.go.dev/github.com/shing1211/webullapi4go/stream |
 | Trading (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/trade |
+| Trading events (gRPC) | https://pkg.go.dev/github.com/shing1211/webullapi4go/events |
 | Streamed protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/marketdata/v1 |
+| Event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/trade/events/v1 |
 | Shared domain types | https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types |
 | Module root | https://pkg.go.dev/github.com/shing1211/webullapi4go |
 
@@ -112,7 +114,29 @@ Requests require an access token and default to the v3 API version under
   enforced by `PreviewOrder` and `PlaceOrder`)
 - Bounds: `MaxOrderQueryPages`
 
-Options orders and combo orders are added in later v0.2 patches.
+## `events`
+
+The Trading events client over gRPC. Construct it with
+`events.New(*client.Client, ...Option)`.
+
+- Lifecycle: `New`, `Run`, `Close`
+- Handlers: `OnConnect`, `OnPing`, `OnEvent`, `OnOrder`, `OnPosition`,
+  `OnOption`, `OnError`
+- Types: `OrderEvent`, `PositionEvent`, `OptionEvent`, `SubscribeType`
+- Subscribe bitmask: `SubscribeOrder`, `SubscribePosition`, `SubscribeOption`,
+  `SubscribeAll`
+- Data event kinds: `EventOrder`, `EventPosition`, `EventOption`
+- Options: `WithGRPCEndpoint`, `WithGRPCPort`, `WithTLS`, `WithDialTimeout`,
+  `WithGRPCDialOption`, `WithSubscribeTypes`, `WithAccounts`,
+  `WithAutoReconnect`, `WithReconnectBaseDelay`, `WithReconnectMaxDelay`,
+  `WithMaxReconnectAttempts`
+- Defaults: `DefaultGRPCPort`, `DefaultDialTimeout`, `DefaultReconnectBaseDelay`,
+  `DefaultReconnectMaxDelay`
+
+The event service signs each `Subscribe` call with HMAC-SHA256 over the
+serialized request, with no `host` in the canonical string. See
+[Trading events](events.md) for the signing rules, dispatch model, and payload
+schemas.
 
 ## `gen/webull/marketdata/v1`
 
@@ -130,5 +154,9 @@ as `Market` and `InstrumentType`.
 
 Implementation details: request signing and token lifecycle, region endpoints,
 the HTTP transport, resilience primitives (retry, rate limit, circuit breaker),
-and the low-level MQTT client. Internal packages are not part of the public API
-and are never referenced by exported signatures; do not import them.
+and the low-level MQTT client. `internal/auth` carries an algorithm-parameterised
+signer: the REST API uses HMAC-SHA1 over a canonical string that includes the
+`host` and an upper-cased MD5 body digest, while the gRPC event service uses
+HMAC-SHA256 with no `host` and a lower-cased SHA-256 body digest. Internal
+packages are not part of the public API and are never referenced by exported
+signatures; do not import them.

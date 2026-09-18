@@ -1,0 +1,101 @@
+name: Nightly live sandbox
+
+# Nightly read-only/preview run of the env-gated live-sandbox integration
+# tests: authentication, Market Data, MQTT/WebSocket streaming, trade event
+# subscription, and read-only trade queries against Webull's sandbox.
+#
+# Mutation is intentionally disabled. WEBULL_TRADE_MUTATE is never set below,
+# so tests that place/replace/cancel real orders (TestSandboxPlaceOrder,
+# TestSandboxOrderEvent, ...) skip themselves and an unattended run can never
+# touch a real order.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   WEBULL_APP_KEY            sandbox market-data/data app key
+#   WEBULL_APP_SECRET         sandbox market-data/data app secret
+#   WEBULL_TRADE_APP_KEY      sandbox trading app key
+#   WEBULL_TRADE_APP_SECRET   sandbox trading app secret
+#   WEBULL_TRADE_ACCOUNT_ID   dedicated trading sandbox account id
+#
+# Optional repository secrets:
+#   WEBULL_BASE_URL           override the HTTP base URL / region sandbox
+#   WEBULL_MQTT_URL           override the MQTT broker address
+#   WEBULL_TRADE_PARTY_ID     HK BCAN party id (HK preview skips without it)
+#
+# When the required secrets are absent the guard step marks the run as skipped
+# and the live steps no-op, so forks and unconfigured clones still succeed.
+
+on:
+  schedule:
+    # 06:00 UTC daily.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+# Least privilege: the job only reads the repository.
+permissions:
+  contents: read
+
+# Never overlap two live runs: the token endpoint allows 10 requests per 30 s
+# and MQTT allows at most 5 concurrent connections per app key.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  live-readonly:
+    name: live sandbox (read-only)
+    runs-on: ubuntu-latest
+    # Bound the job so shared-sandbox flakiness cannot hang the scheduler.
+    timeout-minutes: 30
+    env:
+      WEBULL_SANDBOX: "1"
+      WEBULL_TRADE_SANDBOX: "1"
+      WEBULL_MQTT_WEBSOCKET: "1"
+      # WEBULL_TRADE_MUTATE is deliberately absent: mutation stays off.
+      WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
+      WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
+      WEBULL_TRADE_APP_KEY: ${{ secrets.WEBULL_TRADE_APP_KEY }}
+      WEBULL_TRADE_APP_SECRET: ${{ secrets.WEBULL_TRADE_APP_SECRET }}
+      WEBULL_TRADE_ACCOUNT_ID: ${{ secrets.WEBULL_TRADE_ACCOUNT_ID }}
+      WEBULL_TRADE_PARTY_ID: ${{ secrets.WEBULL_TRADE_PARTY_ID }}
+      WEBULL_BASE_URL: ${{ secrets.WEBULL_BASE_URL }}
+      WEBULL_MQTT_URL: ${{ secrets.WEBULL_MQTT_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Check required secrets
+        id: guard
+        run: |
+          missing=""
+          for name in WEBULL_APP_KEY WEBULL_APP_SECRET WEBULL_TRADE_APP_KEY WEBULL_TRADE_APP_SECRET WEBULL_TRADE_ACCOUNT_ID; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping live sandbox tests; required secrets missing:$missing"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trade - read-only queries and previews
+        if: steps.guard.outputs.skip == 'false'
+        run: go test ./trade/ -run 'SandboxAccounts|SandboxPreview|SandboxOrderQueries|SandboxPreviewHK' -count=1 -v
+
+      - name: Events - subscribe (read-only)
+        if: steps.guard.outputs.skip == 'false'
+        run: go test ./events/ -run Sandbox -count=1 -v
+
+      - name: Stream - WebSocket streaming (read-only)
+        if: steps.guard.outputs.skip == 'false'
+        run: go test ./stream/ -run Sandbox -count=1 -v
+
+      - name: Data - market data (read-only)
+        if: steps.guard.outputs.skip == 'false'
+        run: go test ./data/ -run Sandbox -count=1 -v

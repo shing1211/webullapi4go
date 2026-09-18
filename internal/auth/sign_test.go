@@ -281,6 +281,196 @@ func TestNewNonceIsRandomHex(t *testing.T) {
 	}
 }
 
+// TestDefaultAlgorithmIsSHA1 asserts that the zero Algorithm preserves the
+// original signing behavior: an unset Algorithm and an explicit HMAC_SHA1 must
+// produce the same signature as the golden vector.
+func TestDefaultAlgorithmIsSHA1(t *testing.T) {
+	t.Parallel()
+
+	var params auth.SignParams
+	params.Algorithm = 0
+	if params.Algorithm != auth.HMAC_SHA1 {
+		t.Fatalf("zero Algorithm = %v, want HMAC_SHA1", params.Algorithm)
+	}
+
+	base := auth.SignParams{
+		Path:      "/market-data/stock/quotes",
+		Query:     url.Values{"symbols": {"AAPL", "MSFT"}},
+		Headers:   testHeaders(),
+		AppSecret: "secret",
+	}
+
+	defaultSig := mustSign(t, base)
+
+	explicit := base
+	explicit.Algorithm = auth.HMAC_SHA1
+	if got := mustSign(t, explicit); got != defaultSig {
+		t.Fatalf("explicit HMAC_SHA1 = %q, want default %q", got, defaultSig)
+	}
+
+	const wantDefault = "38xSjgdHuwqRpXxO+zzXjF+rJ5s="
+	if defaultSig != wantDefault {
+		t.Fatalf("default Sign() = %q, want %q", defaultSig, wantDefault)
+	}
+}
+
+// TestSignSHA256GoldenVector pins the HMAC-SHA256 path used by the gRPC events
+// API. The expected value was produced by this Python 3 script, which mirrors
+// webull/core/auth/composer/default_signature_composer.py for a URI-less
+// request (sorted params, "=" join, safe="" quoting, HMAC key secret+"&"):
+//
+//	python -c "
+//	import hashlib, hmac, base64
+//	from urllib.parse import quote
+//	params = {
+//	    'x-app-key': 'test-app-key',
+//	    'x-signature-algorithm': 'HMAC-SHA256',
+//	    'x-signature-version': '1.0',
+//	    'x-signature-nonce': '0123456789abcdef0123456789abcdef',
+//	    'x-timestamp': '2022-01-04T03:55:31Z',
+//	    'host': 'api.webull.com',
+//	    'a': '1', 'b': '2',
+//	}
+//	body = bytes([8, 150, 1])
+//	items = sorted((k.lower(), v) for k, v in params.items())
+//	str3 = '='.join('%s=%s' % (k, v) for k, v in items)
+//	str3 += '&' + hashlib.sha256(body).hexdigest().upper()
+//	encoded = quote(str3, safe='')
+//	sig = base64.b64encode(hmac.new(b'secret&', encoded.encode(), hashlib.sha256).digest()).decode()
+//	print(sig)
+//	"
+//
+// The script prints ysotQQ35FihsgZxUySggfmJWny35sqxghCWmW7WXMJo=.
+func TestSignSHA256GoldenVector(t *testing.T) {
+	t.Parallel()
+
+	headers := make(http.Header)
+	headers.Set(auth.HeaderAppKey, "test-app-key")
+	headers.Set(auth.HeaderSignatureAlgorithm, auth.SignatureAlgorithmSHA256)
+	headers.Set(auth.HeaderSignatureVersion, auth.SignatureVersion)
+	headers.Set(auth.HeaderSignatureNonce, "0123456789abcdef0123456789abcdef")
+	headers.Set(auth.HeaderTimestamp, "2022-01-04T03:55:31Z")
+	headers.Set(auth.HeaderHost, "api.webull.com")
+
+	params := auth.SignParams{
+		Query:     url.Values{"b": {"2"}, "a": {"1"}},
+		Headers:   headers,
+		Body:      []byte{0x08, 0x96, 0x01},
+		AppSecret: "secret",
+		Algorithm: auth.HMAC_SHA256,
+	}
+
+	const want = "ysotQQ35FihsgZxUySggfmJWny35sqxghCWmW7WXMJo="
+	if got := mustSign(t, params); got != want {
+		t.Fatalf("Sign() = %q, want %q", got, want)
+	}
+
+	const wantStringToSign = "a%3D1%3Db%3D2%3Dhost%3Dapi.webull.com%3Dx-app-key%3Dtest-app-key%3Dx-signature-algorithm%3DHMAC-SHA256%3Dx-signature-nonce%3D0123456789abcdef0123456789abcdef%3Dx-signature-version%3D1.0%3Dx-timestamp%3D2022-01-04T03%3A55%3A31Z%26E2E691F1C279E8C97867E3C014104FC5078AFD9BC650760CD8A7D9531AB0DE5E"
+	if got := mustStringToSign(t, params); got != wantStringToSign {
+		t.Fatalf("StringToSign() =\n%q\nwant\n%q", got, wantStringToSign)
+	}
+
+	// The same inputs under HMAC-SHA1 must differ: SHA-1 uses an MD5 body
+	// digest and a different HMAC.
+	sha1Params := params
+	sha1Params.Algorithm = auth.HMAC_SHA1
+	if got := mustSign(t, sha1Params); got == want {
+		t.Fatalf("HMAC_SHA1 produced the HMAC_SHA256 signature %q", got)
+	}
+}
+
+// TestAlgorithmHeaderValues covers algorithm selection and the header values
+// that each algorithm reports.
+func TestAlgorithmHeaderValues(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		alg         auth.Algorithm
+		wantAlg     string
+		wantVersion string
+	}{
+		{"sha1", auth.HMAC_SHA1, "HMAC-SHA1", "1.0"},
+		{"sha256", auth.HMAC_SHA256, "HMAC-SHA256", "1.0"},
+		{"out-of-range defaults to sha1", auth.Algorithm(99), "HMAC-SHA1", "1.0"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tc.alg.String(); got != tc.wantAlg {
+				t.Fatalf("String() = %q, want %q", got, tc.wantAlg)
+			}
+			if got := tc.alg.Version(); got != tc.wantVersion {
+				t.Fatalf("Version() = %q, want %q", got, tc.wantVersion)
+			}
+
+			now := time.Date(2022, 1, 4, 11, 55, 31, 0, time.FixedZone("CST", 8*60*60))
+			h, err := auth.NewSigningHeadersWithAlgorithm("my-key", "api.webull.com", now, tc.alg)
+			if err != nil {
+				t.Fatalf("NewSigningHeadersWithAlgorithm() error = %v", err)
+			}
+			if got := h.Get(auth.HeaderSignatureAlgorithm); got != tc.wantAlg {
+				t.Fatalf("x-signature-algorithm = %q, want %q", got, tc.wantAlg)
+			}
+			if got := h.Get(auth.HeaderSignatureVersion); got != tc.wantVersion {
+				t.Fatalf("x-signature-version = %q, want %q", got, tc.wantVersion)
+			}
+		})
+	}
+}
+
+// TestSignAlgorithmSelection verifies that Sign uses the selected algorithm's
+// HMAC rather than always SHA-1, while leaving the other inputs untouched.
+func TestSignAlgorithmSelection(t *testing.T) {
+	t.Parallel()
+
+	params := auth.SignParams{
+		Path:      "/x",
+		Query:     url.Values{"q": {"1"}},
+		Headers:   testHeaders(),
+		Body:      []byte(`{"k":"v"}`),
+		AppSecret: "secret",
+	}
+
+	sha1 := params
+	sha1.Algorithm = auth.HMAC_SHA1
+	sha256 := params
+	sha256.Algorithm = auth.HMAC_SHA256
+
+	sha1Sig := mustSign(t, sha1)
+	sha256Sig := mustSign(t, sha256)
+	if sha1Sig == sha256Sig {
+		t.Fatalf("HMAC_SHA1 and HMAC_SHA256 produced the same signature %q", sha1Sig)
+	}
+
+	// The algorithm is carried in the headers, so a caller that signs with
+	// HMAC_SHA256 must also send the matching x-signature-algorithm header.
+	sha256Headers := testHeaders()
+	sha256Headers.Set(auth.HeaderSignatureAlgorithm, auth.SignatureAlgorithmSHA256)
+	sha256InHeaders := params
+	sha256InHeaders.Algorithm = auth.HMAC_SHA256
+	sha256InHeaders.Headers = sha256Headers
+	if got := mustSign(t, sha256InHeaders); got == sha256Sig {
+		t.Fatalf("changing x-signature-algorithm did not change the canonical string")
+	}
+}
+
+// TestNewSigningHeadersDefaultAlgorithm ensures the legacy constructor still
+// defaults to HMAC-SHA1.
+func TestNewSigningHeadersDefaultAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2022, 1, 4, 11, 55, 31, 0, time.FixedZone("CST", 8*60*60))
+	h, err := auth.NewSigningHeaders("my-key", "api.webull.com", now)
+	if err != nil {
+		t.Fatalf("NewSigningHeaders() error = %v", err)
+	}
+	if got := h.Get(auth.HeaderSignatureAlgorithm); got != auth.SignatureAlgorithm {
+		t.Fatalf("x-signature-algorithm = %q, want %q", got, auth.SignatureAlgorithm)
+	}
+}
+
 func mustSign(t *testing.T, p auth.SignParams) string {
 	t.Helper()
 	sig, err := auth.Sign(p)

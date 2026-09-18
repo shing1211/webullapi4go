@@ -1,5 +1,5 @@
 ---
-Status: Proposed
+Status: Accepted
 Date: 2026-09-18
 Deciders: maintainer
 ---
@@ -145,6 +145,27 @@ verifying schema fidelity against the sandbox**.
 
 This decision is **Proposed** until the spike completes; it becomes **Accepted**
 (or is superseded) at that point.
+
+## Verification
+
+Promoted to **Accepted** during the v0.3 spike (task T15.1). Findings:
+
+- A real `.proto` source exists upstream at
+  `webull/trade/events/events.proto`; it was pinned at commit
+  `6d1418795449098404a9dbf9ac66e9c1dd9e9c47` (branch `main`).
+- The upstream `LICENSE` is Apache-2.0 and the upstream `NOTICE`
+  (`Webull OpenAPI Python SDK`, `Copyright 2022 Webull`) was located. The
+  vendored `.proto` carries no per-file license header, so provenance rests on
+  the repository-level `NOTICE`.
+- The schema was vendored byte-identical (verified via matching git blob SHA-1)
+  into `proto/webull/trade/events/v1/events.proto`, with no `go_package` edit;
+  the Go package/import path is supplied by an `M` mapping in `buf.gen.yaml`.
+- Go generation succeeded (buf v1.73.0, `protoc-gen-go` v1.36.1,
+  `protoc-gen-go-grpc` v1.6.2) into `gen/webull/trade/events/v1/`, including the
+  `EventService` server-streaming client. `go build`, `go vet`, `gofmt -l`, and
+  `go test ./gen/...` pass offline.
+- Attribution is recorded in `THIRD_PARTY_NOTICES.md`. The live-sandbox
+  round-trip that this ADR gates on is verified separately by T15.3.
 
 ## Rationale
 

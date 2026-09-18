@@ -15,10 +15,12 @@
 // Package auth implements Webull request signing and token lifecycle
 // management.
 //
-// [Sign] and [StringToSign] implement Webull's HMAC-SHA1 request signature:
-// the participating query parameters and signing headers form a sorted
-// canonical string, a non-empty body contributes its MD5 digest, and the whole
-// string is percent-encoded before being HMAC'd with the app secret.
+// [Sign] and [StringToSign] implement Webull's request signature: the
+// participating query parameters and signing headers form a sorted canonical
+// string, a non-empty body contributes its digest, and the whole string is
+// percent-encoded before being HMAC'd with the app secret. The default
+// [HMAC_SHA1] algorithm uses an MD5 body digest and HMAC-SHA1, while
+// [HMAC_SHA256] (used by the gRPC events API) uses SHA-256 for both.
 // [NewSigningHeaders] builds the required header set. The token
 // create/check/poll/store flow is implemented in token.go.
 package auth

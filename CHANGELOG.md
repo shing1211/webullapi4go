@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-18
+
+Trading events over gRPC.
+
+### Added
+
+- `events` package: a server-streaming gRPC client for Webull's trade events,
+  built from the core `client.Client` with `events.New`. It subscribes to order,
+  event-contract position, and option streams (`SubscribeOrder`,
+  `SubscribePosition`, `SubscribeOption`, and the `SubscribeAll` bitmask),
+  optionally scoped to trading accounts with `events.WithAccounts`.
+- Typed event payloads: `OrderEvent`, `PositionEvent`, and `OptionEvent` decode
+  the JSON carried by data events, with every numeric value kept as a string and
+  `Raw` preserving the exact wire bytes. Handlers are `OnOrder`, `OnPosition`,
+  `OnOption`, and the raw `OnEvent`, alongside `OnConnect`, `OnPing`, and
+  `OnError`.
+- HMAC-SHA256 signing for the event service: no `host` participates in the
+  canonical string and the body digest is lower-case SHA-256, distinct from the
+  REST HMAC-SHA1 signer. The algorithm-parameterised signer in `internal/auth`
+  keeps the REST path byte-for-byte unchanged (golden vectors) and adds the
+  SHA-256 path used by `events`.
+- Vendored `events.proto` from the Apache-2.0 Webull Python SDK, generated into
+  `gen/webull/trade/events/v1`, with provenance and attribution recorded in
+  `THIRD_PARTY_NOTICES.md` and the accepted ADR-0002.
+- Reconnect and re-subscribe with exponential backoff plus jitter, bounded by
+  `events.WithMaxReconnectAttempts`; terminal server events (auth, connection
+  limit, expired subscription) end the run with a typed error.
+- Runnable `examples/events` program that subscribes to order events, prints
+  each decoded event, and shuts down on Ctrl+C.
+- Trading events documentation page covering the endpoint, the HMAC-SHA256
+  signing rules, the subscribe bitmask, the dispatch model, the order-event JSON
+  schema, reconnect options, and sandbox caveats.
+- A nightly, read-only live-sandbox CI job that connects to the event stream
+  without mutating any account.
+
+### Changed
+
+- The README feature matrix and roadmap mark Trading events as supported in
+  v0.3.0, and the documentation site gains a Trading Events page.
+
 ## [0.2.6] - 2026-09-18
 
 Route the news Server-Sent Events stream through the core client pipeline.
@@ -202,7 +242,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.3.0
 [0.2.6]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.6
 [0.2.5]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.5
 [0.2.4]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.4
