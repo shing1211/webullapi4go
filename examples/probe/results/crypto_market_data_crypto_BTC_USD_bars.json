@@ -1,0 +1,11 @@
+{
+  "path": "/market-data/crypto/BTC-USD/bars",
+  "query": {
+    "interval": "1d",
+    "count": "5"
+  },
+  "result": {
+    "status": 404,
+    "error": "{\"error_msg\":\"404 Route Not Found\"}\n"
+  }
+}

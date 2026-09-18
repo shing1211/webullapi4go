@@ -1,0 +1,12 @@
+{
+  "path": "/market-data/crypto/bars",
+  "query": {
+    "ticker": "BTCUSD",
+    "interval": "1m",
+    "count": "5"
+  },
+  "result": {
+    "status": 400,
+    "error": "{\"error_code\":\"400\",\"message\":\"Parameters not valid\"}"
+  }
+}

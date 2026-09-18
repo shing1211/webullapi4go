@@ -1,0 +1,10 @@
+{
+  "path": "/market-data/crypto/BTCUSD/tick",
+  "query": {
+    "count": "10"
+  },
+  "result": {
+    "status": 404,
+    "error": "{\"error_msg\":\"404 Route Not Found\"}\n"
+  }
+}
