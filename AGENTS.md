@@ -114,8 +114,10 @@ make generate
 
 ## Known constraints
 
-- v0.1 covers authentication, Market Data HTTP, and MQTT streaming only. Trading,
-  gRPC events, Display Solution, and the Broker API are not implemented.
+- v0.1 covers authentication, Market Data HTTP, and MQTT streaming. v0.2 adds the
+  Trading HTTP API. v0.3 adds Trading events over gRPC. v0.4 adds Market Data
+  fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC
+  filings, financial statements). The Broker API is not yet implemented.
 - Sandbox market data is limited to `AAPL`.
 - Footprint requires a paid entitlement; the sandbox returns `403 Insufficient
   permission`.
@@ -127,7 +129,7 @@ make generate
 - The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
   5 concurrent connections per App Key.
 - `docs/runs/**` and `docs/adr/README.md` are excluded from the published docs
-  site. Do not edit `docs/runs/**`. Accepted ADRs (`0001`, `0002`) are immutable;
+  site. Do not edit `docs/runs/**`. Accepted ADRs (0001, 0002) are immutable;
   supersede them with a new ADR instead.
 - Do not edit `.github/workflows/ci.yml`, `.golangci.yml`, or `LICENSE` without
   an explicit request.
