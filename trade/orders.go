@@ -395,6 +395,9 @@ func (r OrderRequest) validate(prefix string) error {
 	if err := r.validateMarketRules(fail); err != nil {
 		return err
 	}
+	if err := r.validateOptionRules(fail); err != nil {
+		return err
+	}
 
 	switch r.EntrustType {
 	case EntrustTypeQty:

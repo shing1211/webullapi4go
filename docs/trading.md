@@ -7,7 +7,9 @@ rest of the SDK.
 
 The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
 release adds the stock-order lifecycle — preview, place, replace, cancel — and
-order queries. Options orders and combo orders arrive in later v0.2 patches.
+order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
+release adds single-leg options orders; combo orders arrive in a later v0.2
+patch.
 
 ## Authentication
 
@@ -290,6 +292,92 @@ disabled on the account by default: it must be enabled by Webull support before
 any A-share order is accepted. The SDK validates the request shape but cannot
 enable the entitlement.
 
+## Options orders
+
+An options order is a single-leg `SINGLE` order: `instrument_type` is `OPTION`,
+`option_strategy` is `SINGLE`, and `legs` holds exactly one leg. The
+`OrderRequest` still carries the top-level `symbol`, `side`, `order_type`, and
+`quantity`, and the leg repeats the contract fields the API attributes the fill
+to. `OrderRequest.Validate` rejects an option order that carries any other
+strategy, no leg, or more than one leg.
+
+Only the following order types are accepted for options:
+
+| Order type | Extra fields the SDK requires |
+|------------|-------------------------------|
+| `LIMIT` | `limit_price` |
+| `STOP_LOSS` | `stop_price` |
+| `STOP_LOSS_LIMIT` | `stop_price`, `limit_price` |
+
+`MARKET` and every other stock order type are rejected with an `invalid_config`
+error before any network call.
+
+`side` must be `BUY` or `SELL`; `SHORT` is rejected. A sell-side option order
+must use `time_in_force` `DAY`: the API does not accept `GTC` or `GTD` when
+closing an options position. A buy-side order may use `DAY` or `GTC`, but `GTD`
+is rejected for options in both directions.
+
+Each `OrderLeg` in `legs` carries:
+
+| Field | Required value |
+|-------|----------------|
+| `instrument_type` | `OPTION` |
+| `market` | `US` |
+| `symbol` | The option contract symbol; non-blank |
+| `side` | `BUY` or `SELL` |
+| `strike_price` | The strike, a positive decimal string |
+| `option_expire_date` | Expiration date in `YYYY-MM-DD` form |
+| `option_type` | `CALL` or `PUT` |
+| `quantity` | The leg quantity, a positive decimal string |
+
+The example below previews a non-marketable single-leg AAPL call; placing it
+follows the same pattern as a stock order and mutates the account.
+
+```go
+option := trade.OrderRequest{
+	ClientOrderID:  "demo-aapl-call-1",
+	ComboType:      trade.ComboTypeNormal,
+	InstrumentType: trade.InstrumentTypeOption,
+	Market:         trade.MarketUS,
+	Symbol:         "AAPL",
+	OrderType:      trade.OrderTypeLimit,
+	Side:           trade.OrderSideBuy,
+	Quantity:       "1",
+	EntrustType:    trade.EntrustTypeQty,
+	TimeInForce:    trade.TimeInForceDay,
+	LimitPrice:     "0.05", // far below market, so it will not fill
+	OptionStrategy: trade.OptionStrategySingle,
+	Legs: []trade.OrderLeg{{
+		InstrumentType:   trade.InstrumentTypeOption,
+		Market:           trade.MarketUS,
+		Symbol:           "AAPL",
+		Side:             trade.OrderSideBuy,
+		StrikePrice:      "100.00",
+		OptionExpireDate: "2026-01-16",
+		OptionType:       trade.OptionTypeCall,
+		Quantity:         "1",
+	}},
+}
+
+preview, err := trading.PreviewOrder(ctx, trade.PlaceOrderRequest{
+	AccountID: accountID,
+	NewOrders: []trade.OrderRequest{option},
+})
+if err != nil {
+	return err
+}
+log.Printf("estimated cost=%s", preview.EstimatedCost)
+```
+
+!!! note "Sandbox option-contract availability"
+
+    Sandbox market data is limited to `AAPL`, and the sandbox may not list the
+    option contract you have in mind: a preview can fail with `417 Invalid
+    Symbol` when the contract does not exist. The expiration date above is
+    illustrative; pick a real listed contract for the account and environment.
+    Footprint and other entitlement-gated data may also return `403
+    Insufficient permission` in the sandbox.
+
 ## Time in force
 
 | Value | Meaning | Notes |
@@ -334,6 +422,10 @@ Every order method validates its request and returns a typed error with code
   `no_party_ids` requirement, the US-only `support_trading_session`, and the
   at-auction price rules are enforced per market; see
   [Market rules](#market-rules).
+- **Option rules** — an `OPTION` order must use `option_strategy` `SINGLE` with
+  exactly one leg, an allowed order type, and a `BUY`/`SELL` side (sell-side
+  only `DAY`); `option_strategy` and `legs` are rejected on a non-option order.
+  See [Options orders](#options-orders).
 - **`client_order_id`** — 1 to 32 characters from `[A-Za-z0-9_-]`, and unique
   per account. Generate a fresh identifier for each new order.
 - **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a

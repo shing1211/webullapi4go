@@ -1,0 +1,167 @@
+// Copyright 2026 shing1211
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package trade
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/shing1211/webullapi4go/internal/errs"
+)
+
+// optionOrderTypes are the only order types the API accepts for option orders.
+// MARKET is deliberately excluded; options support LIMIT, STOP_LOSS and
+// STOP_LOSS_LIMIT only.
+var optionOrderTypes = []OrderType{
+	OrderTypeLimit,
+	OrderTypeStopLoss,
+	OrderTypeStopLossLimit,
+}
+
+// optionExpireDateLayout is the required wire format of an option expiration
+// date.
+const optionExpireDateLayout = "2006-01-02"
+
+// Validate reports whether l is a well-formed single-leg option order. It checks
+// the leg instrument, market, symbol, side, strike price, expiration date,
+// option type, and quantity, and returns a typed [errs.Error] with
+// [errs.CodeInvalidConfig] on the first problem found.
+//
+// A leg must use instrument_type OPTION, market US, and side BUY or SELL
+// (SHORT is rejected); option_expire_date must be in YYYY-MM-DD form. This is
+// the same validation [OrderRequest.Validate] applies to each option order's
+// single leg.
+func (l OrderLeg) Validate() error { return checkOptionLeg(l, optionLegFail) }
+
+// checkOptionLeg is the shared implementation of [OrderLeg.Validate] and the
+// option-order leg check. It reports the first problem through fail so callers
+// can locate the leg within a batch.
+func checkOptionLeg(l OrderLeg, fail func(string, ...any) error) error {
+	if l.InstrumentType != InstrumentTypeOption {
+		return fail("instrument_type must be OPTION, got %q", l.InstrumentType)
+	}
+	if l.Market != MarketUS {
+		return fail("market must be US, got %q", l.Market)
+	}
+	if strings.TrimSpace(l.Symbol) == "" {
+		return fail("symbol is required")
+	}
+	switch l.Side {
+	case OrderSideBuy, OrderSideSell:
+	default:
+		return fail("side %q must be BUY or SELL", l.Side)
+	}
+	if strings.TrimSpace(l.StrikePrice) == "" {
+		return fail("strike_price is required")
+	}
+	if !isPositiveDecimal(l.StrikePrice) {
+		return fail("strike_price %q must be a positive decimal number", l.StrikePrice)
+	}
+	if strings.TrimSpace(l.OptionExpireDate) == "" {
+		return fail("option_expire_date is required")
+	}
+	if !validOptionExpireDate(l.OptionExpireDate) {
+		return fail("option_expire_date %q must be in YYYY-MM-DD format", l.OptionExpireDate)
+	}
+	switch l.OptionType {
+	case OptionTypeCall, OptionTypePut:
+	default:
+		return fail("option_type %q must be CALL or PUT", l.OptionType)
+	}
+	if strings.TrimSpace(l.Quantity) == "" {
+		return fail("quantity is required")
+	}
+	if !isPositiveDecimal(l.Quantity) {
+		return fail("quantity %q must be a positive decimal number", l.Quantity)
+	}
+	return nil
+}
+
+// optionLegFail builds a typed [errs.Error] with [errs.CodeInvalidConfig] for a
+// leg validation problem.
+func optionLegFail(format string, args ...any) error {
+	return errs.New(errs.CodeInvalidConfig, fmt.Sprintf(format, args...))
+}
+
+// validOptionExpireDate reports whether s is a calendar date in the required
+// YYYY-MM-DD form. The round-trip format comparison rejects zero-padding and
+// any format the parser would otherwise tolerate.
+func validOptionExpireDate(s string) bool {
+	t, err := time.Parse(optionExpireDateLayout, s)
+	if err != nil {
+		return false
+	}
+	return t.Format(optionExpireDateLayout) == s
+}
+
+// validateOptionRules enforces the option-specific constraints that can be
+// checked before any network call. It covers both directions of the option
+// distinction:
+//
+//   - a non-OPTION order must not carry option_strategy or legs;
+//   - an OPTION order requires option_strategy SINGLE and exactly one leg, an
+//     order type of LIMIT, STOP_LOSS or STOP_LOSS_LIMIT, a side of BUY or SELL,
+//     and, for a sell-side order, time_in_force DAY. GTD is rejected for options
+//     and GTC is allowed only for buy-side orders.
+//
+// fail formats and returns the caller's typed error with the batch prefix
+// already applied, and it returns the first problem found.
+func (r OrderRequest) validateOptionRules(fail func(string, ...any) error) error {
+	if r.InstrumentType != InstrumentTypeOption {
+		if r.OptionStrategy != "" {
+			return fail("option_strategy is only valid for OPTION orders")
+		}
+		if len(r.Legs) > 0 {
+			return fail("legs is only valid for OPTION orders")
+		}
+		return nil
+	}
+
+	if r.OptionStrategy != OptionStrategySingle {
+		return fail("option_strategy must be SINGLE for OPTION orders, got %q", r.OptionStrategy)
+	}
+
+	switch r.OrderType {
+	case OrderTypeLimit, OrderTypeStopLoss, OrderTypeStopLossLimit:
+	default:
+		return fail("order_type %s is not supported for options; supported types: %s",
+			r.OrderType, orderTypeList(optionOrderTypes))
+	}
+
+	switch r.Side {
+	case OrderSideBuy:
+		if r.TimeInForce == TimeInForceGTD {
+			return fail("time_in_force GTD is not supported for options")
+		}
+	case OrderSideSell:
+		if r.TimeInForce != TimeInForceDay {
+			return fail("time_in_force must be DAY for option sell-side orders, got %q", r.TimeInForce)
+		}
+	default:
+		return fail("side %q is not supported for options; only BUY and SELL are allowed", r.Side)
+	}
+
+	switch len(r.Legs) {
+	case 1:
+	case 0:
+		return fail("legs must contain exactly one leg for a SINGLE option order, got none")
+	default:
+		return fail("legs must contain exactly one leg for a SINGLE option order, got %d", len(r.Legs))
+	}
+
+	legFail := func(format string, args ...any) error { return fail("legs[0]: "+format, args...) }
+	return checkOptionLeg(r.Legs[0], legFail)
+}

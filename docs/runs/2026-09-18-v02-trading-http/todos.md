@@ -16,9 +16,9 @@ Single source of truth. Statuses: `todo`, `doing`, `blocked`, `review`, `done`.
 | T10.6 | Order docs + example | docs | done | T10.1–4 | docs/trading.md + examples/order; mkdocs --strict OK |
 | T10.7 | Release v0.2.2 | release | done | T10.5, T10.6 | `025588b`; tag v0.2.2 on both remotes |
 | T11.1 | US/HK/CN rules + BCAN + tests | backend | done | T10.1 | 74 rule subtests; live HK preview OK |
-| T11.2 | Docs + release v0.2.3 | docs/release | doing | T11.1 | tag pushed |
-| T12.1 | Options `SINGLE` orders | backend | todo | T10.2 | unit + gated live |
-| T12.2 | Docs + release v0.2.4 | docs/release | todo | T12.1 | tag pushed |
+| T11.2 | Docs + release v0.2.3 | docs/release | done | T11.1 | `d9ba14a`; tag v0.2.3 on both remotes |
+| T12.1 | Options `SINGLE` orders | backend | done | T10.2 | rules + tests; live option preview OK |
+| T12.2 | Docs + release v0.2.4 | docs/release | doing | T12.1 | tag pushed |
 | T13.1 | Combo orders (TP/SL, OTO, OCO, OTOCO) | backend | todo | T10.1 | unit + gated live |
 | T13.2 | Docs + release v0.2.5 | docs/release | todo | T13.1 | tag pushed |
 | T14.1 | Refactor news SSE through client pipeline | backend | todo | v0.1 | tests + gated live |

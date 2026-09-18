@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-09-18
+
+Single-leg options orders for the `trade` package.
+
+### Added
+
+- Single-leg options orders: `OrderRequest` accepts `instrument_type` `OPTION`
+  with `option_strategy` `SINGLE` and exactly one `legs` entry, validated before
+  any network call. Option orders support `LIMIT`, `STOP_LOSS`, and
+  `STOP_LOSS_LIMIT`; `MARKET` and the other stock order types are rejected.
+- Options side and time-in-force rules: only `BUY` and `SELL` are accepted
+  (`SHORT` is rejected), sell-side orders must use `DAY`, and `GTD` is rejected
+  for options.
+- `OrderLeg.Validate` validates a single option leg: `instrument_type` `OPTION`,
+  `market` `US`, a non-blank `symbol`, `BUY`/`SELL`, a positive decimal
+  `strike_price`, a calendar `option_expire_date` in `YYYY-MM-DD` form,
+  `option_type` `CALL` or `PUT`, and a positive decimal `quantity`.
+- Table-driven tests for the option order and leg rules, plus an env-gated,
+  live-tolerant preview test.
+- An "Options orders" section in the trading documentation covering the
+  supported order types, side and time-in-force rules, the `legs` schema, a code
+  example, and sandbox option-contract caveats.
+
+### Changed
+
+- `OrderRequest.Validate` now enforces the option-specific rules after the
+  market rules; a non-OPTION order that carries `option_strategy` or `legs` is
+  rejected.
+
 ## [0.2.3] - 2026-09-18
 
 Market-specific order validation and Hong Kong BCAN support for the `trade`
@@ -121,7 +150,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.4
 [0.2.3]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.3
 [0.2.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.2
 [0.2.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.1
