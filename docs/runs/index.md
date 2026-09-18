@@ -8,3 +8,4 @@
 | 2026-09-18 | v04-fundamentals | BUILD | released v0.4.0 | 58c4bdf |
 | 2026-09-18 | v05-recon | BUILD | released v0.5 | c37968e |
 | 2026-09-19 | v05-fund-crypto | BUILD | released v0.5 | f41b803 |
+| 2026-09-19 | v05-live-probe | BUILD | in progress | 3c3ff7f |
