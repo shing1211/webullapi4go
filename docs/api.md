@@ -9,8 +9,11 @@ The generated reference documentation lives on pkg.go.dev:
 | Market Data (streaming) | https://pkg.go.dev/github.com/shing1211/webullapi4go/stream |
 | Trading (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/trade |
 | Trading events (gRPC) | https://pkg.go.dev/github.com/shing1211/webullapi4go/events |
+| Broker FD (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd |
+| Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/v1 |
 | Streamed protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/marketdata/v1 |
 | Event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/trade/events/v1 |
+| Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/v1 |
 | Shared domain types | https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types |
 | Module root | https://pkg.go.dev/github.com/shing1211/webullapi4go |
 
@@ -57,6 +60,9 @@ Sentinels and accessors: `client.ErrCircuitOpen`, `client.AccessTokenHeader`.
 The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
 
 - Instruments: `GetStockInstruments`
+- Instrument v3 (Display Solution): `GetStockProfilesList` (batch, POST)
+- Logos: `GetLogosBatch` (batch, POST)
+- Corporate actions: `GetCorporateActionsList`, `GetCorporateActionsMarket`
 - Profile and analyst: `GetCompanyProfile`, `GetAnalystTargetPrice`, `GetAnalystRating`
 - Futures static data: `GetFuturesInstruments`, `GetFuturesProductCodes`, `GetFuturesProductClasses`
 - Snapshot and quotes: `GetSnapshot`, `GetQuotes`
@@ -142,12 +148,32 @@ serialized request, with no `host` in the canonical string. See
 [Trading events](events.md) for the signing rules, dispatch model, and payload
 schemas.
 
+## `brokerfd`
+
+The Broker FD (Fund Data) HTTP client. Construct it with `brokerfd.New(*client.Client)`.
+
+- Accounts: `GetAccountsSummary`, `GetPositions`
+- Additional Broker FD endpoints (paths unconfirmed; live probe required)
+- Event types (gRPC, in `gen/webull/brokerfd/v1`): `BrokerFDEventTypeAccountPush`,
+  `BrokerFDEventTypeOrderPush`, `BrokerFDEventTypePositionPush`, `BrokerFDEventTypeTradePush`,
+  `BrokerFDEventTypeAssetDetail`, `BrokerFDEventTypeRiskPush`, `BrokerFDEventTypeOrderFill`,
+  `BrokerFDEventTypePositionSync`, `BrokerFDEventTypeAssetSync`, `BrokerFDEventTypeAssetsPush`,
+  `BrokerFDEventTypeOrdersPush`, `BrokerFDEventTypeCashSecLiab`
+
 ## `gen/webull/marketdata/v1`
 
 Generated protobuf types for streamed messages (`Quote`, `Snapshot`, `Tick`,
 `Basic`, `AskBid`, and so on) plus the `DecodeQuote`, `DecodeSnapshot`, and
 `DecodeTick` helpers. Generated code is committed so builds do not require a
 protobuf toolchain.
+
+## `gen/webull/brokerfd/v1`
+
+Generated protobuf types for Broker FD gRPC events (`BrokerFDEvent`,
+`BrokerFDEventType`, `AccountPush`, `OrderPush`, `PositionPush`, `TradePush`,
+`AssetDetail`, `RiskPush`, `OrderFillPush`, `PositionSync`, `AssetSync`,
+`AssetsPush`, `OrdersPush`, `CashSecLiability`). Schema is best-effort;
+live probe required to confirm field names and types.
 
 ## `pkg/types`
 

@@ -20,8 +20,11 @@ published explicitly by Webull; verify other regions before production use.
 
 ## Test credentials
 
-Webull publishes shared sandbox test accounts in its
-[getting-started guide](https://developer.webull.com/apis/docs/getting-started).
+Webull publishes shared sandbox test accounts for both regions:
+
+- **Hong Kong:** <https://developer.webull.hk/apis/docs/sdk#test-accounts>
+- **US / International:** <https://developer.webull.com/apis/docs/sdk#test-accounts>
+
 Use them to try the API without applying for access.
 
 Credentials are not reproduced in this repository and must never be committed.

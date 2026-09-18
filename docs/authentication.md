@@ -119,4 +119,7 @@ cl, err := client.New(
 
 Never commit app keys, app secrets, or access tokens. Supply them through
 environment variables (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET`) or your own secret
-manager. The token endpoint allows 10 requests per 30 seconds.
+manager. Shared sandbox test accounts (no application required) are published at
+<https://developer.webull.hk/apis/docs/sdk#test-accounts> (HK) and
+<https://developer.webull.com/apis/docs/sdk#test-accounts> (US). The token
+endpoint allows 10 requests per 30 seconds.
