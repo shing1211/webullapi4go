@@ -3,4 +3,4 @@
 | Date | Slug | Mode | Status | Commit |
 |------|------|------|--------|--------|
 | 2026-09-18 | webull-sdk-bootstrap | BUILD | released v0.1.0 | 068d649 |
-| 2026-09-18 | v02-trading-http | BUILD | released v0.2.3 | 96d45a8 |
+| 2026-09-18 | v02-trading-http | BUILD | released v0.2.4 | 3cbcfaa |
