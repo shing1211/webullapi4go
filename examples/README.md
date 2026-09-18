@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.1 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.2 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -20,6 +20,7 @@ which reads:
 | `WEBULL_APP_SECRET` | Webull OpenAPI app secret (required) |
 | `WEBULL_REGION` | Region, for example `hk` or `us` (optional, defaults to `hk`) |
 | `WEBULL_ENVIRONMENT` | `sandbox` / `uat` or `prod` / `production` (optional, defaults to production) |
+| `WEBULL_ACCOUNT_ID` | Trading account to inspect in the `account` example (optional) |
 
 Credentials are never hard-coded and must never be committed. Webull publishes
 shared sandbox test accounts in its
@@ -93,6 +94,20 @@ Lists the authenticated user's watchlists. This example is read-only.
 ```sh
 go run ./examples/watchlist
 ```
+
+## account
+
+Lists the authenticated user's trading accounts and, for one account, prints its
+balance and open positions. This example is read-only: it never places, replaces,
+or cancels an order.
+
+```sh
+go run ./examples/account
+```
+
+The account is taken from `WEBULL_ACCOUNT_ID`; when it is unset, the first
+account returned by the API is used. Trading requests require an access token,
+which the example obtains with `EnsureToken`.
 
 ## Sandbox limitations
 

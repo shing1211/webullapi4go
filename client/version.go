@@ -26,10 +26,11 @@ const (
 	// APIVersionV2 is the legacy API version and the SDK default.
 	APIVersionV2 = "v2"
 	// APIVersionV3 is the current API version used by the newer reference
-	// endpoints, for example the market-data fundamentals and futures static
-	// data paths.
+	// endpoints, notably the /trading/ paths and the market-data
+	// fundamentals and futures static data paths.
 	APIVersionV3 = "v3"
-	// DefaultAPIVersion is the x-version value used when none is configured.
+	// DefaultAPIVersion is the x-version value used for request paths that
+	// have no more specific built-in default, such as the market-data paths.
 	// It remains v2 so that existing behaviour is preserved.
 	DefaultAPIVersion = APIVersionV2
 )
@@ -57,12 +58,16 @@ type versionOverride struct {
 	version string
 }
 
-// WithAPIVersion sets the x-version header sent with every request. Supported
-// values are [APIVersionV2] and [APIVersionV3]; the default is
-// [DefaultAPIVersion] ("v2"), which preserves the SDK's existing behaviour.
-// [New] rejects any other value.
+// WithAPIVersion sets the x-version header sent with every request, taking
+// precedence over the SDK's built-in per-path defaults. Supported values are
+// [APIVersionV2] and [APIVersionV3]. When it is not called, paths under
+// /trading/ default to [APIVersionV3] and every other path to
+// [DefaultAPIVersion] ("v2"). [New] rejects any unsupported version.
 func WithAPIVersion(v string) Option {
-	return func(c *Config) { c.APIVersion = v }
+	return func(c *Config) {
+		c.APIVersion = v
+		c.apiVersionSet = true
+	}
 }
 
 // WithAPIVersionFor overrides the x-version header for requests whose path
@@ -94,11 +99,28 @@ func WithAutoToken(enabled bool) Option {
 	return func(c *Config) { c.autoToken = enabled }
 }
 
-// apiVersionFor returns the x-version value for path, honouring the longest
-// matching [WithAPIVersionFor] override and falling back to the configured
-// default.
+// tradingPathPrefix identifies the Webull trading API paths. Requests under it
+// default to [APIVersionV3], the version documented for the /trading/ endpoints.
+const tradingPathPrefix = "/trading/"
+
+// defaultAPIVersionFor returns the built-in x-version for path: [APIVersionV3]
+// for the trading API and [DefaultAPIVersion] otherwise.
+func defaultAPIVersionFor(path string) string {
+	if strings.HasPrefix(path, tradingPathPrefix) {
+		return APIVersionV3
+	}
+	return DefaultAPIVersion
+}
+
+// apiVersionFor returns the x-version value for path. The configured default
+// applies only when [WithAPIVersion] was passed explicitly; otherwise the
+// built-in per-path default does. In both cases the longest matching
+// [WithAPIVersionFor] override wins.
 func (c *Client) apiVersionFor(path string) string {
-	version := c.cfg.APIVersion
+	version := defaultAPIVersionFor(path)
+	if c.cfg.apiVersionSet {
+		version = c.cfg.APIVersion
+	}
 	best := -1
 	for _, o := range c.cfg.versionOverrides {
 		if len(o.prefix) > best && strings.HasPrefix(path, o.prefix) {

@@ -7,6 +7,7 @@ The generated reference documentation lives on pkg.go.dev:
 | Core client | https://pkg.go.dev/github.com/shing1211/webullapi4go/client |
 | Market Data (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/data |
 | Market Data (streaming) | https://pkg.go.dev/github.com/shing1211/webullapi4go/stream |
+| Trading (HTTP) | https://pkg.go.dev/github.com/shing1211/webullapi4go/trade |
 | Streamed protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/marketdata/v1 |
 | Shared domain types | https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types |
 | Module root | https://pkg.go.dev/github.com/shing1211/webullapi4go |
@@ -80,6 +81,21 @@ The Market Data streaming client. Construct it with `stream.New(*client.Client, 
   `WithAutoReconnect`, `WithAutoResubscribe`, `WithResubscribeTimeout`,
   `WithKeepAlive`, `WithConnectTimeout`, `WithWriteTimeout`,
   `WithMessageChannelDepth`, `WithCleanSession`, `WithTLSConfig`
+
+## `trade`
+
+The Trading HTTP client. Construct it with `trade.New(*client.Client, ...Option)`.
+Requests require an access token and default to the v3 API version under
+`/trading/`.
+
+- Accounts and assets: `ListAccounts`, `GetBalance`, `GetPositions`
+- Types: `Account`, `AccountType`, `AccountClass`, `AssetsBalance`,
+  `AssetsCurrencyAssets`, `Position`, `PositionLeg`, `Market`, `InstrumentType`,
+  `OptionType`, `OptionStrategy`
+- Options: `WithMaxOrderNotional`, `WithMaxOrderQuantity` (order guardrails)
+
+Order placement, replacement, cancellation, and order queries are added in later
+v0.2 patches.
 
 ## `gen/webull/marketdata/v1`
 

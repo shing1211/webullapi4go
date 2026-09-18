@@ -5,8 +5,9 @@ It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kon
 region.
 
 The v0.1 surface covers authentication, a core signed REST client, the Market
-Data HTTP API, and real-time Market Data streaming over MQTT. Trading HTTP and
-gRPC event streams follow in later releases. The module is licensed under
+Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2.1 release
+adds the Trading HTTP foundation for accounts, balances, and positions. Orders
+and gRPC event streams follow in later releases. The module is licensed under
 Apache-2.0.
 
 ## Feature matrix
@@ -16,7 +17,7 @@ Apache-2.0.
 | Authentication | Supported |
 | Market Data (HTTP) | Supported |
 | Market Data (MQTT streaming) | Supported |
-| Trading (HTTP) | Not yet (v0.2) |
+| Trading (HTTP) | Partial (v0.2.1: accounts, balances, positions) |
 | Trading events (gRPC) | Not yet (v0.3) |
 | Display Solution | Not yet (v0.4) |
 | Broker API | Not yet (v0.5) |
@@ -83,6 +84,7 @@ export WEBULL_ENVIRONMENT="sandbox"
 - [Authentication](authentication.md) — request signing and token lifecycle.
 - [Market Data](market-data.md) — HTTP queries.
 - [Streaming](streaming.md) — real-time MQTT pushes.
+- [Trading](trading.md) — accounts, balances, and positions.
 - [Sandbox](sandbox.md) — environments, test credentials, limitations.
 - [Errors](errors.md) — typed errors and classification.
 - [API Reference](api.md) — package overview and pkg.go.dev links.

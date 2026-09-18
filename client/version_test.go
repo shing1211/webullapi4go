@@ -69,6 +69,22 @@ func TestDoUsesDefaultAPIVersionV2(t *testing.T) {
 	}
 }
 
+func TestDoUsesTradingDefaultAPIVersionV3(t *testing.T) {
+	t.Parallel()
+
+	rec := newVersionRecorder()
+	srv := httptest.NewServer(http.HandlerFunc(rec.handler))
+	defer srv.Close()
+
+	cl := newTestClient(t, srv.URL)
+	if err := cl.Do(context.Background(), http.MethodGet, "/trading/accounts/list", nil, nil); err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	if got := rec.version("/trading/accounts/list"); got != client.APIVersionV3 {
+		t.Fatalf("x-version = %q, want trading default %q", got, client.APIVersionV3)
+	}
+}
+
 func TestDoUsesConfiguredAPIVersion(t *testing.T) {
 	t.Parallel()
 
@@ -103,6 +119,63 @@ func TestWithAPIVersionForOverridesByLongestPrefix(t *testing.T) {
 		want string
 	}{
 		{"/market-data/fundamentals/company-profiles/get", client.APIVersionV2},
+		{"/market-data/quotes/list", client.APIVersionV3},
+		{"/openapi/account/list", client.APIVersionV2},
+	}
+	for _, tc := range cases {
+		if err := cl.Do(context.Background(), http.MethodGet, tc.path, nil, nil); err != nil {
+			t.Fatalf("Do(%s) error = %v", tc.path, err)
+		}
+		if got := rec.version(tc.path); got != tc.want {
+			t.Errorf("Do(%s) x-version = %q, want %q", tc.path, got, tc.want)
+		}
+	}
+}
+
+func TestExplicitAPIVersionOverridesTradingDefault(t *testing.T) {
+	t.Parallel()
+
+	rec := newVersionRecorder()
+	srv := httptest.NewServer(http.HandlerFunc(rec.handler))
+	defer srv.Close()
+
+	cl := newTokenClient(t, srv.URL, client.WithAPIVersion(client.APIVersionV2))
+
+	cases := []struct {
+		path string
+		want string
+	}{
+		{"/trading/accounts/list", client.APIVersionV2},
+		{"/market-data/quotes/list", client.APIVersionV2},
+	}
+	for _, tc := range cases {
+		if err := cl.Do(context.Background(), http.MethodGet, tc.path, nil, nil); err != nil {
+			t.Fatalf("Do(%s) error = %v", tc.path, err)
+		}
+		if got := rec.version(tc.path); got != tc.want {
+			t.Errorf("Do(%s) x-version = %q, want explicit %q", tc.path, got, tc.want)
+		}
+	}
+}
+
+func TestWithAPIVersionForOverridesTradingDefault(t *testing.T) {
+	t.Parallel()
+
+	rec := newVersionRecorder()
+	srv := httptest.NewServer(http.HandlerFunc(rec.handler))
+	defer srv.Close()
+
+	cl := newTokenClient(t, srv.URL,
+		client.WithAPIVersionFor("/trading/accounts", client.APIVersionV2),
+		client.WithAPIVersionFor("/market-data", client.APIVersionV3),
+	)
+
+	cases := []struct {
+		path string
+		want string
+	}{
+		{"/trading/accounts/list", client.APIVersionV2},
+		{"/trading/assets/balances/get", client.APIVersionV3},
 		{"/market-data/quotes/list", client.APIVersionV3},
 		{"/openapi/account/list", client.APIVersionV2},
 	}

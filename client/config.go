@@ -62,9 +62,12 @@ type Config struct {
 	Timeout time.Duration
 	// UserAgent is the User-Agent header sent with every request.
 	UserAgent string
-	// APIVersion is the x-version header sent with every request. Supported
-	// values are [APIVersionV2] (the default) and [APIVersionV3]. Per-path
-	// overrides registered with [WithAPIVersionFor] take precedence.
+	// APIVersion is the x-version header sent with every request when it has
+	// been set explicitly with [WithAPIVersion]. Supported values are
+	// [APIVersionV2] and [APIVersionV3]. When it is left at its default,
+	// [Client] applies built-in per-path defaults instead: [APIVersionV3] for
+	// paths under /trading/ and [APIVersionV2] everywhere else. Per-path
+	// overrides registered with [WithAPIVersionFor] take precedence over both.
 	APIVersion string
 
 	// autoToken, when true, makes [Client.Do] obtain an access token
@@ -74,6 +77,10 @@ type Config struct {
 	// versionOverrides apply a per-path x-version override; the longest
 	// matching prefix wins. [Config.APIVersion] is the fallback.
 	versionOverrides []versionOverride
+	// apiVersionSet records whether [WithAPIVersion] set
+	// [Config.APIVersion] explicitly. When false, [Client.apiVersionFor]
+	// applies the built-in per-path defaults instead of Config.APIVersion.
+	apiVersionSet bool
 
 	// endpointsOverride records whether an option set Endpoints or the base
 	// URL explicitly. When false, [New] recomputes Endpoints from Region and

@@ -1,0 +1,203 @@
+// Copyright 2026 shing1211
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package trade
+
+// Market identifies a tradable market for order routing and instrument
+// lookup.
+type Market string
+
+// Markets supported by the trading API.
+const (
+	// MarketUS identifies the United States market.
+	MarketUS Market = "US"
+	// MarketHK identifies the Hong Kong market.
+	MarketHK Market = "HK"
+	// MarketCN identifies the mainland China market.
+	MarketCN Market = "CN"
+)
+
+// InstrumentType identifies the kind of financial instrument referenced by an
+// order or held in a position. It is the trading enum and differs from the
+// market-data instrument classification in
+// [github.com/shing1211/webullapi4go/pkg/types].
+type InstrumentType string
+
+// Instrument types accepted by the trading API.
+const (
+	// InstrumentTypeEquity identifies stocks and other equity instruments.
+	InstrumentTypeEquity InstrumentType = "EQUITY"
+	// InstrumentTypeOption identifies listed option contracts.
+	InstrumentTypeOption InstrumentType = "OPTION"
+	// InstrumentTypeFutures identifies futures contracts.
+	InstrumentTypeFutures InstrumentType = "FUTURES"
+)
+
+// AccountType identifies how an account is funded.
+type AccountType string
+
+// Account funding types.
+const (
+	// AccountTypeCash identifies a cash account, which settles trades from
+	// its own cash balance.
+	AccountTypeCash AccountType = "CASH"
+	// AccountTypeMargin identifies a margin account, which can borrow
+	// against its positions.
+	AccountTypeMargin AccountType = "MARGIN"
+)
+
+// AccountClass is the regulatory classification of an account.
+type AccountClass string
+
+// Account classes returned by the account-list endpoint.
+const (
+	// AccountClassIndividualCash is an individual cash account.
+	AccountClassIndividualCash AccountClass = "INDIVIDUAL_CASH"
+	// AccountClassIndividualMargin is an individual margin account.
+	AccountClassIndividualMargin AccountClass = "INDIVIDUAL_MRGN"
+	// AccountClassFuturesMargin is a futures margin account.
+	AccountClassFuturesMargin AccountClass = "FUTURES_MRGN"
+	// AccountClassInstitutionalCash is an institutional cash account.
+	AccountClassInstitutionalCash AccountClass = "INSTITUTIONAL_CASH"
+	// AccountClassInstitutionalMargin is an institutional margin account.
+	AccountClassInstitutionalMargin AccountClass = "INSTITUTIONAL_MRGN"
+	// AccountClassInstitutionalFuturesMargin is an institutional futures
+	// margin account.
+	AccountClassInstitutionalFuturesMargin AccountClass = "INSTITUTIONAL_FUTURES_MRGN"
+)
+
+// Account is a single brokerage account.
+type Account struct {
+	// AccountID is the unique account identifier used by every account-scoped
+	// endpoint.
+	AccountID string `json:"account_id"`
+	// AccountNumber is the broker-assigned account number.
+	AccountNumber string `json:"account_number"`
+	// AccountType is the funding type of the account.
+	AccountType AccountType `json:"account_type"`
+	// AccountClass is the regulatory classification of the account.
+	AccountClass AccountClass `json:"account_class"`
+}
+
+// AssetsBalance is the multi-currency asset summary for one account.
+type AssetsBalance struct {
+	// TotalAssetCurrency is the currency the balance totals are expressed in.
+	TotalAssetCurrency string `json:"total_asset_currency"`
+	// TotalCashBalance is the total cash across currencies.
+	TotalCashBalance string `json:"total_cash_balance"`
+	// TotalMarketValue is the total market value of held positions.
+	TotalMarketValue string `json:"total_market_value"`
+	// TotalUnrealizedProfitLoss is the total open profit or loss.
+	TotalUnrealizedProfitLoss string `json:"total_unrealized_profit_loss"`
+	// InitMargin is the total initial margin requirement.
+	InitMargin string `json:"init_margin"`
+	// AccountCurrencyAssets breaks the balance down by currency.
+	AccountCurrencyAssets []AssetsCurrencyAssets `json:"account_currency_assets"`
+}
+
+// AssetsCurrencyAssets is the asset breakdown for a single currency.
+type AssetsCurrencyAssets struct {
+	// Currency is the currency this breakdown applies to.
+	Currency string `json:"currency"`
+	// CashBalance is the total cash balance in Currency.
+	CashBalance string `json:"cash_balance"`
+	// SettledCash is the settled portion of the cash balance.
+	SettledCash string `json:"settled_cash"`
+	// UnsettledCash is the portion of the cash balance still settling.
+	UnsettledCash string `json:"unsettled_cash"`
+	// MarketValue is the market value of positions held in Currency.
+	MarketValue string `json:"market_value"`
+	// HeldAmount is the funds committed to open orders.
+	HeldAmount string `json:"held_amount"`
+	// FrozenAmount is the funds frozen by the broker.
+	FrozenAmount string `json:"frozen_amount"`
+	// BuyingPower is the funds available to open new positions.
+	BuyingPower string `json:"buying_power"`
+	// UnrealizedProfitLoss is the open profit or loss in Currency.
+	UnrealizedProfitLoss string `json:"unrealized_profit_loss"`
+	// AvailableWithdrawal is the amount available to withdraw.
+	AvailableWithdrawal string `json:"available_withdrawal"`
+	// InterestsUnpaid is the accrued interest not yet paid.
+	InterestsUnpaid string `json:"interests_unpaid"`
+	// InitMargin is the initial margin requirement in Currency.
+	InitMargin string `json:"init_margin"`
+}
+
+// OptionStrategy identifies the structure of an options position.
+type OptionStrategy string
+
+// Option strategy values.
+const (
+	// OptionStrategySingle is a single-leg options position.
+	OptionStrategySingle OptionStrategy = "SINGLE"
+)
+
+// OptionType identifies whether an options leg is a call or a put.
+type OptionType string
+
+// Option types.
+const (
+	// OptionTypeCall is a call option: the right to buy the underlying.
+	OptionTypeCall OptionType = "CALL"
+	// OptionTypePut is a put option: the right to sell the underlying.
+	OptionTypePut OptionType = "PUT"
+)
+
+// Position is a single holding in an account.
+type Position struct {
+	// PositionID is the unique position identifier.
+	PositionID string `json:"position_id"`
+	// Currency is the currency the position is denominated in.
+	Currency string `json:"currency"`
+	// Quantity is the held quantity, as a decimal string.
+	Quantity string `json:"quantity"`
+	// Symbol is the trading symbol of the held instrument.
+	Symbol string `json:"symbol"`
+	// OptionStrategy is the options strategy, empty for non-option
+	// positions.
+	OptionStrategy OptionStrategy `json:"option_strategy"`
+	// InstrumentType is the kind of instrument held.
+	InstrumentType InstrumentType `json:"instrument_type"`
+	// LastPrice is the latest market price, as a decimal string.
+	LastPrice string `json:"last_price"`
+	// CostPrice is the average cost basis, as a decimal string.
+	CostPrice string `json:"cost_price"`
+	// UnrealizedProfitLoss is the open profit or loss, as a decimal string.
+	UnrealizedProfitLoss string `json:"unrealized_profit_loss"`
+	// Legs lists the legs of a multi-leg option position. It is empty for
+	// single-leg and non-option positions.
+	Legs []PositionLeg `json:"legs"`
+}
+
+// PositionLeg is one leg of a multi-leg option position.
+type PositionLeg struct {
+	// Symbol is the trading symbol of the leg.
+	Symbol string `json:"symbol"`
+	// Quantity is the leg quantity, as a decimal string.
+	Quantity string `json:"quantity"`
+	// OptionType is whether the leg is a call or a put.
+	OptionType OptionType `json:"option_type"`
+	// OptionExpireDate is the leg expiration date in yyyy-MM-dd form.
+	OptionExpireDate string `json:"option_expire_date"`
+	// OptionExercisePrice is the strike price, as a decimal string.
+	OptionExercisePrice string `json:"option_exercise_price"`
+	// OptionContractMultiplier is the number of shares one contract
+	// represents, as a decimal string.
+	OptionContractMultiplier string `json:"option_contract_multiplier"`
+	// OptionContractDeliverable is the number of shares delivered on
+	// exercise of one contract, as a decimal string.
+	OptionContractDeliverable string `json:"option_contract_deliverable"`
+	// ExpirationType is the option expiration style, for example "AM".
+	ExpirationType string `json:"expiration_type"`
+}

@@ -3,21 +3,23 @@
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.com/apis/docs/).
 It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
 region. The v0.1 release covers authentication, a core signed REST client, the
-Market Data HTTP API, and real-time Market Data streaming over MQTT.
+Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2.1
+release adds the Trading HTTP foundation: account listing, balances, and
+positions.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.1)
+## Feature matrix (v0.2)
 
 | Area | Status | Details |
 |------|--------|---------|
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
 | Market Data (HTTP) | Supported | Instruments, company profile, analyst data, futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Not yet | Planned for v0.2 |
+| Trading (HTTP) | Partial | Accounts, balances, and positions supported in v0.2.1. Orders, options, and combo orders land in later v0.2 patches |
 | Trading events (gRPC) | Not yet | Planned for v0.3 |
 | Display Solution | Not yet | Planned for v0.4 |
 | Broker API | Not yet | Planned for v0.5 |
@@ -122,6 +124,47 @@ func main() {
 }
 ```
 
+### Trading: accounts and positions
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/trade"
+)
+
+func main() {
+	cl, err := client.New(client.WithEnv())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = cl.Close() }()
+
+	ctx := context.Background()
+	if _, err := cl.EnsureToken(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	trading := trade.New(cl)
+	accounts, err := trading.ListAccounts(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, acct := range accounts {
+		balance, err := trading.GetBalance(ctx, acct.AccountID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("%s cash=%s market_value=%s", acct.AccountID,
+			balance.TotalCashBalance, balance.TotalMarketValue)
+	}
+}
+```
+
 More runnable programs live in [`examples/`](examples/README.md).
 
 ## Configuration
@@ -160,6 +203,10 @@ Streaming is configured with `stream.WithSessionID`, `WithMQTTURL`,
 `WithResubscribeTimeout`, `WithKeepAlive`, `WithConnectTimeout`,
 `WithWriteTimeout`, `WithMessageChannelDepth`, `WithCleanSession`, and
 `WithTLSConfig`.
+
+Trading is configured with `trade.WithMaxOrderNotional` and
+`trade.WithMaxOrderQuantity`, advisory order guardrails that the order methods
+enforce before an order is built.
 
 ## Sandbox testing
 
@@ -205,6 +252,7 @@ MQTT on port 1883).
 | `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
 | `data` | Market Data HTTP endpoints (typed requests and responses) |
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
+| `trade` | Trading HTTP endpoints (accounts, balances, positions; orders in later patches) |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
 | `pkg/types` | Shared public domain types (markets, instrument types) |
 | `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
@@ -214,7 +262,7 @@ MQTT on port 1883).
 | Version | Scope | Status |
 |---------|-------|--------|
 | v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): orders, positions, accounts | Planned |
+| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), then orders, market rules, options, combo orders | In progress |
 | v0.3 | Trading events over gRPC | Planned |
 | v0.4 | Display Solution | Planned |
 | v0.5 | Broker API | Planned |
@@ -226,6 +274,7 @@ MQTT on port 1883).
 - API reference: https://pkg.go.dev/github.com/shing1211/webullapi4go
 - `data` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/data
 - `stream` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/stream
+- `trade` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/trade
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](docs/adr/index.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)

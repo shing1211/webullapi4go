@@ -53,6 +53,8 @@ nav:
   - Authentication: authentication.md
   - Market Data: market-data.md
   - Streaming: streaming.md
+  - Trading:
+      - Overview: trading.md
   - Sandbox: sandbox.md
   - Errors: errors.md
   - API Reference: api.md

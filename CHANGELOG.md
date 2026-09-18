@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-18
+
+Trading HTTP foundation: read-only accounts and assets.
+
+### Added
+
+- `trade` package: a typed Trading HTTP client built on the core `client.Client`
+  with `trade.New`. Endpoints: `ListAccounts`, `GetBalance`, and `GetPositions`,
+  covering account listing and per-account balances and positions. Asset calls
+  reject an empty account ID before any network request.
+- Trading domain types and enums: `Account`, `AccountType`, `AccountClass`,
+  `AssetsBalance`, `AssetsCurrencyAssets`, `Position`, `PositionLeg`, `Market`,
+  `InstrumentType`, `OptionType`, and `OptionStrategy`. Numeric fields stay
+  strings to preserve precision.
+- Order guardrail options `trade.WithMaxOrderNotional` and
+  `trade.WithMaxOrderQuantity`, enforced by the order methods before an order is
+  built (order placement lands in a later patch).
+- Built-in per-path API version defaults: requests under `/trading/` now send
+  `x-version: v3`, while Market Data paths remain on `v2`. Overridable with
+  `client.WithAPIVersion` and `client.WithAPIVersionFor`.
+- Runnable `examples/account` program that lists accounts and prints the balance
+  and positions for an account.
+- Trading documentation page covering authentication, accounts and assets, the
+  v3 default, guardrails, and sandbox usage.
+
 ## [0.1.0] - 2026-09-18
 
 Initial public release.
@@ -37,5 +62,6 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.1
 [0.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.1.0

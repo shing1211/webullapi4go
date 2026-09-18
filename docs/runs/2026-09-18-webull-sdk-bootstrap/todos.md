@@ -26,5 +26,5 @@ Single source of truth. Statuses: `todo`, `doing`, `blocked`, `review`, `done`.
 | T5.2 | MQTT reconnect + re-subscribe + connection limits | backend | done | T5.1 | registry + resubscribe; live reconnect PASS |
 | T5.3 | MQTT live E2E hardening | backend | done | T5.2 | absorbed into T5.2 (live reconnect verified) |
 | T6.1 | Examples + README + docs sync | docs | done | T1–T5 | 4 examples; README/CHANGELOG/AGENTS/docs site; mkdocs --strict OK |
-| T6.1b | Final GoDoc/comment polish + consistency review | reviewer | doing | T6.1 | no stale "in progress"/placeholder comments |
-| T6.2 | Release v0.1.0 (GitHub + Gitee) | release | todo | T6.1 | both remotes show commit/tag |
+| T6.1b | Final GoDoc/comment polish + consistency review | reviewer | done | T6.1 | stale comments fixed; comment-only changes |
+| T6.2 | Release v0.1.0 (GitHub + Gitee) | release | done | T6.1 | `ee30d6f`; tag `v0.1.0` on both remotes |
