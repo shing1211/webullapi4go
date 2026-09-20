@@ -28,3 +28,9 @@ go.work.sum
 site/
 .cache/
 __pycache__/
+
+# Python virtual environments
+.venv/
+
+# MkDocs internal run artifacts (workspace-only, excluded from published site)
+docs/runs/
