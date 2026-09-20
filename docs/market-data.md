@@ -35,7 +35,19 @@ Coverage in v0.1:
 | Depth analytics | `GetFootprint`, `GetNOIIBars`, `GetNOIISnapshot` |
 | Discovery | `GetTopGainersLosers`, `GetMostActive` |
 | Watchlists | `GetWatchlists`, `CreateWatchlist`, `UpdateWatchlist`, `DeleteWatchlist`, `GetWatchlistInstruments`, `AddWatchlistInstruments`, `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments` |
-| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetNewsSummary` |
+| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionExpirations`*, `GetOptionChain`*, `GetNewsSummary` |
+
+\* Speculative: see the note below.
+
+!!! warning "Unpublished option-discovery endpoints"
+
+    `GetOptionExpirations` and `GetOptionChain` are **speculative**. The Webull
+    OpenAPI reference documents only option ticks, snapshots, and historical
+    bars, so these two endpoints are not part of the published API. Their paths,
+    parameters, and response shapes follow the naming convention of the
+    documented option endpoints, are marked `TODO(t10)` in the code, and may
+    return empty results. Verify them against a live US account before relying
+    on them.
 
 Example: snapshot and bars for `AAPL` on the `US` market.
 

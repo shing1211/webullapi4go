@@ -42,6 +42,10 @@ type Option func(*config)
 // order, expressed as a non-negative decimal string such as "2500.00". The
 // default is empty, which disables the cap.
 //
+// The cap does not cover multi-leg option orders: each leg is priced
+// separately, so the order has no single top-level notional and the cap is
+// skipped. WithMaxOrderQuantity still applies to multi-leg orders.
+//
 // The guardrail is configuration only in this release; the order methods
 // enforce it before an order is built. WithMaxOrderNotional panics when v is
 // not a non-negative, finite decimal number.

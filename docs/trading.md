@@ -11,6 +11,12 @@ order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
 release adds single-leg options orders, and the v0.2.5 release adds US combo
 orders.
 
+Unreleased work adds multi-leg options orders and futures order validation; the
+notional guardrail does not cover multi-leg option orders. Both features are
+**provisional**: their wire values and rules are best-effort assumptions marked
+`TODO` in the code and are not confirmed against the live API. See
+[Options orders](#options-orders) and [Futures orders](#futures-orders).
+
 ## Authentication
 
 Trading requests require an access token, sent as the `x-access-token` header.
@@ -294,14 +300,20 @@ enable the entitlement.
 
 ## Options orders
 
-An options order is a single-leg `SINGLE` order: `instrument_type` is `OPTION`,
-`option_strategy` is `SINGLE`, and `legs` holds exactly one leg. The
-`OrderRequest` still carries the top-level `symbol`, `side`, `order_type`, and
-`quantity`, and the leg repeats the contract fields the API attributes the fill
-to. `OrderRequest.Validate` rejects an option order that carries any other
-strategy, no leg, or more than one leg.
+An options order sets `instrument_type` to `OPTION` and selects an
+`option_strategy`. `SINGLE` is a single-leg order with exactly one `legs`
+entry; every other strategy is a **multi-leg** order carrying two or more
+`legs` entries.
 
-Only the following order types are accepted for options:
+### Single-leg orders
+
+A single-leg order is `option_strategy` `SINGLE` and `legs` holds exactly one
+leg. The `OrderRequest` still carries the top-level `symbol`, `side`,
+`order_type`, and `quantity`, and the leg repeats the contract fields the API
+attributes the fill to. `OrderRequest.Validate` rejects a `SINGLE` order that
+has no leg or more than one leg.
+
+Only the following order types are accepted for single-leg options:
 
 | Order type | Extra fields the SDK requires |
 |------------|-------------------------------|
@@ -369,6 +381,90 @@ if err != nil {
 log.Printf("estimated cost=%s", preview.EstimatedCost)
 ```
 
+### Multi-leg orders
+
+A multi-leg order selects one of the strategy values below and supplies two or
+more `legs`. Each leg carries the same fields as a single-leg option leg
+(validated by `OrderLeg.Validate`); the `strategy` names the structure, and the
+SDK validates it structurally rather than pricing it or assessing its risk.
+
+| Strategy | Structure |
+|----------|-----------|
+| `VERTICAL` | Long and short options of the same type and expiration at different strikes |
+| `STRADDLE` | A call and a put at the same strike and expiration |
+| `STRANGLE` | A call and a put at different strikes and the same expiration |
+| `IRON_CONDOR` | A short strangle bracketed by a wider long strangle |
+| `IRON_BUTTERFLY` | A short straddle bracketed by a long strangle |
+| `BUTTERFLY` | A long low strike, two short middle strikes, and a long high strike, all of the same type and expiration |
+| `COLLAR` | A long put financed by a short call on the same underlying |
+| `CALENDAR` | Options of the same type and strike at different expirations |
+| `DIAGONAL` | Options of the same type at different strikes and expirations |
+| `RATIO` | An unequal number of long and short options of the same type |
+
+`OrderRequest.Validate` applies the following rules to a multi-leg order before
+any network call, and returns an `invalid_config` error naming the first
+problem:
+
+- `legs` must contain **at least two** entries, and every leg must be valid on
+  its own (the `OrderLeg` rules above).
+- No two legs may be identical: each leg must differ in symbol, side, strike,
+  expiration, or option type. Strikes that differ only in decimal precision
+  (for example `"220.0"` and `"220.00"`) count as the same leg.
+- The legs must not all share the same side, option type, and strike, which
+  would make the set degenerate.
+- The order type must be `LIMIT` or `STOP_LOSS_LIMIT`. Multi-leg orders do not
+  accept `MARKET` or `STOP_LOSS`.
+- The top-level `side` and `time_in_force` rules still apply: `side` is `BUY`
+  or `SELL` (`SHORT` is rejected), a sell-side order must use `DAY`, and `GTD`
+  is rejected.
+
+```go
+spread := trade.OrderRequest{
+	ClientOrderID:  "demo-aapl-vertical-1",
+	ComboType:      trade.ComboTypeNormal,
+	InstrumentType: trade.InstrumentTypeOption,
+	Market:         trade.MarketUS,
+	Symbol:         "AAPL",
+	OrderType:      trade.OrderTypeLimit,
+	Side:           trade.OrderSideBuy,
+	Quantity:       "1",
+	EntrustType:    trade.EntrustTypeQty,
+	TimeInForce:    trade.TimeInForceDay,
+	LimitPrice:     "0.05", // far below market, so it will not fill
+	OptionStrategy: trade.OptionStrategyVertical,
+	Legs: []trade.OrderLeg{
+		{
+			InstrumentType:   trade.InstrumentTypeOption,
+			Market:           trade.MarketUS,
+			Symbol:           "AAPL",
+			Side:             trade.OrderSideBuy,
+			StrikePrice:      "100.00",
+			OptionExpireDate: "2026-01-16",
+			OptionType:       trade.OptionTypeCall,
+			Quantity:         "1",
+		},
+		{
+			InstrumentType:   trade.InstrumentTypeOption,
+			Market:           trade.MarketUS,
+			Symbol:           "AAPL",
+			Side:             trade.OrderSideSell,
+			StrikePrice:      "110.00",
+			OptionExpireDate: "2026-01-16",
+			OptionType:       trade.OptionTypeCall,
+			Quantity:         "1",
+		},
+	},
+}
+```
+
+!!! warning "Multi-leg strategies are provisional"
+
+    The multi-leg strategy names and structural rules above are **best-effort
+    assumptions marked `TODO(t8)` in the code**, not confirmed guarantees. The
+    exact strategy strings the Webull OpenAPI accepts, and the leg and
+    order-type rules it enforces, can only be confirmed against a live account.
+    Validate a multi-leg order with `PreviewOrder` before placing it.
+
 !!! note "Sandbox option-contract availability"
 
     Sandbox market data is limited to `AAPL`, and the sandbox may not list the
@@ -377,6 +473,52 @@ log.Printf("estimated cost=%s", preview.EstimatedCost)
     illustrative; pick a real listed contract for the account and environment.
     Footprint and other entitlement-gated data may also return `403
     Insufficient permission` in the sandbox.
+
+## Futures orders
+
+A futures order sets `instrument_type` to `FUTURES`. Futures are single
+instrument orders: `option_strategy` and `legs` are option-only and are
+rejected, as are the US-equity session selector `support_trading_session` and
+the Hong Kong equity `no_party_ids`.
+
+`OrderRequest.Validate` enforces the following futures rules before any network
+call:
+
+| Rule | Requirement |
+|------|-------------|
+| Market | `US` or `HK`; `CN` futures are unsupported |
+| Order type | `LIMIT`, `MARKET`, `STOP_LOSS`, or `STOP_LOSS_LIMIT` |
+| `entrust_type` | `QTY` only; `AMOUNT` is rejected |
+| `quantity` | A positive whole-contract integer such as `"1"`; decimals, signs, and `"0"` are rejected |
+| `time_in_force` | `DAY` or `GTC`; `GTD` is rejected |
+
+The `MARKET` and `STOP_LOSS` cases follow the same price-field rules as other
+instruments: `LIMIT` and `STOP_LOSS_LIMIT` require `limit_price`, and
+`STOP_LOSS` and `STOP_LOSS_LIMIT` require `stop_price`.
+
+```go
+futures := trade.OrderRequest{
+	ClientOrderID:  "demo-futures-1",
+	ComboType:      trade.ComboTypeNormal,
+	InstrumentType: trade.InstrumentTypeFutures,
+	Market:         trade.MarketUS,
+	Symbol:         "ESZ5",
+	OrderType:      trade.OrderTypeLimit,
+	Side:           trade.OrderSideBuy,
+	Quantity:       "1",
+	EntrustType:    trade.EntrustTypeQty,
+	TimeInForce:    trade.TimeInForceDay,
+	LimitPrice:     "1.00", // far below market, so it will not fill
+}
+```
+
+!!! warning "Futures rules are provisional"
+
+    The futures order-type matrix and the time-in-force, entrust-type, and
+    whole-contract quantity rules are **best-effort assumptions marked
+    `TODO(t9)` in the code**, not confirmed guarantees. Futures order
+    submission is unverified against the live API; preview a futures order
+    before placing one and treat a rejection as expected until it is confirmed.
 
 ## Time in force
 
@@ -505,10 +647,16 @@ Every order method validates its request and returns a typed error with code
   `no_party_ids` requirement, the US-only `support_trading_session`, and the
   at-auction price rules are enforced per market; see
   [Market rules](#market-rules).
-- **Option rules** — an `OPTION` order must use `option_strategy` `SINGLE` with
-  exactly one leg, an allowed order type, and a `BUY`/`SELL` side (sell-side
-  only `DAY`); `option_strategy` and `legs` are rejected on a non-option order.
-  See [Options orders](#options-orders).
+- **Option rules** — an `OPTION` order must use a supported `option_strategy`,
+  an allowed order type, and a `BUY`/`SELL` side (sell-side only `DAY`);
+  `SINGLE` takes exactly one leg and every other strategy takes at least two
+  structurally distinct legs. `option_strategy` and `legs` are rejected on a
+  non-option order. See [Options orders](#options-orders).
+- **Futures rules** — a `FUTURES` order must be US or HK, use `LIMIT`,
+  `MARKET`, `STOP_LOSS`, or `STOP_LOSS_LIMIT`, size with `entrust_type` `QTY`
+  and a positive whole-contract integer quantity, and use `DAY` or `GTC`;
+  option and equity-only fields are rejected. See
+  [Futures orders](#futures-orders).
 - **Combo rules** — when any order uses a non-NORMAL `combo_type`, the request
   must be one valid US-equity combo group with a `client_combo_order_id`; see
   [Combo orders (US only)](#combo-orders-us-only).
@@ -551,9 +699,11 @@ not a non-negative, finite number panics at configuration time.
 The notional cap compares `total_cash_amount` for `AMOUNT` orders and
 `quantity` times `limit_price` for orders that carry both. When the notional
 cannot be computed — for example a `MARKET` order with no limit price — the
-notional cap is skipped, but the quantity cap still applies. The guardrails
-apply to preview and place; `ReplaceOrder` is not bounded by them, so re-check
-modified sizes yourself.
+notional cap is skipped, but the quantity cap still applies. A multi-leg option
+order is also skipped by the notional cap, because each leg is priced
+separately and the order has no single top-level notional; the quantity cap
+still applies to it. The guardrails apply to preview and place; `ReplaceOrder`
+is not bounded by them, so re-check modified sizes yourself.
 
 ## Order queries
 

@@ -74,6 +74,11 @@ The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
   `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments`
 - Derivatives and news: `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`,
   `GetNewsSummary`
+- Option discovery: `GetOptionExpirations`, `GetOptionChain`, with
+  `OptionExpirationQuery`, `OptionChainQuery`, `OptionContract`, and
+  `OptionType` (`Call`/`Put`). **Speculative:** not in the published Webull
+  OpenAPI — the paths, parameters, and response shapes are unconfirmed and the
+  calls may return empty results
 - Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` (paths unconfirmed)
 - Crypto data: `GetCryptoBars`, `GetCryptoTick`, `GetCryptoDepth`, `GetCryptoSnapshot` (paths unconfirmed)
 - Screener v2: `GetScreenerV2` (POST, path unconfirmed)
@@ -120,6 +125,10 @@ Requests require an access token and default to the v3 API version under
 - Enumerations: `OrderSide`, `OrderType`, `TimeInForce`, `ComboType`,
   `EntrustType`, `TradingSession`, `TriggerPriceType`, `TrailingType`,
   `OrderStatus`
+- Provisional: multi-leg `OptionStrategy` values (`VERTICAL` through `RATIO`)
+  and `InstrumentTypeFutures` order validation. Their wire values and rules are
+  unconfirmed; see [Trading](trading.md#multi-leg-orders) and
+  [Trading](trading.md#futures-orders)
 - Types: `Account`, `AccountType`, `AccountClass`, `AssetsBalance`,
   `AssetsCurrencyAssets`, `Position`, `PositionLeg`, `Market`, `InstrumentType`,
   `OptionType`, `OptionStrategy`, `PartyID`

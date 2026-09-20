@@ -22,12 +22,24 @@ import (
 	"github.com/shing1211/webullapi4go/internal/errs"
 )
 
-// optionOrderTypes are the only order types the API accepts for option orders.
-// MARKET is deliberately excluded; options support LIMIT, STOP_LOSS and
-// STOP_LOSS_LIMIT only.
+// optionOrderTypes are the only order types the API accepts for single-leg
+// option orders. MARKET is deliberately excluded; single-leg options support
+// LIMIT, STOP_LOSS and STOP_LOSS_LIMIT only.
 var optionOrderTypes = []OrderType{
 	OrderTypeLimit,
 	OrderTypeStopLoss,
+	OrderTypeStopLossLimit,
+}
+
+// optionMultiLegOrderTypes is the provisional set of order types assumed to be
+// accepted for multi-leg option orders. It tentatively admits only LIMIT and
+// STOP_LOSS_LIMIT, on the assumption that multi-leg market orders are not
+// offered for options. Treat this as an unconfirmed assumption rather than a
+// documented API guarantee.
+//
+// TODO(t8): confirm multi-leg order-type matrix and structural rules against live API
+var optionMultiLegOrderTypes = []OrderType{
+	OrderTypeLimit,
 	OrderTypeStopLossLimit,
 }
 
@@ -107,15 +119,33 @@ func validOptionExpireDate(s string) bool {
 	return t.Format(optionExpireDateLayout) == s
 }
 
+// valid reports whether s is a recognized option strategy.
+func (s OptionStrategy) valid() bool {
+	switch s {
+	case OptionStrategySingle, OptionStrategyVertical, OptionStrategyStraddle,
+		OptionStrategyStrangle, OptionStrategyIronCondor, OptionStrategyIronButterfly,
+		OptionStrategyButterfly, OptionStrategyCollar, OptionStrategyCalendar,
+		OptionStrategyDiagonal, OptionStrategyRatio:
+		return true
+	default:
+		return false
+	}
+}
+
 // validateOptionRules enforces the option-specific constraints that can be
 // checked before any network call. It covers both directions of the option
 // distinction:
 //
 //   - a non-OPTION order must not carry option_strategy or legs;
-//   - an OPTION order requires option_strategy SINGLE and exactly one leg, an
-//     order type of LIMIT, STOP_LOSS or STOP_LOSS_LIMIT, a side of BUY or SELL,
-//     and, for a sell-side order, time_in_force DAY. GTD is rejected for options
-//     and GTC is allowed only for buy-side orders.
+//   - an OPTION order requires a supported option_strategy, a side of BUY or
+//     SELL, and, for a sell-side order, time_in_force DAY. GTD is rejected for
+//     options and GTC is allowed only for buy-side orders;
+//   - a SINGLE order requires exactly one leg and an order type of LIMIT,
+//     STOP_LOSS or STOP_LOSS_LIMIT;
+//   - a multi-leg order is provisionally required to carry at least two
+//     structurally well-formed legs and a top-level order type of LIMIT or
+//     STOP_LOSS_LIMIT, pending confirmation against the live API (see
+//     [validateOptionLegSet]).
 //
 // fail formats and returns the caller's typed error with the batch prefix
 // already applied, and it returns the first problem found.
@@ -130,15 +160,18 @@ func (r OrderRequest) validateOptionRules(fail func(string, ...any) error) error
 		return nil
 	}
 
-	if r.OptionStrategy != OptionStrategySingle {
-		return fail("option_strategy must be SINGLE for OPTION orders, got %q", r.OptionStrategy)
+	if !r.OptionStrategy.valid() {
+		return fail("option_strategy %q is not a supported option strategy", r.OptionStrategy)
 	}
 
-	switch r.OrderType {
-	case OrderTypeLimit, OrderTypeStopLoss, OrderTypeStopLossLimit:
-	default:
+	multiLeg := r.OptionStrategy != OptionStrategySingle
+	allowed := optionOrderTypes
+	if multiLeg {
+		allowed = optionMultiLegOrderTypes
+	}
+	if !containsOrderType(allowed, r.OrderType) {
 		return fail("order_type %s is not supported for options; supported types: %s",
-			r.OrderType, orderTypeList(optionOrderTypes))
+			r.OrderType, orderTypeList(allowed))
 	}
 
 	switch r.Side {
@@ -154,6 +187,10 @@ func (r OrderRequest) validateOptionRules(fail func(string, ...any) error) error
 		return fail("side %q is not supported for options; only BUY and SELL are allowed", r.Side)
 	}
 
+	if multiLeg {
+		return validateOptionLegSet(r.Legs, fail)
+	}
+
 	switch len(r.Legs) {
 	case 1:
 	case 0:
@@ -164,4 +201,87 @@ func (r OrderRequest) validateOptionRules(fail func(string, ...any) error) error
 
 	legFail := func(format string, args ...any) error { return fail("legs[0]: "+format, args...) }
 	return checkOptionLeg(r.Legs[0], legFail)
+}
+
+// optionLegKey is the identity of an option leg for duplicate detection. Two
+// legs with the same key are the same order line and must be combined rather
+// than submitted twice.
+type optionLegKey struct {
+	symbol     string
+	side       OrderSide
+	strike     string
+	expiration string
+	optionType OptionType
+}
+
+// canonicalStrike returns a canonical form of an option strike price for
+// equality comparison, so values that differ only in decimal precision (for
+// example "220.0" and "220.00") compare equal. It normalizes through
+// [parseDecimal] and does not alter the stored or emitted strike string. If the
+// strike does not parse as a decimal, it falls back to the trimmed raw string;
+// legs are validated as positive decimals before this is reached, so that path
+// is defensive only.
+func canonicalStrike(s string) string {
+	r, ok := parseDecimal(s)
+	if !ok {
+		return strings.TrimSpace(s)
+	}
+	return r.RatString()
+}
+
+// validateOptionLegSet checks that legs form a structurally well-formed
+// multi-leg option order. The structural rules it applies are provisional
+// assumptions about what the API accepts rather than confirmed guarantees: at
+// least two legs, every leg validated in slice order through [checkOptionLeg],
+// no duplicate legs, and no degenerate set whose legs all share a side, option
+// type, and strike. Errors locate the offending leg as legs[i].
+//
+// TODO(t8): confirm multi-leg order-type matrix and structural rules against live API
+//
+// It validates structure only: it does not price the strategy or evaluate its
+// risk profile.
+func validateOptionLegSet(legs []OrderLeg, fail func(string, ...any) error) error {
+	if len(legs) < 2 {
+		return fail("legs must contain at least two legs for a multi-leg option order, got %d", len(legs))
+	}
+	seen := make(map[optionLegKey]struct{}, len(legs))
+	for i := range legs {
+		legFail := func(format string, args ...any) error {
+			return fail(fmt.Sprintf("legs[%d]: ", i)+format, args...)
+		}
+		if err := checkOptionLeg(legs[i], legFail); err != nil {
+			return err
+		}
+		key := optionLegKey{
+			symbol:     legs[i].Symbol,
+			side:       legs[i].Side,
+			strike:     canonicalStrike(legs[i].StrikePrice),
+			expiration: legs[i].OptionExpireDate,
+			optionType: legs[i].OptionType,
+		}
+		if _, dup := seen[key]; dup {
+			return fail("legs[%d]: duplicate leg; each leg must differ in symbol, side, strike, expiration or type", i)
+		}
+		seen[key] = struct{}{}
+	}
+	if sameSideTypeStrike(legs) {
+		return fail("legs must not all share the same side, option type and strike price")
+	}
+	return nil
+}
+
+// sameSideTypeStrike reports whether every leg shares the same side, option
+// type, and strike price, which makes the leg set degenerate. This structural
+// heuristic is provisional pending live-API confirmation; see
+// [validateOptionLegSet]. Strikes are compared numerically so values that
+// differ only in decimal precision are treated as equal.
+func sameSideTypeStrike(legs []OrderLeg) bool {
+	first := legs[0]
+	firstStrike := canonicalStrike(first.StrikePrice)
+	for _, l := range legs[1:] {
+		if l.Side != first.Side || l.OptionType != first.OptionType || canonicalStrike(l.StrikePrice) != firstStrike {
+			return false
+		}
+	}
+	return true
 }

@@ -41,6 +41,12 @@ const (
 	// InstrumentTypeOption identifies listed option contracts.
 	InstrumentTypeOption InstrumentType = "OPTION"
 	// InstrumentTypeFutures identifies futures contracts.
+	//
+	// The trading API spells this "FUTURES". The market-data package
+	// [github.com/shing1211/webullapi4go/pkg/types] spells the equivalent
+	// classification "FUTURE" (singular). The two are intentionally separate
+	// domains and their wire values are not interchangeable; neither is changed
+	// without evidence from the API.
 	InstrumentTypeFutures InstrumentType = "FUTURES"
 )
 
@@ -135,12 +141,50 @@ type AssetsCurrencyAssets struct {
 }
 
 // OptionStrategy identifies the structure of an options position.
+//
+// The single-leg value is confirmed by the API. The multi-leg strategy string
+// values are best-effort and provisional: the exact wire strings the Webull
+// OpenAPI accepts cannot be confirmed without a live probe, so callers should
+// verify them against the API before relying on them in production.
 type OptionStrategy string
 
 // Option strategy values.
+//
+// TODO(t8): confirm strategy wire values against live API.
 const (
 	// OptionStrategySingle is a single-leg options position.
 	OptionStrategySingle OptionStrategy = "SINGLE"
+	// OptionStrategyVertical is a vertical spread: long and short options of
+	// the same type and expiration at different strikes.
+	OptionStrategyVertical OptionStrategy = "VERTICAL"
+	// OptionStrategyStraddle is a straddle: a call and a put at the same
+	// strike and expiration on the same side.
+	OptionStrategyStraddle OptionStrategy = "STRADDLE"
+	// OptionStrategyStrangle is a strangle: a call and a put on the same side
+	// at different strikes and the same expiration.
+	OptionStrategyStrangle OptionStrategy = "STRANGLE"
+	// OptionStrategyIronCondor is an iron condor: a short strangle bracketed by
+	// a wider long strangle.
+	OptionStrategyIronCondor OptionStrategy = "IRON_CONDOR"
+	// OptionStrategyIronButterfly is an iron butterfly: a short straddle
+	// bracketed by a long strangle.
+	OptionStrategyIronButterfly OptionStrategy = "IRON_BUTTERFLY"
+	// OptionStrategyButterfly is a butterfly spread: a long option at a low
+	// strike, two short options at a middle strike, and a long option at a high
+	// strike, all of the same type and expiration.
+	OptionStrategyButterfly OptionStrategy = "BUTTERFLY"
+	// OptionStrategyCollar is a collar: a long put financed by a short call on
+	// the same underlying.
+	OptionStrategyCollar OptionStrategy = "COLLAR"
+	// OptionStrategyCalendar is a calendar spread: options of the same type
+	// and strike at different expirations.
+	OptionStrategyCalendar OptionStrategy = "CALENDAR"
+	// OptionStrategyDiagonal is a diagonal spread: options of the same type at
+	// different strikes and different expirations.
+	OptionStrategyDiagonal OptionStrategy = "DIAGONAL"
+	// OptionStrategyRatio is a ratio spread: an unequal number of long and
+	// short options of the same type.
+	OptionStrategyRatio OptionStrategy = "RATIO"
 )
 
 // OptionType identifies whether an options leg is a call or a put.

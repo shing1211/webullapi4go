@@ -23,9 +23,9 @@ statements.
 | Area | Status | Details |
 |------|--------|---------|
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements), futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
+| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements), futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news. Unreleased and **speculative**: option-chain and expiration discovery, which is not in the published Webull OpenAPI |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5) |
+| Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5). Unreleased and **provisional**: multi-leg options orders and futures order validation, whose wire values and rules are not yet confirmed against the live API |
 | Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC with HMAC-SHA256 signing, typed JSON payloads, and auto-reconnect/re-subscribe (v0.3.0) |
 | Display Solution | Not yet | Planned for v0.4 |
 | Broker API | Not yet | Planned for v0.5 |
@@ -249,7 +249,9 @@ Streaming is configured with `stream.WithSessionID`, `WithMQTTURL`,
 
 Trading is configured with `trade.WithMaxOrderNotional` and
 `trade.WithMaxOrderQuantity`, advisory order guardrails that the order methods
-enforce before an order is built.
+enforce before an order is built. The notional cap does not cover multi-leg
+option orders, which have no single top-level notional; the quantity cap still
+applies to them.
 
 Trading events are configured with `events.WithSubscribeTypes`,
 `events.WithAccounts`, `events.WithGRPCEndpoint`, `events.WithGRPCPort`,
@@ -301,7 +303,7 @@ MQTT on port 1883).
 | `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
 | `data` | Market Data HTTP endpoints (typed requests and responses) |
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
-| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg options, and US combo orders, and order queries) |
+| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg and multi-leg options, futures validation, US combo orders, and order queries) |
 | `events` | Trading events over gRPC: order, position, and option streams with typed payloads and reconnect |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
 | `gen/webull/trade/events/v1` | Generated protobuf types for the gRPC event service |

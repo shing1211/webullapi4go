@@ -275,6 +275,7 @@ func TestComboCompositionValidation(t *testing.T) {
 			build: func() trade.PlaceOrderRequest {
 				o := comboOrder("f", trade.ComboTypeMaster, trade.OrderTypeLimit, trade.OrderSideBuy)
 				o.InstrumentType = trade.InstrumentTypeFutures
+				o.SupportTradingSession = ""
 				return comboRequest("combo-fut", o)
 			},
 			wantErr:    true,

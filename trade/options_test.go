@@ -118,7 +118,7 @@ func TestOptionRequestValidate(t *testing.T) {
 			o.OptionStrategy = ""
 		}, false},
 		{"unknown option_strategy", func(o *trade.OrderRequest) {
-			o.OptionStrategy = "VERTICAL"
+			o.OptionStrategy = "NOT_A_STRATEGY"
 		}, false},
 		{"short side rejected", func(o *trade.OrderRequest) {
 			o.Side = trade.OrderSideShort

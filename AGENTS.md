@@ -117,7 +117,18 @@ make generate
 - v0.1 covers authentication, Market Data HTTP, and MQTT streaming. v0.2 adds the
   Trading HTTP API. v0.3 adds Trading events over gRPC. v0.4 adds Market Data
   fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC
-  filings, financial statements). The Broker API is not yet implemented.
+  filings, financial statements). v0.5 adds Display Solution (corporate actions,
+  instrument profiles, logos), fund and crypto data, and screener v2. The Broker API
+  is not yet implemented.
+- The v1.0 probe adds **provisional** multi-leg options orders (T8), futures order
+  validation (T9), and **speculative** option-chain/expiration discovery (T10). Their
+  strategy wire values, structural rules, order-type matrices, and endpoint paths are
+  marked `TODO` in code and are not confirmed against the live API.
+- US-only surfaces are blocked in this environment: the HK sandbox returns `404`
+  (fund data, crypto data, screener v2, broker FD, instrument v3/logos) or `417`
+  (crypto category), and no US sandbox credentials are available. Those items stay
+  unverified until `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` for the US sandbox are
+  supplied.
 - Sandbox market data is limited to `AAPL`.
 - Footprint requires a paid entitlement; the sandbox returns `403 Insufficient
   permission`.

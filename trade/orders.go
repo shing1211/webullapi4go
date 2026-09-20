@@ -104,8 +104,8 @@ const (
 )
 
 // ComboType identifies the role an order plays within a combo order.
-// OTO, OCO, and OTOCO are equity-only; their leg-count rules are enforced in a
-// later release.
+// OTO, OCO, and OTOCO are equity-only; their composition rules are enforced by
+// [PlaceOrderRequest.validateComboRules].
 type ComboType string
 
 // Combo types accepted by the trading API.
@@ -206,7 +206,7 @@ const (
 )
 
 // OrderLeg is one leg of an option order. It is only populated for option
-// orders; validation of the leg set is added in a later release.
+// orders; the leg set is validated by [OrderRequest.Validate].
 type OrderLeg struct {
 	// InstrumentType is the kind of instrument the leg references.
 	InstrumentType InstrumentType `json:"instrument_type"`
@@ -392,11 +392,18 @@ func (r OrderRequest) validate(prefix string) error {
 	if r.TrailingType != "" && !r.TrailingType.valid() {
 		return fail("trailing_type %q must be AMOUNT or PERCENTAGE", r.TrailingType)
 	}
-	if err := r.validateMarketRules(fail); err != nil {
-		return err
-	}
-	if err := r.validateOptionRules(fail); err != nil {
-		return err
+	switch r.InstrumentType {
+	case InstrumentTypeEquity, InstrumentTypeOption:
+		if err := r.validateMarketRules(fail); err != nil {
+			return err
+		}
+		if err := r.validateOptionRules(fail); err != nil {
+			return err
+		}
+	case InstrumentTypeFutures:
+		if err := r.validateFuturesRules(fail); err != nil {
+			return err
+		}
 	}
 
 	switch r.EntrustType {
@@ -564,7 +571,14 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 // orderNotional returns the notional value of o and whether it could be
 // computed. AMOUNT orders use total_cash_amount; other orders use quantity
 // times limit_price when both parse as decimals.
+//
+// A multi-leg option order prices each leg separately in Legs, so the
+// top-level order carries no single quantity and price; no notional can be
+// computed and the guardrail is skipped.
 func orderNotional(o *OrderRequest) (*big.Rat, bool) {
+	if len(o.Legs) > 1 {
+		return nil, false
+	}
 	if o.EntrustType == EntrustTypeAmount {
 		return parseDecimal(o.TotalCashAmount)
 	}

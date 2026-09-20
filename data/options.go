@@ -31,6 +31,17 @@ const (
 	pathOptionTicks     = "/market-data/options/ticks/list"
 	pathOptionSnapshots = "/market-data/options/snapshots/list"
 	pathOptionBars      = "/market-data/options/bars/list"
+
+	// TODO(t10): unconfirmed path — cannot verify without live US sandbox (HK sandbox returns 404).
+	// The Webull OpenAPI reference does not document an option-expiration
+	// endpoint; this path follows the naming convention of the documented
+	// option endpoints and must be verified before use.
+	pathOptionExpirations = "/market-data/options/expirations/list"
+	// TODO(t10): unconfirmed path — cannot verify without live US sandbox (HK sandbox returns 404).
+	// The Webull OpenAPI reference does not document an option-chain endpoint;
+	// this path follows the naming convention of the documented option
+	// endpoints and must be verified before use.
+	pathOptionChain = "/market-data/options/contracts/list"
 )
 
 // OptionCategory identifies the option market. The option endpoints currently
@@ -293,4 +304,197 @@ func (c *Client) GetOptionBars(ctx context.Context, q OptionBarsQuery) ([]Option
 		return nil, err
 	}
 	return out.Result, nil
+}
+
+// OptionType is the contract direction of an option, a call or a put.
+//
+// TODO(t10): unconfirmed field — the option-chain endpoint is not documented,
+// so the wire values for calls and puts cannot be verified.
+type OptionType string
+
+// Option contract types.
+const (
+	// OptionTypeCall identifies a call option contract.
+	OptionTypeCall OptionType = "CALL"
+	// OptionTypePut identifies a put option contract.
+	OptionTypePut OptionType = "PUT"
+)
+
+// OptionExpirationQuery parameterizes [Client.GetOptionExpirations]. Symbol is
+// required; Category defaults to [OptionCategoryUS].
+//
+// TODO(t10): the expiration-listing endpoint is not documented by the Webull
+// OpenAPI reference (only tick, snapshot, and historical bars are exposed for
+// options); its path and parameter names are unconfirmed.
+type OptionExpirationQuery struct {
+	// Symbol is the underlying stock symbol, for example "AAPL". Required.
+	Symbol string
+	// Category is the option market. Empty means [OptionCategoryUS].
+	Category OptionCategory
+	// PaginationKey continues from a previous page. Empty means unset.
+	PaginationKey string
+}
+
+// optionExpirationsResponse is the presumed {data, pagination_key} envelope
+// returned by the option-expirations endpoint.
+//
+// TODO(t10): unconfirmed response shape — mirroring the paginated
+// [StockProfilesV3Result] envelope until a live US sandbox confirms it.
+type optionExpirationsResponse struct {
+	Data          []string `json:"data"`
+	PaginationKey string   `json:"pagination_key"`
+}
+
+// OptionExpirationsResult is the result of [Client.GetOptionExpirations].
+//
+// TODO(t10): unconfirmed field mapping — the expiration date format and the
+// envelope keys are not documented.
+type OptionExpirationsResult struct {
+	// Expirations lists the expiration dates available for the underlying,
+	// as returned by the API.
+	Expirations []string
+	// PaginationKey continues from a previous page; empty when there are no
+	// more pages.
+	PaginationKey string
+}
+
+// GetOptionExpirations lists the option expiration dates available for an
+// underlying symbol.
+//
+// Reference: none — the Webull OpenAPI reference does not document this
+// endpoint.
+//
+// TODO(t10): unconfirmed path — cannot verify without live US sandbox (HK
+// sandbox returns 404).
+func (c *Client) GetOptionExpirations(ctx context.Context, q OptionExpirationQuery) (*OptionExpirationsResult, error) {
+	query := url.Values{
+		"symbol":   {q.Symbol},
+		"category": {string(optionCategory(q.Category))},
+	}
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+	var resp optionExpirationsResponse
+	if err := c.get(ctx, pathOptionExpirations, query, &resp); err != nil {
+		return nil, err
+	}
+	return &OptionExpirationsResult{
+		Expirations:   resp.Data,
+		PaginationKey: resp.PaginationKey,
+	}, nil
+}
+
+// OptionChainQuery parameterizes [Client.GetOptionChain]. Symbol is required;
+// every other field narrows the result set and is optional.
+//
+// TODO(t10): the option-chain endpoint is not documented by the Webull OpenAPI
+// reference; its path and parameter names are unconfirmed.
+type OptionChainQuery struct {
+	// Symbol is the underlying stock symbol, for example "AAPL". Required.
+	Symbol string
+	// Category is the option market. Empty means [OptionCategoryUS].
+	Category OptionCategory
+	// Expiration restricts the result to one expiration date. Empty means
+	// all expirations.
+	Expiration string
+	// OptionType restricts the result to calls or puts. Empty means both.
+	OptionType OptionType
+	// StrikeMin is the inclusive lower bound of the strike range, as a
+	// decimal string. Empty means unset.
+	StrikeMin string
+	// StrikeMax is the inclusive upper bound of the strike range, as a
+	// decimal string. Empty means unset.
+	StrikeMax string
+	// PaginationKey continues from a previous page. Empty means unset.
+	PaginationKey string
+}
+
+// OptionContract is the profile of a single option contract.
+//
+// TODO(t10): unconfirmed field mapping — the Webull OpenAPI reference does not
+// document an option-chain endpoint, so the JSON field names and the
+// [OptionType] wire values below must be verified against a live US sandbox.
+type OptionContract struct {
+	// InstrumentID is the unique identifier of the option contract.
+	InstrumentID string `json:"instrument_id"`
+	// Symbol is the option contract symbol, for example
+	// "AAPL260116C00300000".
+	Symbol string `json:"symbol"`
+	// UnderlyingSymbol is the symbol of the underlying stock, for example
+	// "AAPL".
+	UnderlyingSymbol string `json:"underlying_symbol"`
+	// OptionType is the contract direction, a call or a put.
+	OptionType OptionType `json:"option_type"`
+	// StrikePrice is the strike price, as a decimal string.
+	StrikePrice string `json:"strike_price"`
+	// ExpirationDate is the contract expiration date as returned by the API.
+	ExpirationDate string `json:"expiration_date"`
+	// ExchangeCode is the listing exchange code, for example "OPRA".
+	ExchangeCode string `json:"exchange_code"`
+	// Category is the option market.
+	Category OptionCategory `json:"category"`
+	// Currency is the trading currency, for example "USD".
+	Currency string `json:"currency"`
+	// LotSize is the contract size, as a decimal string.
+	LotSize string `json:"lot_size"`
+}
+
+// optionChainResponse is the presumed {data, pagination_key} envelope returned
+// by the option-chain endpoint.
+//
+// TODO(t10): unconfirmed response shape — mirroring the paginated
+// [StockProfilesV3Result] envelope until a live US sandbox confirms it.
+type optionChainResponse struct {
+	Data          []OptionContract `json:"data"`
+	PaginationKey string           `json:"pagination_key"`
+}
+
+// OptionChainResult is the result of [Client.GetOptionChain].
+//
+// TODO(t10): unconfirmed field mapping — the envelope keys and contract
+// fields are not documented.
+type OptionChainResult struct {
+	// Contracts lists the option contracts matching the query.
+	Contracts []OptionContract
+	// PaginationKey continues from a previous page; empty when there are no
+	// more pages.
+	PaginationKey string
+}
+
+// GetOptionChain lists the option contracts available for an underlying
+// symbol, optionally narrowed by expiration, option type, and strike range.
+//
+// Reference: none — the Webull OpenAPI reference does not document this
+// endpoint.
+//
+// TODO(t10): unconfirmed path — cannot verify without live US sandbox (HK
+// sandbox returns 404).
+func (c *Client) GetOptionChain(ctx context.Context, q OptionChainQuery) (*OptionChainResult, error) {
+	query := url.Values{
+		"symbol":   {q.Symbol},
+		"category": {string(optionCategory(q.Category))},
+	}
+	if q.Expiration != "" {
+		query.Set("expiration", q.Expiration)
+	}
+	if q.OptionType != "" {
+		query.Set("option_type", string(q.OptionType))
+	}
+	if q.StrikeMin != "" {
+		query.Set("strike_min", q.StrikeMin)
+	}
+	if q.StrikeMax != "" {
+		query.Set("strike_max", q.StrikeMax)
+	}
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+	var resp optionChainResponse
+	if err := c.get(ctx, pathOptionChain, query, &resp); err != nil {
+		return nil, err
+	}
+	return &OptionChainResult{
+		Contracts:     resp.Data,
+		PaginationKey: resp.PaginationKey,
+	}, nil
 }
