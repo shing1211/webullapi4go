@@ -68,7 +68,10 @@ func NewService(appKey, appSecret string, opts ...Option) *Service {
 	for _, o := range opts {
 		o.apply(&cfg)
 	}
-	hc := &http.Client{Timeout: 30 * time.Second}
+	hc := cfg.httpClnt
+	if hc == nil {
+		hc = &http.Client{Timeout: 30 * time.Second}
+	}
 	t, _ := transport.New(cfg.baseURL, hc, "webullapi4go")
 	return &Service{
 		appKey:    appKey,
@@ -81,7 +84,10 @@ func NewService(appKey, appSecret string, opts ...Option) *Service {
 
 type Option interface{ apply(*config) }
 
-type config struct{ baseURL string }
+type config struct {
+	baseURL  string
+	httpClnt *http.Client
+}
 
 type optionFunc func(*config)
 
@@ -99,6 +105,10 @@ func WithSandbox(v bool) Option {
 			c.baseURL = HKProductionHTTP
 		}
 	})
+}
+
+func WithHTTPClient(hc *http.Client) Option {
+	return optionFunc(func(c *config) { c.httpClnt = hc })
 }
 
 func (s *Service) EnsureToken(ctx context.Context) (string, error) {

@@ -67,9 +67,15 @@ func (c *Client) Core() *client.Client { return c.core }
 
 // DisplayService returns the [display.Service] for Display Solution API calls.
 // It is created lazily on first use using the same app credentials as the
-// underlying [client.Client].
+// underlying [client.Client]. Tests may replace it with [Client.SetDisplaySvcForTesting].
 func (c *Client) DisplayService() *display.Service {
+	if c.displaySvc != nil {
+		return c.displaySvc
+	}
 	c.displayOnce.Do(func() {
+		if c.displaySvc != nil {
+			return
+		}
 		sandbox := c.core.Environment() == client.Sandbox
 		c.displaySvc = display.NewService(
 			c.core.AppKey(),
@@ -78,6 +84,11 @@ func (c *Client) DisplayService() *display.Service {
 		)
 	})
 	return c.displaySvc
+}
+
+// SetDisplaySvcForTesting is for unit tests only (package data only).
+func (c *Client) SetDisplaySvcForTesting(svc *display.Service) {
+	c.displaySvc = svc
 }
 
 // do performs a signed request and decodes the JSON response into out. path is

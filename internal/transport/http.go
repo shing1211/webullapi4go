@@ -71,7 +71,14 @@ func (c *Client) HTTPClient() *http.Client { return c.http }
 // to ctx.
 func (c *Client) NewRequest(ctx context.Context, method, path string, query url.Values, body []byte) (*http.Request, error) {
 	u := *c.baseURL
-	u.Path = joinPath(c.baseURL.Path, path)
+	// Parse the full path to correctly separate path and query components
+	// when path contains a '?' character.
+	full, err := url.Parse(joinPath(c.baseURL.Path, path))
+	if err != nil {
+		return nil, err
+	}
+	u.Path = full.Path
+	u.RawQuery = full.RawQuery
 	if query != nil {
 		u.RawQuery = query.Encode()
 	}
