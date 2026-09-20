@@ -7,38 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-20
+
+Multi-leg options orders, futures order validation, speculative option chain discovery, and documentation sync.
+
 ### Added
 
-- Multi-leg options orders in `trade`: `OptionStrategy` gained `VERTICAL`,
-  `STRADDLE`, `STRANGLE`, `IRON_CONDOR`, `IRON_BUTTERFLY`, `BUTTERFLY`,
-  `COLLAR`, `CALENDAR`, `DIAGONAL`, and `RATIO` alongside `SINGLE`. Multi-leg
-  orders are expressed through `OrderRequest.Legs` (two or more legs).
-  `OrderRequest.Validate` requires at least two structurally well-formed legs,
-  rejects duplicate and degenerate leg sets, and restricts multi-leg orders to
-  `LIMIT` and `STOP_LOSS_LIMIT`. **Provisional:** the multi-leg strategy wire
-  values and structural rules are best-effort assumptions marked `TODO(t8)` and
-  are not confirmed against the live API.
-- Futures order validation in `trade`: a dedicated `validateFuturesRules` for
-  `InstrumentTypeFutures`. US and HK futures accept `LIMIT`, `MARKET`,
-  `STOP_LOSS`, and `STOP_LOSS_LIMIT`, require `entrust_type` `QTY` with a
-  positive whole-contract integer quantity, allow `DAY` or `GTC` only, and
-  reject option and equity/HK-only fields; CN futures are unsupported.
-  **Provisional:** the order-type matrix and the time-in-force, entrust-type,
-  and whole-contract quantity rules are marked `TODO(t9)` and await live
-  confirmation.
-- `data.GetOptionExpirations` and `data.GetOptionChain`, with the supporting
-  `OptionContract`, `OptionExpirationQuery`, `OptionChainQuery`, and
-  `OptionType` (`Call`/`Put`) types. **Speculative:** neither endpoint appears
-  in the published Webull OpenAPI reference. The paths, parameters, and
-  response shapes follow the naming convention of the documented option
-  endpoints, are marked `TODO(t10)`, and may return empty results until
-  verified against a live US sandbox.
+- `trade.OptionStrategy` constants for multi-leg options: `VERTICAL`, `STRADDLE`, `STRANGLE`, `IRON_CONDOR`, `IRON_BUTTERFLY`, `BUTTERFLY`, `COLLAR`, `CALENDAR`, `DIAGONAL`, `RATIO` — provisional (TODO(t8))
+- `trade.validateFuturesRules`: dedicated futures order-type matrix (US/HK), QTY-only/whole-contract/DAY-GTC validation — provisional (TODO(t9))
+- `trade/multileg_test.go`, `trade/futures_order_test.go`: offline tests for multi-leg and futures validation
+- `data.GetOptionExpirations`, `data.GetOptionChain`: speculative option chain discovery (not in published Webull API) — marked TODO(t10)
+- `data/options_test.go`: offline tests for option chain functions
 
 ### Changed
 
-- `trade.WithMaxOrderNotional` documents that the notional cap does not cover
-  multi-leg option orders, because each leg is priced separately and the order
-  has no single top-level notional; the quantity cap still applies.
+- `trade.orders.go`: instrument-dispatched validation (equity/option/futures branches)
+- `trade.options.go`: multi-leg order validation (2+ leg enforcement, duplicate/degenerate detection, canonicalStrike normalization)
+- `trade.rules.go`: futures order-type matrix and `isPositiveInteger` helper
+- `trade.option.go`: `WithMaxOrderNotional` documentation noting multi-leg bypass
+- `README.md`, `AGENTS.md`, `docs/trading.md`, `docs/api.md`, `docs/market-data.md` updated to reflect new features
 
 ## [0.5.0] - 2026-09-19
 
@@ -345,7 +332,9 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.6.0
+[0.5.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.5.0
 [0.3.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.3.0
 [0.2.6]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.6
 [0.2.5]: https://github.com/shing1211/webullapi4go/releases/tag/v0.2.5
