@@ -29,6 +29,7 @@ import (
 	"github.com/shing1211/webullapi4go/internal/auth"
 	"github.com/shing1211/webullapi4go/internal/errs"
 	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+	"github.com/shing1211/webullapi4go/internal/transport"
 )
 
 // Headers that the SDK sets on every request but that do not participate in the
@@ -87,6 +88,120 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 		return c.cfg.retry.Do(ctx, attempt)
 	}
 	return attempt(ctx)
+}
+
+// DoBroker performs a signed request against the Broker API and decodes the JSON
+// response into out. It is identical to [Client.Do] except that it uses the
+// Broker HTTP endpoint (cfg.Endpoints.BrokerHTTP) instead of the default HTTP
+// endpoint. If BrokerHTTP is not configured, DoBroker returns an error.
+func (c *Client) DoBroker(ctx context.Context, method, path string, body, out any) error {
+	if c.brokerTr == nil {
+		return errs.New(errs.CodeInvalidConfig, "broker HTTP endpoint is not configured")
+	}
+	reqPath, query, err := splitPathQuery(path)
+	if err != nil {
+		return err
+	}
+	query = normalizeQuery(query)
+
+	if err := c.ensureAutoToken(ctx, reqPath); err != nil {
+		return err
+	}
+
+	bodyBytes, err := marshalRequestBody(body)
+	if err != nil {
+		return err
+	}
+
+	attempt := func(ctx context.Context) error {
+		return c.attemptBroker(ctx, method, reqPath, query, bodyBytes, out)
+	}
+	if c.cfg.retry != nil && (c.cfg.retryNonIdempotent || isIdempotent(method)) {
+		return c.cfg.retry.Do(ctx, attempt)
+	}
+	return attempt(ctx)
+}
+
+func (c *Client) attemptBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
+	if c.cfg.rateLimiter != nil {
+		if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			return errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
+		}
+	}
+	if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
+		return retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
+	}
+
+	err := c.executeBroker(ctx, method, reqPath, query, bodyBytes, out)
+	if c.cfg.breaker != nil {
+		c.recordBreaker(err)
+	}
+	return err
+}
+
+func (c *Client) executeBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
+	req, err := c.buildSignedRequestForTransport(ctx, method, reqPath, query, bodyBytes, c.brokerTr)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.brokerTr.Do(req)
+	if err != nil {
+		return errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return errs.Wrap(errs.CodeTransport, "reading response body", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return errs.FromHTTPStatus(resp.StatusCode, data)
+	}
+	if out == nil || len(data) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		return errs.Wrap(errs.CodeAPI, "decoding response body", err)
+	}
+	return nil
+}
+
+func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, tr *transport.Client) (*http.Request, error) {
+	req, err := tr.NewRequest(ctx, method, reqPath, query, bodyBytes)
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeInvalidConfig, "building request", err)
+	}
+
+	host := signingHost(req.URL)
+	req.Host = host
+
+	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, time.Now())
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
+	}
+	applySigningHeaders(req.Header, signingHeaders)
+	req.Header.Set(headerVersion, c.apiVersionFor(reqPath))
+	if len(bodyBytes) > 0 {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	signature, err := auth.Sign(auth.SignParams{
+		Method:    method,
+		Path:      reqPath,
+		Query:     query,
+		Headers:   signingHeaders,
+		Body:      bodyBytes,
+		AppSecret: c.cfg.AppSecret,
+	})
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
+	}
+	req.Header.Set(headerSignature, signature)
+	return req, nil
 }
 
 // attempt executes a single request attempt, applying the configured rate
