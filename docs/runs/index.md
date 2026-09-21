@@ -17,4 +17,5 @@
 | 2026-09-21 | md-sync | BUILD | done | 2566182 |
 | 2026-09-21 | sandbox-tests | BUILD | released v0.9.0 | f9ae3e2 |
 | 2026-09-21 | test-sweep | BUILD | released v0.9.1 | c3ee5ce |
+| 2026-09-22 | broker-paths-fix | BUILD | released v0.9.2 | 44299b2 |
 | 2026-09-21 | lint-ci | BUILD | done (no-op — already configured) | 1617d1f |
