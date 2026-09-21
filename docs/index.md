@@ -14,8 +14,9 @@ statements. The v0.5 release adds Display Solution (corporate actions, instrumen
 profiles, logos), fund and crypto data, and screener v2. The v0.6 release adds
 multi-leg options orders, futures order validation (provisional), and speculative
 option chain and expiration discovery. The v0.7 release adds event contracts,
-Broker API HK, Broker FD US, and Broker FD gRPC events. The module is licensed
-under Apache-2.0.
+Broker API HK, Broker FD US, and Broker FD gRPC events. The v0.9 release adds
+watchlist boolean-response handling and the `DoBroker` transport. The module is
+licensed under Apache-2.0.
 
 ## Feature matrix
 

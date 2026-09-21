@@ -18,7 +18,7 @@ statements.
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.7)
+## Feature matrix (v0.9.1)
 
 | Area | Status | Details |
 |------|--------|---------|
@@ -323,6 +323,9 @@ MQTT on port 1883).
 | v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Done (provisional) |
 | v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done (provisional) |
 | v0.7.0 | Event contracts, Broker API HK, Broker FD US, Broker FD gRPC events | Done |
+| v0.8.0 | — | — |
+| v0.9.0 | Full sandbox verification: all core examples verified against HK sandbox; `FinancialsItem` numeric fix | Done |
+| v0.9.1 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v1.0 | Stable public API, full documentation, semver guarantees | Planned |
 
 ## Links

@@ -83,6 +83,11 @@ developing:
 - **Token rate limit.** The token endpoint allows 10 requests per 30 seconds.
 - **MQTT concurrency.** At most 5 concurrent MQTT connections per App Key; the
   server retains a disconnected session for about a minute.
+- **Broker API HK.** The HK sandbox returns `404 Route Not Found` for Broker API
+  HK endpoints (`/openapi/v1/broker/...`). The endpoint group is not available
+  in the sandbox environment.
+- **SSE news.** The news SSE endpoint returns `504 Gateway Timeout` in the
+  sandbox.
 
 See [Troubleshooting](troubleshooting.md) for the symptoms of each limitation and
 how to respond.

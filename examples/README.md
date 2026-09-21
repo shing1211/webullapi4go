@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.4 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.9.1 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -180,6 +180,31 @@ go run ./examples/probe
 
 Results are saved to `examples/probe/results/`. Not a user-facing example —
 used during SDK development to verify endpoint paths and response shapes.
+
+## watchlist-cmd
+
+Watchlist CRUD example demonstrating create, add instruments, update, remove
+instruments, and delete. Guarded by `WEBULL_WATCHLIST_TEST=1` since it mutates
+the watchlist.
+
+```sh
+WEBULL_WATCHLIST_TEST=1 go run ./examples/watchlist-cmd
+```
+
+## broker-probe
+
+Broker HK read-only endpoint probe program. Tests virtual account, instrument,
+asset, order, cash activity, FX, and journal endpoints against the sandbox.
+
+```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/broker-probe
+```
+
+Note: Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` in
+the HK sandbox — the endpoint group is not available in the sandbox environment.
 
 ## Sandbox limitations
 

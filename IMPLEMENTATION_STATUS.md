@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-21 (sandbox probe) · Current version: **v0.7.0**
+Last updated: 2026-09-21 (v0.9.1 release) · Current version: **v0.9.1**
 
 ## Summary
 
@@ -47,6 +47,9 @@ Last updated: 2026-09-21 (sandbox probe) · Current version: **v0.7.0**
 | v0.5.0 | 2026-09-19 | Display Solution, corporate actions, fund/crypto data, screener v2 | Done (provisional) |
 | v0.6.0 | 2026-09-20 | Multi-leg options, futures validation, option chain discovery | Done (provisional) |
 | v0.7.0 | 2026-09-21 | Event contracts, Broker API HK, Broker FD US, Broker FD events | Done (current) |
+| v0.8.0 | 2026-09-21 | Reserved | — |
+| v0.9.0 | 2026-09-21 | Full sandbox verification; `FinancialsItem` numeric fix | Done |
+| v0.9.1 | 2026-09-21 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 
 ## Feature Coverage
 
@@ -224,6 +227,8 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 | events | `examples/events/` | ✅ | gRPC order event subscription |
 | data-fundamentals | `examples/data-fundamentals/` | ✅ | All 13 fundamental endpoints for AAPL |
 | probe | `examples/probe/` | ❌ | Sandbox endpoint testing tool (has own README) |
+| watchlist-cmd | `examples/watchlist-cmd/` | ✅ | Watchlist CRUD example (create, add, update, remove, delete) |
+| broker-probe | `examples/broker-probe/` | ❌ | Broker HK read-only endpoint probe program |
 
 ## Known Issues
 
@@ -235,7 +240,8 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 6. **Order-book depth**: Empty outside regular trading hours
 7. **MQTT blocking**: Plain MQTT on port 1883 may be blocked; use MQTT-over-WebSocket on `wss://...:8883/mqtt`
 8. **Rate limits**: Token endpoint allows 10 requests/30s; max 5 MQTT connections per App Key
-9. **probe/ not documented**: The `examples/probe/` directory has its own README but is missing from `examples/README.md`
+9. **Broker API HK sandbox limitation**: Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` in the HK sandbox — the endpoint group is not available in the sandbox environment. Broker HK remains unverified pending production or US sandbox access.
+10. **SSE news 504**: SSE news upstream returns `504 Gateway Timeout` in the HK sandbox.
 
 ## Module Structure
 
@@ -257,5 +263,4 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 7. **Futures order validation rules** (2 TODOs): Confirm against live trading API
 8. **Event contract order rules** (1 TODO): Confirm against live trading API
 9. **Broker FD paths** (1 TODO) and **Broker FD event schemas** (3 TODOs): US-only
-10. **Document probe/ example** in `examples/README.md` (already done in this run)
 11. **Work toward v1.0**: stabilize public API, finalize documentation, semver guarantees

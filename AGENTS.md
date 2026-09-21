@@ -124,7 +124,8 @@ make generate
   even with valid credentials. v0.6 adds
   multi-leg options orders and futures order validation (provisional). v0.7 adds
   event contracts, Broker API HK, Broker FD US, and Broker FD gRPC events. The Broker
-  API HK is implemented; the Broker FD US and events remain provisional.
+  API HK is implemented; the Broker FD US and events remain provisional. v0.8 is
+  reserved. v0.9 adds watchlist boolean-response handling and the `DoBroker` transport.
 - The v1.0 probe adds **provisional** multi-leg options orders (T8), futures order
   validation (T9), and **speculative** option-chain/expiration discovery (T10). Their
   strategy wire values, structural rules, order-type matrices, and endpoint paths are
@@ -135,6 +136,10 @@ make generate
   unverified until `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` for the US sandbox are
   supplied.
 - Display Solution returns `403` in HK sandbox (entitlement required, not a path issue)
+- Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` in the HK
+  sandbox — the endpoint group is not available in that environment. Broker HK remains
+  unverified pending production or US sandbox access.
+- SSE news upstream returns `504 Gateway Timeout` in the HK sandbox.
 - Sandbox market data is limited to `AAPL`.
 - Footprint requires a paid entitlement; the sandbox returns `403 Insufficient
   permission`.
