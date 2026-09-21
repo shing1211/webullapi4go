@@ -165,6 +165,22 @@ cash flow, financial indicators, financial alert, and forecast EPS.
 go run ./examples/data-fundamentals
 ```
 
+## probe
+
+Sandbox endpoint testing tool. Hits live sandbox endpoints to verify response
+schemas for v0.5+ features (crypto, fund data, screener v2, display solution,
+broker FD). Includes a Go program and a Python equivalent.
+
+```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/probe
+```
+
+Results are saved to `examples/probe/results/`. Not a user-facing example —
+used during SDK development to verify endpoint paths and response shapes.
+
 ## Sandbox limitations
 
 While trying these examples against the sandbox, expect a few restrictions:

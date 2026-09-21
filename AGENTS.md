@@ -118,8 +118,10 @@ make generate
   Trading HTTP API. v0.3 adds Trading events over gRPC. v0.4 adds Market Data
   fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC
   filings, financial statements). v0.5 adds Display Solution (corporate actions,
-  instrument profiles, logos), fund and crypto data, and screener v2. The Broker API
-  is not yet implemented.
+  instrument profiles, logos), fund and crypto data, and screener v2. v0.6 adds
+  multi-leg options orders and futures order validation (provisional). v0.7 adds
+  event contracts, Broker API HK, Broker FD US, and Broker FD gRPC events. The Broker
+  API HK is implemented; the Broker FD US and events remain provisional.
 - The v1.0 probe adds **provisional** multi-leg options orders (T8), futures order
   validation (T9), and **speculative** option-chain/expiration discovery (T10). Their
   strategy wire values, structural rules, order-type matrices, and endpoint paths are

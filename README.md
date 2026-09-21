@@ -320,8 +320,8 @@ MQTT on port 1883).
 | v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | Done |
 | v0.3 | Trading events over gRPC | Done |
 | v0.4 | Market Data fundamentals: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements | Done |
-| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Planned |
-| v0.6 | Broker API | Planned |
+| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Done (provisional) |
+| v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done (provisional) |
 | v1.0 | Stable public API, full documentation, semver guarantees | Planned |
 
 ## Links

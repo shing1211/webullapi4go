@@ -10,7 +10,12 @@ add the Trading HTTP API for accounts, balances, positions, and the stock,
 options, and combo order lifecycle. The v0.3.0 release adds Trading events over
 gRPC. The v0.4.0 release adds Market Data fundamentals: capital flows, industry
 comparisons, earnings and dividend calendars, SEC filings, and financial
-statements. The module is licensed under Apache-2.0.
+statements. The v0.5 release adds Display Solution (corporate actions, instrument
+profiles, logos), fund and crypto data, and screener v2. The v0.6 release adds
+multi-leg options orders, futures order validation (provisional), and speculative
+option chain and expiration discovery. The v0.7 release adds event contracts,
+Broker API HK, Broker FD US, and Broker FD gRPC events. The module is licensed
+under Apache-2.0.
 
 ## Feature matrix
 
@@ -22,7 +27,8 @@ statements. The module is licensed under Apache-2.0.
 | Market Data (MQTT streaming) | Supported |
 | Trading (HTTP) | Supported |
 | Trading events (gRPC) | Supported (v0.3.0: order, position, and option streams) |
-| Broker API | Not yet (v0.5) |
+| Broker API HK | Supported (v0.7) |
+| Broker FD US | Provisional (v0.7) |
 
 ## Install
 
