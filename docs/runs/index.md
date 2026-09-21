@@ -15,3 +15,4 @@
 | 2026-09-21 | v09-quality-polish-derivatives | BUILD | in progress | — |
 | 2026-09-21 | impl-status-doc | BUILD | done | eb29556 |
 | 2026-09-21 | md-sync | BUILD | done | 2566182 |
+| 2026-09-21 | sandbox-tests | BUILD | released v0.9.0 | f9ae3e2 |
