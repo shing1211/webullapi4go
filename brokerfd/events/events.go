@@ -16,59 +16,305 @@ package events
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"io"
+	"math/rand/v2"
+	"net"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/shing1211/webullapi4go/client"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
 	"github.com/shing1211/webullapi4go/internal/errs"
 )
 
-type EventType = eventsevents.EventType
-
-const (
-	EventTypeSubscribeSuccess = eventsevents.EventType_SubscribeSuccess
-	EventTypePing             = eventsevents.EventType_Ping
-	EventTypeAuthError        = eventsevents.EventType_AuthError
-	EventTypeNumOfConnExceed  = eventsevents.EventType_NumOfConnExceed
-	EventTypeSubscribeExpired = eventsevents.EventType_SubscribeExpired
-)
-
-type SubscribeResponse struct {
-	*eventsevents.SubscribeResponse
-}
-
-func (r *SubscribeResponse) EventType() EventType { return r.GetEventType() }
-func (r *SubscribeResponse) ContentType() string  { return r.GetContentType() }
-func (r *SubscribeResponse) Payload() string      { return r.GetPayload() }
-func (r *SubscribeResponse) RequestId() string    { return r.GetRequestId() }
-func (r *SubscribeResponse) Timestamp() int64     { return r.GetTimestamp() }
-
 type Client struct {
-	svc     eventsevents.EventServiceClient
-	timeout time.Duration
+	core *client.Client
+	cfg  config
+	conn *grpc.ClientConn
+	svc  eventsevents.EventServiceClient
+
+	closeOnce sync.Once
+
+	mu        sync.RWMutex
+	onConnect []func()
+	onPing    []func()
+	onError   []func(error)
+	onData    []func(subscribeType uint32, contentType string, payload []byte)
+
+	runMu     sync.Mutex
+	runCancel context.CancelFunc
 }
 
-func NewClient(svc eventsevents.EventServiceClient) *Client {
-	return &Client{svc: svc, timeout: 30 * time.Second}
-}
-
-type Option func(*Client)
-
-func WithTimeout(d time.Duration) Option {
-	return func(c *Client) { c.timeout = d }
-}
-
-func (c *Client) Subscribe(ctx context.Context, req *SubscribeRequest, opts ...grpc.CallOption) (*streamClient, error) {
-	if c.timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.timeout)
-		defer cancel()
+func New(cl *client.Client, opts ...Option) (*Client, error) {
+	if cl == nil {
+		return nil, errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is required")
 	}
-	stream, err := c.svc.Subscribe(ctx, req, opts...)
+	cfg := defaultConfig()
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&cfg)
+		}
+	}
+	if cfg.endpoint == "" {
+		cfg.endpoint = cl.Endpoints().GRPC
+	}
+	if cfg.endpoint == "" {
+		return nil, errs.New(errs.CodeInvalidConfig, "brokerfd/events: no gRPC endpoint configured")
+	}
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
+	dialOpts := make([]grpc.DialOption, 0, len(cfg.dialOptions)+1)
+	if cfg.tls {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+	} else {
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+	dialOpts = append(dialOpts, cfg.dialOptions...)
+
+	conn, err := grpc.NewClient(dialTarget(cfg.endpoint, cfg.port), dialOpts...)
 	if err != nil {
-		return nil, errs.Wrap(errs.CodeTransport, "subscribe failed", err)
+		return nil, errs.Wrap(errs.CodeInvalidConfig, "brokerfd/events: invalid gRPC target", err)
+	}
+	return &Client{
+		core: cl,
+		cfg:  cfg,
+		conn: conn,
+		svc:  eventsevents.NewEventServiceClient(conn),
+	}, nil
+}
+
+func dialTarget(host string, port int) string {
+	if strings.Contains(host, "://") {
+		return host
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
+func (c *Client) OnConnect(fn func()) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onConnect = append(c.onConnect, fn)
+	c.mu.Unlock()
+}
+
+func (c *Client) OnPing(fn func()) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onPing = append(c.onPing, fn)
+	c.mu.Unlock()
+}
+
+func (c *Client) OnError(fn func(error)) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onError = append(c.onError, fn)
+	c.mu.Unlock()
+}
+
+func (c *Client) OnData(fn func(subscribeType uint32, contentType string, payload []byte)) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onData = append(c.onData, fn)
+	c.mu.Unlock()
+}
+
+func (c *Client) Run(ctx context.Context) error {
+	if c == nil || c.conn == nil {
+		return errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is not initialized")
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	c.setRunCancel(cancel)
+	defer func() {
+		c.setRunCancel(nil)
+		cancel()
+	}()
+
+	if !c.cfg.autoReconnect {
+		return c.fail(ctx, c.runOnce(ctx))
+	}
+	return c.runReconnecting(ctx)
+}
+
+func (c *Client) runOnce(ctx context.Context) error {
+	if err := c.waitForReady(ctx); err != nil {
+		return err
+	}
+	stream, err := c.open(ctx)
+	if err != nil {
+		return err
+	}
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			return c.recvError(ctx, err)
+		}
+		if err := c.dispatch(resp); err != nil {
+			return err
+		}
+	}
+}
+
+func (c *Client) runReconnecting(ctx context.Context) error {
+	attempt := 0
+	for {
+		err := c.runOnce(ctx)
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if !isRetryableStreamError(err) {
+			return c.fail(ctx, err)
+		}
+		if err != nil {
+			c.emitError(err)
+		}
+		if c.cfg.maxReconnectAttempts > 0 && attempt >= c.cfg.maxReconnectAttempts {
+			exhausted := errs.New(errs.CodeTransport, "brokerfd/events: reconnect attempts exhausted")
+			c.emitError(exhausted)
+			return exhausted
+		}
+		delay := c.reconnectDelay(attempt)
+		attempt++
+		if !sleepContext(ctx, delay) {
+			return ctx.Err()
+		}
+	}
+}
+
+var errTerminalStream = errors.New("brokerfd/events: terminal stream event")
+
+func isRetryableStreamError(err error) bool {
+	if err == nil {
+		return true
+	}
+	if errors.Is(err, errTerminalStream) {
+		return false
+	}
+	return errs.Is(err, errs.CodeTransport)
+}
+
+func (c *Client) reconnectDelay(attempt int) time.Duration {
+	base := c.cfg.reconnectBaseDelay
+	if base <= 0 {
+		base = DefaultReconnectBaseDelay
+	}
+	maxDelay := c.cfg.reconnectMaxDelay
+	if maxDelay < base {
+		maxDelay = base
+	}
+	delay := base
+	for i := 0; i < attempt && delay < maxDelay; i++ {
+		delay *= 2
+	}
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+	half := delay / 2
+	if half <= 0 {
+		return delay
+	}
+	return half + time.Duration(rand.Int64N(int64(half)+1))
+}
+
+func sleepContext(ctx context.Context, d time.Duration) bool {
+	if d <= 0 {
+		return ctx.Err() == nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
+}
+
+func (c *Client) Close() error {
+	var err error
+	c.closeOnce.Do(func() {
+		c.runMu.Lock()
+		cancel := c.runCancel
+		c.runMu.Unlock()
+		if cancel != nil {
+			cancel()
+		}
+		if c.conn != nil {
+			err = c.conn.Close()
+		}
+	})
+	return err
+}
+
+func (c *Client) setRunCancel(cancel context.CancelFunc) {
+	c.runMu.Lock()
+	c.runCancel = cancel
+	c.runMu.Unlock()
+}
+
+func (c *Client) fail(ctx context.Context, err error) error {
+	if err == nil || ctx.Err() != nil {
+		return err
+	}
+	c.emitError(err)
+	return err
+}
+
+func (c *Client) waitForReady(ctx context.Context) error {
+	parent := ctx
+	ctx, cancel := context.WithTimeout(ctx, c.cfg.dialTimeout)
+	defer cancel()
+	c.conn.Connect()
+	for {
+		state := c.conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		if !c.conn.WaitForStateChange(ctx, state) {
+			if parent.Err() != nil {
+				return parent.Err()
+			}
+			return errs.New(errs.CodeTransport, "brokerfd/events: gRPC connection not ready before the dial timeout")
+		}
+	}
+}
+
+func (c *Client) open(ctx context.Context) (*streamClient, error) {
+	now := time.Now()
+	req := NewSubscribeRequest(uint32(c.cfg.subscribeTypes), c.cfg.accounts)
+	body, err := proto.Marshal(req)
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeTransport, "brokerfd/events: marshal subscribe request", err)
+	}
+	md, err := subscribeMetadata(c.core.Config().AppKey, c.core.Config().AppSecret, now, body)
+	if err != nil {
+		return nil, err
+	}
+	stream, err := c.svc.Subscribe(metadata.NewOutgoingContext(ctx, md), req, grpc.WaitForReady(true))
+	if err != nil {
+		return nil, rpcError("brokerfd/events: subscribe", err)
 	}
 	return &streamClient{stream: stream}, nil
 }
@@ -83,18 +329,102 @@ func (s *streamClient) Recv() (*SubscribeResponse, error) {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return nil, errs.Wrap(errs.CodeTransport, "recv failed", err)
+		return nil, err
 	}
 	return &SubscribeResponse{SubscribeResponse: resp}, nil
 }
 
-type SubscribeRequest = eventsevents.SubscribeRequest
+func (c *Client) recvError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	return rpcError("brokerfd/events: stream receive", err)
+}
 
-func NewSubscribeRequest(subscribeType uint32, accounts []string) *SubscribeRequest {
-	return &SubscribeRequest{
-		SubscribeType: subscribeType,
-		Timestamp:     time.Now().UnixMilli(),
-		ContentType:   "application/json",
-		Accounts:      accounts,
+func rpcError(message string, err error) error {
+	st, ok := status.FromError(err)
+	if !ok {
+		return errs.Wrap(errs.CodeTransport, message, err)
+	}
+	code := errs.CodeTransport
+	switch st.Code() {
+	case codes.Unauthenticated:
+		code = errs.CodeAuth
+	case codes.PermissionDenied:
+		code = errs.CodeForbidden
+	case codes.InvalidArgument, codes.NotFound, codes.AlreadyExists, codes.FailedPrecondition:
+		code = errs.CodeAPI
+	case codes.ResourceExhausted:
+		code = errs.CodeRateLimited
+	case codes.Unimplemented:
+		code = errs.CodeUnsupported
+	}
+	return errs.Wrap(code, message+": "+st.Message(), err)
+}
+
+func (c *Client) dispatch(resp *SubscribeResponse) error {
+	switch resp.EventType() {
+	case eventsevents.EventType_SubscribeSuccess:
+		c.emitConnect()
+		return nil
+	case eventsevents.EventType_Ping:
+		c.emitPing()
+		return nil
+	case eventsevents.EventType_AuthError:
+		return errs.New(errs.CodeAuth, "brokerfd/events: authentication failed; verify the App Key, App Secret, and signing parameters")
+	case eventsevents.EventType_NumOfConnExceed:
+		return errs.Wrap(errs.CodeTransport, "brokerfd/events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errTerminalStream)
+	case eventsevents.EventType_SubscribeExpired:
+		return errs.New(errs.CodeAuth, "brokerfd/events: subscription expired; reconnect to resume")
+	default:
+		c.emitData(resp)
+		return nil
+	}
+}
+
+func (c *Client) emitConnect() {
+	c.mu.RLock()
+	handlers := make([]func(), len(c.onConnect))
+	copy(handlers, c.onConnect)
+	c.mu.RUnlock()
+	for _, h := range handlers {
+		h()
+	}
+}
+
+func (c *Client) emitPing() {
+	c.mu.RLock()
+	handlers := make([]func(), len(c.onPing))
+	copy(handlers, c.onPing)
+	c.mu.RUnlock()
+	for _, h := range handlers {
+		h()
+	}
+}
+
+func (c *Client) emitError(err error) {
+	if err == nil {
+		return
+	}
+	c.mu.RLock()
+	handlers := make([]func(error), len(c.onError))
+	copy(handlers, c.onError)
+	c.mu.RUnlock()
+	for _, h := range handlers {
+		h(err)
+	}
+}
+
+func (c *Client) emitData(resp *SubscribeResponse) {
+	c.mu.RLock()
+	handlers := make([]func(uint32, string, []byte), len(c.onData))
+	copy(handlers, c.onData)
+	c.mu.RUnlock()
+	de := resp.ToDataEvent()
+	for _, h := range handlers {
+		h(de.SubscribeType, de.ContentType, de.Payload)
 	}
 }
