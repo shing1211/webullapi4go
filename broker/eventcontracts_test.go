@@ -30,7 +30,7 @@ func TestGetEventContractCategories(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/event-contracts/categories"; got != want {
+		if got, want := r.URL.Path, "/broker/event-contracts/categories/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -60,7 +60,7 @@ func TestGetEventContractSeries(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/event-contracts/series"; got != want {
+		if got, want := r.URL.Path, "/broker/event-contracts/series/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("category_id"), "CAT1"; got != want {
@@ -93,7 +93,7 @@ func TestGetEventContractEvents(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/event-contracts/events"; got != want {
+		if got, want := r.URL.Path, "/broker/event-contracts/events/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("series_id"), "SER1"; got != want {
@@ -126,7 +126,7 @@ func TestGetEventContractInstruments(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/event-contracts/instruments"; got != want {
+		if got, want := r.URL.Path, "/broker/event-contracts/instruments/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("event_id"), "EVT1"; got != want {

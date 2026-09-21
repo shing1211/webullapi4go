@@ -19,47 +19,51 @@ import (
 	"net/url"
 )
 
-// Virtual account management endpoint paths.
 const (
-	pathVirtualAccounts       = "/openapi/v1/broker/virtual-accounts"
-	pathVirtualAccountsDetail = "/openapi/v1/broker/virtual-accounts/detail"
+	pathVirtualAccountsList   = "/broker/accounts/virtual-accounts/list"
+	pathVirtualAccountsGet    = "/broker/accounts/virtual-accounts/get"
+	pathVirtualAccountsCreate = "/broker/accounts/virtual-accounts/create"
+	pathVirtualAccountsUpdate = "/broker/accounts/virtual-accounts/update"
 )
 
-// VirtualAccount represents a virtual trading account.
 type VirtualAccount struct {
-	AccountID   string `json:"account_id"`
-	AccountName string `json:"account_name"`
-	AccountType string `json:"account_type"`
-	Currency    string `json:"currency"`
-	Status      string `json:"status"`
-	CreateTime  string `json:"create_time"`
-	UpdateTime  string `json:"update_time"`
+	AccountID                string   `json:"account_id"`
+	AccountNumber            string   `json:"account_number"`
+	AccountStatus            string   `json:"account_status"`
+	AccountType              string   `json:"account_type"`
+	BelongAccountID          string   `json:"belong_account_id"`
+	BelongAccountNumber      string   `json:"belong_account_number"`
+	TradingPermissions       []string `json:"trading_permissions"`
+	OptionLevel              string   `json:"option_level"`
+	CommissionCode           string   `json:"commission_code"`
+	W8benInfo                string   `json:"w8ben_info"`
+	ChinaConnectInvestorInfo string   `json:"china_connect_investor_info"`
 }
 
-// CreateVirtualAccountRequest is the body for [Client.CreateVirtualAccount].
+type virtualAccountsResponse struct {
+	Data []VirtualAccount `json:"data"`
+}
+
 type CreateVirtualAccountRequest struct {
 	AccountName string `json:"account_name"`
 	AccountType string `json:"account_type"`
 	Currency    string `json:"currency"`
 }
 
-// UpdateVirtualAccountRequest is the body for [Client.UpdateVirtualAccount].
 type UpdateVirtualAccountRequest struct {
 	AccountName string `json:"account_name,omitempty"`
 }
 
-// CreateVirtualAccount creates a new virtual account.
 func (c *Client) CreateVirtualAccount(ctx context.Context, req CreateVirtualAccountRequest) (*VirtualAccount, error) {
 	var out VirtualAccount
-	if err := c.post(ctx, pathVirtualAccounts, nil, req, &out); err != nil {
+	if err := c.post(ctx, pathVirtualAccountsCreate, nil, req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
 }
 
-// UpdateVirtualAccount updates an existing virtual account identified by accountID.
 func (c *Client) UpdateVirtualAccount(ctx context.Context, accountID string, req UpdateVirtualAccountRequest) (*VirtualAccount, error) {
-	path := pathVirtualAccountsDetail + "?account_id=" + accountID
+	path := pathVirtualAccountsUpdate + "?account_id=" + accountID
 	var out VirtualAccount
 	if err := c.put(ctx, path, nil, req, &out); err != nil {
 		return nil, err
@@ -67,22 +71,20 @@ func (c *Client) UpdateVirtualAccount(ctx context.Context, accountID string, req
 	return &out, nil
 }
 
-// GetVirtualAccount retrieves a single virtual account by accountID.
 func (c *Client) GetVirtualAccount(ctx context.Context, accountID string) (*VirtualAccount, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
 	var out VirtualAccount
-	if err := c.get(ctx, pathVirtualAccountsDetail, q, &out); err != nil {
+	if err := c.get(ctx, pathVirtualAccountsGet, q, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
 }
 
-// ListVirtualAccounts lists all virtual accounts.
 func (c *Client) ListVirtualAccounts(ctx context.Context) ([]VirtualAccount, error) {
-	var out []VirtualAccount
-	if err := c.get(ctx, pathVirtualAccounts, nil, &out); err != nil {
+	var out virtualAccountsResponse
+	if err := c.get(ctx, pathVirtualAccountsList, nil, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return out.Data, nil
 }

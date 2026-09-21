@@ -21,12 +21,11 @@ import (
 )
 
 const (
-	pathStockInstruments       = "/openapi/v1/broker/instruments/stocks"
-	pathStockLocate            = "/openapi/v1/broker/instruments/stock-locate"
-	pathCorporateActionsDetail = "/openapi/v1/broker/instruments/corporate-actions/detail"
+	pathStockInstruments       = "/broker/instruments/stocks/list"
+	pathStockLocate            = "/broker/instruments/stock-locate/get"
+	pathCorporateActionsDetail = "/broker/instruments/corporate-actions/get"
 )
 
-// StockInstrument represents a stock instrument in the broker system.
 type StockInstrument struct {
 	Symbol   string `json:"symbol"`
 	Name     string `json:"name"`
@@ -36,7 +35,6 @@ type StockInstrument struct {
 	Status   string `json:"status"`
 }
 
-// GetStockInstruments retrieves stock instruments for a list of symbols.
 func (c *Client) GetStockInstruments(ctx context.Context, symbols []string) ([]StockInstrument, error) {
 	q := url.Values{}
 	q.Set("symbols", strings.Join(symbols, ","))
@@ -47,7 +45,6 @@ func (c *Client) GetStockInstruments(ctx context.Context, symbols []string) ([]S
 	return out, nil
 }
 
-// StockLocate represents a stock locate entry.
 type StockLocate struct {
 	Symbol         string `json:"symbol"`
 	LocateQuantity string `json:"locate_quantity"`
@@ -55,7 +52,6 @@ type StockLocate struct {
 	Rate           string `json:"rate"`
 }
 
-// GetStockLocate retrieves locate information for a symbol.
 func (c *Client) GetStockLocate(ctx context.Context, symbol string) ([]StockLocate, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)
@@ -66,7 +62,6 @@ func (c *Client) GetStockLocate(ctx context.Context, symbol string) ([]StockLoca
 	return out, nil
 }
 
-// CorporateActionDetail represents corporate action details.
 type CorporateActionDetail struct {
 	Symbol      string `json:"symbol"`
 	ActionType  string `json:"action_type"`
@@ -77,7 +72,6 @@ type CorporateActionDetail struct {
 	Description string `json:"description"`
 }
 
-// GetCorporateActionsDetail retrieves corporate action details for a symbol.
 func (c *Client) GetCorporateActionsDetail(ctx context.Context, symbol string) ([]CorporateActionDetail, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)

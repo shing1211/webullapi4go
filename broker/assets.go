@@ -19,25 +19,25 @@ import (
 	"net/url"
 )
 
-// Broker asset endpoints.
 const (
-	pathBalance   = "/openapi/v1/broker/assets/balance"
-	pathPositions = "/openapi/v1/broker/assets/positions"
+	pathBalance   = "/broker/assets/balances/get"
+	pathPositions = "/broker/assets/positions/list"
 )
 
-// Balance represents the account balance.
-type Balance struct {
-	AccountID    string `json:"account_id"`
-	TotalEquity  string `json:"total_equity"`
-	CashBalance  string `json:"cash_balance"`
-	MarketValue  string `json:"market_value"`
-	BuyingPower  string `json:"buying_power"`
-	UnrealizedPL string `json:"unrealized_pl"`
-	Margin       string `json:"margin"`
-	Currency     string `json:"currency"`
+type CurrencyAsset struct {
+	Currency string `json:"currency"`
+	Balance  string `json:"balance"`
 }
 
-// GetBalance retrieves the account balance.
+type Balance struct {
+	TotalAssetCurrency    string          `json:"total_asset_currency"`
+	TotalCashBalance      string          `json:"total_cash_balance"`
+	TotalMarketValue      string          `json:"total_market_value"`
+	TotalUnrealizedPL     string          `json:"total_unrealized_profit_loss"`
+	InitMargin            string          `json:"init_margin"`
+	AccountCurrencyAssets []CurrencyAsset `json:"account_currency_assets"`
+}
+
 func (c *Client) GetBalance(ctx context.Context, accountID string) (*Balance, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -48,7 +48,6 @@ func (c *Client) GetBalance(ctx context.Context, accountID string) (*Balance, er
 	return &out, nil
 }
 
-// Position represents a holding.
 type Position struct {
 	Symbol         string `json:"symbol"`
 	Quantity       string `json:"quantity"`
@@ -59,13 +58,16 @@ type Position struct {
 	Currency       string `json:"currency"`
 }
 
-// GetPositions retrieves positions for an account.
+type positionsResponse struct {
+	Data []Position `json:"data"`
+}
+
 func (c *Client) GetPositions(ctx context.Context, accountID string) ([]Position, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []Position
+	var out positionsResponse
 	if err := c.get(ctx, pathPositions, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return out.Data, nil
 }

@@ -28,20 +28,20 @@ import (
 func TestGetFXRate(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"from_currency":"USD","to_currency":"HKD","rate":"7.85","timestamp":"2026-01-01T00:00:00Z"}`
+	const body = `{"from_currency":"USD","to_currency":"HKD","fx_rate":"7.85","rate_effective_time":"2026-01-01T00:00:00Z","rate_expire_time":"2026-01-01T00:01:00Z"}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/fx/rate"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/fx-rates/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("from"), "USD"; got != want {
-			t.Errorf("from = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("from_currency"), "USD"; got != want {
+			t.Errorf("from_currency = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("to"), "HKD"; got != want {
-			t.Errorf("to = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("to_currency"), "HKD"; got != want {
+			t.Errorf("to_currency = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -56,21 +56,21 @@ func TestGetFXRate(t *testing.T) {
 	if got.FromCurrency != "USD" || got.ToCurrency != "HKD" {
 		t.Errorf("currencies = %+v, want USD/HKD", got)
 	}
-	if got.Rate != "7.85" {
-		t.Errorf("rate = %q, want 7.85", got.Rate)
+	if got.FXRate != "7.85" {
+		t.Errorf("fx_rate = %q, want 7.85", got.FXRate)
 	}
 }
 
 func TestCreateFXExchange(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"exchange_id":"FX1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","from_amount":"1000.00","to_amount":"7850.00","rate":"7.85","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const respBody = `{"fx_id":"FX1","client_request_id":"CR1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","from_amount":"1000.00","to_amount":"7850.00","fx_rate":"7.85","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/fx/exchange"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/fx-exchanges/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -105,8 +105,8 @@ func TestCreateFXExchange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateFXExchange() error = %v", err)
 	}
-	if got.ExchangeID != "FX1" {
-		t.Errorf("exchange_id = %q, want FX1", got.ExchangeID)
+	if got.FXID != "FX1" {
+		t.Errorf("fx_id = %q, want FX1", got.FXID)
 	}
 	if got.Status != "COMPLETED" {
 		t.Errorf("status = %q, want COMPLETED", got.Status)
@@ -116,14 +116,17 @@ func TestCreateFXExchange(t *testing.T) {
 func TestGetFXExchangeDetail(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"exchange_id":"FX1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","from_amount":"1000.00","to_amount":"7850.00","rate":"7.85","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const body = `{"fx_id":"FX1","client_request_id":"CR1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","from_amount":"1000.00","to_amount":"7850.00","fx_rate":"7.85","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/fx/exchange/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/fx-exchanges/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("exchange_id"), "FX1"; got != want {
-			t.Errorf("exchange_id = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
+			t.Errorf("account_id = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("client_request_id"), "CR1"; got != want {
+			t.Errorf("client_request_id = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -131,25 +134,25 @@ func TestGetFXExchangeDetail(t *testing.T) {
 	defer srv.Close()
 
 	c := newBrokerClient(t, srv.URL)
-	got, err := c.GetFXExchangeDetail(context.Background(), "FX1")
+	got, err := c.GetFXExchangeDetail(context.Background(), "ACC1", "CR1")
 	if err != nil {
 		t.Fatalf("GetFXExchangeDetail() error = %v", err)
 	}
-	if got.ExchangeID != "FX1" {
-		t.Errorf("exchange_id = %q, want FX1", got.ExchangeID)
+	if got.FXID != "FX1" {
+		t.Errorf("fx_id = %q, want FX1", got.FXID)
 	}
 }
 
 func TestCreateInstantExchange(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"exchange_id":"IE1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","amount":"1000.00","rate":"7.85","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const respBody = `{"client_request_id":"IE1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","amount":"1000.00","rate":"7.85","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/fx/instant-exchange"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-fx/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -178,22 +181,25 @@ func TestCreateInstantExchange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateInstantExchange() error = %v", err)
 	}
-	if got.ExchangeID != "IE1" {
-		t.Errorf("exchange_id = %q, want IE1", got.ExchangeID)
+	if got.ClientRequestID != "IE1" {
+		t.Errorf("client_request_id = %q, want IE1", got.ClientRequestID)
 	}
 }
 
 func TestGetInstantExchangeDetail(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"exchange_id":"IE1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","amount":"1000.00","rate":"7.85","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const body = `{"client_request_id":"IE1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","amount":"1000.00","rate":"7.85","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/fx/exchange/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-fx/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("exchange_id"), "IE1"; got != want {
-			t.Errorf("exchange_id = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
+			t.Errorf("account_id = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("client_request_id"), "IE1"; got != want {
+			t.Errorf("client_request_id = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -201,25 +207,25 @@ func TestGetInstantExchangeDetail(t *testing.T) {
 	defer srv.Close()
 
 	c := newBrokerClient(t, srv.URL)
-	got, err := c.GetInstantExchangeDetail(context.Background(), "IE1")
+	got, err := c.GetInstantExchangeDetail(context.Background(), "ACC1", "IE1")
 	if err != nil {
 		t.Fatalf("GetInstantExchangeDetail() error = %v", err)
 	}
-	if got.ExchangeID != "IE1" {
-		t.Errorf("exchange_id = %q, want IE1", got.ExchangeID)
+	if got.ClientRequestID != "IE1" {
+		t.Errorf("client_request_id = %q, want IE1", got.ClientRequestID)
 	}
 }
 
 func TestCreateInstantFunding(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"funding_id":"IF1","account_id":"ACC1","amount":"5000.00","currency":"USD","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const respBody = `{"client_request_id":"IF1","account_id":"ACC1","amount":"5000.00","currency":"USD","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/instant"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -250,22 +256,25 @@ func TestCreateInstantFunding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateInstantFunding() error = %v", err)
 	}
-	if got.FundingID != "IF1" {
-		t.Errorf("funding_id = %q, want IF1", got.FundingID)
+	if got.ClientRequestID != "IF1" {
+		t.Errorf("client_request_id = %q, want IF1", got.ClientRequestID)
 	}
 }
 
 func TestGetInstantFundingDetail(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"funding_id":"IF1","account_id":"ACC1","amount":"5000.00","currency":"USD","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const body = `{"client_request_id":"IF1","account_id":"ACC1","amount":"5000.00","currency":"USD","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/funding/instant/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("funding_id"), "IF1"; got != want {
-			t.Errorf("funding_id = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
+			t.Errorf("account_id = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("client_request_id"), "IF1"; got != want {
+			t.Errorf("client_request_id = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -273,25 +282,25 @@ func TestGetInstantFundingDetail(t *testing.T) {
 	defer srv.Close()
 
 	c := newBrokerClient(t, srv.URL)
-	got, err := c.GetInstantFundingDetail(context.Background(), "IF1")
+	got, err := c.GetInstantFundingDetail(context.Background(), "ACC1", "IF1")
 	if err != nil {
 		t.Fatalf("GetInstantFundingDetail() error = %v", err)
 	}
-	if got.FundingID != "IF1" {
-		t.Errorf("funding_id = %q, want IF1", got.FundingID)
+	if got.ClientRequestID != "IF1" {
+		t.Errorf("client_request_id = %q, want IF1", got.ClientRequestID)
 	}
 }
 
 func TestCreateCashJournal(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"journal_id":"CJ1","account_id":"ACC1","type":"DEPOSIT","amount":"10000.00","currency":"HKD","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const respBody = `{"journal_id":"CJ1","client_request_id":"CRJ1","from_account":"ACC0","to_account":"ACC1","account_id":"ACC1","type":"DEPOSIT","amount":"10000.00","currency":"HKD","status":"COMPLETED","reason":"","create_time":"2026-01-01T00:00:00Z"}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/journals/cash"; got != want {
+		if got, want := r.URL.Path, "/broker/journals/cash-journals/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -331,14 +340,17 @@ func TestCreateCashJournal(t *testing.T) {
 func TestGetCashJournalDetail(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"journal_id":"CJ1","account_id":"ACC1","type":"DEPOSIT","amount":"10000.00","currency":"HKD","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const body = `{"journal_id":"CJ1","client_request_id":"CRJ1","from_account":"ACC0","to_account":"ACC1","account_id":"ACC1","type":"DEPOSIT","amount":"10000.00","currency":"HKD","status":"COMPLETED","reason":"","create_time":"2026-01-01T00:00:00Z"}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/journals/cash/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/journals/cash-journals/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("journal_id"), "CJ1"; got != want {
-			t.Errorf("journal_id = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
+			t.Errorf("account_id = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("client_request_id"), "CRJ1"; got != want {
+			t.Errorf("client_request_id = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -346,7 +358,7 @@ func TestGetCashJournalDetail(t *testing.T) {
 	defer srv.Close()
 
 	c := newBrokerClient(t, srv.URL)
-	got, err := c.GetCashJournalDetail(context.Background(), "CJ1")
+	got, err := c.GetCashJournalDetail(context.Background(), "ACC1", "CRJ1")
 	if err != nil {
 		t.Fatalf("GetCashJournalDetail() error = %v", err)
 	}
@@ -358,13 +370,13 @@ func TestGetCashJournalDetail(t *testing.T) {
 func TestCreatePositionJournal(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"journal_id":"PJ1","account_id":"ACC1","symbol":"00700.HK","quantity":"100","action":"TRANSFER_IN","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const respBody = `{"journal_id":"PJ1","client_request_id":"RPJ1","from_account":"ACC0","to_account":"ACC1","account_id":"ACC1","symbol":"00700.HK","quantity":"100","action":"TRANSFER_IN","status":"COMPLETED","reason":"","create_time":"2026-01-01T00:00:00Z"}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/journals/position"; got != want {
+		if got, want := r.URL.Path, "/broker/journals/position-journals/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -404,14 +416,17 @@ func TestCreatePositionJournal(t *testing.T) {
 func TestGetPositionJournalDetail(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"journal_id":"PJ1","account_id":"ACC1","symbol":"00700.HK","quantity":"100","action":"TRANSFER_IN","status":"COMPLETED","create_time":"2026-01-01T00:00:00Z"}`
+	const body = `{"journal_id":"PJ1","client_request_id":"RPJ1","from_account":"ACC0","to_account":"ACC1","account_id":"ACC1","symbol":"00700.HK","quantity":"100","action":"TRANSFER_IN","status":"COMPLETED","reason":"","create_time":"2026-01-01T00:00:00Z"}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/journals/position/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/journals/position-journals/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("journal_id"), "PJ1"; got != want {
-			t.Errorf("journal_id = %q, want %q", got, want)
+		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
+			t.Errorf("account_id = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("client_request_id"), "RPJ1"; got != want {
+			t.Errorf("client_request_id = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -419,7 +434,7 @@ func TestGetPositionJournalDetail(t *testing.T) {
 	defer srv.Close()
 
 	c := newBrokerClient(t, srv.URL)
-	got, err := c.GetPositionJournalDetail(context.Background(), "PJ1")
+	got, err := c.GetPositionJournalDetail(context.Background(), "ACC1", "RPJ1")
 	if err != nil {
 		t.Fatalf("GetPositionJournalDetail() error = %v", err)
 	}

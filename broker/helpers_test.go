@@ -27,6 +27,10 @@ func newTestClient(t *testing.T, baseURL string) *client.Client {
 		client.WithBaseURL(baseURL),
 		client.WithAppKey("test-key"),
 		client.WithAppSecret("test-secret"),
+		client.WithEndpoints(client.Endpoints{
+			HTTP:       baseURL,
+			BrokerHTTP: baseURL,
+		}),
 	)
 	if err != nil {
 		t.Fatalf("client.New() error = %v", err)

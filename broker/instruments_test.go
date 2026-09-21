@@ -33,8 +33,8 @@ func TestGetStockInstruments(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if r.URL.Path != "/openapi/v1/broker/instruments/stocks" {
-			t.Errorf("path = %q, want /openapi/v1/broker/instruments/stocks", r.URL.Path)
+		if r.URL.Path != "/broker/instruments/stocks/list" {
+			t.Errorf("path = %q, want /broker/instruments/stocks/list", r.URL.Path)
 		}
 		got := r.URL.Query().Get("symbols")
 		if got != "AAPL,TSLA" {
@@ -66,8 +66,8 @@ func TestGetStockLocate(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if r.URL.Path != "/openapi/v1/broker/instruments/stock-locate" {
-			t.Errorf("path = %q, want /openapi/v1/broker/instruments/stock-locate", r.URL.Path)
+		if r.URL.Path != "/broker/instruments/stock-locate/get" {
+			t.Errorf("path = %q, want /broker/instruments/stock-locate/get", r.URL.Path)
 		}
 		if got := r.URL.Query().Get("symbol"); got != "TSLA" {
 			t.Errorf("symbol = %q, want TSLA", got)
@@ -101,8 +101,8 @@ func TestGetCorporateActionsDetail(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if r.URL.Path != "/openapi/v1/broker/instruments/corporate-actions/detail" {
-			t.Errorf("path = %q, want /openapi/v1/broker/instruments/corporate-actions/detail", r.URL.Path)
+		if r.URL.Path != "/broker/instruments/corporate-actions/get" {
+			t.Errorf("path = %q, want /broker/instruments/corporate-actions/get", r.URL.Path)
 		}
 		if got := r.URL.Query().Get("symbol"); got != "MSFT" {
 			t.Errorf("symbol = %q, want MSFT", got)

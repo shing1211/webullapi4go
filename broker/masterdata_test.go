@@ -16,6 +16,8 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,20 +30,32 @@ func TestGetTradeCalendar(t *testing.T) {
 		`"open_time":"09:30","close_time":"16:00"}]`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/master-data/trade-calendar"; got != want {
+		if got, want := r.URL.Path, "/broker/master-data/trade-calendar/query"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
-		if got, want := r.URL.Query().Get("market"), "HK"; got != want {
-			t.Errorf("market = %q, want %q", got, want)
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
 		}
-		if got, want := r.URL.Query().Get("start_date"), "2026-01-01"; got != want {
-			t.Errorf("start_date = %q, want %q", got, want)
+		var req struct {
+			Market    string `json:"market"`
+			StartDate string `json:"start_date"`
+			EndDate   string `json:"end_date"`
 		}
-		if got, want := r.URL.Query().Get("end_date"), "2026-01-31"; got != want {
-			t.Errorf("end_date = %q, want %q", got, want)
+		if err := json.Unmarshal(bodyBytes, &req); err != nil {
+			t.Fatalf("unmarshal body: %v", err)
+		}
+		if req.Market != "HK" {
+			t.Errorf("market = %q, want HK", req.Market)
+		}
+		if req.StartDate != "2026-01-01" {
+			t.Errorf("start_date = %q, want 2026-01-01", req.StartDate)
+		}
+		if req.EndDate != "2026-01-31" {
+			t.Errorf("end_date = %q, want 2026-01-31", req.EndDate)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))

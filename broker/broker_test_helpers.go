@@ -23,8 +23,12 @@ import (
 func newTestBrokerClient(t *testing.T, baseURL string) *Client {
 	t.Helper()
 	cl, err := client.New(
-		client.WithBaseURL(baseURL),
-		client.WithCredentials("test-key", "test-secret"),
+		client.WithAppKey("test-key"),
+		client.WithAppSecret("test-secret"),
+		client.WithEndpoints(client.Endpoints{
+			HTTP:       baseURL,
+			BrokerHTTP: baseURL,
+		}),
 	)
 	if err != nil {
 		t.Fatalf("client.New() error = %v", err)

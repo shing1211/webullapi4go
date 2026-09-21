@@ -28,15 +28,17 @@ import (
 func TestListVirtualAccounts(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"account_id":"VA1","account_name":"Paper",` +
-		`"account_type":"PAPER","currency":"USD","status":"ACTIVE",` +
-		`"create_time":"2026-01-01","update_time":"2026-01-02"}]`
+	const body = `{"data":[{"account_id":"VA1","account_number":"Paper",` +
+		`"account_type":"PAPER","account_status":"ACTIVE",` +
+		`"belong_account_id":"ACC1","belong_account_number":"Main",` +
+		`"trading_permissions":["STOCK","OPTION"],"option_level":"Level 1",` +
+		`"commission_code":"C001","w8ben_info":"","china_connect_investor_info":""}]}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/virtual-accounts"; got != want {
+		if got, want := r.URL.Path, "/broker/accounts/virtual-accounts/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -52,7 +54,7 @@ func TestListVirtualAccounts(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d accounts, want 1", len(got))
 	}
-	if got[0].AccountID != "VA1" || got[0].AccountName != "Paper" {
+	if got[0].AccountID != "VA1" || got[0].AccountNumber != "Paper" {
 		t.Errorf("account = %+v, want VA1/Paper", got[0])
 	}
 }
@@ -60,12 +62,14 @@ func TestListVirtualAccounts(t *testing.T) {
 func TestGetVirtualAccount(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"account_id":"VA1","account_name":"Paper",` +
-		`"account_type":"PAPER","currency":"USD","status":"ACTIVE",` +
-		`"create_time":"2026-01-01","update_time":"2026-01-02"}`
+	const body = `{"account_id":"VA1","account_number":"Paper",` +
+		`"account_type":"PAPER","account_status":"ACTIVE",` +
+		`"belong_account_id":"ACC1","belong_account_number":"Main",` +
+		`"trading_permissions":["STOCK"],"option_level":"Level 1",` +
+		`"commission_code":"C001","w8ben_info":"","china_connect_investor_info":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/openapi/v1/broker/virtual-accounts/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/accounts/virtual-accounts/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "VA1"; got != want {
@@ -81,7 +85,7 @@ func TestGetVirtualAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetVirtualAccount() error = %v", err)
 	}
-	if got.AccountID != "VA1" || got.Currency != "USD" {
+	if got.AccountID != "VA1" || got.AccountNumber != "Paper" {
 		t.Errorf("account = %+v", got)
 	}
 }
@@ -89,15 +93,17 @@ func TestGetVirtualAccount(t *testing.T) {
 func TestCreateVirtualAccount(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"account_id":"VA2","account_name":"Trading",` +
-		`"account_type":"PAPER","currency":"HKD","status":"ACTIVE",` +
-		`"create_time":"2026-02-01","update_time":"2026-02-01"}`
+	const respBody = `{"account_id":"VA2","account_number":"Trading",` +
+		`"account_type":"PAPER","account_status":"ACTIVE",` +
+		`"belong_account_id":"ACC1","belong_account_number":"Main",` +
+		`"trading_permissions":["STOCK"],"option_level":"Level 1",` +
+		`"commission_code":"C002","w8ben_info":"","china_connect_investor_info":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/virtual-accounts"; got != want {
+		if got, want := r.URL.Path, "/broker/accounts/virtual-accounts/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -128,7 +134,7 @@ func TestCreateVirtualAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateVirtualAccount() error = %v", err)
 	}
-	if got.AccountID != "VA2" || got.AccountName != "Trading" {
+	if got.AccountID != "VA2" || got.AccountNumber != "Trading" {
 		t.Errorf("account = %+v", got)
 	}
 }
@@ -136,15 +142,17 @@ func TestCreateVirtualAccount(t *testing.T) {
 func TestUpdateVirtualAccount(t *testing.T) {
 	t.Parallel()
 
-	const respBody = `{"account_id":"VA1","account_name":"Renamed",` +
-		`"account_type":"PAPER","currency":"USD","status":"ACTIVE",` +
-		`"create_time":"2026-01-01","update_time":"2026-03-01"}`
+	const respBody = `{"account_id":"VA1","account_number":"Renamed",` +
+		`"account_type":"PAPER","account_status":"ACTIVE",` +
+		`"belong_account_id":"ACC1","belong_account_number":"Main",` +
+		`"trading_permissions":["STOCK"],"option_level":"Level 1",` +
+		`"commission_code":"C001","w8ben_info":"","china_connect_investor_info":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
 			t.Errorf("method = %q, want PUT", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/virtual-accounts/detail"; got != want {
+		if got, want := r.URL.Path, "/broker/accounts/virtual-accounts/update"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "VA1"; got != want {
@@ -173,7 +181,7 @@ func TestUpdateVirtualAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateVirtualAccount() error = %v", err)
 	}
-	if got.AccountID != "VA1" || got.AccountName != "Renamed" {
+	if got.AccountID != "VA1" || got.AccountNumber != "Renamed" {
 		t.Errorf("account = %+v", got)
 	}
 }

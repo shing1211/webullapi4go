@@ -19,21 +19,18 @@ import (
 	"net/url"
 )
 
-// Broker event contract endpoints.
 const (
-	pathECCategories  = "/openapi/v1/broker/event-contracts/categories"
-	pathECSeries      = "/openapi/v1/broker/event-contracts/series"
-	pathECEvents      = "/openapi/v1/broker/event-contracts/events"
-	pathECInstruments = "/openapi/v1/broker/event-contracts/instruments"
+	pathECCategories  = "/broker/event-contracts/categories/list"
+	pathECSeries      = "/broker/event-contracts/series/get"
+	pathECEvents      = "/broker/event-contracts/events/get"
+	pathECInstruments = "/broker/event-contracts/instruments/get"
 )
 
-// EventContractCategory represents an event contract category.
 type EventContractCategory struct {
 	CategoryID   string `json:"category_id"`
 	CategoryName string `json:"category_name"`
 }
 
-// EventContractSeries represents a series of related events.
 type EventContractSeries struct {
 	SeriesID   string `json:"series_id"`
 	CategoryID string `json:"category_id"`
@@ -41,7 +38,6 @@ type EventContractSeries struct {
 	Status     string `json:"status"`
 }
 
-// EventContractEvent represents a single event within a series.
 type EventContractEvent struct {
 	EventID   string `json:"event_id"`
 	SeriesID  string `json:"series_id"`
@@ -50,7 +46,6 @@ type EventContractEvent struct {
 	EventDate string `json:"event_date"`
 }
 
-// EventContractInstrument represents a tradable event contract instrument.
 type EventContractInstrument struct {
 	Symbol         string `json:"symbol"`
 	EventID        string `json:"event_id"`
@@ -60,7 +55,6 @@ type EventContractInstrument struct {
 	ExpirationDate string `json:"expiration_date"`
 }
 
-// GetEventContractCategories retrieves all event contract categories.
 func (c *Client) GetEventContractCategories(ctx context.Context) ([]EventContractCategory, error) {
 	var out []EventContractCategory
 	if err := c.get(ctx, pathECCategories, nil, &out); err != nil {
@@ -69,7 +63,6 @@ func (c *Client) GetEventContractCategories(ctx context.Context) ([]EventContrac
 	return out, nil
 }
 
-// GetEventContractSeries retrieves event contract series.
 func (c *Client) GetEventContractSeries(ctx context.Context, categoryID string) ([]EventContractSeries, error) {
 	q := url.Values{}
 	q.Set("category_id", categoryID)
@@ -80,7 +73,6 @@ func (c *Client) GetEventContractSeries(ctx context.Context, categoryID string) 
 	return out, nil
 }
 
-// GetEventContractEvents retrieves events for a series.
 func (c *Client) GetEventContractEvents(ctx context.Context, seriesID string) ([]EventContractEvent, error) {
 	q := url.Values{}
 	q.Set("series_id", seriesID)
@@ -91,7 +83,6 @@ func (c *Client) GetEventContractEvents(ctx context.Context, seriesID string) ([
 	return out, nil
 }
 
-// GetEventContractInstruments retrieves instruments for an event.
 func (c *Client) GetEventContractInstruments(ctx context.Context, eventID string) ([]EventContractInstrument, error) {
 	q := url.Values{}
 	q.Set("event_id", eventID)

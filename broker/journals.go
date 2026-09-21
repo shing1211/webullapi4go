@@ -20,20 +20,24 @@ import (
 )
 
 const (
-	pathCashJournal           = "/openapi/v1/broker/journals/cash"
-	pathCashJournalDetail     = "/openapi/v1/broker/journals/cash/detail"
-	pathPositionJournal       = "/openapi/v1/broker/journals/position"
-	pathPositionJournalDetail = "/openapi/v1/broker/journals/position/detail"
+	pathCashJournal           = "/broker/journals/cash-journals/create"
+	pathCashJournalDetail     = "/broker/journals/cash-journals/get"
+	pathPositionJournal       = "/broker/journals/position-journals/create"
+	pathPositionJournalDetail = "/broker/journals/position-journals/get"
 )
 
 type CashJournal struct {
-	JournalID  string `json:"journal_id"`
-	AccountID  string `json:"account_id"`
-	Type       string `json:"type"`
-	Amount     string `json:"amount"`
-	Currency   string `json:"currency"`
-	Status     string `json:"status"`
-	CreateTime string `json:"create_time"`
+	JournalID       string `json:"journal_id"`
+	ClientRequestID string `json:"client_request_id"`
+	FromAccount     string `json:"from_account"`
+	ToAccount       string `json:"to_account"`
+	AccountID       string `json:"account_id"`
+	Type            string `json:"type"`
+	Amount          string `json:"amount"`
+	Currency        string `json:"currency"`
+	Status          string `json:"status"`
+	Reason          string `json:"reason,omitempty"`
+	CreateTime      string `json:"create_time"`
 }
 
 type CreateCashJournalRequest struct {
@@ -51,9 +55,10 @@ func (c *Client) CreateCashJournal(ctx context.Context, req CreateCashJournalReq
 	return &out, nil
 }
 
-func (c *Client) GetCashJournalDetail(ctx context.Context, journalID string) (*CashJournal, error) {
+func (c *Client) GetCashJournalDetail(ctx context.Context, accountID, clientRequestID string) (*CashJournal, error) {
 	q := url.Values{}
-	q.Set("journal_id", journalID)
+	q.Set("account_id", accountID)
+	q.Set("client_request_id", clientRequestID)
 	var out CashJournal
 	if err := c.get(ctx, pathCashJournalDetail, q, &out); err != nil {
 		return nil, err
@@ -62,13 +67,17 @@ func (c *Client) GetCashJournalDetail(ctx context.Context, journalID string) (*C
 }
 
 type PositionJournal struct {
-	JournalID  string `json:"journal_id"`
-	AccountID  string `json:"account_id"`
-	Symbol     string `json:"symbol"`
-	Quantity   string `json:"quantity"`
-	Action     string `json:"action"`
-	Status     string `json:"status"`
-	CreateTime string `json:"create_time"`
+	JournalID       string `json:"journal_id"`
+	ClientRequestID string `json:"client_request_id"`
+	FromAccount     string `json:"from_account"`
+	ToAccount       string `json:"to_account"`
+	AccountID       string `json:"account_id"`
+	Symbol          string `json:"symbol"`
+	Quantity        string `json:"quantity"`
+	Action          string `json:"action"`
+	Status          string `json:"status"`
+	Reason          string `json:"reason,omitempty"`
+	CreateTime      string `json:"create_time"`
 }
 
 type CreatePositionJournalRequest struct {
@@ -86,9 +95,10 @@ func (c *Client) CreatePositionJournal(ctx context.Context, req CreatePositionJo
 	return &out, nil
 }
 
-func (c *Client) GetPositionJournalDetail(ctx context.Context, journalID string) (*PositionJournal, error) {
+func (c *Client) GetPositionJournalDetail(ctx context.Context, accountID, clientRequestID string) (*PositionJournal, error) {
 	q := url.Values{}
-	q.Set("journal_id", journalID)
+	q.Set("account_id", accountID)
+	q.Set("client_request_id", clientRequestID)
 	var out PositionJournal
 	if err := c.get(ctx, pathPositionJournalDetail, q, &out); err != nil {
 		return nil, err

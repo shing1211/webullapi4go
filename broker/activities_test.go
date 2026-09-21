@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/shing1211/webullapi4go/broker"
 )
 
 func TestGetCashActivities(t *testing.T) {
@@ -32,7 +34,7 @@ func TestGetCashActivities(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/activities/cash"; got != want {
+		if got, want := r.URL.Path, "/broker/activities/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
@@ -43,7 +45,7 @@ func TestGetCashActivities(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := newBrokerClient(t, srv.URL)
+	c := broker.New(newTestClient(t, srv.URL))
 	got, err := c.GetCashActivities(context.Background(), "ACC1")
 	if err != nil {
 		t.Fatalf("GetCashActivities() error = %v", err)

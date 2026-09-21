@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	pathCashActivities = "/openapi/v1/broker/activities/cash"
+	pathActivities = "/broker/activities/list"
 )
 
 type CashActivity struct {
@@ -38,7 +38,7 @@ func (c *Client) GetCashActivities(ctx context.Context, accountID string) ([]Cas
 	q := url.Values{}
 	q.Set("account_id", accountID)
 	var out []CashActivity
-	if err := c.get(ctx, pathCashActivities, q, &out); err != nil {
+	if err := c.get(ctx, pathActivities, q, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

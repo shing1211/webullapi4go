@@ -16,15 +16,12 @@ package broker
 
 import (
 	"context"
-	"net/url"
 )
 
-// Master data endpoints.
 const (
-	pathTradeCalendar = "/openapi/v1/broker/master-data/trade-calendar"
+	pathTradeCalendar = "/broker/master-data/trade-calendar/query"
 )
 
-// TradeCalendar represents a trading calendar entry.
 type TradeCalendar struct {
 	Date      string `json:"date"`
 	Market    string `json:"market"`
@@ -33,14 +30,20 @@ type TradeCalendar struct {
 	CloseTime string `json:"close_time"`
 }
 
-// GetTradeCalendar retrieves the trade calendar for a date range.
+type tradeCalendarRequest struct {
+	Market    string `json:"market"`
+	StartDate string `json:"start_date"`
+	EndDate   string `json:"end_date"`
+}
+
 func (c *Client) GetTradeCalendar(ctx context.Context, market, startDate, endDate string) ([]TradeCalendar, error) {
-	q := url.Values{}
-	q.Set("market", market)
-	q.Set("start_date", startDate)
-	q.Set("end_date", endDate)
+	body := tradeCalendarRequest{
+		Market:    market,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
 	var out []TradeCalendar
-	if err := c.get(ctx, pathTradeCalendar, q, &out); err != nil {
+	if err := c.post(ctx, pathTradeCalendar, nil, body, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

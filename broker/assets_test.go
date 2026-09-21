@@ -26,16 +26,15 @@ import (
 func TestGetBalance(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"account_id":"ACC1","total_equity":"500000.00",` +
-		`"cash_balance":"200000.00","market_value":"300000.00",` +
-		`"buying_power":"400000.00","unrealized_pl":"15000.00",` +
-		`"margin":"50000.00","currency":"USD"}`
+	const body = `{"total_asset_currency":"USD","total_cash_balance":"200000.00",` +
+		`"total_market_value":"300000.00","total_unrealized_profit_loss":"15000.00",` +
+		`"init_margin":"50000.00","account_currency_assets":[{"currency":"USD","balance":"200000.00"}]}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/assets/balance"; got != want {
+		if got, want := r.URL.Path, "/broker/assets/balances/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
@@ -51,36 +50,39 @@ func TestGetBalance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetBalance() error = %v", err)
 	}
-	if got.AccountID != "ACC1" {
-		t.Errorf("account_id = %q, want ACC1", got.AccountID)
+	if got.TotalCashBalance != "200000.00" {
+		t.Errorf("total_cash_balance = %q, want 200000.00", got.TotalCashBalance)
 	}
-	if got.TotalEquity != "500000.00" || got.CashBalance != "200000.00" {
-		t.Errorf("equity/cash = %+v", got)
+	if got.TotalMarketValue != "300000.00" {
+		t.Errorf("total_market_value = %q, want 300000.00", got.TotalMarketValue)
 	}
-	if got.MarketValue != "300000.00" || got.BuyingPower != "400000.00" {
-		t.Errorf("market/buying = %+v", got)
+	if got.TotalUnrealizedPL != "15000.00" {
+		t.Errorf("total_unrealized_profit_loss = %q, want 15000.00", got.TotalUnrealizedPL)
 	}
-	if got.UnrealizedPL != "15000.00" || got.Margin != "50000.00" {
-		t.Errorf("pl/margin = %+v", got)
+	if got.InitMargin != "50000.00" {
+		t.Errorf("init_margin = %q, want 50000.00", got.InitMargin)
 	}
-	if got.Currency != "USD" {
-		t.Errorf("currency = %q, want USD", got.Currency)
+	if len(got.AccountCurrencyAssets) != 1 {
+		t.Errorf("account_currency_assets len = %d, want 1", len(got.AccountCurrencyAssets))
+	}
+	if got.AccountCurrencyAssets[0].Currency != "USD" {
+		t.Errorf("account_currency_assets[0].currency = %q, want USD", got.AccountCurrencyAssets[0].Currency)
 	}
 }
 
 func TestGetPositions(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"symbol":"00700.HK","quantity":"100",` +
+	const body = `{"data":[{"symbol":"00700.HK","quantity":"100",` +
 		`"average_cost":"350.00","market_value":"36000.00",` +
 		`"unrealized_pl":"1000.00","instrument_type":"EQUITY",` +
-		`"currency":"HKD"}]`
+		`"currency":"HKD"}]}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/openapi/v1/broker/assets/positions"; got != want {
+		if got, want := r.URL.Path, "/broker/assets/positions/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
@@ -125,7 +127,7 @@ func TestGetPositionsEmpty(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	defer srv.Close()
 

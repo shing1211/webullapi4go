@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-09-22
+
+Critical path corrections for the Broker API HK package. All paths were wrong
+— the SDK used `/openapi/v1/broker/...` but the official API uses `/broker/...`
+directly. Sandbox returned 404 not because the API was missing but because every
+path was wrong. Additionally, request/response shapes were updated to match the
+official OpenAPI specification.
+
+### Fixed
+
+- `broker/accounts.go`: paths corrected to `/broker/accounts/virtual-accounts/{list,get,create,update}`;
+  `VirtualAccount` struct updated to official fields; `ListVirtualAccounts` now handles
+  wrapped `{data:[...]}` response.
+- `broker/activities.go`: path corrected to `/broker/activities/list`.
+- `broker/assets.go`: paths corrected to `/broker/assets/{balances/get,positions/list}`;
+  `Balance` struct updated to official nested shape with `total_cash_balance`,
+  `total_market_value`, `total_unrealized_profit_loss`; `GetPositions` handles
+  wrapped `{data:[...]}` response.
+- `broker/instruments.go`: paths corrected to `/broker/instruments/{stocks/list,stock-locate/get,corporate-actions/get}`.
+- `broker/orders.go`: paths corrected to `/broker/orders/{preview,place,replace,cancel,get,history,open}`;
+  `ReplaceOrder` and `CancelOrder` now use POST with JSON body instead of PUT/DELETE
+  with query params; `PreviewOrderRequest` adapted to official nested wire format.
+- `broker/funding.go`: paths corrected to `/broker/funding/fx-rates/get`,
+  `/broker/funding/fx-exchanges/{create,get}`,
+  `/broker/funding/instant-fx/{create,get}`, `/broker/funding/instant/{create,get}`;
+  `FXRate` struct updated (`fx_rate`, `rate_effective_time`, `rate_expire_time`);
+  detail queries now require `client_request_id` + `account_id`.
+- `broker/journals.go`: paths corrected to `/broker/journals/{cash-journals/{create,get},position-journals/{create,get}}`;
+  detail queries now require `client_request_id` + `account_id`.
+- `broker/masterdata.go`: path corrected to `/broker/master-data/trade-calendar/query`;
+  changed from GET with query params to POST with JSON body.
+- `broker/eventcontracts.go`: paths corrected to `/broker/event-contracts/{categories/list,series/get,events/get,instruments/get}`.
+- `examples/broker-probe/main.go`: updated to use new field names and paths.
+
+### Noted
+
+- Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` on the HK
+  sandbox — the app does not have Broker API scope enabled in the sandbox.
+  Paths are confirmed correct (no more 404); the 401 means auth/scope issue.
+
 ## [0.9.1] - 2026-09-21
 
 Bug fixes found during remaining endpoint verification sweep.
@@ -403,7 +443,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.2
 [0.9.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.1
 [0.9.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.0
 [0.7.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.7.0

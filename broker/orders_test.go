@@ -31,8 +31,6 @@ const (
 	testAppSecret = "test-app-secret"
 )
 
-// requestInfo captures the details of a single HTTP request received by the
-// test server.
 type requestInfo struct {
 	Method string
 	Path   string
@@ -44,7 +42,10 @@ func newTestCoreClient(t *testing.T, baseURL string) *client.Client {
 	cl, err := client.New(
 		client.WithAppKey(testAppKey),
 		client.WithAppSecret(testAppSecret),
-		client.WithBaseURL(baseURL),
+		client.WithEndpoints(client.Endpoints{
+			HTTP:       baseURL,
+			BrokerHTTP: baseURL,
+		}),
 	)
 	if err != nil {
 		t.Fatalf("client.New() error = %v", err)
@@ -64,7 +65,7 @@ func TestPreviewOrder(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		captured = requestInfo{Method: r.Method, Path: r.URL.RequestURI(), Body: body}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"order_id":"O-1","estimated_fee":"1.23","estimated_total":"501.23"}`))
+		_, _ = w.Write([]byte(`{"order_id":"O-1","estimated_cost":"501.23","estimated_transaction_fee":"1.23"}`))
 	}))
 	defer srv.Close()
 
@@ -85,14 +86,14 @@ func TestPreviewOrder(t *testing.T) {
 	if captured.Method != http.MethodPost {
 		t.Errorf("method = %s, want POST", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/preview" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/preview", captured.Path)
+	if captured.Path != "/broker/orders/preview" {
+		t.Errorf("path = %s, want /broker/orders/preview", captured.Path)
 	}
 	if out.OrderID != "O-1" {
 		t.Errorf("order_id = %s, want O-1", out.OrderID)
 	}
 	if out.EstimatedFee != "1.23" {
-		t.Errorf("estimated_fee = %s, want 1.23", out.EstimatedFee)
+		t.Errorf("estimated_transaction_fee = %s, want 1.23", out.EstimatedFee)
 	}
 }
 
@@ -124,8 +125,8 @@ func TestPlaceOrder(t *testing.T) {
 	if captured.Method != http.MethodPost {
 		t.Errorf("method = %s, want POST", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/place" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/place", captured.Path)
+	if captured.Path != "/broker/orders/place" {
+		t.Errorf("path = %s, want /broker/orders/place", captured.Path)
 	}
 	if out.OrderID != "O-2" {
 		t.Errorf("order_id = %s, want O-2", out.OrderID)
@@ -156,11 +157,11 @@ func TestReplaceOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReplaceOrder: %v", err)
 	}
-	if captured.Method != http.MethodPut {
-		t.Errorf("method = %s, want PUT", captured.Method)
+	if captured.Method != http.MethodPost {
+		t.Errorf("method = %s, want POST", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/replace?order_id=O-3" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/replace?order_id=O-3", captured.Path)
+	if captured.Path != "/broker/orders/replace" {
+		t.Errorf("path = %s, want /broker/orders/replace", captured.Path)
 	}
 	if out.OrderID != "O-3" {
 		t.Errorf("order_id = %s, want O-3", out.OrderID)
@@ -193,11 +194,11 @@ func TestCancelOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CancelOrder: %v", err)
 	}
-	if captured.Method != http.MethodDelete {
-		t.Errorf("method = %s, want DELETE", captured.Method)
+	if captured.Method != http.MethodPost {
+		t.Errorf("method = %s, want POST", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/cancel?order_id=O-4" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/cancel?order_id=O-4", captured.Path)
+	if captured.Path != "/broker/orders/cancel" {
+		t.Errorf("path = %s, want /broker/orders/cancel", captured.Path)
 	}
 }
 
@@ -220,8 +221,8 @@ func TestGetOrderDetail(t *testing.T) {
 	if captured.Method != http.MethodGet {
 		t.Errorf("method = %s, want GET", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/detail?order_id=O-5" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/detail?order_id=O-5", captured.Path)
+	if captured.Path != "/broker/orders/get?order_id=O-5" {
+		t.Errorf("path = %s, want /broker/orders/get?order_id=O-5", captured.Path)
 	}
 	if out.OrderID != "O-5" {
 		t.Errorf("order_id = %s, want O-5", out.OrderID)
@@ -250,8 +251,8 @@ func TestGetOrderHistory(t *testing.T) {
 	if captured.Method != http.MethodGet {
 		t.Errorf("method = %s, want GET", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/history?account_id=ACC-1" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/history?account_id=ACC-1", captured.Path)
+	if captured.Path != "/broker/orders/history?account_id=ACC-1" {
+		t.Errorf("path = %s, want /broker/orders/history?account_id=ACC-1", captured.Path)
 	}
 	if len(out) != 2 {
 		t.Fatalf("len(out) = %d, want 2", len(out))
@@ -283,8 +284,8 @@ func TestGetOpenOrders(t *testing.T) {
 	if captured.Method != http.MethodGet {
 		t.Errorf("method = %s, want GET", captured.Method)
 	}
-	if captured.Path != "/openapi/v1/broker/orders/open?account_id=ACC-1" {
-		t.Errorf("path = %s, want /openapi/v1/broker/orders/open?account_id=ACC-1", captured.Path)
+	if captured.Path != "/broker/orders/open?account_id=ACC-1" {
+		t.Errorf("path = %s, want /broker/orders/open?account_id=ACC-1", captured.Path)
 	}
 	if len(out) != 1 {
 		t.Fatalf("len(out) = %d, want 1", len(out))

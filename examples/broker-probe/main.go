@@ -44,7 +44,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("GetVirtualAccount: FAIL %v\n", err)
 		} else {
-			fmt.Printf("GetVirtualAccount: PASS account_id=%s name=%s\n", va.AccountID, va.AccountName)
+			fmt.Printf("GetVirtualAccount: PASS account_id=%s number=%s status=%s\n", va.AccountID, va.AccountNumber, va.AccountStatus)
 		}
 	}
 
@@ -53,7 +53,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("GetBalance: FAIL %v\n", err)
 		} else {
-			fmt.Printf("GetBalance: PASS total_equity=%s currency=%s\n", bal.TotalEquity, bal.Currency)
+			fmt.Printf("GetBalance: PASS total_cash=%s total_market=%s currency=%s\n", bal.TotalCashBalance, bal.TotalMarketValue, bal.TotalAssetCurrency)
 		}
 	}
 
@@ -155,7 +155,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("GetFXRate: FAIL %v\n", err)
 		} else {
-			fmt.Printf("GetFXRate: PASS rate=%s from=%s to=%s\n", fx.Rate, fx.FromCurrency, fx.ToCurrency)
+			fmt.Printf("GetFXRate: PASS fx_rate=%s from=%s to=%s\n", fx.FXRate, fx.FromCurrency, fx.ToCurrency)
 		}
 	}
 
@@ -184,7 +184,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("PreviewOrder: FAIL %v\n", err)
 		} else {
-			fmt.Printf("PreviewOrder: PASS order_id=%s estimated_total=%s\n", preview.OrderID, preview.EstimatedTotal)
+			fmt.Printf("PreviewOrder: PASS estimated_cost=%s estimated_fee=%s\n", preview.EstimatedCost, preview.EstimatedFee)
 		}
 	}
 
