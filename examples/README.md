@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.9.1 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.9.2 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -203,8 +203,8 @@ export WEBULL_APP_SECRET="your-sandbox-app-secret"
 go run ./examples/broker-probe
 ```
 
-Note: Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` in
-the HK sandbox — the endpoint group is not available in the sandbox environment.
+Note: Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in
+the HK sandbox — the app lacks the required scope, not a path issue.
 
 ## Sandbox limitations
 

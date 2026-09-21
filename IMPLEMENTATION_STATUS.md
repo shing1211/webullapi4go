@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-21 (v0.9.1 release) · Current version: **v0.9.1**
+Last updated: 2026-09-22 (v0.9.2 release) · Current version: **v0.9.2**
 
 ## Summary
 
@@ -50,6 +50,7 @@ Last updated: 2026-09-21 (v0.9.1 release) · Current version: **v0.9.1**
 | v0.8.0 | 2026-09-21 | Reserved | — |
 | v0.9.0 | 2026-09-21 | Full sandbox verification; `FinancialsItem` numeric fix | Done |
 | v0.9.1 | 2026-09-21 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
+| v0.9.2 | 2026-09-22 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
 
 ## Feature Coverage
 
@@ -240,7 +241,7 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 6. **Order-book depth**: Empty outside regular trading hours
 7. **MQTT blocking**: Plain MQTT on port 1883 may be blocked; use MQTT-over-WebSocket on `wss://...:8883/mqtt`
 8. **Rate limits**: Token endpoint allows 10 requests/30s; max 5 MQTT connections per App Key
-9. **Broker API HK sandbox limitation**: Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` in the HK sandbox — the endpoint group is not available in the sandbox environment. Broker HK remains unverified pending production or US sandbox access.
+9. **Broker API HK sandbox limitation**: Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in the HK sandbox — the app lacks the required scope, not a path issue. Broker HK remains unverified pending production or US sandbox access.
 10. **SSE news 504**: SSE news upstream returns `504 Gateway Timeout` in the HK sandbox.
 
 ## Module Structure
