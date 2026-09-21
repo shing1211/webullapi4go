@@ -1,0 +1,54 @@
+# Broker API HK
+
+The `broker` package provides the Webull Broker API for Hong Kong. It is a
+separate Go module that shares the core `client.Client` for signing and transport.
+
+## Install
+
+```sh
+go get github.com/shing1211/webullapi4go/broker
+```
+
+## Construct
+
+```go
+cl, err := client.New(client.WithEnv())
+if err != nil {
+    return err
+}
+defer func() { _ = cl.Close() }()
+
+if _, err := cl.EnsureToken(ctx); err != nil {
+    return err
+}
+
+bk := broker.New(cl)
+```
+
+## Coverage
+
+| Group | Methods |
+|-------|---------|
+| Virtual accounts | `CreateVirtualAccount`, `UpdateVirtualAccount`, `GetVirtualAccount`, `ListVirtualAccounts` |
+| Instruments | `GetStockInstruments`, `GetStockLocate`, `GetCorporateActionsDetail` |
+| Assets | `GetBalance`, `GetPositions` |
+| Orders | `PreviewOrder`, `PlaceOrder`, `ReplaceOrder`, `CancelOrder`, `GetOrderDetail`, `GetOrderHistory`, `GetOpenOrders` |
+| Cash activities | `GetCashActivities` |
+| Funding FX | `GetFXRate`, `CreateFXExchange`, `GetFXExchangeDetail`, `CreateInstantExchange`, `GetInstantExchangeDetail` |
+| Instant funding | `CreateInstantFunding`, `GetInstantFundingDetail` |
+| Journals | `CreateCashJournal`, `GetCashJournalDetail`, `CreatePositionJournal`, `GetPositionJournalDetail` |
+| Master data | `GetTradeCalendar` |
+| Event contracts | `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractInstruments` |
+
+## Hosts
+
+| Environment | Host |
+|-------------|------|
+| Production (HK) | `https://broker-api.webull.hk` |
+| Sandbox (HK) | `https://broker-api.sandbox.webull.hk` |
+
+## Related
+
+- [`broker` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/broker)
+- [Getting Started](getting-started.md)
+- [Authentication](authentication.md)

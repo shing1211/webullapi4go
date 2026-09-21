@@ -10,3 +10,4 @@
 | 2026-09-19 | v05-fund-crypto | BUILD | released v0.5 | f41b803 |
 | 2026-09-19 | v05-live-probe | BUILD | in progress | 3c3ff7f |
 | 2026-09-20 | v1-alpha-probe | BUILD | released v0.6.0 | 8500eda |
+| 2026-09-21 | v07-complete-coverage | BUILD | released v0.7.0 | |

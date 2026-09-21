@@ -36,6 +36,12 @@ Coverage in v0.1:
 | Discovery | `GetTopGainersLosers`, `GetMostActive` |
 | Watchlists | `GetWatchlists`, `CreateWatchlist`, `UpdateWatchlist`, `DeleteWatchlist`, `GetWatchlistInstruments`, `AddWatchlistInstruments`, `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments` |
 | Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionExpirations`*, `GetOptionChain`*, `GetNewsSummary` |
+| Event contracts | `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractMarkets` |
+| Event contract market data (provisional) | `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` (TODO) |
+| Futures market data (provisional) | `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` (TODO) |
+| Display Solution (provisional) | Screener, quotes, instruments, news, streaming — see Display Solution section (TODO) |
+| Non-display screener | `GetMarketSectors`, `GetMarketSectorDetail`, `GetHighDividendRank`, `GetWeek52HighLow` |
+| Crypto US (provisional) | `GetCryptoSnapshotList`, `GetCryptoBarsList` (TODO) |
 
 \* Speculative: see the note below.
 
@@ -116,6 +122,18 @@ Streaming is scoped to the symbols you subscribe to. In the sandbox the availabl
 symbol set is limited (currently `AAPL`). See [Streaming](streaming.md) for the
 full API and [Troubleshooting](troubleshooting.md) for network and entitlement
 limitations.
+
+## Display Solution (provisional)
+
+Display Solution endpoints use a separate HMAC-SHA1 signing mechanism and are
+accessed via `data.Client.DisplayService()`. All Display Solution paths are
+provisional: marked `TODO(ds)` in the code and require live probe to confirm.
+
+Coverage: screener (`GetDisplayGainersLosers`, `GetDisplayTopActive`), quotes
+(`GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`,
+`GetDisplayDepth`), instruments (`GetDSCompanyProfile`, `GetDSAnalystTargetPrice`,
+`GetDSAnalystRating`), news (`GetDSNewsSummary`, `GetDSMarketNews`, `GetDSSymbolNews`,
+`GetDSLatestNews`), and streaming (`DSSubscribe`, `DSUnsubscribe`).
 
 ## Related
 

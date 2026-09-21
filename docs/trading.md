@@ -9,13 +9,15 @@ The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
 release adds the stock-order lifecycle — preview, place, replace, cancel — and
 order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
 release adds single-leg options orders, and the v0.2.5 release adds US combo
-orders.
+orders. The v0.6.0 release adds multi-leg options orders and futures order
+validation (provisional). The v0.7.0 release adds event contract orders
+(provisional) and batch place orders.
 
-Unreleased work adds multi-leg options orders and futures order validation; the
-notional guardrail does not cover multi-leg option orders. Both features are
+Multi-leg options, futures order validation, and event contract orders are
 **provisional**: their wire values and rules are best-effort assumptions marked
 `TODO` in the code and are not confirmed against the live API. See
-[Options orders](#options-orders) and [Futures orders](#futures-orders).
+[Options orders](#options-orders), [Futures orders](#futures-orders), and
+[Event contract orders](#event-contract-orders).
 
 ## Authentication
 
@@ -519,6 +521,24 @@ futures := trade.OrderRequest{
     `TODO(t9)` in the code**, not confirmed guarantees. Futures order
     submission is unverified against the live API; preview a futures order
     before placing one and treat a rejection as expected until it is confirmed.
+
+## Event contract orders
+
+An event contract order sets `instrument_type` to `EVENT`. Event contracts are
+binary-outcome prediction markets with `yes` and `no` sides. Order validation
+enforces:
+
+| Rule | Requirement |
+|------|-------------|
+| Order type | `LIMIT` only |
+| `entrust_type` | `QTY` only |
+| `quantity` | A positive integer ≤ 50,000 |
+| `time_in_force` | `DAY` only |
+
+!!! warning "Event contract rules are provisional"
+
+    Event contract order rules are **best-effort assumptions marked
+    `TODO(event)` in the code**, not confirmed against the live API.
 
 ## Time in force
 

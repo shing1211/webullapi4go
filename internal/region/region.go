@@ -119,6 +119,8 @@ type Endpoints struct {
 	MQTTWebSocket string
 	// GRPC is the host of the gRPC trading-event stream.
 	GRPC string
+	// BrokerHTTP is the Broker API REST endpoint.
+	BrokerHTTP string
 }
 
 // Documented Hong Kong service hosts. These are the values returned by
@@ -128,12 +130,14 @@ const (
 	// Hong Kong production.
 	HKProductionHTTP          = "https://api.webull.hk"
 	HKProductionGRPC          = "events-api.webull.hk"
+	HKProductionBrokerHTTP    = "https://broker-api.webull.hk"
 	HKProductionMQTT          = "data-api.webull.hk:1883"
 	HKProductionMQTTWebSocket = "wss://data-api.webull.hk:8883/mqtt"
 
 	// Hong Kong sandbox.
 	HKSandboxHTTP          = "https://api.sandbox.webull.hk"
 	HKSandboxGRPC          = "events-api.sandbox.webull.hk"
+	HKSandboxBrokerHTTP    = "https://broker-api.sandbox.webull.hk"
 	HKSandboxMQTT          = "data-api.sandbox.webull.hk:1883"
 	HKSandboxMQTTWebSocket = "wss://data-api.sandbox.webull.hk:8883/mqtt"
 )
@@ -184,5 +188,6 @@ func endpointsFromDomain(domain string, env Environment) Endpoints {
 		MQTT:          "data-api." + prefix + domain + ":1883",
 		MQTTWebSocket: "wss://data-api." + prefix + domain + ":8883/mqtt",
 		GRPC:          "events-api." + prefix + domain,
+		BrokerHTTP:    "https://broker-api." + prefix + domain,
 	}
 }

@@ -17,8 +17,10 @@ package data_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
@@ -260,5 +262,191 @@ func TestGetCryptoSnapshot_responseFields(t *testing.T) {
 	}
 	if snap.LastPrice != "96000" || snap.Bid != "95999" {
 		t.Errorf("snapshot = %+v", snap)
+	}
+}
+
+func TestGetCryptoSnapshotList_pathAndQuery(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/market-data/crypto/snapshots/list" {
+			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/crypto/snapshots/list")
+		}
+		q := r.URL.Query()
+		if q.Get("category") != "" {
+			t.Errorf("category should be absent, got %q", q.Get("category"))
+		}
+		if q.Get("symbols") != "BTCUSD,ETHUSD" {
+			t.Errorf("symbols = %q, want %q", q.Get("symbols"), "BTCUSD,ETHUSD")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetCryptoSnapshotList(context.Background(), data.CryptoSnapshotListQuery{
+		Symbols: []string{"BTCUSD", "ETHUSD"},
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoSnapshotList() error = %v", err)
+	}
+}
+
+func TestGetCryptoSnapshotList_responseFields(t *testing.T) {
+	t.Parallel()
+	const body = `[{"symbol":"BTCUSD","exchange":"CRYPTO","currency":"USD","last_price":"96000","open":"95000","high":"97000","low":"94000","close":"96000","volume":"12345","turnover":"1180000000","bid":"95999","ask":"96001","timestamp":"1739100939000"},{"symbol":"ETHUSD","exchange":"CRYPTO","currency":"USD","last_price":"3500","open":"3400","high":"3600","low":"3300","close":"3500","volume":"500","turnover":"1750000","bid":"3499","ask":"3501","timestamp":"1739100939000"}]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	snaps, err := c.GetCryptoSnapshotList(context.Background(), data.CryptoSnapshotListQuery{
+		Symbols: []string{"BTCUSD", "ETHUSD"},
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoSnapshotList() error = %v", err)
+	}
+	if len(snaps) != 2 {
+		t.Fatalf("len(snaps) = %d, want 2", len(snaps))
+	}
+	if snaps[0].Symbol != "BTCUSD" || snaps[0].LastPrice != "96000" {
+		t.Errorf("snap[0] = %+v", snaps[0])
+	}
+	if snaps[1].Symbol != "ETHUSD" || snaps[1].LastPrice != "3500" {
+		t.Errorf("snap[1] = %+v", snaps[1])
+	}
+}
+
+func TestGetCryptoSnapshotListMaxSymbols(t *testing.T) {
+	t.Parallel()
+	symbols := make([]string, 21)
+	for i := range symbols {
+		symbols[i] = "SYM" + fmt.Sprintf("%d", i)
+	}
+	c := newTestClient(t, "http://localhost")
+	_, err := c.GetCryptoSnapshotList(context.Background(), data.CryptoSnapshotListQuery{
+		Symbols: symbols,
+	})
+	if err == nil {
+		t.Fatal("expected error for >20 symbols, got nil")
+	}
+}
+
+func TestGetCryptoSnapshotListEmptySymbols(t *testing.T) {
+	t.Parallel()
+	c := newTestClient(t, "http://localhost")
+	_, err := c.GetCryptoSnapshotList(context.Background(), data.CryptoSnapshotListQuery{
+		Symbols: []string{},
+	})
+	if err == nil {
+		t.Fatal("expected error for empty symbols, got nil")
+	}
+}
+
+func TestGetCryptoBarsList_pathAndQuery(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/market-data/crypto/bars/list" {
+			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/crypto/bars/list")
+		}
+		q := r.URL.Query()
+		if q.Get("category") != "" {
+			t.Errorf("category should be absent, got %q", q.Get("category"))
+		}
+		if q.Get("symbol") != "BTCUSD" {
+			t.Errorf("symbol = %q, want %q", q.Get("symbol"), "BTCUSD")
+		}
+		if q.Get("timespan") != "D" {
+			t.Errorf("timespan = %q, want %q", q.Get("timespan"), "D")
+		}
+		if q.Get("count") != "10" {
+			t.Errorf("count = %q, want %q", q.Get("count"), "10")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetCryptoBarsList(context.Background(), data.CryptoBarsListQuery{
+		Symbol:   "BTCUSD",
+		Interval: data.BarTimespanDay,
+		Count:    10,
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoBarsList() error = %v", err)
+	}
+}
+
+func TestGetCryptoBarsList_responseFields(t *testing.T) {
+	t.Parallel()
+	const body = `[{"symbol":"BTCUSD","exchange":"CRYPTO","currency":"USD","open":"95000","high":"97000","low":"94000","close":"96000","volume":"12345","turnover":"1180000000","timestamp":"1739100939000","timespan":"d1"}]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	bars, err := c.GetCryptoBarsList(context.Background(), data.CryptoBarsListQuery{
+		Symbol:   "BTCUSD",
+		Interval: data.BarTimespanDay,
+		Count:    5,
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoBarsList() error = %v", err)
+	}
+	if len(bars) != 1 {
+		t.Fatalf("len(bars) = %d, want 1", len(bars))
+	}
+	if bars[0].Symbol != "BTCUSD" || bars[0].Close != "96000" {
+		t.Errorf("bar = %+v", bars[0])
+	}
+}
+
+func TestGetCryptoBarsList_omitsOptionalParams(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		for _, key := range []string{"timespan", "count"} {
+			if _, ok := q[key]; ok {
+				t.Errorf("%s present, want omitted", key)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetCryptoBarsList(context.Background(), data.CryptoBarsListQuery{
+		Symbol: "ETHUSD",
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoBarsList() error = %v", err)
+	}
+}
+
+func TestGetCryptoSnapshotList_commaJoined(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		symbols := r.URL.Query().Get("symbols")
+		parts := strings.Split(symbols, ",")
+		if len(parts) != 3 {
+			t.Errorf("symbols parts = %d, want 3", len(parts))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetCryptoSnapshotList(context.Background(), data.CryptoSnapshotListQuery{
+		Symbols: []string{"BTCUSD", "ETHUSD", "SOLUSD"},
+	})
+	if err != nil {
+		t.Fatalf("GetCryptoSnapshotList() error = %v", err)
 	}
 }

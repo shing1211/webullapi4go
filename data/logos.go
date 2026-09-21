@@ -47,7 +47,7 @@ func (c *Client) GetLogos(ctx context.Context, q LogoQuery) ([]Logo, error) {
 	}
 
 	var out []Logo
-	if err := c.do(ctx, http.MethodPost, pathLogosBatch, query, nil, &out); err != nil {
+	if err := c.DisplayService().Do(ctx, http.MethodPost, pathLogosBatch, query, nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

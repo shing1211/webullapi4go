@@ -234,6 +234,49 @@ func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) erro
 	return nil
 }
 
+// validateEventRules enforces event-contract-specific constraints:
+//   - LIMIT orders only
+//   - DAY time-in-force only
+//   - EntrustType must be QTY
+//   - Quantity must be a positive integer (max 50,000)
+//   - No option_strategy or legs
+//   - No support_trading_session or no_party_ids
+//
+// TODO(event): confirm event contract order rules against live API.
+func (r OrderRequest) validateEventRules(fail func(string, ...any) error) error {
+	if r.SupportTradingSession != "" {
+		return fail("support_trading_session is not valid for event contract orders")
+	}
+	if len(r.NoPartyIDs) > 0 {
+		return fail("no_party_ids is not valid for event contract orders")
+	}
+	if r.OptionStrategy != "" {
+		return fail("option_strategy is only valid for OPTION orders")
+	}
+	if len(r.Legs) > 0 {
+		return fail("legs is only valid for OPTION orders")
+	}
+	if r.OrderType != OrderTypeLimit {
+		return fail("order_type %s is not supported for event contract orders; only LIMIT is supported", r.OrderType)
+	}
+	if r.TimeInForce != TimeInForceDay {
+		return fail("time_in_force %s is not supported for event contract orders; only DAY is supported", r.TimeInForce)
+	}
+	if r.EntrustType != EntrustTypeQty {
+		return fail("entrust_type %q must be QTY for event contract orders", r.EntrustType)
+	}
+	if !isPositiveInteger(r.Quantity) {
+		return fail("quantity %q must be a positive integer for event contract orders", r.Quantity)
+	}
+	if qty, ok := new(big.Int).SetString(strings.TrimSpace(r.Quantity), 10); ok {
+		max := new(big.Int).SetInt64(50000)
+		if qty.Cmp(max) > 0 {
+			return fail("quantity %s exceeds the maximum 50000 contracts for event contract orders", r.Quantity)
+		}
+	}
+	return nil
+}
+
 // isPositiveInteger reports whether s is a base-10 integer string greater than
 // zero. It rejects signs, decimal points, and any non-digit character, so a
 // fractional futures quantity such as "1.5" fails.

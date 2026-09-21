@@ -12,16 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package brokerfd provides the Webull Broker FD (US) API client.
+//
+// A Client is constructed from the public client, so signing, token handling,
+// retries, and rate limiting are shared with the rest of the SDK:
+//
+//	cl, err := client.New(
+//		client.WithAppKey(key),
+//		client.WithAppSecret(secret),
+//		client.WithSandbox(),
+//	)
+//	if err != nil {
+//		return err
+//	}
+//	bfd := brokerfd.New(cl)
+//
+// TODO: confirm all paths via live probe.
 package brokerfd
 
 import (
 	"context"
-	"net/http"
-	"net/url"
 )
 
-// AccountSummary is a best-effort account summary type.
-// Live probe needed to confirm all fields.
 type AccountSummary struct {
 	AccountID    string `json:"account_id"`
 	Currency     string `json:"currency"`
@@ -31,7 +43,6 @@ type AccountSummary struct {
 	BuyingPower  string `json:"buying_power"`
 }
 
-// PositionSummary is a best-effort position type.
 type PositionSummary struct {
 	Symbol       string `json:"symbol"`
 	Quantity     string `json:"quantity"`
@@ -40,9 +51,6 @@ type PositionSummary struct {
 	UnrealizedPL string `json:"unrealized_pl"`
 }
 
-// GetAccountsSummary retrieves account summaries for the linked account.
-//
-// Path and schema unconfirmed; live probe required.
 func (c *Client) GetAccountsSummary(ctx context.Context) ([]AccountSummary, error) {
 	path := "/broker-fd/accounts"
 	var out []AccountSummary
@@ -52,9 +60,6 @@ func (c *Client) GetAccountsSummary(ctx context.Context) ([]AccountSummary, erro
 	return out, nil
 }
 
-// GetPositions retrieves positions for the linked account.
-//
-// Path and schema unconfirmed; live probe required.
 func (c *Client) GetPositions(ctx context.Context) ([]PositionSummary, error) {
 	path := "/broker-fd/positions"
 	var out []PositionSummary
@@ -62,11 +67,4 @@ func (c *Client) GetPositions(ctx context.Context) ([]PositionSummary, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-func (c *Client) get(ctx context.Context, path string, query url.Values, out any) error {
-	if len(query) > 0 {
-		path += "?" + query.Encode()
-	}
-	return c.core.Do(ctx, http.MethodGet, path, nil, out)
 }

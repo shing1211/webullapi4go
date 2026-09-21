@@ -57,6 +57,8 @@ nav:
   - Trading:
       - Overview: trading.md
   - Trading Events: events.md
+  - Broker API HK: broker.md
+  - Broker FD API US: brokerfd.md
   - Sandbox: sandbox.md
   - Errors: errors.md
   - API Reference: api.md

@@ -78,7 +78,7 @@ func (c *Client) GetStockProfilesV3(ctx context.Context, q StockProfilesV3Query)
 	}
 
 	var resp instrumentProfilesV3Resp
-	if err := c.do(ctx, http.MethodPost, pathStockProfilesV3, query, nil, &resp); err != nil {
+	if err := c.DisplayService().Do(ctx, http.MethodPost, pathStockProfilesV3, query, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &StockProfilesV3Result{

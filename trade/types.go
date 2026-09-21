@@ -48,6 +48,11 @@ const (
 	// domains and their wire values are not interchangeable; neither is changed
 	// without evidence from the API.
 	InstrumentTypeFutures InstrumentType = "FUTURES"
+	// InstrumentTypeEvent identifies event contract instruments (prediction markets).
+	//
+	// The trading API uses this value for event contract orders. Event contracts
+	// are binary-outcome instruments with yes/no sides.
+	InstrumentTypeEvent InstrumentType = "EVENT"
 )
 
 // AccountType identifies how an account is funded.
@@ -185,6 +190,17 @@ const (
 	// OptionStrategyRatio is a ratio spread: an unequal number of long and
 	// short options of the same type.
 	OptionStrategyRatio OptionStrategy = "RATIO"
+)
+
+// EventOutcome identifies the side of an event contract position.
+type EventOutcome string
+
+// Event outcomes.
+const (
+	// EventOutcomeYes represents the "yes" side of an event contract.
+	EventOutcomeYes EventOutcome = "yes"
+	// EventOutcomeNo represents the "no" side of an event contract.
+	EventOutcomeNo EventOutcome = "no"
 )
 
 // OptionType identifies whether an options leg is a call or a put.

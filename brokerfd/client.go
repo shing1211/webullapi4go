@@ -15,6 +15,10 @@
 package brokerfd
 
 import (
+	"context"
+	"net/http"
+	"net/url"
+
 	"github.com/shing1211/webullapi4go/client"
 )
 
@@ -25,5 +29,28 @@ type Client struct {
 func New(c *client.Client) *Client { return &Client{core: c} }
 
 func (c *Client) Core() *client.Client { return c.core }
+
+func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
+	if len(query) > 0 {
+		path += "?" + query.Encode()
+	}
+	return c.core.Do(ctx, method, path, body, out)
+}
+
+func (c *Client) get(ctx context.Context, path string, query url.Values, out any) error {
+	return c.do(ctx, http.MethodGet, path, query, nil, out)
+}
+
+func (c *Client) post(ctx context.Context, path string, query url.Values, body, out any) error {
+	return c.do(ctx, http.MethodPost, path, query, body, out)
+}
+
+func (c *Client) put(ctx context.Context, path string, query url.Values, body, out any) error {
+	return c.do(ctx, http.MethodPut, path, query, body, out)
+}
+
+func (c *Client) delete(ctx context.Context, path string, query url.Values, body, out any) error {
+	return c.do(ctx, http.MethodDelete, path, query, body, out)
+}
 
 func (c *Client) Close() error { return nil }

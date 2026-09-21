@@ -21,8 +21,10 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -30,6 +32,9 @@ const (
 	pathCryptoTick     = "/market-data/tick"
 	pathCryptoDepth    = "/market-data/depth"
 	pathCryptoSnapshot = "/market-data/snapshot"
+
+	pathCryptoSnapshotsList = "/market-data/crypto/snapshots/list"
+	pathCryptoBarsList      = "/market-data/crypto/bars/list"
 )
 
 type CryptoBarsQuery struct {
@@ -158,6 +163,18 @@ func (c *Client) GetCryptoDepth(ctx context.Context, q CryptoDepthQuery) (*Crypt
 	return &out, nil
 }
 
+// CryptoSnapshotListQuery parameterizes [Client.GetCryptoSnapshotList].
+type CryptoSnapshotListQuery struct {
+	Symbols []string // up to 20 crypto symbols, e.g. ["BTCUSD", "ETHUSD"]
+}
+
+// CryptoBarsListQuery parameterizes [Client.GetCryptoBarsList].
+type CryptoBarsListQuery struct {
+	Symbol   string      // the crypto symbol, e.g. "BTCUSD"
+	Interval BarTimespan // time granularity: M1, M5, H1, D, etc.
+	Count    int         // number of bars, 1-1200
+}
+
 func (c *Client) GetCryptoSnapshot(ctx context.Context, q CryptoSnapshotQuery) (*CryptoSnapshot, error) {
 	query := url.Values{}
 	query.Set("category", "CRYPTO")
@@ -167,4 +184,42 @@ func (c *Client) GetCryptoSnapshot(ctx context.Context, q CryptoSnapshotQuery) (
 		return nil, err
 	}
 	return &out, nil
+}
+
+// GetCryptoSnapshotList retrieves real-time market snapshot data for one or
+// more crypto symbols using the dedicated US crypto endpoint. Supports up
+// to 20 symbols per request.
+//
+// Reference: https://developer.webull.com/apis/docs/reference/crypto-snapshot.md
+func (c *Client) GetCryptoSnapshotList(ctx context.Context, q CryptoSnapshotListQuery) ([]CryptoSnapshot, error) {
+	if n := len(q.Symbols); n == 0 || n > 20 {
+		return nil, fmt.Errorf("crypto snapshot list requires 1-20 symbols, got %d", n)
+	}
+	query := url.Values{}
+	query.Set("symbols", strings.Join(q.Symbols, ","))
+	var out []CryptoSnapshot
+	if err := c.get(ctx, pathCryptoSnapshotsList, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetCryptoBarsList retrieves historical candlestick data for a crypto symbol
+// using the dedicated US crypto endpoint. Supports 1-1200 bars per request.
+//
+// Reference: https://developer.webull.com/apis/docs/reference/crypto-bars.md
+func (c *Client) GetCryptoBarsList(ctx context.Context, q CryptoBarsListQuery) ([]CryptoBar, error) {
+	query := url.Values{}
+	query.Set("symbol", q.Symbol)
+	if q.Interval != "" {
+		query.Set("timespan", string(q.Interval))
+	}
+	if q.Count > 0 {
+		query.Set("count", strconv.Itoa(q.Count))
+	}
+	var out []CryptoBar
+	if err := c.get(ctx, pathCryptoBarsList, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

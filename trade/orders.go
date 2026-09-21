@@ -31,11 +31,19 @@ const (
 	pathOrdersPreview = "/trading/orders/preview"
 	// pathOrdersPlace submits one or more orders.
 	pathOrdersPlace = "/trading/orders/place"
+	// pathOrdersBatchPlace submits multiple orders in a single request.
+	// Maximum 50 orders per request; currently only EQUITY orders are supported.
+	//
+	// Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
+	pathOrdersBatchPlace = "/trading/orders/batch-place"
 )
 
 // maxClientOrderIDLength is the documented maximum length of a client order
 // identifier.
 const maxClientOrderIDLength = 32
+
+// maxBatchOrders is the maximum number of orders in a single batch request.
+const maxBatchOrders = 50
 
 // OrderSide is the intended trading direction of an order.
 type OrderSide string
@@ -366,7 +374,7 @@ func (r OrderRequest) validate(prefix string) error {
 		return fail("combo_type %q is not one of %s", r.ComboType, comboTypeList)
 	}
 	if !r.InstrumentType.valid() {
-		return fail("instrument_type %q must be EQUITY, OPTION or FUTURES", r.InstrumentType)
+		return fail("instrument_type %q must be EQUITY, OPTION, FUTURES or EVENT", r.InstrumentType)
 	}
 	if !r.Market.valid() {
 		return fail("market %q must be US, HK or CN", r.Market)
@@ -402,6 +410,10 @@ func (r OrderRequest) validate(prefix string) error {
 		}
 	case InstrumentTypeFutures:
 		if err := r.validateFuturesRules(fail); err != nil {
+			return err
+		}
+	case InstrumentTypeEvent:
+		if err := r.validateEventRules(fail); err != nil {
 			return err
 		}
 	}
@@ -518,6 +530,57 @@ func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*PlaceO
 	return &out, nil
 }
 
+// BatchPlaceOrderResult carries the result for one order within a batch.
+type BatchPlaceOrderResult struct {
+	// ClientOrderID echoes the caller-supplied order identifier.
+	ClientOrderID string `json:"client_order_id"`
+	// OrderID is the system-generated order identifier.
+	OrderID string `json:"order_id"`
+}
+
+// BatchPlaceOrderResponse is the response of [Client.BatchPlaceOrder].
+type BatchPlaceOrderResponse struct {
+	Results []BatchPlaceOrderResult `json:"results"`
+}
+
+// BatchPlaceOrder submits multiple orders in a single request and returns
+// a result for each order. The request is validated and the configured
+// order guardrails are enforced before any network call.
+//
+// Maximum 50 orders per request; currently only EQUITY orders are supported.
+// Each order must have ComboType NORMAL (combo orders are not supported
+// in batch mode).
+//
+// Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
+func (c *Client) BatchPlaceOrder(ctx context.Context, req PlaceOrderRequest) (*BatchPlaceOrderResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	if err := c.enforceGuardrails(req); err != nil {
+		return nil, err
+	}
+	if len(req.NewOrders) > maxBatchOrders {
+		return nil, errs.New(errs.CodeInvalidConfig,
+			fmt.Sprintf("batch place supports at most %d orders, got %d", maxBatchOrders, len(req.NewOrders)))
+	}
+	for i := range req.NewOrders {
+		o := &req.NewOrders[i]
+		if o.InstrumentType != InstrumentTypeEquity {
+			return nil, errs.New(errs.CodeInvalidConfig,
+				fmt.Sprintf("new_orders[%d]: instrument_type %q is not supported in batch mode; only EQUITY is allowed", i, o.InstrumentType))
+		}
+		if o.ComboType != ComboTypeNormal {
+			return nil, errs.New(errs.CodeInvalidConfig,
+				fmt.Sprintf("new_orders[%d]: combo_type %q is not supported in batch mode; only NORMAL is allowed", i, o.ComboType))
+		}
+	}
+	var out BatchPlaceOrderResponse
+	if err := c.do(ctx, http.MethodPost, pathOrdersBatchPlace, nil, req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // enforceGuardrails applies the configured order caps to every order in req. It
 // runs before the network call and returns a typed [errs.Error] with
 // [errs.CodeInvalidConfig] when an order exceeds a cap.
@@ -628,7 +691,7 @@ func validClientOrderID(id string) bool {
 // valid reports whether t is a recognized instrument type.
 func (t InstrumentType) valid() bool {
 	switch t {
-	case InstrumentTypeEquity, InstrumentTypeOption, InstrumentTypeFutures:
+	case InstrumentTypeEquity, InstrumentTypeOption, InstrumentTypeFutures, InstrumentTypeEvent:
 		return true
 	default:
 		return false

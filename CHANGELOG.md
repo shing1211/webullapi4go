@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-21
+
+Complete API coverage: market data extensions, event contracts, Broker API HK, Broker FD API US, and Broker FD gRPC events.
+
+### Added
+
+- `data/eventcontracts.go`: Event contract instrument discovery — `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractMarkets`
+- `data/eventcontracts_market.go`: Event contract market data (provisional) — `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` (TODO)
+- `trade/types.go`: `InstrumentTypeEvent` and `EventOutcome` (`yes`/`no`) for event contract trading
+- `trade/rules.go`: `validateEventRules` — LIMIT-only, DAY-only, QTY-only, integer quantity ≤50,000 (TODO)
+- `data/screener.go`: Non-display screener extensions — `GetMarketSectors`, `GetMarketSectorDetail`, `GetHighDividendRank`, `GetWeek52HighLow`
+- `data/crypto_data.go`: US crypto dedicated paths — `GetCryptoSnapshotList`, `GetCryptoBarsList`
+- `trade/orders.go`: `BatchPlaceOrder` for multi-order submission
+- `trade/accounts.go`: Cash activity accessors — `GetCashActivities`, `GetCashActivitiesPage`, `GetAllCashActivities`
+- `data/futures_market.go`: Futures market data (provisional) — `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` (TODO)
+- `data/display_screener.go`: Display Solution screeners (provisional) — `GetDisplayGainersLosers`, `GetDisplayTopActive` (TODO)
+- `data/display_quotes.go`: Display Solution quotes (provisional) — `GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`, `GetDisplayDepth` (TODO)
+- `data/display_instruments.go`, `data/display_news.go`, `data/display_streaming.go`: Display Solution instruments, news, and streaming (provisional) (TODO)
+- `broker/` module: New Go module for Broker API HK — virtual accounts, instruments, assets, orders, cash activities, funding FX, instant funding, journals, master data, event contracts
+- `brokerfd/` module: Complete rewrite of Broker FD API US — agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, master data
+- `brokerfd/events/` module: Broker FD gRPC events client using `grpc.event.EventService`
+- `internal/region/region.go`: `BrokerHTTP` field added to `Endpoints` struct
+- `gen/webull/brokerfd/events/v1/`: Generated protobuf for Broker FD events (P5.2)
+
+### Changed
+
+- `data/instrument_v3.go`: `GetStockProfilesV3` auth routed through `DisplayService()`
+- `data/logos.go`: `GetLogos` auth routed through `DisplayService()`
+
 ## [0.6.0] - 2026-09-20
 
 Multi-leg options orders, futures order validation, speculative option chain discovery, and documentation sync.

@@ -13,7 +13,9 @@ The generated reference documentation lives on pkg.go.dev:
 | Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/v1 |
 | Streamed protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/marketdata/v1 |
 | Event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/trade/events/v1 |
-| Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/v1 |
+| Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1 |
+| Broker API HK | https://pkg.go.dev/github.com/shing1211/webullapi4go/broker |
+| Broker FD events | https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd/events |
 | Shared domain types | https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types |
 | Module root | https://pkg.go.dev/github.com/shing1211/webullapi4go |
 

@@ -18,17 +18,19 @@ statements.
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.4)
+## Feature matrix (v0.7)
 
 | Area | Status | Details |
 |------|--------|---------|
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements), futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news. Unreleased and **speculative**: option-chain and expiration discovery, which is not in the published Webull OpenAPI |
+| Market Data (HTTP) | Supported | Instruments, fundamentals, futures static, snapshot, tick, quotes/depth, bars, footprint, NOII, screener, watchlists, options, news, event contracts. **Provisional**: futures market data, Display Solution endpoints (TODO markers) |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5). Unreleased and **provisional**: multi-leg options orders and futures order validation, whose wire values and rules are not yet confirmed against the live API |
-| Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC with HMAC-SHA256 signing, typed JSON payloads, and auto-reconnect/re-subscribe (v0.3.0) |
-| Display Solution | Not yet | Planned for v0.4 |
-| Broker API | Not yet | Planned for v0.5 |
+| Trading (HTTP) | Supported | Accounts, balances, and positions; stock order preview, place, replace, cancel, and order queries; US/HK/CN order-type rules, Hong Kong BCAN; single-leg options orders; US combo orders; multi-leg options orders (provisional); futures order validation (provisional); event contract orders (provisional); batch place orders |
+| Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC |
+| Broker API HK | Supported | Virtual accounts, instruments, assets, orders, cash activities, funding FX, instant funding, journals, master data, event contracts (`broker/` module) |
+| Broker FD API US | Supported | Agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, master data (`brokerfd/` module) |
+| Broker FD events (gRPC) | Supported | Broker FD event stream over gRPC using `grpc.event.EventService` (`brokerfd/events/` module) |
+| Display Solution | Supported | Company profile, analyst data, news, streaming, screeners, quotes (provisional paths, TODO markers) |
 
 ## Install
 

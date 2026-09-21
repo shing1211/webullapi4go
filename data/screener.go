@@ -31,6 +31,22 @@ const (
 	//
 	// Reference: https://developer.webull.hk/apis/docs/reference/get-top-active.md
 	pathTopActives = "/market-data/screeners/top-actives/list"
+	// pathMarketSectors is the market-sectors endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sectors.md
+	pathMarketSectors = "/market-data/screeners/market-sectors/list"
+	// pathMarketSectorDetail is the market-sector detail endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sector-detail.md
+	pathMarketSectorDetail = "/market-data/screeners/market-sectors/get"
+	// pathHighDividend is the high-dividend-ranks endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-high-dividend-ranks.md
+	pathHighDividend = "/market-data/screeners/high-dividend-ranks/list"
+	// pathWeek52HighLow is the week52-high-low endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-week52-high-low.md
+	pathWeek52HighLow = "/market-data/screeners/week52-high-low/list"
 )
 
 // GainersLosersRankType is the time window over which gainers and losers are
@@ -149,6 +165,47 @@ type MostActiveQuery struct {
 	Direction SortDirection
 }
 
+// MarketSector represents a market sector overview.
+type MarketSector struct {
+	SectorName  string          `json:"sector_name"`
+	ChangeRatio string          `json:"change_ratio"`
+	Volume      string          `json:"volume"`
+	MarketValue string          `json:"market_value"`
+	Stocks      []ScreenerStock `json:"stocks"`
+}
+
+// MarketSectorDetailQuery parameterizes [Client.GetMarketSectorDetail].
+type MarketSectorDetailQuery struct {
+	// SectorName is the sector to query. Required.
+	SectorName string
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+}
+
+// HighDividendQuery parameterizes [Client.GetHighDividendRank].
+type HighDividendQuery struct {
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+}
+
+// Week52HighLowQuery parameterizes [Client.GetWeek52HighLow].
+type Week52HighLowQuery struct {
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+}
+
 // ScreenerStock is a single stock row returned by the screener endpoints. Not
 // every field is populated by every endpoint; for example RelativeVolume10D is
 // only reported by the most-active endpoint.
@@ -246,6 +303,89 @@ func (c *Client) GetMostActive(ctx context.Context, q MostActiveQuery) ([]Screen
 
 	var out []ScreenerStock
 	if err := c.get(ctx, pathTopActives, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetMarketSectors retrieves the list of market sectors with their aggregate
+// statistics and constituent stocks.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sectors.md
+func (c *Client) GetMarketSectors(ctx context.Context) ([]MarketSector, error) {
+	var out []MarketSector
+	if err := c.get(ctx, pathMarketSectors, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetMarketSectorDetail retrieves the constituent stocks of a single market
+// sector, with optional sorting.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sector-detail.md
+func (c *Client) GetMarketSectorDetail(ctx context.Context, q MarketSectorDetailQuery) ([]ScreenerStock, error) {
+	query := url.Values{}
+	if q.SectorName != "" {
+		query.Set("sector", q.SectorName)
+	}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	var out []ScreenerStock
+	if err := c.get(ctx, pathMarketSectorDetail, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetHighDividendRank retrieves US stocks ranked by dividend yield.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-high-dividend-ranks.md
+func (c *Client) GetHighDividendRank(ctx context.Context, q HighDividendQuery) ([]ScreenerStock, error) {
+	query := url.Values{}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	var out []ScreenerStock
+	if err := c.get(ctx, pathHighDividend, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetWeek52HighLow retrieves US stocks based on their 52-week high/low
+// performance.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-week52-high-low.md
+func (c *Client) GetWeek52HighLow(ctx context.Context, q Week52HighLowQuery) ([]ScreenerStock, error) {
+	query := url.Values{}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	var out []ScreenerStock
+	if err := c.get(ctx, pathWeek52HighLow, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
