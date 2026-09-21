@@ -303,8 +303,9 @@ func (c *Client) GetFilings(ctx context.Context, symbol string, category StockCa
 }
 
 // FinancialsItem is one period's financial data entry. Field names are preserved
-// from the API response.
-type FinancialsItem map[string]string
+// from the API response. Values are any because the API returns a mix of strings
+// and numbers (e.g. integer fiscal periods).
+type FinancialsItem map[string]any
 
 // GetIncomeStatement retrieves the income statement for symbol.
 //

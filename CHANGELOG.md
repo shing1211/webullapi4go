@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-21
+
+Full sandbox verification: all core SDK functionality tested against live HK sandbox.
+
+### Fixed
+
+- `data/fundamentals.go`: `FinancialsItem` changed from `map[string]string` to
+  `map[string]any` to handle numeric values returned by the income statement,
+  balance sheet, and cash flow endpoints.
+
+### Added
+
+- `examples/`: all examples verified against HK sandbox (auth, marketdata,
+  account, watchlist, order preview, data-fundamentals, streaming, events).
+- Documentation complete: `IMPLEMENTATION_STATUS.md` with full codebase audit
+  (49 TODOs, 522 tests), README roadmap sync, AGENTS.md constraints updated.
+
 ## [0.7.0] - 2026-09-21
 
 Complete API coverage: market data extensions, event contracts, Broker API HK, Broker FD API US, and Broker FD gRPC events.
@@ -361,7 +378,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.0
 [0.7.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.5.0
