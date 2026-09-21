@@ -88,6 +88,8 @@ type Endpoints struct {
 	MQTTWebSocket string
 	// GRPC is the host of the gRPC trading-event stream.
 	GRPC string
+	// BrokerHTTP is the Broker API REST endpoint.
+	BrokerHTTP string
 }
 
 // EndpointsFor returns the service endpoints for the given region and
@@ -111,5 +113,6 @@ func endpointsFromInternal(e region.Endpoints) Endpoints {
 		MQTT:          e.MQTT,
 		MQTTWebSocket: e.MQTTWebSocket,
 		GRPC:          e.GRPC,
+		BrokerHTTP:    e.BrokerHTTP,
 	}
 }

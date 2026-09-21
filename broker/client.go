@@ -53,14 +53,14 @@ func (c *Client) Core() *client.Client { return c.core }
 // do performs a signed request and decodes the JSON response into out. path is
 // the API path without a query string; query, when non-empty, is appended as an
 // encoded query string. body is optional and out is optional, exactly as in
-// [client.Client.Do].
+// [client.Client.DoBroker].
 //
 // It is the single shared helper used by every endpoint method in this package.
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
 	if len(query) > 0 {
 		path += "?" + query.Encode()
 	}
-	return c.core.Do(ctx, method, path, body, out)
+	return c.core.DoBroker(ctx, method, path, body, out)
 }
 
 // get is a convenience wrapper around [Client.do] for GET requests with no body.

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-21
+
+Bug fixes found during remaining endpoint verification sweep.
+
+### Fixed
+
+- `data/watchlist.go`: `AddWatchlistInstruments`, `RemoveWatchlistInstruments`,
+  `UpdateWatchlistInstruments`, `UpdateWatchlist`, and `DeleteWatchlist` now
+  handle bare boolean (`true`/`false`) responses from the API using a
+  `BoolOrSuccess` type that accepts both raw bool and `{"success":bool}` JSON.
+- `broker/client.go`: `DoBroker` method added to route Broker API calls to the
+  correct `broker-api.sandbox.webull.hk` base URL instead of the market data URL.
+
+### Added
+
+- `examples/watchlist-cmd/`: Watchlist CRUD example (create, add instruments,
+  update, remove, delete) guarded by `WEBULL_WATCHLIST_TEST=1`.
+- `examples/broker-probe/`: Broker HK read-only endpoint probe program.
+
+### Noted
+
+- Broker API HK (`/openapi/v1/broker/...`) returns `404 Route Not Found` on the
+  HK sandbox — the endpoint group is not available in the sandbox environment.
+  Broker HK remains unverified pending production or US sandbox access.
+
 ## [0.9.0] - 2026-09-21
 
 Full sandbox verification: all core SDK functionality tested against live HK sandbox.
@@ -378,7 +403,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.1
 [0.9.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.0
 [0.7.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.6.0

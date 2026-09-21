@@ -32,6 +32,7 @@ import (
 type Client struct {
 	cfg       Config
 	transport *transport.Client
+	brokerTr  *transport.Client
 
 	// tok is this client's token cache, polling configuration, and injection
 	// installation state. It lives in the struct rather than in a package-level
@@ -71,7 +72,11 @@ func New(opts ...Option) (*Client, error) {
 	if err != nil {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "invalid HTTP endpoint", err)
 	}
-	return &Client{cfg: cfg, transport: t}, nil
+	c := &Client{cfg: cfg, transport: t}
+	if cfg.Endpoints.BrokerHTTP != "" {
+		c.brokerTr, _ = transport.New(cfg.Endpoints.BrokerHTTP, cfg.HTTPClient, cfg.UserAgent)
+	}
+	return c, nil
 }
 
 // Config returns a copy of the client configuration.
