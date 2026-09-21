@@ -29,6 +29,7 @@ under Apache-2.0.
 | Trading events (gRPC) | Supported (v0.3.0: order, position, and option streams) |
 | Broker API HK | Supported (v0.7) |
 | Broker FD US | Provisional (v0.7) |
+| Display Solution | Provisional (v0.7) | Company profile, analyst data, news, streaming, screeners, quotes — requires paid Webull subscription |
 
 ## Install
 

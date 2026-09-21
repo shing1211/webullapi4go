@@ -118,7 +118,10 @@ make generate
   Trading HTTP API. v0.3 adds Trading events over gRPC. v0.4 adds Market Data
   fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC
   filings, financial statements). v0.5 adds Display Solution (corporate actions,
-  instrument profiles, logos), fund and crypto data, and screener v2. v0.6 adds
+  instrument profiles, logos). Note: Display Solution requires a paid Webull subscription;
+  the HK sandbox returns `403 Forbidden` at the host level
+  (`hk-co-branding-openapi.uat.webullbroker.com`), blocking all Display Solution endpoints
+  even with valid credentials. v0.6 adds
   multi-leg options orders and futures order validation (provisional). v0.7 adds
   event contracts, Broker API HK, Broker FD US, and Broker FD gRPC events. The Broker
   API HK is implemented; the Broker FD US and events remain provisional.
@@ -131,6 +134,7 @@ make generate
   (crypto category), and no US sandbox credentials are available. Those items stay
   unverified until `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` for the US sandbox are
   supplied.
+- Display Solution returns `403` in HK sandbox (entitlement required, not a path issue)
 - Sandbox market data is limited to `AAPL`.
 - Footprint requires a paid entitlement; the sandbox returns `403 Insufficient
   permission`.

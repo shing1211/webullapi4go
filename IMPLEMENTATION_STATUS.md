@@ -8,7 +8,7 @@ Last updated: 2026-09-21 (sandbox probe) · Current version: **v0.7.0**
 |--------|---------|-----------|-------------|-------|----------|
 | Core SDK | `client/` | HTTP | 20+ options, `Client.Do`, `Client.DoStream` | 0 | ✅ |
 | Authentication | `internal/auth/` | — | HMAC-SHA1/SHA-256 signing, token lifecycle | 0 | ✅ |
-| Market Data HTTP | `data/` | HTTP | 92 functions | 39 | ⚠️ Paths provisional |
+| Market Data HTTP | `data/` | HTTP | 92 functions | 23 | ⚠️ Futures/event/option-chain paths unconfirmed |
 | Market Data Streaming | `stream/` | MQTT | 12+ options, typed handlers | 0 | ✅ |
 | Trading HTTP | `trade/` | HTTP | 30+ methods | 6 | ⚠️ Multi-leg/futures unconfirmed |
 | Trading Events | `events/` | gRPC | 21 functions | 0 | ✅ |
@@ -21,7 +21,7 @@ Last updated: 2026-09-21 (sandbox probe) · Current version: **v0.7.0**
 
 | Tag | Count | Package | Subject |
 |-----|-------|---------|---------|
-| `TODO(ds)` | 16 | `data/display_*.go` | Display Solution paths; HK sandbox returns 403 at auth level — host blocked |
+| `TODO(ds)` | 16 | `data/display_*.go` | Display Solution paths; requires paid Display Solution entitlement — HK sandbox returns 403 |
 | `TODO(t10)` | 12 | `data/options.go` | Option expirations/chain endpoints undocumented, paths and schemas unconfirmed |
 | `TODO(futures)` | 6 | `data/futures_market.go` | Futures market data paths unconfirmed against US sandbox |
 | `TODO(event-market-data)` | 5 | `data/eventcontracts_market.go` | Event contract market data paths unconfirmed |
@@ -122,6 +122,8 @@ All functions below have real HTTP/gRPC logic, full test coverage, and work agai
 ### ⚠️ Provisional (implemented, paths/rules unconfirmed)
 
 Every function below has real HTTP/gRPC logic but hits paths or uses wire values that are inferred from convention and not confirmed against a live US sandbox.
+
+**Market Data HTTP — core** (`data/` non-DS) — 23 TODO(futures/t10/event-market-data)
 
 **Futures market data** (`data/futures_market.go`) — 6 TODO(futures)
 - `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint`
