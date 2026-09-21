@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-21 · Current version: **v0.7.0**
+Last updated: 2026-09-21 (sandbox probe) · Current version: **v0.7.0**
 
 ## Summary
 
@@ -12,7 +12,7 @@ Last updated: 2026-09-21 · Current version: **v0.7.0**
 | Market Data Streaming | `stream/` | MQTT | 12+ options, typed handlers | 0 | ✅ |
 | Trading HTTP | `trade/` | HTTP | 30+ methods | 6 | ⚠️ Multi-leg/futures unconfirmed |
 | Trading Events | `events/` | gRPC | 21 functions | 0 | ✅ |
-| Display Solution | `display/` | HTTP | 8 functions | 0 | ✅ Auth service |
+| Display Solution | `display/` | HTTP | 8 functions | 16 | ⚠️ Host blocked (403 in HK sandbox) |
 | Broker API HK | `broker/` | HTTP | 32 methods | 0 | ✅ Own `go.mod` |
 | Broker FD API US | `brokerfd/` | HTTP | 56 methods | 1 | ⚠️ Paths unconfirmed |
 | Broker FD Events | `brokerfd/events/` | gRPC | 17 functions | 3 | ⚠️ Schemas unconfirmed |
@@ -21,7 +21,7 @@ Last updated: 2026-09-21 · Current version: **v0.7.0**
 
 | Tag | Count | Package | Subject |
 |-----|-------|---------|---------|
-| `TODO(ds)` | 16 | `data/display_*.go` | Display Solution paths unconfirmed against US sandbox |
+| `TODO(ds)` | 16 | `data/display_*.go` | Display Solution paths; HK sandbox returns 403 at auth level — host blocked |
 | `TODO(t10)` | 12 | `data/options.go` | Option expirations/chain endpoints undocumented, paths and schemas unconfirmed |
 | `TODO(futures)` | 6 | `data/futures_market.go` | Futures market data paths unconfirmed against US sandbox |
 | `TODO(event-market-data)` | 5 | `data/eventcontracts_market.go` | Event contract market data paths unconfirmed |
@@ -134,9 +134,10 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 **Display Solution endpoints** (`data/display_*.go`) — 16 TODO(ds)
 - Instruments (4): `GetDSCompanyProfile`, `GetDSAnalystTargetPrice`, `GetDSAnalystRating`
 - News (5): `GetDSNewsSummary`, `GetDSMarketNews`, `GetDSSymbolNews`, `GetDSLatestNews`
-- Quotes (1): `GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`, `GetDisplayDepth`
+- Quotes (5): `GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`, `GetDisplayDepth`
 - Screeners (3): `GetDisplayGainersLosers`, `GetDisplayTopActive`
-- Streaming (3): `DSSubscribe`, `DSUnsubscribe`
+- Streaming (2): `DSSubscribe`, `DSUnsubscribe`
+- **HK sandbox probe result**: All 14 endpoints return `403 Forbidden` at the Display Solution host (`hk-co-branding-openapi.uat.webullbroker.com`) — even the token endpoint is blocked. App lacks Display Solution entitlement in HK sandbox.
 
 **Option chain discovery** (`data/options.go`) — 12 TODO(t10)
 - `GetOptionExpirations`, `GetOptionChain`
@@ -224,14 +225,15 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 
 ## Known Issues
 
-1. **No US sandbox credentials**: Cannot verify fund data, crypto data, screener v2, broker FD, Display Solution endpoints, option chain discovery, or any US-only surface
-2. **Sandbox symbol limit**: Only `AAPL` supported in HK sandbox
-3. **Footprint entitlement**: Requires paid entitlement; sandbox returns `403`
-4. **Options contracts**: May not exist for `AAPL` in sandbox (`417 Invalid Symbol`)
-5. **Order-book depth**: Empty outside regular trading hours
-6. **MQTT blocking**: Plain MQTT on port 1883 may be blocked; use MQTT-over-WebSocket on `wss://...:8883/mqtt`
-7. **Rate limits**: Token endpoint allows 10 requests/30s; max 5 MQTT connections per App Key
-8. **probe/ not documented**: The `examples/probe/` directory has its own README but is missing from `examples/README.md`
+1. **Display Solution blocked at host level**: The HK sandbox Display Solution host (`hk-co-branding-openapi.uat.webullbroker.com`) returns 403 for all requests, including token creation. All 16 `TODO(ds)` items are blocked at the auth level — not just paths unconfirmed. App may not have Display Solution entitlement in HK sandbox.
+2. **No US sandbox credentials**: Cannot verify fund data, crypto data, screener v2, broker FD, Display Solution (US paths), option chain discovery, or any US-only surface
+3. **Sandbox symbol limit**: Only `AAPL` supported in HK sandbox
+4. **Footprint entitlement**: Requires paid entitlement; sandbox returns `403`
+5. **Options contracts**: May not exist for `AAPL` in sandbox (`417 Invalid Symbol`)
+6. **Order-book depth**: Empty outside regular trading hours
+7. **MQTT blocking**: Plain MQTT on port 1883 may be blocked; use MQTT-over-WebSocket on `wss://...:8883/mqtt`
+8. **Rate limits**: Token endpoint allows 10 requests/30s; max 5 MQTT connections per App Key
+9. **probe/ not documented**: The `examples/probe/` directory has its own README but is missing from `examples/README.md`
 
 ## Module Structure
 
@@ -244,15 +246,14 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 
 ## Next Steps
 
-1. **Obtain US sandbox credentials** (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET` for US) to verify 49 provisional items
-2. **Confirm Display Solution paths** (16 TODOs) against US sandbox
-3. **Confirm option chain discovery** (12 TODOs) — may need to remove if not in published API
-4. **Confirm futures market data paths** (6 TODOs) against US sandbox
-5. **Confirm event contract market data paths** (5 TODOs) against US sandbox
-6. **Confirm multi-leg strategy wire values** (3 TODOs) against live API
-7. **Confirm futures order validation rules** (2 TODOs) against live API
-8. **Confirm Broker FD event schemas** (3 TODOs) against US sandbox
-9. **Confirm Broker FD paths** (1 TODO) against US sandbox
-10. **Document probe/ example** in `examples/README.md`
-11. **Mark v0.5 and v0.6 as complete** in README roadmap once US verification is done
-12. **Work toward v1.0**: stabilize public API, finalize documentation, semver guarantees
+1. **Obtain US sandbox credentials** (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET` for US) — required to verify Display Solution (16 TODOs), option chain discovery (12 TODOs), futures market data (6 TODOs), event contract market data (5 TODOs), and Broker FD (4 TODOs)
+2. **Display Solution** (16 TODOs): HK sandbox returns 403 at the host level — the app lacks Display Solution entitlement in HK. US sandbox may be needed, or a separate Display Solution app registration.
+3. **Option chain discovery** (12 TODOs): Speculative — may need to remove if not in published API
+4. **Futures market data** (6 TODOs): HK sandbox may not serve US futures data
+5. **Event contract market data** (5 TODOs): US-only product, not available in HK sandbox
+6. **Multi-leg strategy wire values** (3 TODOs): Confirm against live trading API (place preview order)
+7. **Futures order validation rules** (2 TODOs): Confirm against live trading API
+8. **Event contract order rules** (1 TODO): Confirm against live trading API
+9. **Broker FD paths** (1 TODO) and **Broker FD event schemas** (3 TODOs): US-only
+10. **Document probe/ example** in `examples/README.md` (already done in this run)
+11. **Work toward v1.0**: stabilize public API, finalize documentation, semver guarantees

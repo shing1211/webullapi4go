@@ -13,3 +13,4 @@
 | 2026-09-21 | v07-complete-coverage | BUILD | released v0.7.0 | 97a3920 |
 | 2026-09-21 | v08-brokerfd-events-client | BUILD | released v0.8.0 | 956cf4a |
 | 2026-09-21 | v09-quality-polish-derivatives | BUILD | in progress | — |
+| 2026-09-21 | impl-status-doc | BUILD | done | eb29556 |
