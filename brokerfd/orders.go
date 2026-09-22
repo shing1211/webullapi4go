@@ -29,6 +29,7 @@ const (
 	pathFDOrderOpen    = "/broker-fd/orders/open"
 )
 
+// FDOrder represents a fractional share order with execution details.
 type FDOrder struct {
 	OrderID        string `json:"order_id"`
 	AccountID      string `json:"account_id"`
@@ -45,6 +46,7 @@ type FDOrder struct {
 	CreateTime     string `json:"create_time"`
 }
 
+// FDOrderPreviewRequest contains the order parameters for a preview request.
 type FDOrderPreviewRequest struct {
 	AccountID   string `json:"account_id"`
 	Symbol      string `json:"symbol"`
@@ -56,12 +58,14 @@ type FDOrderPreviewRequest struct {
 	TimeInForce string `json:"time_in_force"`
 }
 
+// FDOrderPreview contains the estimated cost breakdown for a fractional order.
 type FDOrderPreview struct {
 	OrderID        string `json:"order_id"`
 	EstimatedFee   string `json:"estimated_fee"`
 	EstimatedTotal string `json:"estimated_total"`
 }
 
+// PreviewFDOrder submits a fractional order for fee and cost estimation without execution.
 func (c *Client) PreviewFDOrder(ctx context.Context, req FDOrderPreviewRequest) (*FDOrderPreview, error) {
 	var out FDOrderPreview
 	if err := c.post(ctx, pathFDOrderPreview, nil, req, &out); err != nil {
@@ -70,6 +74,7 @@ func (c *Client) PreviewFDOrder(ctx context.Context, req FDOrderPreviewRequest) 
 	return &out, nil
 }
 
+// PlaceFDOrder submits a fractional order for immediate execution.
 func (c *Client) PlaceFDOrder(ctx context.Context, req FDOrderPreviewRequest) (*FDOrder, error) {
 	var out FDOrder
 	if err := c.post(ctx, pathFDOrderPlace, nil, req, &out); err != nil {
@@ -78,6 +83,7 @@ func (c *Client) PlaceFDOrder(ctx context.Context, req FDOrderPreviewRequest) (*
 	return &out, nil
 }
 
+// ReplaceFDOrderRequest contains the fields that may be updated on an existing fractional order.
 type ReplaceFDOrderRequest struct {
 	OrderID    string `json:"order_id"`
 	LimitPrice string `json:"limit_price,omitempty"`
@@ -85,6 +91,7 @@ type ReplaceFDOrderRequest struct {
 	Quantity   string `json:"quantity,omitempty"`
 }
 
+// ReplaceFDOrder modifies an existing fractional order with new parameters.
 func (c *Client) ReplaceFDOrder(ctx context.Context, orderID string, req ReplaceFDOrderRequest) (*FDOrder, error) {
 	q := url.Values{}
 	q.Set("order_id", orderID)
@@ -95,12 +102,14 @@ func (c *Client) ReplaceFDOrder(ctx context.Context, orderID string, req Replace
 	return &out, nil
 }
 
+// CancelFDOrder cancels a pending fractional order by ID.
 func (c *Client) CancelFDOrder(ctx context.Context, orderID string) error {
 	q := url.Values{}
 	q.Set("order_id", orderID)
 	return c.delete(ctx, pathFDOrderCancel, q, nil, nil)
 }
 
+// GetFDOrderDetail retrieves the current state of a single fractional order.
 func (c *Client) GetFDOrderDetail(ctx context.Context, orderID string) (*FDOrder, error) {
 	q := url.Values{}
 	q.Set("order_id", orderID)
@@ -111,6 +120,7 @@ func (c *Client) GetFDOrderDetail(ctx context.Context, orderID string) (*FDOrder
 	return &out, nil
 }
 
+// GetFDOrderHistory returns all filled and cancelled fractional orders for an account.
 func (c *Client) GetFDOrderHistory(ctx context.Context, accountID string) ([]FDOrder, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -121,6 +131,7 @@ func (c *Client) GetFDOrderHistory(ctx context.Context, accountID string) ([]FDO
 	return out, nil
 }
 
+// GetFDOpenOrders returns all open (unfilled) fractional orders for an account.
 func (c *Client) GetFDOpenOrders(ctx context.Context, accountID string) ([]FDOrder, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-22
+
+GoDoc coverage, HK options stubs, HK futures market data, new examples, and graceful credential handling.
+
+### Added
+
+- `brokerfd/brokerfd.go`: GoDoc on all 12 files and ~80 exported identifiers.
+- `brokerfd/events/events.go`, `brokerfd/events/option.go`, `brokerfd/events/sign.go`:
+  GoDoc on all event types and sign functions.
+- `examples/brokerfd/`: Broker FD US read-only endpoint probe (accounts, orders,
+  assets, instruments, funding, activity, journals, master data, agreements, documents).
+- `examples/brokerfd-events/`: Broker FD gRPC event subscription probe (order, option,
+  position streams).
+- `examples/options/`: HK options discovery probe (expirations, option chain).
+- `examples/`: graceful credential handling in all 9 existing examples — no more
+  panic on missing env vars; instead a descriptive message and zero-value client.
+- `data/futures.go`: `FuturesCategoryCN` constant for CN futures queries.
+- `data/futures_market.go`: `GetHKFuturesTick`, `GetHKFuturesSnapshot`,
+  `GetHKFuturesBars`, `GetHKFuturesDepth`, `GetHKFuturesFootprint` — 5 new HK
+  futures market data functions.
+- `data/options.go`: `OptionCategoryHK`, `OptionCategoryCN` constants.
+- `data/options.go`: `GetHKOptionExpirations`, `GetHKOptionChain` — HK options
+  discovery stubs (TODO t10, paths unconfirmed).
+- `trade/derivatives_hk.go`: new file for HK derivatives-specific trading helpers.
+
+### Tests Added
+
+- `brokerfd/brokerfd_test.go`: unit tests for broker FD root package.
+- `broker/options_test.go`: unit tests for broker options.
+- `brokerfd/events/option_test.go`: unit tests for broker FD option events.
+
 ## [0.9.2] - 2026-09-22
 
 Critical path corrections for the Broker API HK package. All paths were wrong

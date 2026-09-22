@@ -24,12 +24,16 @@ const (
 	pathFDTradeCalendar = "/broker-fd/master-data/trade-calendar"
 )
 
+// FDEnum represents a key-value pair with a human-readable label, returned by the
+// broker-fd master-data enums endpoint.
 type FDEnum struct {
 	EnumType string `json:"enum_type"`
 	Value    string `json:"value"`
 	Label    string `json:"label"`
 }
 
+// GetFDEnums returns the list of broker-fd master-data enums.
+// The set of enum types and values is fixed for the lifetime of the API.
 func (c *Client) GetFDEnums(ctx context.Context) ([]FDEnum, error) {
 	var out []FDEnum
 	if err := c.get(ctx, pathFDEnums, nil, &out); err != nil {
@@ -38,6 +42,7 @@ func (c *Client) GetFDEnums(ctx context.Context) ([]FDEnum, error) {
 	return out, nil
 }
 
+// FDTradeCalendarEntry represents a single trading day for a market.
 type FDTradeCalendarEntry struct {
 	Date      string `json:"date"`
 	Market    string `json:"market"`
@@ -46,6 +51,8 @@ type FDTradeCalendarEntry struct {
 	CloseTime string `json:"close_time"`
 }
 
+// GetFDTradeCalendar returns the trading calendar for a given market between startDate and endDate.
+// Dates are in YYYY-MM-DD format. The market parameter identifies the exchange or region.
 func (c *Client) GetFDTradeCalendar(ctx context.Context, market, startDate, endDate string) ([]FDTradeCalendarEntry, error) {
 	q := url.Values{}
 	q.Set("market", market)

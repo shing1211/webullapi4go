@@ -27,13 +27,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
 )
 
 func main() {
+	if os.Getenv("WEBULL_APP_KEY") == "" {
+		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
+		return
+	}
+
 	// WithEnv reads WEBULL_APP_KEY, WEBULL_APP_SECRET, WEBULL_REGION, and
 	// WEBULL_ENVIRONMENT. New fails when the credentials are missing.
 	cl, err := client.New(client.WithEnv())

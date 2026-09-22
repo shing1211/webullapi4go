@@ -324,7 +324,7 @@ MQTT on port 1883).
 | v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done (provisional) |
 | v0.7.0 | Event contracts, Broker API HK, Broker FD US, Broker FD gRPC events | Done |
 | v0.8.0 | — | — |
-| v0.9.0 | Full sandbox verification: all core examples verified against HK sandbox; `FinancialsItem` numeric fix | Done |
+| v0.9.0 | GoDoc coverage on brokerfd/ and brokerfd/events/, HK options stubs, HK futures market data, new examples (brokerfd, brokerfd-events, options), graceful credential handling | Done |
 | v0.9.1 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v0.9.2 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
 | v1.0 | Stable public API, full documentation, semver guarantees | Planned |

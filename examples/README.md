@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.9.2 API surface of `webullapi4go`. Each example is a
+Runnable examples for the v0.9.0 API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -205,6 +205,44 @@ go run ./examples/broker-probe
 
 Note: Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in
 the HK sandbox — the app lacks the required scope, not a path issue.
+
+## brokerfd
+
+Broker FD US read-only endpoint probe. Tests accounts, orders, assets,
+instruments, funding, activity, journals, master data, agreements, and
+documents endpoints against the sandbox.
+
+```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/brokerfd
+```
+
+## brokerfd-events
+
+Broker FD gRPC event subscription probe. Subscribes to order, option, and
+position event streams over gRPC and prints decoded payloads until Ctrl+C.
+
+```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/brokerfd-events
+```
+
+## options
+
+HK options discovery probe. Fetches HK option expirations and builds the
+full option chain for a given expiration. Paths are speculative (TODO t10)
+and may return 404 if the HK sandbox does not support these endpoints.
+
+```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/options
+```
 
 ## Sandbox limitations
 

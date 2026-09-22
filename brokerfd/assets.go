@@ -25,6 +25,8 @@ const (
 	pathFDAssetsPositions = "/broker-fd/assets/positions"
 )
 
+// FDAssetsSummary contains aggregate asset data for a fractional shares account.
+// Values are presented as strings to preserve numeric precision.
 type FDAssetsSummary struct {
 	AccountID    string `json:"account_id"`
 	TotalEquity  string `json:"total_equity"`
@@ -36,6 +38,8 @@ type FDAssetsSummary struct {
 	Currency     string `json:"currency"`
 }
 
+// GetFDAssetsSummary retrieves the aggregate asset summary for a fractional shares account.
+// It requires a valid accountID and returns summary fields including equity, cash, and P/L.
 func (c *Client) GetFDAssetsSummary(ctx context.Context, accountID string) (*FDAssetsSummary, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -46,6 +50,8 @@ func (c *Client) GetFDAssetsSummary(ctx context.Context, accountID string) (*FDA
 	return &out, nil
 }
 
+// FDAssetDetail provides a per-currency breakdown of cash and buying power
+// for a fractional shares account. Values are presented as strings to preserve numeric precision.
 type FDAssetDetail struct {
 	Currency      string `json:"currency"`
 	CashBalance   string `json:"cash_balance"`
@@ -54,6 +60,8 @@ type FDAssetDetail struct {
 	AvailableCash string `json:"available_cash"`
 }
 
+// GetFDAssetsDetail retrieves per-currency asset detail for a fractional shares account.
+// Returns a slice of FDAssetDetail, one per supported currency.
 func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) ([]FDAssetDetail, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -64,6 +72,8 @@ func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) ([]FDA
 	return out, nil
 }
 
+// FDPosition represents a single position held in a fractional shares account.
+// Values such as quantity, cost, and P/L are strings to preserve numeric precision.
 type FDPosition struct {
 	PositionID     string `json:"position_id"`
 	AccountID      string `json:"account_id"`
@@ -77,6 +87,7 @@ type FDPosition struct {
 	Currency       string `json:"currency"`
 }
 
+// GetFDPositions retrieves all open positions for a fractional shares account.
 func (c *Client) GetFDPositions(ctx context.Context, accountID string) ([]FDPosition, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)

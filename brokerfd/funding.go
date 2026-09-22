@@ -37,6 +37,7 @@ const (
 	pathFDCreditInfo           = "/broker-fd/funding/credit"
 )
 
+// BankAccount represents a linked bank account for funding operations.
 type BankAccount struct {
 	BankID        string `json:"bank_id"`
 	AccountID     string `json:"account_id"`
@@ -46,6 +47,7 @@ type BankAccount struct {
 	Status        string `json:"status"`
 }
 
+// ListFDBankAccounts retrieves all linked bank accounts for a broker FD account.
 func (c *Client) ListFDBankAccounts(ctx context.Context, accountID string) ([]BankAccount, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -56,6 +58,7 @@ func (c *Client) ListFDBankAccounts(ctx context.Context, accountID string) ([]Ba
 	return out, nil
 }
 
+// GetFDBankAccountDetail retrieves details for a specific bank account by its ID.
 func (c *Client) GetFDBankAccountDetail(ctx context.Context, bankID string) (*BankAccount, error) {
 	q := url.Values{}
 	q.Set("bank_id", bankID)
@@ -66,6 +69,7 @@ func (c *Client) GetFDBankAccountDetail(ctx context.Context, bankID string) (*Ba
 	return &out, nil
 }
 
+// AddFDBankAccountRequest contains the parameters to link a new bank account.
 type AddFDBankAccountRequest struct {
 	AccountID     string `json:"account_id"`
 	BankName      string `json:"bank_name"`
@@ -73,6 +77,7 @@ type AddFDBankAccountRequest struct {
 	RoutingNumber string `json:"routing_number"`
 }
 
+// AddFDBankAccount links a new bank account to the broker FD account.
 func (c *Client) AddFDBankAccount(ctx context.Context, req AddFDBankAccountRequest) (*BankAccount, error) {
 	var out BankAccount
 	if err := c.post(ctx, pathFDBankAccountAdd, nil, req, &out); err != nil {
@@ -81,12 +86,14 @@ func (c *Client) AddFDBankAccount(ctx context.Context, req AddFDBankAccountReque
 	return &out, nil
 }
 
+// RemoveFDBankAccount unlinks a bank account from the broker FD account.
 func (c *Client) RemoveFDBankAccount(ctx context.Context, bankID string) error {
 	q := url.Values{}
 	q.Set("bank_id", bankID)
 	return c.post(ctx, pathFDBankAccountRemove, q, nil, nil)
 }
 
+// ACHAccount represents an ACH account linked for electronic fund transfers.
 type ACHAccount struct {
 	ACHID         string `json:"ach_id"`
 	AccountID     string `json:"account_id"`
@@ -95,6 +102,7 @@ type ACHAccount struct {
 	Status        string `json:"status"`
 }
 
+// ListFDAchAccounts retrieves all linked ACH accounts for a broker FD account.
 func (c *Client) ListFDAchAccounts(ctx context.Context, accountID string) ([]ACHAccount, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -105,6 +113,7 @@ func (c *Client) ListFDAchAccounts(ctx context.Context, accountID string) ([]ACH
 	return out, nil
 }
 
+// GetFDAchAccountDetail retrieves details for a specific ACH account by its ID.
 func (c *Client) GetFDAchAccountDetail(ctx context.Context, achID string) (*ACHAccount, error) {
 	q := url.Values{}
 	q.Set("ach_id", achID)
@@ -115,12 +124,14 @@ func (c *Client) GetFDAchAccountDetail(ctx context.Context, achID string) (*ACHA
 	return &out, nil
 }
 
+// AddFDAchAccountRequest contains the parameters to link a new ACH account.
 type AddFDAchAccountRequest struct {
 	AccountID     string `json:"account_id"`
 	BankName      string `json:"bank_name"`
 	AccountNumber string `json:"account_number"`
 }
 
+// AddFDAchAccount links a new ACH account to the broker FD account.
 func (c *Client) AddFDAchAccount(ctx context.Context, req AddFDAchAccountRequest) (*ACHAccount, error) {
 	var out ACHAccount
 	if err := c.post(ctx, pathFDAchAccountAdd, nil, req, &out); err != nil {
@@ -129,12 +140,14 @@ func (c *Client) AddFDAchAccount(ctx context.Context, req AddFDAchAccountRequest
 	return &out, nil
 }
 
+// RemoveFDAchAccount unlinks an ACH account from the broker FD account.
 func (c *Client) RemoveFDAchAccount(ctx context.Context, achID string) error {
 	q := url.Values{}
 	q.Set("ach_id", achID)
 	return c.post(ctx, pathFDAchAccountRemove, q, nil, nil)
 }
 
+// Transfer represents a fund transfer transaction.
 type Transfer struct {
 	TransferID string `json:"transfer_id"`
 	AccountID  string `json:"account_id"`
@@ -145,6 +158,7 @@ type Transfer struct {
 	CreateTime string `json:"create_time"`
 }
 
+// ListFDTransfers retrieves all fund transfers for a broker FD account.
 func (c *Client) ListFDTransfers(ctx context.Context, accountID string) ([]Transfer, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -155,6 +169,7 @@ func (c *Client) ListFDTransfers(ctx context.Context, accountID string) ([]Trans
 	return out, nil
 }
 
+// GetFDTransferDetail retrieves details for a specific transfer by its ID.
 func (c *Client) GetFDTransferDetail(ctx context.Context, transferID string) (*Transfer, error) {
 	q := url.Values{}
 	q.Set("transfer_id", transferID)
@@ -165,6 +180,7 @@ func (c *Client) GetFDTransferDetail(ctx context.Context, transferID string) (*T
 	return &out, nil
 }
 
+// InitiateTransferRequest contains the parameters to initiate a fund transfer.
 type InitiateTransferRequest struct {
 	AccountID string `json:"account_id"`
 	Type      string `json:"type"`
@@ -172,6 +188,7 @@ type InitiateTransferRequest struct {
 	Currency  string `json:"currency"`
 }
 
+// InitiateFDTransfer initiates a new fund transfer for the broker FD account.
 func (c *Client) InitiateFDTransfer(ctx context.Context, req InitiateTransferRequest) (*Transfer, error) {
 	var out Transfer
 	if err := c.post(ctx, pathFDTransferInitiate, nil, req, &out); err != nil {
@@ -180,6 +197,7 @@ func (c *Client) InitiateFDTransfer(ctx context.Context, req InitiateTransferReq
 	return &out, nil
 }
 
+// InstantFunding represents an instant funding transaction.
 type InstantFunding struct {
 	FundingID  string `json:"funding_id"`
 	AccountID  string `json:"account_id"`
@@ -188,6 +206,7 @@ type InstantFunding struct {
 	CreateTime string `json:"create_time"`
 }
 
+// CreateFDInstantFunding creates an instant funding transaction for immediate funds.
 func (c *Client) CreateFDInstantFunding(ctx context.Context, accountID, amount string) (*InstantFunding, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -199,6 +218,7 @@ func (c *Client) CreateFDInstantFunding(ctx context.Context, accountID, amount s
 	return &out, nil
 }
 
+// GetFDInstantFundingDetail retrieves details for a specific instant funding by its ID.
 func (c *Client) GetFDInstantFundingDetail(ctx context.Context, fundingID string) (*InstantFunding, error) {
 	q := url.Values{}
 	q.Set("funding_id", fundingID)
@@ -209,12 +229,14 @@ func (c *Client) GetFDInstantFundingDetail(ctx context.Context, fundingID string
 	return &out, nil
 }
 
+// TransferFee represents the fee associated with a transfer type.
 type TransferFee struct {
 	Type     string `json:"type"`
 	Amount   string `json:"amount"`
 	Currency string `json:"currency"`
 }
 
+// GetFDTransferFees retrieves all available transfer fees.
 func (c *Client) GetFDTransferFees(ctx context.Context) ([]TransferFee, error) {
 	var out []TransferFee
 	if err := c.get(ctx, pathFDTransferFees, nil, &out); err != nil {
@@ -223,6 +245,7 @@ func (c *Client) GetFDTransferFees(ctx context.Context) ([]TransferFee, error) {
 	return out, nil
 }
 
+// CreditInfo represents credit/margin information for a broker FD account.
 type CreditInfo struct {
 	AccountID       string `json:"account_id"`
 	CreditLimit     string `json:"credit_limit"`
@@ -230,6 +253,7 @@ type CreditInfo struct {
 	AvailableCredit string `json:"available_credit"`
 }
 
+// GetFDCreditInfo retrieves credit information for a broker FD account.
 func (c *Client) GetFDCreditInfo(ctx context.Context, accountID string) (*CreditInfo, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)

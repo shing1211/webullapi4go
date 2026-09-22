@@ -213,6 +213,8 @@ func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) erro
 	if !r.Market.allowsFuturesOrderType(r.OrderType) {
 		allowed, known := marketFuturesOrderTypes[r.Market]
 		if !known {
+			// TODO(futures-cn): CN futures are not yet supported. Trading rules
+			// currently reject CN market for futures orders.
 			return fail("futures are not supported for this market")
 		}
 		return fail("order_type %s is not supported for %s futures orders; supported types: %s",

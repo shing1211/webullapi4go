@@ -29,6 +29,7 @@ const (
 	pathFDECInstrumentDetail    = "/broker-fd/instruments/event-contract/detail"
 )
 
+// FDStockInstrument represents a fractional share stock instrument available for trading.
 type FDStockInstrument struct {
 	Symbol   string `json:"symbol"`
 	Name     string `json:"name"`
@@ -38,6 +39,7 @@ type FDStockInstrument struct {
 	Status   string `json:"status"`
 }
 
+// GetFDStockInstruments retrieves fractional share stock instruments by symbol list.
 func (c *Client) GetFDStockInstruments(ctx context.Context, symbols []string) ([]FDStockInstrument, error) {
 	q := url.Values{}
 	q.Set("symbols", strings.Join(symbols, ","))
@@ -48,6 +50,7 @@ func (c *Client) GetFDStockInstruments(ctx context.Context, symbols []string) ([
 	return out, nil
 }
 
+// FDStockLocate represents locate (borrowed shares) information for a fractional share.
 type FDStockLocate struct {
 	Symbol         string `json:"symbol"`
 	LocateQuantity string `json:"locate_quantity"`
@@ -55,6 +58,7 @@ type FDStockLocate struct {
 	Rate           string `json:"rate"`
 }
 
+// GetFDStockLocate retrieves locate information for a fractional share symbol.
 func (c *Client) GetFDStockLocate(ctx context.Context, symbol string) ([]FDStockLocate, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)
@@ -65,6 +69,7 @@ func (c *Client) GetFDStockLocate(ctx context.Context, symbol string) ([]FDStock
 	return out, nil
 }
 
+// FDCorporateAction represents a corporate action (dividend, split, etc.) for fractional shares.
 type FDCorporateAction struct {
 	ActionID   string `json:"action_id"`
 	Symbol     string `json:"symbol"`
@@ -75,6 +80,7 @@ type FDCorporateAction struct {
 	Ratio      string `json:"ratio"`
 }
 
+// GetFDCorporateActions retrieves corporate actions for a fractional share symbol.
 func (c *Client) GetFDCorporateActions(ctx context.Context, symbol string) ([]FDCorporateAction, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)
@@ -85,6 +91,7 @@ func (c *Client) GetFDCorporateActions(ctx context.Context, symbol string) ([]FD
 	return out, nil
 }
 
+// GetFDCorporateActionDetail retrieves details for a specific corporate action by its ID.
 func (c *Client) GetFDCorporateActionDetail(ctx context.Context, actionID string) (*FDCorporateAction, error) {
 	q := url.Values{}
 	q.Set("action_id", actionID)
@@ -95,6 +102,7 @@ func (c *Client) GetFDCorporateActionDetail(ctx context.Context, actionID string
 	return &out, nil
 }
 
+// FDECInstrument represents an event contract (EC) instrument for fractional shares.
 type FDECInstrument struct {
 	Symbol         string `json:"symbol"`
 	EventID        string `json:"event_id"`
@@ -104,6 +112,7 @@ type FDECInstrument struct {
 	Status         string `json:"status"`
 }
 
+// GetFDECInstruments retrieves event contract instruments by event ID.
 func (c *Client) GetFDECInstruments(ctx context.Context, eventID string) ([]FDECInstrument, error) {
 	q := url.Values{}
 	q.Set("event_id", eventID)
@@ -114,6 +123,7 @@ func (c *Client) GetFDECInstruments(ctx context.Context, eventID string) ([]FDEC
 	return out, nil
 }
 
+// GetFDECInstrumentDetail retrieves details for a specific event contract by its symbol.
 func (c *Client) GetFDECInstrumentDetail(ctx context.Context, symbol string) (*FDECInstrument, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)

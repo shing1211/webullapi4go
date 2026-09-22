@@ -30,6 +30,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -41,6 +42,11 @@ import (
 )
 
 func main() {
+	if os.Getenv("WEBULL_APP_KEY") == "" {
+		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
+		return
+	}
+
 	cl, err := client.New(client.WithEnv())
 	if err != nil {
 		log.Fatal(err)

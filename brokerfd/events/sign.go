@@ -29,6 +29,9 @@ import (
 
 const metadataSignature = "x-signature"
 
+// subscribeMetadata constructs gRPC metadata for a Broker FD event subscription request.
+// It generates a nonce, timestamp, and HMAC-SHA256 signature using the provided
+// appKey, appSecret, and request body.
 func subscribeMetadata(appKey, appSecret string, now time.Time, body []byte) (metadata.MD, error) {
 	nonce, err := auth.NewNonce()
 	if err != nil {
@@ -59,6 +62,9 @@ func subscribeMetadata(appKey, appSecret string, now time.Time, body []byte) (me
 	), nil
 }
 
+// eventSignature computes the HMAC-SHA256 signature for a Broker FD event.
+// The signature is computed over the percent-encoded canonical string of the
+// parameters concatenated with the SHA-256 hash of the request body.
 func eventSignature(params map[string]string, appSecret string, body []byte) (string, error) {
 	encoded := percentEncode(eventCanonicalString(params, body))
 	mac := hmac.New(sha256.New, []byte(appSecret+"&"))
@@ -66,6 +72,10 @@ func eventSignature(params map[string]string, appSecret string, body []byte) (st
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
+// eventCanonicalString builds the canonical string for event signing.
+// Parameters are sorted by key name, joined as key=value pairs separated by "=",
+// then concatenated with the lower-case hex representation of the SHA-256 hash
+// of the request body, separated by "&".
 func eventCanonicalString(params map[string]string, body []byte) string {
 	names := make([]string, 0, len(params))
 	for name := range params {
@@ -80,6 +90,7 @@ func eventCanonicalString(params map[string]string, body []byte) string {
 	return strings.Join(entries, "=") + "&" + strings.ToLower(hexEncode(sum[:]))
 }
 
+// hexEncode converts a byte slice to its lower-case hexadecimal string representation.
 func hexEncode(b []byte) string {
 	const hexChars = "0123456789abcdef"
 	result := make([]byte, len(b)*2)
@@ -90,6 +101,9 @@ func hexEncode(b []byte) string {
 	return string(result)
 }
 
+// percentEncode percent-encodes a string according to RFC 3986 Section 2.1.
+// Unreserved characters (A-Z, a-z, 0-9, '-', '_', '.', '~') are passed through unchanged;
+// all other bytes are encoded as "%XX" using upper-case hex digits.
 func percentEncode(s string) string {
 	const upperhex = "0123456789ABCDEF"
 	var b strings.Builder
@@ -107,6 +121,8 @@ func percentEncode(s string) string {
 	return b.String()
 }
 
+// isUnreserved reports whether a byte is an RFC 3986 unreserved character:
+// A-Z, a-z, 0-9, '-', '_', '.', '~'.
 func isUnreserved(c byte) bool {
 	switch {
 	case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':

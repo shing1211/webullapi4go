@@ -37,6 +37,8 @@ const (
 	FuturesCategoryUS FuturesCategory = "US_FUTURES"
 	// FuturesCategoryHK identifies Hong Kong futures.
 	FuturesCategoryHK FuturesCategory = "HK_FUTURES"
+	// FuturesCategoryCN identifies China futures.
+	FuturesCategoryCN FuturesCategory = "CN_FUTURES"
 )
 
 // FuturesContractType distinguishes regular month contracts from continuous

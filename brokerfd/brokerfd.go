@@ -34,6 +34,8 @@ import (
 	"context"
 )
 
+// AccountSummary holds cash and buying power data for a Broker FD account.
+// Numeric fields are returned as strings to preserve precision.
 type AccountSummary struct {
 	AccountID    string `json:"account_id"`
 	Currency     string `json:"currency"`
@@ -43,6 +45,8 @@ type AccountSummary struct {
 	BuyingPower  string `json:"buying_power"`
 }
 
+// PositionSummary holds position-level data for a Broker FD account.
+// Numeric fields are returned as strings to preserve precision.
 type PositionSummary struct {
 	Symbol       string `json:"symbol"`
 	Quantity     string `json:"quantity"`
@@ -51,6 +55,7 @@ type PositionSummary struct {
 	UnrealizedPL string `json:"unrealized_pl"`
 }
 
+// GetAccountsSummary returns cash and buying power data for all Broker FD accounts.
 func (c *Client) GetAccountsSummary(ctx context.Context) ([]AccountSummary, error) {
 	path := "/broker-fd/accounts"
 	var out []AccountSummary
@@ -60,6 +65,7 @@ func (c *Client) GetAccountsSummary(ctx context.Context) ([]AccountSummary, erro
 	return out, nil
 }
 
+// GetPositions returns position-level data for all positions held across Broker FD accounts.
 func (c *Client) GetPositions(ctx context.Context) ([]PositionSummary, error) {
 	path := "/broker-fd/positions"
 	var out []PositionSummary

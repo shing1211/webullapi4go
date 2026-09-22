@@ -12,39 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command events connects to the Webull gRPC trade-event stream, subscribes to
-// order events for one trading account, and prints each decoded event until
-// interrupted with Ctrl+C.
+// Command brokerfd-events connects to the Webull Broker FD gRPC event stream,
+// subscribes to events for one or more trading accounts, and prints each
+// received data event until interrupted with Ctrl+C.
 //
-// Unlike the REST and MQTT paths, the event service signs every Subscribe call
-// with HMAC-SHA256 over the serialized request, so no access token is required.
 // Credentials are read from the environment:
 //
 //	WEBULL_APP_KEY=...
 //	WEBULL_APP_SECRET=...
 //	WEBULL_ENVIRONMENT=sandbox
-//	WEBULL_TRADE_ACCOUNT_ID=...
+//	WEBULL_TRADE_ACCOUNT_ID=...   (optional; omit to subscribe without account filter)
 //
 // Run it with:
 //
-//	go run ./examples/events
+//	go run ./examples/brokerfd-events
 package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/shing1211/webullapi4go/brokerfd/events"
 	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/events"
 )
 
 func main() {
 	if os.Getenv("WEBULL_APP_KEY") == "" {
-		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
+		log.Println("credentials not set, skipping brokerfd-events example")
 		return
 	}
 
@@ -54,7 +53,7 @@ func main() {
 	}
 	defer func() { _ = cl.Close() }()
 
-	opts := []events.Option{events.WithSubscribeTypes(events.SubscribeOrder)}
+	opts := []events.Option{}
 	if account := os.Getenv("WEBULL_TRADE_ACCOUNT_ID"); account != "" {
 		opts = append(opts, events.WithAccounts([]string{account}))
 	}
@@ -65,15 +64,13 @@ func main() {
 	}
 	defer func() { _ = ev.Close() }()
 
-	ev.OnConnect(func() { log.Println("subscribed") })
+	ev.OnConnect(func() { log.Println("connected") })
+	ev.OnPing(func() { log.Println("ping") })
 	ev.OnError(func(err error) { log.Printf("event stream error: %v", err) })
-	ev.OnOrder(func(o *events.OrderEvent) {
-		log.Printf("order %s %s %s status=%s scene=%s symbol=%s qty=%s filled=%s@%s",
-			o.OrderID, o.Side, o.OrderType, o.OrderStatus, o.SceneType,
-			o.Symbol, o.Quantity, o.FilledQuantity, o.FilledPrice)
+	ev.OnData(func(subscribeType uint32, contentType string, payload []byte) {
+		log.Printf("data: type=%d content=%s payload=%s", subscribeType, contentType, hex.EncodeToString(payload))
 	})
 
-	// Ctrl+C or SIGTERM cancels the context and ends the stream cleanly.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -82,7 +79,7 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		log.Println("shutting down")
+		fmt.Println("shutting down")
 	case err := <-runErr:
 		if err != nil {
 			log.Fatal(err)

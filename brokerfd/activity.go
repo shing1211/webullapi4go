@@ -23,6 +23,8 @@ const (
 	pathFDActivities = "/broker-fd/activities"
 )
 
+// FDActivity represents a single activity or transaction in a fractional shares account.
+// Amount is a string to preserve numeric precision; type and status are free-form strings.
 type FDActivity struct {
 	ActivityID  string `json:"activity_id"`
 	AccountID   string `json:"account_id"`
@@ -34,6 +36,8 @@ type FDActivity struct {
 	Description string `json:"description"`
 }
 
+// GetFDActivities retrieves all account activities for a fractional shares account,
+// including trades, deposits, withdrawals, and other transactions.
 func (c *Client) GetFDActivities(ctx context.Context, accountID string) ([]FDActivity, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)

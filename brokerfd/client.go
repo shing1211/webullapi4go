@@ -22,14 +22,20 @@ import (
 	"github.com/shing1211/webullapi4go/client"
 )
 
+// Client provides access to the Broker FD (US) HTTP API via the shared transport.
+// It wraps a [client.Client] and delegates all HTTP calls to it.
 type Client struct {
 	core *client.Client
 }
 
+// New returns a new Broker FD client backed by the supplied shared [client.Client].
 func New(c *client.Client) *Client { return &Client{core: c} }
 
+// Core returns the underlying shared [client.Client] used for HTTP transport.
 func (c *Client) Core() *client.Client { return c.core }
 
+// do executes an HTTP request with the given method, path, query parameters, body,
+// and populates the response into out. It appends query parameters to the path.
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
 	if len(query) > 0 {
 		path += "?" + query.Encode()
@@ -37,20 +43,25 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	return c.core.Do(ctx, method, path, body, out)
 }
 
+// get issues a GET request to the Broker FD API.
 func (c *Client) get(ctx context.Context, path string, query url.Values, out any) error {
 	return c.do(ctx, http.MethodGet, path, query, nil, out)
 }
 
+// post issues a POST request to the Broker FD API.
 func (c *Client) post(ctx context.Context, path string, query url.Values, body, out any) error {
 	return c.do(ctx, http.MethodPost, path, query, body, out)
 }
 
+// put issues a PUT request to the Broker FD API.
 func (c *Client) put(ctx context.Context, path string, query url.Values, body, out any) error {
 	return c.do(ctx, http.MethodPut, path, query, body, out)
 }
 
+// delete issues a DELETE request to the Broker FD API.
 func (c *Client) delete(ctx context.Context, path string, query url.Values, body, out any) error {
 	return c.do(ctx, http.MethodDelete, path, query, body, out)
 }
 
+// Close is a placeholder for future resource cleanup. Currently returns nil.
 func (c *Client) Close() error { return nil }

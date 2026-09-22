@@ -24,6 +24,8 @@ const (
 	pathFDCashJournalDetail = "/broker-fd/journals/cash/detail"
 )
 
+// FDCashJournal represents a cash journal entry recording a deposit, withdrawal, or other
+// cash movement for a broker-fd account.
 type FDCashJournal struct {
 	JournalID  string `json:"journal_id"`
 	AccountID  string `json:"account_id"`
@@ -34,6 +36,8 @@ type FDCashJournal struct {
 	CreateTime string `json:"create_time"`
 }
 
+// ListFDCashJournals returns all cash journal entries for the specified broker-fd account.
+// Results are ordered by creation time descending.
 func (c *Client) ListFDCashJournals(ctx context.Context, accountID string) ([]FDCashJournal, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -44,6 +48,7 @@ func (c *Client) ListFDCashJournals(ctx context.Context, accountID string) ([]FD
 	return out, nil
 }
 
+// GetFDCashJournalDetail returns a single cash journal entry by its journal ID.
 func (c *Client) GetFDCashJournalDetail(ctx context.Context, journalID string) (*FDCashJournal, error) {
 	q := url.Values{}
 	q.Set("journal_id", journalID)

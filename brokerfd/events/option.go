@@ -22,15 +22,22 @@ import (
 	"github.com/shing1211/webullapi4go/internal/errs"
 )
 
-const (
-	DefaultGRPCPort           = 443
-	DefaultDialTimeout        = 10 * time.Second
-	DefaultReconnectBaseDelay = time.Second
-	DefaultReconnectMaxDelay  = 30 * time.Second
-)
+// DefaultGRPCPort is the default port for gRPC connections (443).
+const DefaultGRPCPort = 443
 
+// DefaultDialTimeout is the default timeout for establishing gRPC connections (10 seconds).
+const DefaultDialTimeout = 10 * time.Second
+
+// DefaultReconnectBaseDelay is the default base delay for exponential backoff reconnection (1 second).
+const DefaultReconnectBaseDelay = time.Second
+
+// DefaultReconnectMaxDelay is the default maximum delay for exponential backoff reconnection (30 seconds).
+const DefaultReconnectMaxDelay = 30 * time.Second
+
+// Option configures a BrokerFD events client.
 type Option func(*config)
 
+// config holds the configuration for a BrokerFD events client.
 type config struct {
 	endpoint       string
 	port           int
@@ -46,6 +53,7 @@ type config struct {
 	maxReconnectAttempts int
 }
 
+// defaultConfig returns the default configuration for a BrokerFD events client.
 func defaultConfig() config {
 	return config{
 		port:               DefaultGRPCPort,
@@ -57,6 +65,7 @@ func defaultConfig() config {
 	}
 }
 
+// validate checks that the configuration values are valid.
 func (cfg config) validate() error {
 	if cfg.port <= 0 || cfg.port > 65535 {
 		return errs.New(errs.CodeInvalidConfig, "brokerfd/events: port must be between 1 and 65535")
@@ -76,10 +85,12 @@ func (cfg config) validate() error {
 	return nil
 }
 
+// WithGRPCEndpoint sets the gRPC server host address.
 func WithGRPCEndpoint(host string) Option {
 	return func(cfg *config) { cfg.endpoint = host }
 }
 
+// WithGRPCPort sets the gRPC server port.
 func WithGRPCPort(port int) Option {
 	return func(cfg *config) {
 		if port > 0 {
@@ -88,10 +99,12 @@ func WithGRPCPort(port int) Option {
 	}
 }
 
+// WithTLS enables or disables TLS for the gRPC connection.
 func WithTLS(enabled bool) Option {
 	return func(cfg *config) { cfg.tls = enabled }
 }
 
+// WithDialTimeout sets the timeout for establishing gRPC connections.
 func WithDialTimeout(d time.Duration) Option {
 	return func(cfg *config) {
 		if d > 0 {
@@ -100,6 +113,7 @@ func WithDialTimeout(d time.Duration) Option {
 	}
 }
 
+// WithGRPCDialOption appends a gRPC dial option to the connection.
 func WithGRPCDialOption(opt grpc.DialOption) Option {
 	return func(cfg *config) {
 		if opt != nil {
@@ -108,16 +122,19 @@ func WithGRPCDialOption(opt grpc.DialOption) Option {
 	}
 }
 
+// WithAccounts sets the account IDs to filter events.
 func WithAccounts(accounts []string) Option {
 	return func(cfg *config) {
 		cfg.accounts = append([]string(nil), accounts...)
 	}
 }
 
+// WithAutoReconnect enables or disables automatic reconnection on connection loss.
 func WithAutoReconnect(enabled bool) Option {
 	return func(cfg *config) { cfg.autoReconnect = enabled }
 }
 
+// WithReconnectBaseDelay sets the base delay for exponential backoff reconnection.
 func WithReconnectBaseDelay(d time.Duration) Option {
 	return func(cfg *config) {
 		if d > 0 {
@@ -126,6 +143,7 @@ func WithReconnectBaseDelay(d time.Duration) Option {
 	}
 }
 
+// WithReconnectMaxDelay sets the maximum delay for exponential backoff reconnection.
 func WithReconnectMaxDelay(d time.Duration) Option {
 	return func(cfg *config) {
 		if d > 0 {
@@ -134,6 +152,8 @@ func WithReconnectMaxDelay(d time.Duration) Option {
 	}
 }
 
+// WithMaxReconnectAttempts sets the maximum number of reconnection attempts.
+// A value of 0 means unlimited attempts.
 func WithMaxReconnectAttempts(n int) Option {
 	return func(cfg *config) {
 		if n > 0 {

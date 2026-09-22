@@ -40,6 +40,10 @@ import (
 	"github.com/shing1211/webullapi4go/internal/errs"
 )
 
+// Client is a gRPC-based Broker FD event subscription client. It maintains a
+// persistent connection to the event stream, optionally reconnecting on
+// transport errors, and dispatches connection lifecycle events and data
+// payloads to registered handlers.
 type Client struct {
 	core *client.Client
 	cfg  config
@@ -58,6 +62,11 @@ type Client struct {
 	runCancel context.CancelFunc
 }
 
+// New returns a Broker FD event client configured with cl and the supplied
+// options. It validates the configuration and establishes the gRPC connection
+// but does not start the event loop; call [Client.Run] to begin receiving
+// events. New returns an error if cl is nil, no endpoint is available, or
+// the dial options are invalid.
 func New(cl *client.Client, opts ...Option) (*Client, error) {
 	if cl == nil {
 		return nil, errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is required")
@@ -105,6 +114,10 @@ func dialTarget(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
 }
 
+// OnConnect registers fn to be called when the client establishes a
+// successful subscription with the server. The callbacks are invoked
+// synchronously inside the stream receive loop. Multiple callbacks are
+// supported; they are called in registration order.
 func (c *Client) OnConnect(fn func()) {
 	if fn == nil {
 		return
@@ -114,6 +127,8 @@ func (c *Client) OnConnect(fn func()) {
 	c.mu.Unlock()
 }
 
+// OnPing registers fn to be called when the server sends a keep-alive ping.
+// The callbacks are invoked synchronously inside the stream receive loop.
 func (c *Client) OnPing(fn func()) {
 	if fn == nil {
 		return
@@ -123,6 +138,10 @@ func (c *Client) OnPing(fn func()) {
 	c.mu.Unlock()
 }
 
+// OnError registers fn to be called when a transport or protocol error
+// occurs during streaming. It is not called for context cancellation or
+// normal stream termination. The error is the reason the stream failed; the
+// client may still be reconnecting depending on the configured options.
 func (c *Client) OnError(fn func(error)) {
 	if fn == nil {
 		return
@@ -132,6 +151,11 @@ func (c *Client) OnError(fn func(error)) {
 	c.mu.Unlock()
 }
 
+// OnData registers fn to be called for each data event received from the
+// server. subscribeType identifies the event category, contentType is the MIME
+// type of the payload (for example "application/json"), and payload holds the
+// raw event data. The callbacks are invoked synchronously inside the stream
+// receive loop.
 func (c *Client) OnData(fn func(subscribeType uint32, contentType string, payload []byte)) {
 	if fn == nil {
 		return
@@ -141,6 +165,13 @@ func (c *Client) OnData(fn func(subscribeType uint32, contentType string, payloa
 	c.mu.Unlock()
 }
 
+// Run starts the event subscription loop. It blocks until the context is
+// cancelled, the stream terminates, or an unrecoverable error occurs. If
+// auto-reconnect is enabled (the default), Run retries transient transport
+// errors indefinitely up to [WithMaxReconnectAttempts]; when disabled it
+// returns after a single stream attempt. Run must not be called more than once
+// concurrently, but may be called again after [Client.Close] is used to shut
+// down the client.
 func (c *Client) Run(ctx context.Context) error {
 	if c == nil || c.conn == nil {
 		return errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is not initialized")
@@ -252,6 +283,10 @@ func sleepContext(ctx context.Context, d time.Duration) bool {
 	}
 }
 
+// Close gracefully shuts down the client. It cancels the run context, waits
+// for any in-flight handlers to finish, and closes the underlying gRPC
+// connection. Close is safe to call multiple times; subsequent calls return
+// nil.
 func (c *Client) Close() error {
 	var err error
 	c.closeOnce.Do(func() {

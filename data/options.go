@@ -53,6 +53,10 @@ const (
 	// OptionCategoryUS identifies United States options, the only category
 	// currently supported by the option endpoints.
 	OptionCategoryUS OptionCategory = "US_OPTION"
+	// OptionCategoryHK identifies Hong Kong options.
+	OptionCategoryHK OptionCategory = "HK"
+	// OptionCategoryCN identifies China options.
+	OptionCategoryCN OptionCategory = "CN"
 )
 
 // OptionBarTimespan is the time granularity of option historical bars.
@@ -497,4 +501,27 @@ func (c *Client) GetOptionChain(ctx context.Context, q OptionChainQuery) (*Optio
 		Contracts:     resp.Data,
 		PaginationKey: resp.PaginationKey,
 	}, nil
+}
+
+// GetHKOptionExpirations lists the option expiration dates available for an
+// underlying symbol on the Hong Kong market.
+//
+// TODO(options-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKOptionExpirations(ctx context.Context, symbol string) (*OptionExpirationsResult, error) {
+	return c.GetOptionExpirations(ctx, OptionExpirationQuery{
+		Symbol:   symbol,
+		Category: OptionCategoryHK,
+	})
+}
+
+// GetHKOptionChain lists the option contracts available for an underlying
+// symbol on the Hong Kong market, optionally narrowed by expiration, option
+// type, and strike range.
+//
+// TODO(options-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKOptionChain(ctx context.Context, symbol string) (*OptionChainResult, error) {
+	return c.GetOptionChain(ctx, OptionChainQuery{
+		Symbol:   symbol,
+		Category: OptionCategoryHK,
+	})
 }

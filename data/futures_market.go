@@ -222,3 +222,137 @@ func (c *Client) GetFuturesFootprint(ctx context.Context, q FuturesFootprintQuer
 	}
 	return out, nil
 }
+
+// HKFuturesTickQuery parameterizes [Client.GetHKFuturesTick]. Symbol is required;
+// Category is pre-set to [FuturesCategoryHK].
+type HKFuturesTickQuery struct {
+	Symbol string
+	Count  int
+}
+
+// GetHKFuturesTick retrieves tick-by-tick trade data for a single Hong Kong
+// futures contract.
+//
+// TODO(futures-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKFuturesTick(ctx context.Context, q HKFuturesTickQuery) (*StockTicks, error) {
+	query := url.Values{
+		"symbol":   {q.Symbol},
+		"category": {string(FuturesCategoryHK)},
+	}
+	if q.Count > 0 {
+		query.Set("count", strconv.Itoa(q.Count))
+	}
+	var out StockTicks
+	if err := c.get(ctx, pathFuturesTick, query, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// HKFuturesSnapshotQuery parameterizes [Client.GetHKFuturesSnapshot]. Symbols is
+// required; Category is pre-set to [FuturesCategoryHK].
+type HKFuturesSnapshotQuery struct {
+	Symbols []string
+}
+
+// GetHKFuturesSnapshot retrieves real-time market snapshots for one or more
+// Hong Kong futures contracts.
+//
+// TODO(futures-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKFuturesSnapshot(ctx context.Context, q HKFuturesSnapshotQuery) ([]Snapshot, error) {
+	query := url.Values{
+		"symbols":  {strings.Join(q.Symbols, ",")},
+		"category": {string(FuturesCategoryHK)},
+	}
+	var out []Snapshot
+	if err := c.get(ctx, pathFuturesSnapshot, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// HKFuturesBarsQuery parameterizes [Client.GetHKFuturesBars]. Symbols and Interval
+// are required; Category is pre-set to [FuturesCategoryHK].
+type HKFuturesBarsQuery struct {
+	Symbols  []string
+	Interval BarTimespan
+	Count    int
+}
+
+// GetHKFuturesBars retrieves historical bars for one or more Hong Kong futures
+// contracts.
+//
+// TODO(futures-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKFuturesBars(ctx context.Context, q HKFuturesBarsQuery) (*BatchBars, error) {
+	query := url.Values{
+		"symbols":  {strings.Join(q.Symbols, ",")},
+		"category": {string(FuturesCategoryHK)},
+	}
+	if q.Interval != "" {
+		query.Set("timespan", string(q.Interval))
+	}
+	if q.Count > 0 {
+		query.Set("count", strconv.Itoa(q.Count))
+	}
+	var out BatchBars
+	if err := c.get(ctx, pathFuturesBars, query, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// HKFuturesDepthQuery parameterizes [Client.GetHKFuturesDepth]. Symbol is required;
+// Category is pre-set to [FuturesCategoryHK].
+type HKFuturesDepthQuery struct {
+	Symbol string
+	Depth  int
+}
+
+// GetHKFuturesDepth retrieves the latest bid/ask order-book depth for a single
+// Hong Kong futures contract.
+//
+// TODO(futures-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKFuturesDepth(ctx context.Context, q HKFuturesDepthQuery) (*Quote, error) {
+	query := url.Values{
+		"symbol":   {q.Symbol},
+		"category": {string(FuturesCategoryHK)},
+	}
+	if q.Depth > 0 {
+		query.Set("depth", strconv.Itoa(q.Depth))
+	}
+	var out Quote
+	if err := c.get(ctx, pathFuturesDepth, query, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// HKFuturesFootprintQuery parameterizes [Client.GetHKFuturesFootprint]. Symbols and
+// Timespan are required; Category is pre-set to [FuturesCategoryHK].
+type HKFuturesFootprintQuery struct {
+	Symbols  []string
+	Timespan FootprintTimespan
+	Count    int
+}
+
+// GetHKFuturesFootprint retrieves footprint (order-flow) bars for one or more
+// Hong Kong futures contracts.
+//
+// TODO(futures-hk): unconfirmed path — requires live probe
+func (c *Client) GetHKFuturesFootprint(ctx context.Context, q HKFuturesFootprintQuery) ([]StockFootprint, error) {
+	query := url.Values{
+		"symbols":  {strings.Join(q.Symbols, ",")},
+		"category": {string(FuturesCategoryHK)},
+	}
+	if q.Timespan != "" {
+		query.Set("timespan", string(q.Timespan))
+	}
+	if q.Count > 0 {
+		query.Set("count", strconv.Itoa(q.Count))
+	}
+	var out []StockFootprint
+	if err := c.get(ctx, pathFuturesFootprint, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

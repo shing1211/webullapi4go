@@ -24,6 +24,7 @@ const (
 	pathAgreementDetail = "/broker-fd/agreements/detail"
 )
 
+// Agreement represents a legal or regulatory agreement in the Broker FD system.
 type Agreement struct {
 	AgreementID   string `json:"agreement_id"`
 	AgreementType string `json:"agreement_type"`
@@ -33,6 +34,7 @@ type Agreement struct {
 	Content       string `json:"content,omitempty"`
 }
 
+// ListAgreements returns all agreements available in the Broker FD system.
 func (c *Client) ListAgreements(ctx context.Context) ([]Agreement, error) {
 	var out []Agreement
 	if err := c.get(ctx, pathAgreements, nil, &out); err != nil {
@@ -41,6 +43,7 @@ func (c *Client) ListAgreements(ctx context.Context) ([]Agreement, error) {
 	return out, nil
 }
 
+// GetAgreementDetail returns the full details of a single agreement identified by agreementID.
 func (c *Client) GetAgreementDetail(ctx context.Context, agreementID string) (*Agreement, error) {
 	q := url.Values{}
 	q.Set("agreement_id", agreementID)

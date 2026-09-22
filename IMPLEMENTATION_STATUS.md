@@ -48,7 +48,7 @@ Last updated: 2026-09-22 (v1.0.0 release) · Current version: **v1.0.0**
 | v0.6.0 | 2026-09-20 | Multi-leg options, futures validation, option chain discovery | Done (provisional) |
 | v0.7.0 | 2026-09-21 | Event contracts, Broker API HK, Broker FD US, Broker FD events | Done (current) |
 | v0.8.0 | 2026-09-21 | Reserved | — |
-| v0.9.0 | 2026-09-21 | Full sandbox verification; `FinancialsItem` numeric fix | Done |
+| v0.9.0 | 2026-09-22 | GoDoc coverage on brokerfd/ and brokerfd/events/, HK options stubs (OptionCategoryHK/CN, GetHKOptionExpirations, GetHKOptionChain), HK futures market data (GetHKFuturesTick/Snapshot/Bars/Depth/Footprint), new examples (brokerfd, brokerfd-events, options), graceful credential handling, FuturesCategoryCN | Done |
 | v0.9.1 | 2026-09-21 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v0.9.2 | 2026-09-22 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
 | v1.0.0 | 2026-09-22 | Futures market data bug fix (Category field added to all 5 query structs); v1.0 API stability audit completed; all 49 TODOs remain provisional (require US sandbox) | Done (provisional) |

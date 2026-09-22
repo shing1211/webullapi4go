@@ -31,6 +31,7 @@ const (
 	pathFDAccountFormStatus = "/broker-fd/account/form/status"
 )
 
+// FDAccount represents a Broker FD account with its identification and status details.
 type FDAccount struct {
 	AccountID     string `json:"account_id"`
 	AccountNumber string `json:"account_number"`
@@ -41,6 +42,7 @@ type FDAccount struct {
 	CreateTime    string `json:"create_time"`
 }
 
+// ListFDAccounts returns all Broker FD accounts associated with the authenticated user.
 func (c *Client) ListFDAccounts(ctx context.Context) ([]FDAccount, error) {
 	var out []FDAccount
 	if err := c.get(ctx, pathFDAccountList, nil, &out); err != nil {
@@ -49,6 +51,7 @@ func (c *Client) ListFDAccounts(ctx context.Context) ([]FDAccount, error) {
 	return out, nil
 }
 
+// GetFDAccountDetail returns the details of a specific Broker FD account by its ID.
 func (c *Client) GetFDAccountDetail(ctx context.Context, accountID string) (*FDAccount, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -59,12 +62,14 @@ func (c *Client) GetFDAccountDetail(ctx context.Context, accountID string) (*FDA
 	return &out, nil
 }
 
+// CreateFDAccountRequest defines the parameters required to create a new Broker FD account.
 type CreateFDAccountRequest struct {
 	AccountType  string `json:"account_type"`
 	AccountClass string `json:"account_class"`
 	Currency     string `json:"currency"`
 }
 
+// CreateFDAccount creates a new Broker FD account with the given parameters and returns the created account.
 func (c *Client) CreateFDAccount(ctx context.Context, req CreateFDAccountRequest) (*FDAccount, error) {
 	var out FDAccount
 	if err := c.post(ctx, pathFDAccountCreate, nil, req, &out); err != nil {
@@ -73,12 +78,14 @@ func (c *Client) CreateFDAccount(ctx context.Context, req CreateFDAccountRequest
 	return &out, nil
 }
 
+// UpdateFDAccountRequest defines the parameters for updating an existing Broker FD account.
 type UpdateFDAccountRequest struct {
 	AccountID    string `json:"account_id"`
 	AccountType  string `json:"account_type,omitempty"`
 	AccountClass string `json:"account_class,omitempty"`
 }
 
+// UpdateFDAccount updates an existing Broker FD account and returns the updated account.
 func (c *Client) UpdateFDAccount(ctx context.Context, req UpdateFDAccountRequest) (*FDAccount, error) {
 	var out FDAccount
 	if err := c.put(ctx, pathFDAccountUpdate, nil, req, &out); err != nil {
@@ -87,12 +94,14 @@ func (c *Client) UpdateFDAccount(ctx context.Context, req UpdateFDAccountRequest
 	return &out, nil
 }
 
+// CloseFDAccount closes the Broker FD account identified by accountID.
 func (c *Client) CloseFDAccount(ctx context.Context, accountID string) error {
 	q := url.Values{}
 	q.Set("account_id", accountID)
 	return c.post(ctx, pathFDAccountClose, q, nil, nil)
 }
 
+// AccountForm represents a Broker FD account form with its metadata and content.
 type AccountForm struct {
 	FormID     string `json:"form_id"`
 	FormType   string `json:"form_type"`
@@ -101,6 +110,7 @@ type AccountForm struct {
 	Content    string `json:"content,omitempty"`
 }
 
+// ListAccountForms returns all account forms associated with the specified Broker FD account.
 func (c *Client) ListAccountForms(ctx context.Context, accountID string) ([]AccountForm, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -111,6 +121,7 @@ func (c *Client) ListAccountForms(ctx context.Context, accountID string) ([]Acco
 	return out, nil
 }
 
+// GetAccountFormDetail returns the details of a specific account form by its ID.
 func (c *Client) GetAccountFormDetail(ctx context.Context, formID string) (*AccountForm, error) {
 	q := url.Values{}
 	q.Set("form_id", formID)
@@ -121,11 +132,13 @@ func (c *Client) GetAccountFormDetail(ctx context.Context, formID string) (*Acco
 	return &out, nil
 }
 
+// SubmitAccountFormRequest defines the parameters for submitting an account form.
 type SubmitAccountFormRequest struct {
 	FormID  string `json:"form_id"`
 	Content string `json:"content"`
 }
 
+// SubmitAccountForm submits a completed account form and returns the updated form state.
 func (c *Client) SubmitAccountForm(ctx context.Context, req SubmitAccountFormRequest) (*AccountForm, error) {
 	var out AccountForm
 	if err := c.post(ctx, pathFDAccountFormSubmit, nil, req, &out); err != nil {
@@ -134,6 +147,7 @@ func (c *Client) SubmitAccountForm(ctx context.Context, req SubmitAccountFormReq
 	return &out, nil
 }
 
+// GetAccountFormStatus returns the current status of a specific account form.
 func (c *Client) GetAccountFormStatus(ctx context.Context, formID string) (*AccountForm, error) {
 	q := url.Values{}
 	q.Set("form_id", formID)
