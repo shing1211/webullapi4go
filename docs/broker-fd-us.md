@@ -24,6 +24,7 @@ fd := brokerfd.New(cl)
 
 | Group | Methods |
 |-------|---------|
+| Summary | `GetAccountsSummary` (aggregate account data), `GetPositions` (aggregate position data) |
 | Agreements | `ListAgreements`, `GetAgreementDetail` |
 | Accounts | `ListFDAccounts`, `GetFDAccountDetail`, `CreateFDAccount`, `UpdateFDAccount`, `CloseFDAccount`, `ListAccountForms`, `GetAccountFormDetail`, `SubmitAccountForm`, `GetAccountFormStatus` |
 | Documents | `UploadDocument`, `DownloadDocument`, `ListDocuments`, `GetDocumentDetail` |
@@ -40,21 +41,20 @@ fd := brokerfd.New(cl)
 ```go
 import "github.com/shing1211/webullapi4go/brokerfd/events"
 
-conn, err := grpc.Dial(endpoint, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
-svc := eventsevents.NewEventServiceClient(conn)
-ec := events.NewClient(svc)
+ec, err := events.New(cl)
+if err != nil {
+    log.Fatal(err)
+}
+defer ec.Close()
 
-req := events.NewSubscribeRequest(subscribeType, accounts)
-client, err := ec.Subscribe(ctx, req)
-for {
-    resp, err := client.Recv()
-    if err == io.EOF {
-        break
-    }
-    if err != nil {
-        return err
-    }
-    // process resp.GetEventType(), resp.GetPayload() ...
+ec.OnConnect(func() { log.Println("connected") })
+ec.OnError(func(err error) { log.Printf("error: %v", err) })
+ec.OnData(func(subscribeType uint32, contentType string, payload []byte) {
+    log.Printf("event type=%d content=%s", subscribeType, contentType)
+})
+
+if err := ec.Run(ctx); err != nil {
+    log.Fatal(err)
 }
 ```
 

@@ -1,8 +1,8 @@
 # Authentication
 
 Webull OpenAPI requests use two independent mechanisms: a per-request signature
-and an access token. The SDK handles both. `client.New` builds the signing
-headers and `Client.Do` signs every outgoing request; `Client.EnsureToken`
+and an access token. The SDK handles both. `client.New` stores the AppKey used
+for signing; signing headers are built per-request in `Client.Do`. `Client.EnsureToken`
 creates and activates an access token and installs it as the `x-access-token`
 header on later requests.
 
@@ -10,7 +10,8 @@ header on later requests.
 
 Every request is signed with **HMAC-SHA1** over a percent-encoded canonical
 string. The HMAC key is the app secret followed by `&`, and the signature is
-returned as standard Base64.
+returned as standard Base64. The gRPC events API uses HMAC-SHA256 with a
+different canonical string; see [Trading events](events.md) for details.
 
 The canonical string is assembled as follows:
 
@@ -78,12 +79,28 @@ default). The public API is:
 | `Client.CurrentToken()` | Returns the cached token, or `nil` |
 | `Client.AccessToken()` | Returns the cached token value, or `""` |
 | `Client.SetToken(token)` | Sets or clears the cached token |
+| `Client.EnableTokenInjection()` | Installs a transport wrapper that injects the `x-access-token` header automatically |
+
+`CurrentToken` returns a `*Token` with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Value` | `string` | Access token sent as `x-access-token` |
+| `ExpiresAt` | `time.Time` | Expiry; zero means unspecified |
+| `Status` | `TokenStatus` | Current lifecycle state (`client.TokenStatusPending`, `TokenStatusNormal`, `TokenStatusInvalid`, `TokenStatusExpired`) |
+
+Helper methods: `Token.Valid() bool` (true when non-empty, NORMAL, and not
+expired) and `Token.Expired() bool` (true when past `ExpiresAt`).
+
+The header name is the constant `client.AccessTokenHeader` (`"x-access-token"`).
+Poll defaults are `client.DefaultTokenPollInterval` (5s) and
+`client.DefaultTokenPollTimeout` (5min).
 
 | Status | Meaning |
 |--------|---------|
 | `PENDING` | Created, awaiting verification (Webull App code / 2FA) |
 | `NORMAL` | Valid and usable |
-| `INVALID` | Revoked, never used, or unused for 15 consecutive days |
+| `INVALID` | Invalid or was never used |
 | `EXPIRED` | Verification was not completed within five minutes; create a new token |
 
 Sandbox tokens are issued as `NORMAL` automatically, with no 2FA step.

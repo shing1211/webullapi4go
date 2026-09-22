@@ -2,7 +2,8 @@
 
 The `events` package delivers Webull's trade events (order status changes,
 event-contract position settlements, and option status changes) over a
-persistent, server-streaming gRPC connection. Unlike the REST API, the event
+persistent, server-streaming gRPC connection. Requires a trade account ID
+(see [Trading](trading.md)). Unlike the REST API, the event
 service authenticates each `Subscribe` call with an HMAC-SHA256 signature over
 the serialized request, so no access token is involved. Build a client from a
 configured [`*client.Client`](api.md#client), which supplies the credentials,
@@ -101,6 +102,14 @@ cancelled or the stream ends. Each response is routed by its event type:
 | `AuthError`, `NumOfConnExceed`, `SubscribeExpired` | `OnError` with a typed error; ends `Run` |
 | Data event (`1024` order, `1028` position, `1032` option) | `OnEvent` raw, then the matching typed handler |
 
+The raw event kinds dispatched on the wire:
+
+| Constant | Value | Delivered to |
+|----------|-------|-------------|
+| `EventOrder` | `1024` | `OnOrder` |
+| `EventPosition` | `1028` | `OnPosition` |
+| `EventOption` | `1032` | `OnOption` |
+
 Data events are delivered to `OnEvent` with the kind and MIME content type and,
 when the content type is `application/json`, decoded and delivered to `OnOrder`,
 `OnPosition`, or `OnOption`. A payload that fails to decode is reported to
@@ -149,9 +158,9 @@ Captured sandbox example:
 
 `PositionEvent` and `OptionEvent` model the same style of JSON for the position
 and option streams. `OptionEvent` carries the order fields above with
-`category` `US_OPTION`; `PositionEvent` carries the settlement fields
-(`position_id`, `event_name`, `yes_condition`, `settle_result`, `settle_side`,
-`quantity`, `cost`, `settle_amount`, and `biz_type`).
+`category` `US_OPTION`; `PositionEvent` carries `account_id`, `symbol`, and the
+settlement fields (`position_id`, `event_name`, `yes_condition`, `settle_result`,
+`settle_side`, `quantity`, `cost`, `settle_amount`, and `biz_type`).
 
 ## Reconnect and backoff
 
@@ -172,6 +181,9 @@ the terminal server events — end `Run`. Consecutive attempts are bounded by
 | `WithAccounts([]string)` | none | Account filter (copied) |
 | `WithSubscribeTypes(...)` | `SubscribeAll` | Event categories |
 
+Defaults: `DefaultGRPCPort` = 443, `DefaultDialTimeout` = 10s,
+`DefaultReconnectBaseDelay` = 1s, `DefaultReconnectMaxDelay` = 30s.
+
 `Close` cancels an in-progress `Run` and closes the gRPC connection; it is
 idempotent. The underlying `client.Client` is owned by the caller and is not
 closed by `Close`.
@@ -183,23 +195,31 @@ The runnable example in
 subscribes to order events, prints each decoded event, and handles Ctrl+C:
 
 ```go
-ev, err := events.New(cl,
-	events.WithSubscribeTypes(events.SubscribeOrder),
-	events.WithAccounts([]string{accountID}),
-)
+ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+defer cancel()
+
+opts := []events.Option{events.WithSubscribeTypes(events.SubscribeOrder)}
+if accountID != "" {
+    opts = append(opts, events.WithAccounts([]string{accountID}))
+}
+
+ev, err := events.New(cl, opts...)
 if err != nil {
-	return err
+    log.Fatal(err)
 }
 defer func() { _ = ev.Close() }()
 
 ev.OnConnect(func() { log.Println("subscribed") })
 ev.OnError(func(err error) { log.Printf("event stream error: %v", err) })
 ev.OnOrder(func(o *events.OrderEvent) {
-	log.Printf("order %s status=%s scene=%s symbol=%s",
-		o.OrderID, o.OrderStatus, o.SceneType, o.Symbol)
+    log.Printf("order %s status=%s side=%s type=%s qty=%s filled_qty=%s filled_price=%s symbol=%s",
+        o.OrderID, o.OrderStatus, o.Side, o.OrderType,
+        o.Quantity, o.FilledQuantity, o.FilledPrice, o.Symbol)
 })
 
-return ev.Run(ctx) // blocks until ctx is cancelled or the stream ends
+if err := ev.Run(ctx); err != nil {
+    log.Fatal(err)
+}
 ```
 
 ## Sandbox caveats

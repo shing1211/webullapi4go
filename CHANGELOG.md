@@ -19,6 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   v1.1.0; consolidated the official Webull doc links into `AGENTS.md`; merged
   `docs/adr/README.md` into `docs/adr/index.md`; standardized READMEs across all
   17 example directories.
+- Fixed 80+ doc-code discrepancies across all endpoint docs: wrong function names
+  (`GetOptionChain`→`GetOptionContracts`, `GetStockProfilesList`→`GetStockProfilesV3`),
+  parameter mismatches, outdated code examples, and missing type documentation.
+- Replaced the v0.1 coverage table in `market-data.md` with a comprehensive
+  current table of all ~105 functions organized by group.
+- Added SDK compatibility notes to all Display Solution endpoints documenting
+  differences between the SDK implementation and the official OpenAPI spec.
+- Added shared patterns reference (`patterns.md`) covering client construction,
+  options, pagination, numeric strings, error handling, display service, and
+  streaming patterns.
+- Enhanced `errors.md` with transient vs permanent error classification table
+  and rate-limit retry pattern.
+- Added architecture diagram, "What's new in v1.1" section, and cross-reference
+  links to `docs/index.md`.
+- Added prerequisites to streaming, trading, and events docs.
+- Documented previously undocumented types and functions across authentication,
+  streaming, events, trading, broker-fd, and connect-api docs.
 
 ## [1.1.0] - 2026-09-22
 

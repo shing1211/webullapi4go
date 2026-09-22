@@ -1,6 +1,8 @@
 # Trading
 
-The `trade` package exposes the Webull Trading HTTP API. It is a thin, typed
+The `trade` package exposes the Webull Trading HTTP API. Requires a live or
+sandbox account with order permissions and a valid token (see
+[Authentication](authentication.md)). It is a thin, typed
 layer over the core [client](api.md#client), so request signing, access-token
 handling, retries, rate limiting, and error classification are shared with the
 rest of the SDK.
@@ -83,10 +85,26 @@ for _, pos := range positions {
 ```
 
 `AssetsBalance` includes a per-currency breakdown in
-`AccountCurrencyAssets`. `Position` carries the held quantity, average cost,
-last price, unrealized P/L, and, for multi-leg option positions, the `Legs`
-slice. Numeric fields such as quantities and prices are strings, preserving the
-precision of the wire values.
+`AccountCurrencyAssets`. `Position` carries the held quantity, cost price
+(`CostPrice`), last price, unrealized P/L, and, for multi-leg option positions,
+the `Legs` slice. Numeric fields such as quantities and prices are strings,
+preserving the precision of the wire values.
+
+## Cash activities
+
+| Method | Description |
+|--------|-------------|
+| `GetCashActivities(ctx, q)` | First page of cash activities |
+| `GetCashActivitiesPage(ctx, q)` | One page with cursor |
+| `GetAllCashActivities(ctx, q)` | All pages (exhausts pagination) |
+
+`CashActivityQuery` fields: `AccountID`, `ActivityType` (one of
+`CashActivityTypeTrade`, `CashActivityTypeDividend`, `CashActivityTypeInterest`,
+`CashActivityTypeTransfer`), `PaginationKey`.
+
+`CashActivity` fields: `ID`, `AccountID`, `AccountNumber`, `ActivityType`,
+`ActivitySubType`, `Currency`, `Market`, `Symbol`, `TradeDate`, `NetAmount`,
+`BizTime`.
 
 ## Order lifecycle
 
@@ -118,7 +136,7 @@ A stock order moves through five operations:
 | `ReplaceOrder(ctx, req)` | `POST /trading/orders/replace` | `*ReplaceOrderResult` |
 | `CancelOrder(ctx, req)` | `POST /trading/orders/cancel` | `*CancelOrderResult` |
 | `GetOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
-| `GetOpenOrdersPage(ctx, accountID, key)` | `GET /trading/orders/open-orders/list` | `*OrderPage` |
+| `GetOpenOrdersPage(ctx, accountID, paginationKey)` | `GET /trading/orders/open-orders/list` | `*OrderPage` |
 | `GetAllOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
 | `GetOrderHistory(ctx, q)` | `GET /trading/orders/historical-orders/list` | `[]OrderGroup` |
 | `GetOrderHistoryPage(ctx, q)` | `GET /trading/orders/historical-orders/list` | `*OrderPage` |
@@ -196,6 +214,13 @@ Only the fields set on each `ModifyOrderRequest` are changed. `ClientOrderID` is
 required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
 `StopPrice`, `TriggerPriceType`, `TrailingType`, `TrailingStopStep`,
 `TrailingLimitPriceOffset`, and `ExpireDate` are optional.
+
+## Batch orders
+
+`BatchPlaceOrder(ctx, req)` submits multiple orders in a single request (max 50,
+EQUITY only). It takes a standard `PlaceOrderRequest` and returns
+`*BatchPlaceOrderResponse` with a `Results` slice of
+`BatchPlaceOrderResult{ClientOrderID, OrderID}`.
 
 ## Order types
 
@@ -538,6 +563,15 @@ enforces:
     contracts are a US-only product and cannot be exercised in the HK sandbox.
     Preview an event-contract order before placing it.
 
+Event contract outcomes use the `EventOutcome` type: `EventOutcomeYes` (`"yes"`)
+and `EventOutcomeNo` (`"no"`).
+
+### Hong Kong derivatives order helpers
+
+`ValidateHKDerivativesOrder(req)` checks that HK futures and options orders
+include the required BCAN `PartyID` slice. `BuildHKDerivativesPartyIDs(partyID)`
+constructs the slice with the correct source (`"D"`) and role (`"3"`) constants.
+
 ## Time in force
 
 | Value | Meaning | Notes |
@@ -659,7 +693,7 @@ Every order method validates its request and returns a typed error with code
   at least one order; no two orders may reuse a `client_order_id`.
 - **`OrderRequest`** — `client_order_id`, `combo_type`, `instrument_type`,
   `market`, `symbol`, `order_type`, `side`, `entrust_type`, and `time_in_force`
-  are required. `instrument_type` is `EQUITY`, `OPTION`, or `FUTURES` and
+  are required. `instrument_type` is `EQUITY`, `OPTION`, `FUTURES`, or `EVENT` and
   `market` is `US`, `HK`, or `CN`.
 - **Market rules** — the equity order-type matrix, the Hong Kong BCAN
   `no_party_ids` requirement, the US-only `support_trading_session`, and the

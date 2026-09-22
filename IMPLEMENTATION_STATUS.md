@@ -181,6 +181,10 @@ in the HK sandbox; optional verification is available via `examples/path-probe`
 | broker-probe | `examples/broker-probe/` | ❌ | Broker HK read-only endpoint probe program |
 | futures-probe | `examples/futures-probe/` | ❌ | HK futures product discovery and market data probe |
 | options-multi-leg | `examples/options-multi-leg/` | ❌ | Multi-leg options strategy probe (11 combo types) |
+| options | `examples/options/` | ❌ | Multi-leg options strategy preview |
+| brokerfd | `examples/brokerfd/` | ❌ | Broker FD US API endpoints |
+| brokerfd-events | `examples/brokerfd-events/` | ❌ | Broker FD US gRPC events |
+| path-probe | `examples/path-probe/` | ❌ | SDK path verification tool |
 
 ## Known Issues
 

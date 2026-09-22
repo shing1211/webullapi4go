@@ -16,6 +16,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayGainersLosers` |
 | **Reference** | [top-gainers-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-gainers-using-get-new.md) |
+| **Note** | SDK rank_type values: `MIN_3`, `MIN_5`, `DAY_1`, `DAY_5`, `MONTH_1`, `MONTH_3`, `WEEK_52` (not `M3`, `D1`, etc.). |
 
 **Request — parameters**
 
@@ -121,6 +122,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplaySnapshot` |
 | **Reference** | [snapshot-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/snapshot-using-get.md) |
+| **Note** | SDK sends GET with query params (`symbols`, `category`, `extend_hour_required`, `overnight_required`), not POST with `category_symbols` body. |
 
 **Request body**
 
@@ -197,6 +199,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayBars` |
 | **Reference** | [query-batch-bars-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/query-batch-bars-using-post.md) |
+| **Note** | SDK field name is `timespan` (not `interval`). |
 
 **Request body**
 
@@ -266,6 +269,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayBarsSingle` |
 | **Reference** | [bars-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/bars-using-get.md) |
+| **Note** | SDK query param is `timespan` (not `interval`). Omits `last_time`, `real_time_required`, `trading_sessions`. |
 
 **Request — parameters**
 
@@ -430,6 +434,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSNewsSummary` |
 | **Reference** | [watchlist-summary-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/watchlist-summary-using-post.md) |
+| **Note** | SDK sends bare `[]string` body (not `{category_symbols, lang}`). |
 
 **Request body**
 
@@ -467,6 +472,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSMarketNews` |
 | **Reference** | [list-news-by-market-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-market-using-get.md) |
+| **Note** | SDK sends only `category` query param (not `market`, `language`, `last_news_id`, `page_size`). |
 
 **Request — parameters**
 
@@ -500,6 +506,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSSymbolNews` |
 | **Reference** | [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-ticker-using-get.md) |
+| **Note** | SDK sends only `symbol` query param (not `category`, `language`, `last_news_id`, `page_size`). |
 
 **Request — parameters**
 
@@ -534,6 +541,7 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSLatestNews` |
 | **Reference** | [list-latest-news-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-latest-news-using-get.md) |
+| **Note** | SDK sends no query params (not `language`, `last_news_id`, `page_size`). |
 
 **Request — parameters**
 
@@ -697,6 +705,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetLogos` |
 | **Reference** | [batch-logo-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/batch-logo-using-post.md) |
+| **Note** | SDK sends `symbols` as query param with nil body (not `{category_symbols}` body). Response field is `logo` (not `logo_url`). |
 
 **Request body**
 
@@ -727,6 +736,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSCompanyProfile` |
 | **Reference** | [list-company-profile-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-company-profile-using-get.md) |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 **Request — parameters**
 
@@ -762,6 +772,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSAnalystTargetPrice` |
 | **Reference** | [list-analyst-target-price-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-target-price-using-get.md) |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 **Request — parameters**
 
@@ -795,6 +806,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSAnalystRating` |
 | **Reference** | [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-rating-using-get.md) |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 **Request — parameters**
 
@@ -829,7 +841,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.DSSubscribe` |
 | **Reference** | [subscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/subscribe-using-post.md) |
-| **Note** | US-site reference. |
+| **Note** | US-site reference. SDK sends `{symbols: []string}` body (not `{session_id, category_symbols, sub_types, depth, overnight_required}`). |
 
 **Request body**
 
@@ -860,7 +872,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.DSUnsubscribe` |
 | **Reference** | [unsubscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/unsubscribe-using-post.md) |
-| **Note** | US-site reference. |
+| **Note** | US-site reference. SDK sends `{symbols: []string}` body (not `{session_id, category_symbols, sub_types, unsubscribe_all}`). |
 
 **Request body**
 

@@ -90,5 +90,36 @@ message, as shown in the tables.
   `WithRateLimiter`, or `WithBreaker` if the defaults are not enough.
 - Treat `invalid_config` as a programming error and fail fast.
 
+### Transient vs permanent errors
+
+| Error code | Transient? | Retry? |
+|------------|-----------|--------|
+| `UNAUTHORIZED` | No | Fix credentials, then retry once |
+| `FORBIDDEN` | No | Never — check entitlements and permissions |
+| `INVALID_TOKEN` | No | Call `EnsureToken`, then retry once |
+| `RATE_LIMITED` | Yes | Back off exponentially; SDK retries idempotent requests |
+| `SERVER_ERROR` | Yes | Retry with backoff; configure `WithRetry` |
+| `transport` | Yes | Retry with backoff; check network connectivity |
+| `invalid_config` | No | Never — fix the code |
+
+### Rate limit pattern
+
+```go
+// The SDK retries automatically for idempotent requests. For non-idempotent
+// requests (PlaceOrder, etc.), implement exponential backoff:
+backoff := time.Second
+for i := 0; i < maxRetries; i++ {
+    _, err := trading.PlaceOrder(ctx, req)
+    if err == nil {
+        break
+    }
+    if !strings.Contains(err.Error(), "RATE_LIMITED") {
+        return err
+    }
+    time.Sleep(backoff)
+    backoff *= 2
+}
+```
+
 See [Authentication](authentication.md) for the token lifecycle and
 [Troubleshooting](troubleshooting.md) for sandbox-specific error causes.

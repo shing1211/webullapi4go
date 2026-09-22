@@ -308,8 +308,14 @@ MQTT on port 1883).
 | `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
 | `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg and multi-leg options, futures validation, US combo orders, and order queries) |
 | `events` | Trading events over gRPC: order, position, and option streams with typed payloads and reconnect |
+| `connect` | OAuth 2.0 authorization-code flow for third-party apps (US only) |
+| `display` | Display Solution client-to-server authentication and token management |
+| `broker` | Broker API HK (own Go module; root module uses `replace`) |
+| `brokerfd` | Broker FD US HTTP endpoints (accounts, orders, funding, instruments, etc.) |
+| `brokerfd/events` | Broker FD US events over gRPC |
 | `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
 | `gen/webull/trade/events/v1` | Generated protobuf types for the gRPC event service |
+| `gen/webull/brokerfd/v1` | Generated protobuf types for Broker FD events |
 | `pkg/types` | Shared public domain types (markets, instrument types) |
 | `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
 

@@ -23,11 +23,12 @@ if _, err := cl.EnsureToken(ctx); err != nil {
 market := data.New(cl)
 ```
 
-Coverage in v0.1:
-
 | Group | Methods |
 |-------|---------|
 | Instruments | `GetStockInstruments` |
+| Instrument v3 (Display) | `GetStockProfilesV3` |
+| Logos (Display) | `GetLogos` |
+| Corporate actions (Display) | `GetCorporateActions`, `GetCorporateActionsByMarket` |
 | Profile and analyst | `GetCompanyProfile`, `GetAnalystTargetPrice`, `GetAnalystRating` |
 | Futures static data | `GetFuturesInstruments`, `GetFuturesProductCodes`, `GetFuturesProductClasses` |
 | Snapshot and quotes | `GetSnapshot`, `GetQuotes` |
@@ -35,24 +36,19 @@ Coverage in v0.1:
 | Depth analytics | `GetFootprint`, `GetNOIIBars`, `GetNOIISnapshot` |
 | Discovery | `GetTopGainersLosers`, `GetMostActive` |
 | Watchlists | `GetWatchlists`, `CreateWatchlist`, `UpdateWatchlist`, `DeleteWatchlist`, `GetWatchlistInstruments`, `AddWatchlistInstruments`, `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments` |
-| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionExpirations`*, `GetOptionChain`*, `GetNewsSummary` |
+| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionContracts`, `GetNewsSummary` |
 | Event contracts | `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractMarkets` |
 | Event contract market data | `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` |
+| Event contracts display | `GetEventContractTags`, `GetEventContractEventsList`, `GetEventContractMilestones`, `GetEventContractSeriesList`, `GetEventContractSportsFilters`, `GetEventGameStats`, `GetEventLiveData`, `GetEventMarketBars`, `GetEventMarketBarsByEvent`, `GetEventMarketDepth`, `GetEventMarketSnapshot` |
 | Futures market data | `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` |
-| Display Solution | Screener, quotes, instruments, news, streaming — see Display Solution section |
+| Fund data | `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` |
+| Fund extras | `GetFundPerformance`, `GetFundHoldings`, `GetFundRating`, `GetFundSplits`, `GetFundFiles`, `GetFundAllocation` |
 | Non-display screener | `GetMarketSectors`, `GetMarketSectorDetail`, `GetHighDividendRank`, `GetWeek52HighLow` |
 | Crypto US | `GetCryptoSnapshot`, `GetCryptoBars`, `GetCryptoInstruments` |
+| Fundamentals | `GetCapitalFlow`, `GetIndustryComparison`, `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`, `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`, `GetFinancialIndicators`, `GetFinancialAlert`, `GetForecastEPS` |
 
-\* Not part of the published API: see the note below.
-
-!!! warning "Unpublished option-discovery endpoints"
-
-    `GetOptionExpirations` and `GetOptionChain` are **not part of the published
-    Webull API**. The official OpenAPI reference documents only option ticks,
-    snapshots, historical bars, and the option-contract list. These two
-    endpoints follow the naming convention of the documented option endpoints
-    and may return empty results. Verify them against a live US account before
-    relying on them.
+`GetOptionContracts` follows the official option-contract list endpoint. The HK
+sandbox may return `404` for this US-only surface.
 
 Example: snapshot and bars for `AAPL` on the `US` market.
 
@@ -133,7 +129,9 @@ Coverage: screener (`GetDisplayGainersLosers`, `GetDisplayTopActive`), quotes
 (`GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`,
 `GetDisplayDepth`), instruments (`GetDSCompanyProfile`, `GetDSAnalystTargetPrice`,
 `GetDSAnalystRating`), news (`GetDSNewsSummary`, `GetDSMarketNews`, `GetDSSymbolNews`,
-`GetDSLatestNews`), and streaming (`DSSubscribe`, `DSUnsubscribe`).
+`GetDSLatestNews`), streaming (`DSSubscribe`, `DSUnsubscribe`), instruments v3
+(`GetStockProfilesV3`), logos (`GetLogos`), corporate actions (`GetCorporateActions`,
+`GetCorporateActionsByMarket`).
 
 ## Related
 

@@ -59,6 +59,7 @@ nav:
       - Broker FD US: broker-fd-us.md
       - Sandbox: sandbox.md
       - Errors: errors.md
+      - Patterns: patterns.md
       - Troubleshooting: troubleshooting.md
   # Layer 2 — generated: each official endpoint mapped to its SDK method.
   - API Reference:

@@ -40,6 +40,7 @@ OAuth 2.0 authorization-code flow for third-party applications (US only).
 |---|---|
 | **SDK** | `connect.CreateToken` |
 | **Reference** | [create-and-refresh-token.md](https://developer.webull.com/apis/docs/reference/connect-api/create-and-refresh-token.md) |
+| **Note** | Takes `TokenRequest` with fields: `GrantType` (`"authorization_code"` or `"refresh_token"`), `Code`, `RedirectURI`, `RefreshToken`. |
 
 **Response 200**
 

@@ -62,9 +62,9 @@ Sentinels and accessors: `client.ErrCircuitOpen`, `client.AccessTokenHeader`.
 The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
 
 - Instruments: `GetStockInstruments`
-- Instrument v3 (Display Solution): `GetStockProfilesList` (batch, POST)
-- Logos: `GetLogosBatch` (batch, POST)
-- Corporate actions: `GetCorporateActionsList`, `GetCorporateActionsMarket`
+- Instrument v3 (Display Solution): `GetStockProfilesV3` (batch, POST)
+- Logos: `GetLogos` (batch, POST)
+- Corporate actions: `GetCorporateActions`, `GetCorporateActionsByMarket`
 - Profile and analyst: `GetCompanyProfile`, `GetAnalystTargetPrice`, `GetAnalystRating`
 - Futures static data: `GetFuturesInstruments`, `GetFuturesProductCodes`, `GetFuturesProductClasses`
 - Snapshot and quotes: `GetSnapshot`, `GetQuotes`

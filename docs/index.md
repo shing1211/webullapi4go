@@ -31,6 +31,28 @@ Apache-2.0.
 | Display Solution | Supported, entitlement-gated — HK sandbox returns `403` |
 | Connect API (OAuth) | Supported |
 
+## What's new in v1.1
+
+- **209 endpoints** — full parity with the official Webull OpenAPI (was ~140 in v1.0)
+- **6 new packages** — `connect`, `display`, `broker`, `brokerfd`, `brokerfd/events`, plus new protobuf types
+- **Zero TODO markers** — all provisional scaffolding removed
+- **Sandbox-tested** — 20/20 integration tests pass against the HK sandbox
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                       Your Application                           │
+├──────────┬──────────┬──────────┬──────────┬──────────────────────┤
+│  client  │   data   │  trade   │  stream  │       events         │
+│  (core)  │ (market) │ (orders) │  (MQTT)  │       (gRPC)         │
+├──────────┴──────────┴──────────┴──────────┴──────────────────────┤
+│                 internal/auth · errs · region                    │
+└──────────────────────────────────────────────────────────────────┘
+  Display: data.DisplayService()   │  Broker: broker/, brokerfd/
+  Connect: connect/ (OAuth)        │  Types:  pkg/types/
+```
+
 ## Install
 
 ```sh
@@ -91,15 +113,18 @@ export WEBULL_ENVIRONMENT="sandbox"
 
 - [Getting Started](getting-started.md) — install, credentials, sandbox, first call.
 - [Authentication](authentication.md) — request signing and token lifecycle.
-- [Market Data](market-data.md) — HTTP queries.
+- [Market Data](market-data.md) — HTTP queries (requires [Authentication](authentication.md)).
 - [Fundamentals](fundamentals.md) — capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements.
-- [Streaming](streaming.md) — real-time MQTT pushes.
-- [Trading](trading.md) — accounts, balances, positions, and orders.
-- [Trading Events](events.md) — order, position, and option events over gRPC.
+- [Streaming](streaming.md) — real-time MQTT pushes (requires [Authentication](authentication.md)).
+- [Trading](trading.md) — accounts, balances, positions, and orders (requires [Authentication](authentication.md)).
+- [Trading Events](events.md) — order, position, and option events over gRPC (requires account ID from [Trading](trading.md)).
+- [Display Solution](webull-api/display-solution.md) — entitlement-gated market data (compare with [Market Data](market-data.md)).
 - [Broker API HK](broker-hk.md) — HK broker endpoints.
-- [Broker FD US](broker-fd-us.md) — US Broker FD endpoints.
+- [Broker FD US](broker-fd-us.md) — US Broker FD endpoints (US equivalent of [Broker HK](broker-hk.md)).
+- [Connect API](webull-api/connect-api.md) — OAuth 2.0 authorization-code flow.
 - [Sandbox](sandbox.md) — environments, test credentials, limitations.
 - [Errors](errors.md) — typed errors and classification.
+- [Patterns](patterns.md) — shared SDK patterns (pagination, options, error handling).
 - [API Reference](api.md) — package overview and pkg.go.dev links.
 - [Webull API Reference](webull-api.md) — every official endpoint mapped to its SDK method.
 - [SDK ↔ API Reconciliation](reconciliation.md) — coverage report: implemented endpoints, gaps, path parity.
