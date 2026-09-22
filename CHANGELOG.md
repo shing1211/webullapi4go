@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-22
+
+Documentation release: verbatim Webull master reference, an SDK↔API
+reconciliation, a reproducible doc generator, and a path probe.
+
+### Added
+
+- `docs/webull-api.md` and `docs/webull-api/**`: an SDK-mapped reference for
+  every documented endpoint, plus **verbatim** Webull master guides
+  (`master-guides.md`) and per-area OpenAPI definitions (`reference/*.md`).
+- `docs/reconciliation.md`: maps every documented endpoint to its SDK function
+  and status (match / differs / not implemented).
+- `tools/webull-docgen/`: generator CLI (`docgen.py
+  reference|master|reconciliation|all`) that fetches Webull's machine-readable
+  `.md` pages and renders the docs above.
+- `examples/path-probe/`: env-gated probe comparing SDK paths against the
+  official OpenAPI paths for the endpoints where they disagree.
+
+### Changed
+
+- `IMPLEMENTATION_STATUS.md`: coverage/gap section, Known Issues 12–13 (path
+  drift), version history updated to v1.0.3.
+- `mkdocs.yml`: added the Webull API Reference section.
+
+## [1.0.2] - 2026-09-22
+
+Reconciled the codebase against the official Webull API.
+
+### Removed (breaking)
+
+- Undocumented functions: crypto data (`data/crypto_data.go`), screener v2
+  (`data/screener_v2.go`), option expirations/chains, and the redundant HK
+  futures market-data variants.
+
+### Changed
+
+- `data.GetOptionContracts` now uses the Trading API path
+  `/trading/instruments/options/contracts/list`.
+
 ## [1.0.1] - 2026-09-22
 
 HK sandbox probe: confirmed futures product-codes path, fixed FuturesInstrument.Unit
