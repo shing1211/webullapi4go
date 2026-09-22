@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Reorganized the docs site nav into Guides / API Reference / Official Webull
+  Docs / Coverage / Architecture Decisions, and renamed pages for consistency
+  (`broker.md` → `broker-hk.md`, `brokerfd.md` → `broker-fd-us.md`,
+  `webull-api/crypto.md` → `webull-api/market-data-crypto.md`); old URLs are
+  preserved with `mkdocs-redirects`.
+- Marked every generated file with a "do not edit" banner; refreshed stale
+  v1.0-era content (feature matrices, hub path status, provisional warnings) for
+  v1.1.0; consolidated the official Webull doc links into `AGENTS.md`; merged
+  `docs/adr/README.md` into `docs/adr/index.md`; standardized READMEs across all
+  17 example directories.
+
 ## [1.1.0] - 2026-09-22
 
 Full SDK parity with the official Webull OpenAPI.
@@ -567,7 +580,12 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v1.1.0
+[1.0.3]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.3
+[1.0.2]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.2
+[1.0.1]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.1
+[1.0.0]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.0
 [0.9.2]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.2
 [0.9.1]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.1
 [0.9.0]: https://github.com/shing1211/webullapi4go/releases/tag/v0.9.0

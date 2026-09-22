@@ -77,10 +77,11 @@ The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
 - Derivatives and news: `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`,
   `GetNewsSummary`
 - Option contracts: `GetOptionContracts` with `OptionContractsQuery`,
-  `OptionContract`, and `OptionType` (`Call`/`Put`). Uses the Trading API
-  path `/trading/instruments/options/contracts/list`; **TODO(t10):** field
-  mappings are unconfirmed (HK sandbox returns `404`)
-- Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` (paths unconfirmed; HK sandbox returns `404`)
+  `OptionContract`, and `OptionType` (`Call`/`Put`); path follows the official
+  definition (HK sandbox returns `404` — US-only surface)
+- Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList`,
+  plus `GetFundPerformance`, `GetFundHoldings`, `GetFundRating`, `GetFundSplits`,
+  `GetFundFiles`, `GetFundAllocation` (HK sandbox returns `404`)
 - Fundamentals: `GetCapitalFlow`, `GetIndustryComparison`,
   `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`,
   `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`,
@@ -124,10 +125,10 @@ Requests require an access token and default to the v3 API version under
 - Enumerations: `OrderSide`, `OrderType`, `TimeInForce`, `ComboType`,
   `EntrustType`, `TradingSession`, `TriggerPriceType`, `TrailingType`,
   `OrderStatus`
-- Provisional: multi-leg `OptionStrategy` values (`VERTICAL` through `RATIO`)
-  and `InstrumentTypeFutures` order validation. Their wire values and rules are
-  unconfirmed; see [Trading](trading.md#multi-leg-orders) and
-  [Trading](trading.md#futures-orders)
+- Multi-leg `OptionStrategy` values (`VERTICAL` through `RATIO`) and
+  `InstrumentTypeFutures` order validation follow the official documentation;
+  the HK sandbox accepts only `SINGLE` strategies (`417` otherwise) — see
+  [Trading](trading.md#multi-leg-orders) and [Trading](trading.md#futures-orders)
 - Types: `Account`, `AccountType`, `AccountClass`, `AssetsBalance`,
   `AssetsCurrencyAssets`, `Position`, `PositionLeg`, `Market`, `InstrumentType`,
   `OptionType`, `OptionStrategy`, `PartyID`
@@ -163,8 +164,10 @@ schemas.
 
 The Broker FD (Fund Data) HTTP client. Construct it with `brokerfd.New(*client.Client)`.
 
-- Accounts: `GetAccountsSummary`, `GetPositions`
-- Additional Broker FD endpoints (paths unconfirmed; live probe required)
+- Accounts: `GetAccountsSummary`, `GetPositions`, plus orders, assets,
+  instruments, funding, activity, journals, master data, agreements, and
+  documents endpoints (paths follow the official definition; US-only — the HK
+  sandbox returns `404`)
 - Event types (gRPC, in `gen/webull/brokerfd/v1`): `BrokerFDEventTypeAccountPush`,
   `BrokerFDEventTypeOrderPush`, `BrokerFDEventTypePositionPush`, `BrokerFDEventTypeTradePush`,
   `BrokerFDEventTypeAssetDetail`, `BrokerFDEventTypeRiskPush`, `BrokerFDEventTypeOrderFill`,

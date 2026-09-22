@@ -140,7 +140,7 @@ Contributions are accepted under the project's [Apache-2.0 license](LICENSE).
 - Open one logical change per pull request and keep the diff small.
 - Add or update tests for behavior changes.
 - Update the README, docs, and ADRs where behavior or decisions change. See
-  `docs/adr/README.md` (in the repository source; excluded from the published docs site) for the ADR format.
+  `docs/adr/index.md` for the ADR format and conventions.
 - Ensure `go build ./...`, `go vet ./...`, `go test ./...`, and
   `golangci-lint run` pass before requesting review.
 - Fill in the [pull request template](.github/pull_request_template.md).

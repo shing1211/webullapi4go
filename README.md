@@ -1,6 +1,6 @@
 # webullapi4go
 
-An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.com/apis/docs/).
+An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
 It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
 region. The v0.1 release covers authentication, a core signed REST client, the
 Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2
@@ -18,19 +18,20 @@ statements.
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.9.2)
+## Feature matrix (v1.1.0)
 
 | Area | Status | Details |
 |------|--------|---------|
 | Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, fundamentals, futures static, snapshot, tick, quotes/depth, bars, footprint, NOII, screener, watchlists, options, news, event contracts. **Provisional**: futures market data, Display Solution endpoints (TODO markers) |
+| Market Data (HTTP) | Supported | Instruments, fundamentals, futures static and market data, snapshot, tick, quotes/depth, bars, footprint, NOII, screener, watchlists, options, news, event contracts, crypto data, Display Solution |
 | Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Supported | Accounts, balances, and positions; stock order preview, place, replace, cancel, and order queries; US/HK/CN order-type rules, Hong Kong BCAN; single-leg options orders; US combo orders; multi-leg options orders (provisional); futures order validation (provisional); event contract orders (provisional); batch place orders |
+| Trading (HTTP) | Supported | Accounts, balances, and positions; stock order preview, place, replace, cancel, and order queries; US/HK/CN order-type rules, Hong Kong BCAN; single-leg and multi-leg options orders; futures order validation; event contract orders; batch place orders |
 | Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC |
 | Broker API HK | Supported | Virtual accounts, instruments, assets, orders, cash activities, funding FX, instant funding, journals, master data, event contracts (`broker/` module) |
 | Broker FD API US | Supported | Agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, master data (`brokerfd/` module) |
 | Broker FD events (gRPC) | Supported | Broker FD event stream over gRPC using `grpc.event.EventService` (`brokerfd/events/` module) |
-| Display Solution | Supported | Company profile, analyst data, news, streaming, screeners, quotes (provisional paths, TODO markers) |
+| Display Solution | Supported | Company profile, analyst data, news, streaming, screeners, quotes (entitlement-gated: the HK sandbox host returns `403`) |
+| Connect API (OAuth) | Supported | Authorization-code URL builder and token exchange (authorization code / refresh) |
 
 ## Install
 
@@ -320,14 +321,15 @@ MQTT on port 1883).
 | v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | Done |
 | v0.3 | Trading events over gRPC | Done |
 | v0.4 | Market Data fundamentals: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements | Done |
-| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Done (provisional) |
-| v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done (provisional) |
+| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Done |
+| v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done |
 | v0.7.0 | Event contracts, Broker API HK, Broker FD US, Broker FD gRPC events | Done |
 | v0.8.0 | — | — |
 | v0.9.0 | GoDoc coverage on brokerfd/ and brokerfd/events/, HK options stubs, HK futures market data, new examples (brokerfd, brokerfd-events, options), graceful credential handling | Done |
 | v0.9.1 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v0.9.2 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
-| v1.0 | Stable public API, full documentation, semver guarantees | Planned |
+| v1.0 | Stable public API, full documentation, semver guarantees | Done |
+| v1.1 | Full Webull OpenAPI parity: every documented endpoint implemented with official paths (209 endpoints, 0 gaps); `connect/` OAuth, crypto, fund extras, event-contract Display | Done |
 
 ## Links
 

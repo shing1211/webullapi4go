@@ -59,7 +59,7 @@ https://api.sandbox.webull.hk
 ```
 
 Webull publishes shared test accounts in its
-[getting-started guide](https://developer.webull.com/apis/docs/getting-started)
+[getting-started guide](https://developer.webull.hk/apis/docs/getting-started)
 so you can try the API without applying for access. Only the host above belongs
 in committed material. App keys, app secrets, and access tokens are per-account
 secrets and must be supplied through the environment or your own secret store,

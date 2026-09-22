@@ -9,9 +9,8 @@ documented endpoint to its Go method, request fields and response fields.
   OpenAPI definition JSON). Broker FD US is documented on the
   [US site](https://developer.webull.com/apis/llms.txt).
 - Every page below links back to the official reference for that endpoint.
-- The official `path` is authoritative. Where the SDK currently calls a
-  different path, it is flagged in the entry or in
-  [Path status](#path-status) below.
+- The official `path` is authoritative; the SDK follows it (v1.1.0 aligned all
+  paths — see [Path status](#path-status) below).
 
 Go type references live on pkg.go.dev:
 [`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) ·
@@ -31,7 +30,7 @@ Each endpoint entry is laid out as:
 | `METHOD /path` | The official endpoint path from the OpenAPI definition. |
 | **SDK** | The `webullapi4go` method that calls it. |
 | **Reference** | The official page (`.md` variant). |
-| **Note** | SDK-specific caveats (provisional, sandbox behaviour, entitlements). |
+| **Note** | SDK-specific caveats (sandbox behaviour, entitlements, region limits). |
 | **Request — parameters** | Query/path parameters with type, required flag, and enum values. |
 | **Request body** | JSON body schema; nested objects are shown as follow-up tables. |
 | **Response 200** | Success schema fields. |
@@ -107,36 +106,33 @@ of these onto typed `errs` codes — see [Errors](errors.md).
 
 ## Path status
 
-Most SDK paths match the official definition exactly. The following are called
-out because the SDK currently **does not** confirm them, or calls a different
-path:
+Since v1.1.0 every SDK path follows the official OpenAPI definition —
+[SDK ↔ API Reconciliation](reconciliation.md) reports **209 implemented
+endpoints, 0 gaps, and 0 path discrepancies**. What remains unverified is live
+behaviour in environments the HK sandbox cannot exercise:
 
-| Area | SDK function(s) | Status |
-|------|-----------------|--------|
-| Display Solution passthrough | `data.GetDisplay*`, `data.GetDS*`, `data.GetDSCompanyProfile`, `data.GetDSAnalystTargetPrice`, `data.GetDSAnalystRating` | SDK uses `/openapi/...` literals marked `TODO(ds)`; official paths are `/market-data/...`. Verify before use. |
-| Event-contract market data | `data.GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` | Host and paths unconfirmed (`TODO(event-market-data)`). |
-| Option contracts | `data.GetOptionContracts` | Path is the Trading API path; field mappings unconfirmed (HK sandbox `404`). |
-| Fund data | `data.GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` | Paths unconfirmed (HK sandbox `404`). |
-| Futures market data | `data.GetFuturesTick/Snapshot/Bars/Depth/Footprint` | Paths unconfirmed against live API. |
-| Broker FD US | all `brokerfd.*` | Provisional; HK sandbox `404`. |
-| Broker API HK | all `broker.*` | HK sandbox `401 ROUTE_NOT_PERMITTED` (missing scope). |
+| Area | Status |
+|------|--------|
+| Display Solution | Implemented; HK sandbox returns `403` (paid entitlement required). |
+| Broker API HK | Implemented; HK sandbox returns `401 ROUTE_NOT_PERMITTED` (app scope missing). |
+| Broker FD US, crypto, option-chain, some futures and event-contract data | Implemented; US-only — HK sandbox returns `404` / `417`. Verify with US sandbox credentials. |
+| Auth and instrument paths | Webull's `llms.txt` summary and its own OpenAPI JSON disagree for a few endpoints; the SDK follows the summary path. `examples/path-probe` can confirm both against a live sandbox. |
 
-## Provisional and unimplemented
+Multi-leg option strategies, futures order validation and option-chain
+discovery are fully implemented; the HK sandbox accepts only `SINGLE` orders
+(`417` for every other strategy).
 
-- **Multi-leg option strategies** — only `SINGLE` is documented; the SDK defines
-  `VERTICAL` … `RATIO` as best-effort/provisional (`TODO(t8)`).
-- **Futures order rules** — provisional (`TODO(t9)`); A-share futures unsupported.
-- **Crypto** — documented by Webull US but **not implemented** here (removed in
-  v1.0.2); the HK docs do not expose it.
-- **Fund performance / holdings / rating / splits / files / allocation** are
-  documented but have no SDK method.
+## Not implemented
+
+None — every endpoint documented by Webull is implemented. See
+[SDK ↔ API Reconciliation](reconciliation.md) for the per-endpoint mapping.
 
 ## Pages
 
 - [Authentication](webull-api/authentication.md) — create/check token, client token.
 - [Market Data — Stock](webull-api/market-data-stock.md)
 - [Market Data — Option](webull-api/market-data-option.md)
-- [Market Data — Crypto](webull-api/crypto.md)
+- [Market Data — Crypto](webull-api/market-data-crypto.md)
 - [Market Data — Futures](webull-api/market-data-futures.md)
 - [Market Data — News](webull-api/market-data-news.md)
 - [Market Data — Screener](webull-api/market-data-screener.md)

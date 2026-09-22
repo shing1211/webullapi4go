@@ -9,24 +9,67 @@ an idiomatic Go SDK for the Webull OpenAPI. Read this before making changes.
 client/                         Core SDK: config, options, signing, tokens, transport entry point
 data/                           Market Data HTTP endpoints (typed requests and responses)
 stream/                         Market Data streaming over MQTT (reconnect + resubscribe)
-gen/webull/marketdata/v1/       Generated protobuf types (committed; do not hand-edit)
+trade/                          Trading HTTP API: accounts, balances, positions, orders, rules
+events/                         Trading events over gRPC (order, position, option streams)
+broker/                         Broker API HK (own Go module; root module via `replace`)
+brokerfd/                       Broker FD US HTTP endpoints
+brokerfd/events/                Broker FD events over gRPC + protobuf payloads
+display/                        Display Solution client-token authentication
+connect/                        Connect API OAuth 2.0 authorization-code flow
+gen/webull/...                  Generated protobuf types (committed; do not hand-edit)
 pkg/types/                      Shared public domain types
-internal/auth/                  Request signing and token DTOs
-internal/errs/                  Typed error model
-internal/region/                Regions and service endpoints
-internal/transport/             Thin HTTP executor
-internal/resilience/            Retry, rate limit, circuit breaker, clock
-internal/mqtt/                  Low-level MQTT client
+internal/...                    auth, errs, region, transport, resilience, mqtt
 proto/, buf.gen.yaml, buf.yaml  Protobuf sources and codegen configuration
 examples/                       Runnable main programs
+tools/webull-docgen/            Doc generator for docs/webull-api/** and docs/reconciliation.md
 docs/                           Documentation site sources (MkDocs Material)
 docs/adr/                       Architecture Decision Records
 docs/runs/                      Internal run artifacts; excluded from the built site
 ```
 
 Root files: `doc.go` (module package doc), `mkdocs.yml`, `requirements-docs.txt`,
-`Makefile`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`,
-`CODE_OF_CONDUCT.md`, `LICENSE`.
+`Makefile`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+`CODE_OF_CONDUCT.md`, `THIRD_PARTY_NOTICES.md`, `IMPLEMENTATION_STATUS.md`,
+`AGENTS.md`, `LICENSE`.
+
+## Official Webull documentation
+
+Canonical links for API paths, schemas, and guides. The official `path` in the
+OpenAPI JSON (embedded in the `.md` variant of each reference page) is
+authoritative; regenerate derived docs with
+`python tools/webull-docgen/docgen.py all`.
+
+**Machine-readable indexes** (fetched by `tools/webull-docgen`)
+
+- HK: <https://developer.webull.hk/apis/llms.txt>
+- US: <https://developer.webull.com/apis/llms.txt>
+- AI-friendly resources: <https://developer.webull.hk/apis/docs/AI-friendly-Resources/llm.md>
+
+**Docs roots**
+
+- HK: <https://developer.webull.hk/apis/docs>
+- US: <https://developer.webull.com/apis/docs>
+
+**Per-endpoint reference bases** (the `// Reference:` comments in Go code)
+
+- HK: <https://developer.webull.hk/apis/docs/reference/>
+- US: <https://developer.webull.com/apis/docs/reference/>
+
+**Guides cited in code and docs**
+
+- Getting started: <https://developer.webull.hk/apis/docs/getting-started>
+- Display Solution: <https://developer.webull.hk/apis/docs/market-data-api/Hosted-Display-Solution>
+- Connect API: <https://developer.webull.com/apis/docs/connect-api/about-connect-api>
+- Test accounts: <https://developer.webull.hk/apis/docs/sdk#test-accounts> (HK),
+  <https://developer.webull.com/apis/docs/sdk#test-accounts> (US)
+
+**Related**
+
+- Official Python SDK (see `THIRD_PARTY_NOTICES.md`):
+  <https://github.com/webull-inc/webull-openapi-python-sdk>
+- Project docs site: <https://shing1211.github.io/webullapi4go/>
+- Go package docs: <https://pkg.go.dev/github.com/shing1211/webullapi4go>
+  (per-package table in `docs/api.md`)
 
 ## Build, test, and lint
 
@@ -114,29 +157,18 @@ make generate
 
 ## Known constraints
 
-- v0.1 covers authentication, Market Data HTTP, and MQTT streaming. v0.2 adds the
-  Trading HTTP API. v0.3 adds Trading events over gRPC. v0.4 adds Market Data
-  fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC
-  filings, financial statements). v0.5 adds Display Solution (corporate actions,
-  instrument profiles, logos). Note: Display Solution requires a paid Webull subscription;
-  the HK sandbox returns `403 Forbidden` at the host level
-  (`hk-co-branding-openapi.uat.webullbroker.com`), blocking all Display Solution endpoints
-  even with valid credentials. v0.6 adds
-  multi-leg options orders and futures order validation (provisional). v0.7 adds
-  event contracts, Broker API HK, Broker FD US, and Broker FD gRPC events. The Broker
-  API HK is implemented; the Broker FD US and events remain provisional. v0.8 is
-  reserved. v0.9 adds watchlist boolean-response handling and the `DoBroker` transport.
-  v0.9.2 corrects Broker HK paths from `/openapi/v1/broker/...` to `/broker/...`.
-- The v1.0 probe adds **provisional** multi-leg options orders (T8), futures order
-  validation (T9), and **speculative** option-chain/expiration discovery (T10). Their
-  strategy wire values, structural rules, order-type matrices, and endpoint paths are
-  marked `TODO` in code and are not confirmed against the live API.
+- **v1.1.0 brings full coverage of the Webull OpenAPI**: every documented
+  endpoint is implemented and all paths follow the official OpenAPI definition
+  (`docs/reconciliation.md`: 209 implemented, 0 gaps, 0 path discrepancies).
+  Earlier version history lives in `CHANGELOG.md`.
 - US-only surfaces are blocked in this environment: the HK sandbox returns `404`
   (fund data, crypto data, screener v2, broker FD, instrument v3/logos) or `417`
   (crypto category), and no US sandbox credentials are available. Those items stay
   unverified until `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` for the US sandbox are
   supplied.
-- Display Solution returns `403` in HK sandbox (entitlement required, not a path issue)
+- Display Solution requires a paid Webull subscription; the HK sandbox host
+  (`hk-co-branding-openapi.uat.webullbroker.com`) returns `403 Forbidden` at the
+  host level, blocking all Display Solution endpoints even with valid credentials.
 - Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in the HK
   sandbox — the app lacks the required scope, not a path issue. Broker HK remains
   unverified pending production or US sandbox access.
@@ -151,9 +183,12 @@ make generate
   `wss://...:8883/mqtt`.
 - The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
   5 concurrent connections per App Key.
-- `docs/runs/**` and `docs/adr/README.md` are excluded from the published docs
-  site. Do not edit `docs/runs/**`. Accepted ADRs (0001, 0002) are immutable;
-  supersede them with a new ADR instead.
+- `docs/runs/**` is excluded from the published docs site. Do not edit
+  `docs/runs/**`. Accepted ADRs (0001, 0002) are immutable; supersede them with
+  a new ADR instead.
+- Generated docs (`docs/webull-api/**` and `docs/reconciliation.md`) start with
+  a "Generated file — do not edit" banner. Change `tools/webull-docgen/` (or its
+  manifest `_common.py`) and regenerate instead of editing them by hand.
 - Do not edit `.github/workflows/ci.yml`, `.golangci.yml`, or `LICENSE` without
   an explicit request.
 

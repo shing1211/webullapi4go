@@ -184,7 +184,7 @@ in the HK sandbox; optional verification is available via `examples/path-probe`
 
 ## Known Issues
 
-1. **Display Solution blocked at host level**: The HK sandbox Display Solution host (`hk-co-branding-openapi.uat.webullbroker.com`) returns 403 for all requests, including token creation. All 16 `TODO(ds)` items are blocked at the auth level — not just paths unconfirmed. App may not have Display Solution entitlement in HK sandbox.
+1. **Display Solution blocked at host level**: The HK sandbox Display Solution host (`hk-co-branding-openapi.uat.webullbroker.com`) returns 403 for all requests, including token creation — the app appears to lack the Display Solution entitlement in the HK sandbox. Not a path issue; paths follow the official definition.
 2. **No US sandbox credentials**: Cannot verify fund data, crypto data, screener v2, broker FD, Display Solution (US paths), option chain discovery, or any US-only surface
 3. **Sandbox symbol limit**: Only `AAPL` supported in HK sandbox
 4. **Footprint entitlement**: Requires paid entitlement; sandbox returns `403`

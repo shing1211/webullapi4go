@@ -1,23 +1,17 @@
 # webullapi4go
 
-`webullapi4go` is an idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.com/apis/docs/).
+`webullapi4go` is an idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
 It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
 region.
 
-The v0.1 surface covers authentication, a core signed REST client, the Market
-Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2 releases
-add the Trading HTTP API for accounts, balances, positions, and the stock,
-options, and combo order lifecycle. The v0.3.0 release adds Trading events over
-gRPC. The v0.4.0 release adds Market Data fundamentals: capital flows, industry
-comparisons, earnings and dividend calendars, SEC filings, and financial
-statements. The v0.5 release adds Display Solution (corporate actions, instrument
-profiles, logos), fund and crypto data, and screener v2. The v0.6 release adds
-multi-leg options orders, futures order validation (provisional), and speculative
-option chain and expiration discovery. The v0.7 release adds event contracts,
-Broker API HK, Broker FD US, and Broker FD gRPC events. The v0.9 release adds
-watchlist boolean-response handling and the `DoBroker` transport, with v0.9.2
-correcting Broker HK paths from `/openapi/v1/broker/...` to `/broker/...`. The module is
-licensed under Apache-2.0.
+The current release (v1.1.0) covers authentication, a core signed REST client,
+Market Data HTTP and MQTT streaming, the Trading HTTP API, Trading events over
+gRPC, fundamentals and fund data, crypto data, Display Solution, event
+contracts, options and futures, Broker API HK, Broker FD US, and the Connect
+API. Every endpoint documented by Webull is implemented, with paths taken from
+the official OpenAPI definition — see the
+[reconciliation report](reconciliation.md). The module is licensed under
+Apache-2.0.
 
 ## Feature matrix
 
@@ -25,13 +19,17 @@ licensed under Apache-2.0.
 |------|--------|
 | Authentication | Supported |
 | Market Data (HTTP) | Supported |
-| Market Data Fundamentals | Supported (v0.4.0: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements) |
+| Market Data Fundamentals | Supported — capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements |
 | Market Data (MQTT streaming) | Supported |
-| Trading (HTTP) | Supported |
-| Trading events (gRPC) | Supported (v0.3.0: order, position, and option streams) |
-| Broker API HK | Supported (v0.7) |
-| Broker FD US | Provisional (v0.7) |
-| Display Solution | Provisional (v0.7) | Company profile, analyst data, news, streaming, screeners, quotes — requires paid Webull subscription |
+| Trading (HTTP) | Supported — including multi-leg options and futures order validation |
+| Trading events (gRPC) | Supported — order, position, and option streams |
+| Event contracts | Supported |
+| Crypto market data | Supported — US-only; HK sandbox returns `404` |
+| Fund data | Supported — info, NAV, dividends, plus performance, holdings, rating, splits, files, allocation |
+| Broker API HK | Supported — HK sandbox returns `401 ROUTE_NOT_PERMITTED` (app scope missing) |
+| Broker FD US | Supported — US-only; HK sandbox returns `404` |
+| Display Solution | Supported, entitlement-gated — HK sandbox returns `403` |
+| Connect API (OAuth) | Supported |
 
 ## Install
 
@@ -98,9 +96,13 @@ export WEBULL_ENVIRONMENT="sandbox"
 - [Streaming](streaming.md) — real-time MQTT pushes.
 - [Trading](trading.md) — accounts, balances, positions, and orders.
 - [Trading Events](events.md) — order, position, and option events over gRPC.
+- [Broker API HK](broker-hk.md) — HK broker endpoints.
+- [Broker FD US](broker-fd-us.md) — US Broker FD endpoints.
 - [Sandbox](sandbox.md) — environments, test credentials, limitations.
 - [Errors](errors.md) — typed errors and classification.
 - [API Reference](api.md) — package overview and pkg.go.dev links.
+- [Webull API Reference](webull-api.md) — every official endpoint mapped to its SDK method.
+- [SDK ↔ API Reconciliation](reconciliation.md) — coverage report: implemented endpoints, gaps, path parity.
 - [Troubleshooting](troubleshooting.md) — symptoms and fixes.
 
 ## Links
@@ -108,7 +110,7 @@ export WEBULL_ENVIRONMENT="sandbox"
 - Source and issues: [github.com/shing1211/webullapi4go](https://github.com/shing1211/webullapi4go)
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](adr/index.md)
-- Webull API reference: [developer.webull.com](https://developer.webull.com/apis/docs/)
+- Webull API reference: [developer.webull.hk](https://developer.webull.hk/apis/docs/)
 
 ## Disclaimer
 

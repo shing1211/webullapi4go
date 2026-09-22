@@ -26,8 +26,6 @@
 //		return err
 //	}
 //	bfd := brokerfd.New(cl)
-//
-// TODO: confirm all paths via live probe.
 package brokerfd
 
 import (

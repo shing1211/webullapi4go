@@ -5,17 +5,15 @@ layer over the core [client](api.md#client), so request signing, access-token
 handling, retries, rate limiting, and error classification are shared with the
 rest of the SDK.
 
-The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
-release adds the stock-order lifecycle — preview, place, replace, cancel — and
-order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
-release adds single-leg options orders, and the v0.2.5 release adds US combo
-orders. The v0.6.0 release adds multi-leg options orders and futures order
-validation (provisional). The v0.7.0 release adds event contract orders
-(provisional) and batch place orders.
+The guide covers read-only account and asset access, the stock-order lifecycle
+(preview, place, replace, cancel), order queries, per-market order rules,
+single-leg and multi-leg options orders, futures order validation, event
+contract orders, and batch place orders.
 
-Multi-leg options, futures order validation, and event contract orders are
-**provisional**: their wire values and rules are best-effort assumptions marked
-`TODO` in the code and are not confirmed against the live API. See
+Multi-leg strategies, futures rules, and event-contract rules follow the
+official Webull documentation. The HK sandbox accepts only `SINGLE` options
+strategies (`417` for every other strategy) and cannot exercise US-only
+paths, so validate any order with `PreviewOrder` before placing it. See
 [Options orders](#options-orders), [Futures orders](#futures-orders), and
 [Event contract orders](#event-contract-orders).
 
@@ -459,13 +457,12 @@ spread := trade.OrderRequest{
 }
 ```
 
-!!! warning "Multi-leg strategies are provisional"
+!!! warning "Multi-leg strategies in the HK sandbox"
 
-    The multi-leg strategy names and structural rules above are **best-effort
-    assumptions marked `TODO(t8)` in the code**, not confirmed guarantees. The
-    exact strategy strings the Webull OpenAPI accepts, and the leg and
-    order-type rules it enforces, can only be confirmed against a live account.
-    Validate a multi-leg order with `PreviewOrder` before placing it.
+    The multi-leg strategy names and structural rules above follow the official
+    Webull documentation. The HK sandbox accepts only `SINGLE` orders — every
+    multi-leg strategy is rejected with `417` — so validate a multi-leg order
+    with `PreviewOrder` against a US sandbox before placing it.
 
 !!! note "Sandbox option-contract availability"
 
@@ -514,13 +511,13 @@ futures := trade.OrderRequest{
 }
 ```
 
-!!! warning "Futures rules are provisional"
+!!! note "Futures orders are not verified in this environment"
 
     The futures order-type matrix and the time-in-force, entrust-type, and
-    whole-contract quantity rules are **best-effort assumptions marked
-    `TODO(t9)` in the code**, not confirmed guarantees. Futures order
-    submission is unverified against the live API; preview a futures order
-    before placing one and treat a rejection as expected until it is confirmed.
+    whole-contract quantity rules follow the official documentation but have
+    not been exercised against a live account in the HK sandbox. Preview a
+    futures order before placing one and treat a rejection as expected until it
+    is confirmed.
 
 ## Event contract orders
 
@@ -535,10 +532,11 @@ enforces:
 | `quantity` | A positive integer ≤ 50,000 |
 | `time_in_force` | `DAY` only |
 
-!!! warning "Event contract rules are provisional"
+!!! note "Event contract orders are US-only"
 
-    Event contract order rules are **best-effort assumptions marked
-    `TODO(event)` in the code**, not confirmed against the live API.
+    Event contract order rules follow the official documentation; event
+    contracts are a US-only product and cannot be exercised in the HK sandbox.
+    Preview an event-contract order before placing it.
 
 ## Time in force
 

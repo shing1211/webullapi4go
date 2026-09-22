@@ -37,23 +37,22 @@ Coverage in v0.1:
 | Watchlists | `GetWatchlists`, `CreateWatchlist`, `UpdateWatchlist`, `DeleteWatchlist`, `GetWatchlistInstruments`, `AddWatchlistInstruments`, `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments` |
 | Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionExpirations`*, `GetOptionChain`*, `GetNewsSummary` |
 | Event contracts | `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractMarkets` |
-| Event contract market data (provisional) | `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` (TODO) |
-| Futures market data (provisional) | `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` (TODO) |
-| Display Solution (provisional) | Screener, quotes, instruments, news, streaming — see Display Solution section (TODO) |
+| Event contract market data | `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` |
+| Futures market data | `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` |
+| Display Solution | Screener, quotes, instruments, news, streaming — see Display Solution section |
 | Non-display screener | `GetMarketSectors`, `GetMarketSectorDetail`, `GetHighDividendRank`, `GetWeek52HighLow` |
-| Crypto US (provisional) | `GetCryptoSnapshotList`, `GetCryptoBarsList` (TODO) |
+| Crypto US | `GetCryptoSnapshot`, `GetCryptoBars`, `GetCryptoInstruments` |
 
-\* Speculative: see the note below.
+\* Not part of the published API: see the note below.
 
 !!! warning "Unpublished option-discovery endpoints"
 
-    `GetOptionExpirations` and `GetOptionChain` are **speculative**. The Webull
-    OpenAPI reference documents only option ticks, snapshots, and historical
-    bars, so these two endpoints are not part of the published API. Their paths,
-    parameters, and response shapes follow the naming convention of the
-    documented option endpoints, are marked `TODO(t10)` in the code, and may
-    return empty results. Verify them against a live US account before relying
-    on them.
+    `GetOptionExpirations` and `GetOptionChain` are **not part of the published
+    Webull API**. The official OpenAPI reference documents only option ticks,
+    snapshots, historical bars, and the option-contract list. These two
+    endpoints follow the naming convention of the documented option endpoints
+    and may return empty results. Verify them against a live US account before
+    relying on them.
 
 Example: snapshot and bars for `AAPL` on the `US` market.
 
@@ -123,11 +122,12 @@ symbol set is limited (currently `AAPL`). See [Streaming](streaming.md) for the
 full API and [Troubleshooting](troubleshooting.md) for network and entitlement
 limitations.
 
-## Display Solution (provisional)
+## Display Solution
 
-Display Solution endpoints use a separate HMAC-SHA1 signing mechanism and are
-accessed via `data.Client.DisplayService()`. All Display Solution paths are
-provisional: marked `TODO(ds)` in the code and require live probe to confirm.
+Display Solution endpoints use a separate signing and client-token mechanism
+and are accessed via `data.Client.DisplayService()`. Their paths follow the
+official documentation; the HK sandbox host returns `403 Forbidden` (paid
+entitlement required), so live behaviour could not be verified there.
 
 Coverage: screener (`GetDisplayGainersLosers`, `GetDisplayTopActive`), quotes
 (`GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`,
