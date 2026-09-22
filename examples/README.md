@@ -1,6 +1,6 @@
 # Examples
 
-Runnable examples for the v0.9.0 API surface of `webullapi4go`. Each example is a
+Runnable examples for the current API surface of `webullapi4go`. Each example is a
 small `main` program in its own directory, so they all compile together:
 
 ```sh
@@ -26,7 +26,7 @@ which reads:
 
 Credentials are never hard-coded and must never be committed. Webull publishes
 shared sandbox test accounts in its
-[getting-started guide](https://developer.webull.com/apis/docs/getting-started);
+[getting-started guide](https://developer.webull.hk/apis/docs/getting-started);
 supply the values at run time through your shell or a secret manager. Only the
 sandbox host `api.sandbox.webull.hk` belongs in committed material.
 
@@ -188,7 +188,8 @@ instruments, and delete. Guarded by `WEBULL_WATCHLIST_TEST=1` since it mutates
 the watchlist.
 
 ```sh
-WEBULL_WATCHLIST_TEST=1 go run ./examples/watchlist-cmd
+cd examples/watchlist-cmd
+WEBULL_WATCHLIST_TEST=1 go run .
 ```
 
 ## broker-probe
@@ -197,10 +198,11 @@ Broker HK read-only endpoint probe program. Tests virtual account, instrument,
 asset, order, cash activity, FX, and journal endpoints against the sandbox.
 
 ```sh
+cd examples/broker-probe
 export WEBULL_ENVIRONMENT="sandbox"
 export WEBULL_APP_KEY="your-sandbox-app-key"
 export WEBULL_APP_SECRET="your-sandbox-app-secret"
-go run ./examples/broker-probe
+go run .
 ```
 
 Note: Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in
@@ -233,15 +235,50 @@ go run ./examples/brokerfd-events
 
 ## options
 
-HK options discovery probe. Fetches HK option expirations and builds the
-full option chain for a given expiration. Paths are speculative (TODO t10)
-and may return 404 if the HK sandbox does not support these endpoints.
+Preview-only multi-leg US options order: builds an AAPL vertical call spread
+(long 220 call / short 230 call) and calls `PreviewOrder` to estimate its cost.
+No order is ever placed.
 
 ```sh
-export WEBULL_ENVIRONMENT="sandbox"
-export WEBULL_APP_KEY="your-sandbox-app-key"
-export WEBULL_APP_SECRET="your-sandbox-app-secret"
 go run ./examples/options
+```
+
+The HK sandbox accepts only `SINGLE` strategies (`417` for multi-leg) and may
+not have option contracts for `AAPL` (`417 Invalid Symbol`), so a US sandbox is
+needed to exercise this example end to end.
+
+## options-multi-leg
+
+Probes every multi-leg strategy value (VERTICAL, STRADDLE, STRANGLE,
+IRON_CONDOR, IRON_BUTTERFLY, BUTTERFLY, CALENDAR, DIAGONAL, RATIO, COLLAR)
+through the read-only `PreviewOrder`; no live orders are sent. Its own Go
+module. Off by default:
+
+```sh
+cd examples/options-multi-leg
+WEBULL_OPTIONS_TEST=1 go run .
+```
+
+The HK sandbox accepts only `SINGLE` (`417` otherwise).
+
+## futures-probe
+
+Probes HK futures discovery and market data (instrument list, product codes,
+product classes, snapshot, bars). Its own Go module. Off by default:
+
+```sh
+cd examples/futures-probe
+WEBULL_FUTURES_TEST=1 go run .
+```
+
+## path-probe
+
+Compares the paths the SDK calls against the official Webull OpenAPI definition
+for the endpoints where Webull's `llms.txt` summary and its own OpenAPI JSON
+disagree (Known Issue 12 in `IMPLEMENTATION_STATUS.md`). Env-gated:
+
+```sh
+WEBULL_SANDBOX=1 WEBULL_APP_KEY=... WEBULL_APP_SECRET=... go run ./examples/path-probe
 ```
 
 ## Sandbox limitations

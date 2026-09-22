@@ -1,32 +1,19 @@
-# Webull Broker FD gRPC Event Streaming
+# brokerfd-events
 
-Subscribes to Webull Broker FD events over a gRPC stream and prints received
-data events until interrupted with Ctrl+C.
+Subscribes to Broker FD order, option, and position events over gRPC and prints
+each decoded payload until interrupted with Ctrl+C (or SIGTERM).
 
-## Usage
+## Run
 
 ```sh
 go run ./examples/brokerfd-events
 ```
 
-## Credentials
+## Notes
 
-Requires `WEBULL_APP_KEY` and `WEBULL_APP_SECRET`. If `WEBULL_APP_KEY` is not
-set, the program logs a message and exits gracefully without error.
-
-Optionally set `WEBULL_TRADE_ACCOUNT_ID` to filter events to a specific
-account.
-
-## Output
-
-The program logs:
-
-- `"connected"` when the subscription is established
-- `"ping"` upon receiving a keep-alive ping from the server
-- `"event stream error: ..."` if an error occurs on the stream
-- `"data: type=N content=... payload=..."` for each received data event
-
-## Graceful Shutdown
-
-Send SIGINT (Ctrl+C) or SIGTERM to exit cleanly. The underlying gRPC connection
-is closed before the program exits.
+- Credentials — see [../README.md](../README.md). Exits gracefully if
+  `WEBULL_APP_KEY` is unset.
+- Optionally set `WEBULL_TRADE_ACCOUNT_ID` to filter events to one account.
+- Logs `connected`, `ping`, and `data: type=N ...` lines; the gRPC connection is
+  closed on shutdown.
+- US-only: the HK sandbox has no FD event stream.

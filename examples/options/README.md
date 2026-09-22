@@ -1,21 +1,8 @@
-# Options Example
+# options
 
-This example demonstrates a **preview-only** multi-leg US options order.
-
-It builds a vertical call spread (buy the lower-strike call, sell the higher-strike call on the same expiration) and calls `PreviewOrder` to estimate its cost. No order is ever placed.
-
-```text
-AAPL vertical call spread: long 220 call / short 230 call
-```
-
-## Credentials
-
-```sh
-export WEBULL_APP_KEY=...
-export WEBULL_APP_SECRET=...
-export WEBULL_ACCOUNT_ID=...   # optional; uses first account if unset
-export WEBULL_ENVIRONMENT=sandbox
-```
+Preview-only multi-leg US options order: builds an AAPL vertical call spread
+(long 220 call / short 230 call) and calls `PreviewOrder` to estimate its cost.
+No order is ever placed.
 
 ## Run
 
@@ -25,6 +12,9 @@ go run ./examples/options
 
 ## Notes
 
-- US sandbox market data is limited to `AAPL`.
-- Option contracts for `AAPL` may not exist in the sandbox (`417 Invalid Symbol`).
-- This is **preview only** — it never submits an order to the account.
+- Credentials — see [../README.md](../README.md); `WEBULL_ACCOUNT_ID` is optional
+  (the first account is used when unset).
+- The HK sandbox accepts only `SINGLE` strategies (`417` for multi-leg) and may
+  not have option contracts for `AAPL` (`417 Invalid Symbol`) — a US sandbox is
+  needed to exercise this end to end.
+- This is preview only; it never submits an order.

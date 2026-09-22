@@ -1,48 +1,28 @@
-# Webull API Live Probe
+# probe
 
-Authenticates against the Webull HK sandbox and probes endpoint paths + schemas
-for v0.5 best-effort stubs (Fund Data, Crypto Data, Screener v2, Broker FD).
+Sandbox endpoint probe (Go and Python equivalents): hits live sandbox endpoints
+to verify paths and response schemas. Not a user-facing example — a development
+tool used while building the SDK.
 
-## Usage
+## Run
 
 ```sh
+export WEBULL_ENVIRONMENT="sandbox"
+export WEBULL_APP_KEY="your-sandbox-app-key"
+export WEBULL_APP_SECRET="your-sandbox-app-secret"
+go run ./examples/probe
+
+# or the Python equivalent
 python examples/probe/probe.py
 ```
 
-Results are written to `examples/probe/results/` as JSON files.
+## Notes
 
-## Credentials
-
-Uses the shared HK sandbox test account hardcoded in `probe.py`.
-Override with environment variables:
-
-```sh
-WEBULL_APP_KEY=xxx WEBULL_APP_SECRET=yyy python examples/probe/probe.py
-```
-
-Credentials: https://developer.webull.hk/apis/docs/sdk#test-accounts
-
-## Output
-
-Each probe result is saved as `{category}_{endpoint}.json` with structure:
-
-```json
-{
-  "path": "/market-data/fund/AAPL/nav",
-  "query": {"page_size": "5"},
-  "result": {
-    "status": 200,
-    "data": { ... }
-  }
-}
-```
-
-## Rate limits
-
-- Token endpoint: max 10 req / 30s — script enforces 4s cooldown
-- General: 1s between requests
-
-## Adding new probe targets
-
-Add entries to the `tests` list in each `probe_*` function. If a path returns 200,
-the function stops trying alternates for that base path.
+- Results are written to `examples/probe/results/` as JSON files
+  (`{category}_{endpoint}.json`).
+- Shared HK sandbox test accounts:
+  <https://developer.webull.hk/apis/docs/sdk#test-accounts>
+- Rate limits: token endpoint 10 req / 30 s (the script enforces a 4 s
+  cooldown); 1 s between general requests.
+- To add targets, extend the `tests` list in each `probe_*` function; a `200`
+  response stops alternate-path attempts for that base path.
