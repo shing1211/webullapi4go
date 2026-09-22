@@ -66,9 +66,9 @@ type OrderPreview struct {
 }
 
 type previewOrderInternal struct {
-	AccountID            string            `json:"account_id"`
-	ClientComboOrderID   string            `json:"client_combo_order_id,omitempty"`
-	NewOrders            []orderLineInternal `json:"new_orders"`
+	AccountID          string              `json:"account_id"`
+	ClientComboOrderID string              `json:"client_combo_order_id,omitempty"`
+	NewOrders          []orderLineInternal `json:"new_orders"`
 }
 
 type orderLineInternal struct {

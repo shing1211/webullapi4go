@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-22 (v0.9.2 release) · Current version: **v0.9.2**
+Last updated: 2026-09-22 (v1.0.0 release) · Current version: **v1.0.0**
 
 ## Summary
 
@@ -8,7 +8,7 @@ Last updated: 2026-09-22 (v0.9.2 release) · Current version: **v0.9.2**
 |--------|---------|-----------|-------------|-------|----------|
 | Core SDK | `client/` | HTTP | 20+ options, `Client.Do`, `Client.DoStream` | 0 | ✅ |
 | Authentication | `internal/auth/` | — | HMAC-SHA1/SHA-256 signing, token lifecycle | 0 | ✅ |
-| Market Data HTTP | `data/` | HTTP | 92 functions | 23 | ⚠️ Futures/event/option-chain paths unconfirmed |
+| Market Data HTTP | `data/` | HTTP | 92 functions | 23 | ⚠️ Futures/event/option-chain paths unconfirmed (Category field added to all futures query structs — v1.0.0) |
 | Market Data Streaming | `stream/` | MQTT | 12+ options, typed handlers | 0 | ✅ |
 | Trading HTTP | `trade/` | HTTP | 30+ methods | 6 | ⚠️ Multi-leg/futures unconfirmed |
 | Trading Events | `events/` | gRPC | 21 functions | 0 | ✅ |
@@ -51,6 +51,7 @@ Last updated: 2026-09-22 (v0.9.2 release) · Current version: **v0.9.2**
 | v0.9.0 | 2026-09-21 | Full sandbox verification; `FinancialsItem` numeric fix | Done |
 | v0.9.1 | 2026-09-21 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v0.9.2 | 2026-09-22 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
+| v1.0.0 | 2026-09-22 | Futures market data bug fix (Category field added to all 5 query structs); v1.0 API stability audit completed; all 49 TODOs remain provisional (require US sandbox) | Done (provisional) |
 
 ## Feature Coverage
 
@@ -132,6 +133,7 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 **Futures market data** (`data/futures_market.go`) — 6 TODO(futures)
 - `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint`
 - Paths inferred from pattern; response shape unconfirmed for bars and footprint
+- **v1.0.0 fix:** All 5 query structs now have a `Category` field (defaults to `US_FUTURES` if empty) — previously hardcoded US category regardless of query parameter
 
 **Event contract market data** (`data/eventcontracts_market.go`) — 5 TODO(event-market-data)
 - `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick`
@@ -187,8 +189,8 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 
 ### ❌ Not Yet Implemented
 
-- **v1.0 scope**: Stable public API, full documentation, semver guarantees
 - **US sandbox verification**: All ⚠️ items above need US sandbox credentials to verify
+- **v1.0.0 is released** with 49 provisional TODOs — all require US sandbox; see audit findings in `docs/runs/2026-09-22-futures-options-probe/`
 
 ## Test Coverage
 
@@ -230,6 +232,8 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 | probe | `examples/probe/` | ❌ | Sandbox endpoint testing tool (has own README) |
 | watchlist-cmd | `examples/watchlist-cmd/` | ✅ | Watchlist CRUD example (create, add, update, remove, delete) |
 | broker-probe | `examples/broker-probe/` | ❌ | Broker HK read-only endpoint probe program |
+| futures-probe | `examples/futures-probe/` | ❌ | HK futures product discovery and market data probe |
+| options-multi-leg | `examples/options-multi-leg/` | ❌ | Multi-leg options strategy probe (11 combo types) |
 
 ## Known Issues
 
@@ -255,13 +259,15 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 
 ## Next Steps
 
-1. **Obtain US sandbox credentials** (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET` for US) — required to verify Display Solution (16 TODOs), option chain discovery (12 TODOs), futures market data (6 TODOs), event contract market data (5 TODOs), and Broker FD (4 TODOs)
-2. **Display Solution** (16 TODOs): HK sandbox returns 403 at the host level — the app lacks Display Solution entitlement in HK. US sandbox may be needed, or a separate Display Solution app registration.
-3. **Option chain discovery** (12 TODOs): Speculative — may need to remove if not in published API
-4. **Futures market data** (6 TODOs): HK sandbox may not serve US futures data
-5. **Event contract market data** (5 TODOs): US-only product, not available in HK sandbox
-6. **Multi-leg strategy wire values** (3 TODOs): Confirm against live trading API (place preview order)
-7. **Futures order validation rules** (2 TODOs): Confirm against live trading API
-8. **Event contract order rules** (1 TODO): Confirm against live trading API
-9. **Broker FD paths** (1 TODO) and **Broker FD event schemas** (3 TODOs): US-only
-11. **Work toward v1.0**: stabilize public API, finalize documentation, semver guarantees
+v1.0.0 is released. All 49 TODO items require US sandbox credentials to verify and cannot be confirmed with the current HK sandbox setup.
+
+1. **Obtain US sandbox credentials** (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET` for US) — required to verify all 49 provisional items
+2. **Run futures-probe** (`examples/futures-probe/`): probe HK futures discovery + market data; requires `WEBULL_FUTURES_TEST=1`
+3. **Run options-multi-leg** (`examples/options-multi-leg/`): test 11 combo strategies via PreviewOrder; requires `WEBULL_OPTIONS_TEST=1`
+4. **Verify Display Solution** (16 TODOs): HK returns 403 at host level — US sandbox or paid entitlement required
+5. **Verify option chain discovery** (12 TODOs): HK returns 404 — US-only endpoints
+6. **Verify futures market data paths** (6 TODOs): US sandbox required
+7. **Verify event contract market data** (5 TODOs): US-only product
+8. **Verify multi-leg strategy wire values** (3 TODOs): US sandbox required for PreviewOrder probe
+9. **Verify futures order rules** (2 TODOs): US sandbox required
+10. **Verify Broker FD paths** (1 TODO) and **Broker FD event schemas** (3 TODOs): US-only

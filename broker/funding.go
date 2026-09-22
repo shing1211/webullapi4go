@@ -20,13 +20,13 @@ import (
 )
 
 const (
-	pathFXRate                  = "/broker/funding/fx-rates/get"
-	pathFXExchange              = "/broker/funding/fx-exchanges/create"
-	pathFXExchangeDetail        = "/broker/funding/fx-exchanges/get"
-	pathInstantExchange         = "/broker/funding/instant-fx/create"
-	pathInstantExchangeDetail   = "/broker/funding/instant-fx/get"
-	pathInstantFunding          = "/broker/funding/instant/create"
-	pathInstantFundingDetail    = "/broker/funding/instant/get"
+	pathFXRate                = "/broker/funding/fx-rates/get"
+	pathFXExchange            = "/broker/funding/fx-exchanges/create"
+	pathFXExchangeDetail      = "/broker/funding/fx-exchanges/get"
+	pathInstantExchange       = "/broker/funding/instant-fx/create"
+	pathInstantExchangeDetail = "/broker/funding/instant-fx/get"
+	pathInstantFunding        = "/broker/funding/instant/create"
+	pathInstantFundingDetail  = "/broker/funding/instant/get"
 )
 
 type FXRate struct {
@@ -56,16 +56,16 @@ type CreateFXExchangeRequest struct {
 }
 
 type FXExchange struct {
-	FXID           string `json:"fx_id"`
+	FXID            string `json:"fx_id"`
 	ClientRequestID string `json:"client_request_id"`
-	AccountID      string `json:"account_id"`
-	FromCurrency   string `json:"from_currency"`
-	ToCurrency     string `json:"to_currency"`
-	FromAmount     string `json:"from_amount"`
-	ToAmount       string `json:"to_amount"`
-	FXRate         string `json:"fx_rate"`
-	Status         string `json:"status"`
-	Reason         string `json:"reason,omitempty"`
+	AccountID       string `json:"account_id"`
+	FromCurrency    string `json:"from_currency"`
+	ToCurrency      string `json:"to_currency"`
+	FromAmount      string `json:"from_amount"`
+	ToAmount        string `json:"to_amount"`
+	FXRate          string `json:"fx_rate"`
+	Status          string `json:"status"`
+	Reason          string `json:"reason,omitempty"`
 }
 
 func (c *Client) CreateFXExchange(ctx context.Context, req CreateFXExchangeRequest) (*FXExchange, error) {

@@ -39,6 +39,8 @@ const (
 type FuturesTickQuery struct {
 	// Symbol is the futures contract symbol, for example "ESZ5".
 	Symbol string
+	// Category is the futures market category. Defaults to US_FUTURES if empty.
+	Category FuturesCategory
 	// Count is the number of ticks to return. Zero means the server default
 	// (30); the documented maximum is 1000.
 	Count int
@@ -53,7 +55,11 @@ func (c *Client) GetFuturesTick(ctx context.Context, q FuturesTickQuery) (*Stock
 	if q.Symbol != "" {
 		query.Set("symbol", q.Symbol)
 	}
-	query.Set("category", string(FuturesCategoryUS))
+	category := q.Category
+	if category == "" {
+		category = FuturesCategoryUS
+	}
+	query.Set("category", string(category))
 	if q.Count > 0 {
 		query.Set("count", strconv.Itoa(q.Count))
 	}
@@ -70,6 +76,8 @@ func (c *Client) GetFuturesTick(ctx context.Context, q FuturesTickQuery) (*Stock
 type FuturesSnapshotQuery struct {
 	// Symbols is the list of futures contract symbols to query, at most 100.
 	Symbols []string
+	// Category is the futures market category. Defaults to US_FUTURES if empty.
+	Category FuturesCategory
 }
 
 // GetFuturesSnapshot retrieves real-time market snapshots for one or more
@@ -81,7 +89,11 @@ func (c *Client) GetFuturesSnapshot(ctx context.Context, q FuturesSnapshotQuery)
 	if len(q.Symbols) > 0 {
 		query.Set("symbols", strings.Join(q.Symbols, ","))
 	}
-	query.Set("category", string(FuturesCategoryUS))
+	category := q.Category
+	if category == "" {
+		category = FuturesCategoryUS
+	}
+	query.Set("category", string(category))
 
 	var out []Snapshot
 	if err := c.get(ctx, pathFuturesSnapshot, query, &out); err != nil {
@@ -95,6 +107,8 @@ func (c *Client) GetFuturesSnapshot(ctx context.Context, q FuturesSnapshotQuery)
 type FuturesBarsQuery struct {
 	// Symbols is the list of futures contract symbols to query.
 	Symbols []string
+	// Category is the futures market category. Defaults to US_FUTURES if empty.
+	Category FuturesCategory
 	// Interval is the bar granularity. Required.
 	Interval BarTimespan
 	// Count is the number of bars to return per symbol. Zero means the server
@@ -111,7 +125,11 @@ func (c *Client) GetFuturesBars(ctx context.Context, q FuturesBarsQuery) (*Batch
 	if len(q.Symbols) > 0 {
 		query.Set("symbols", strings.Join(q.Symbols, ","))
 	}
-	query.Set("category", string(FuturesCategoryUS))
+	category := q.Category
+	if category == "" {
+		category = FuturesCategoryUS
+	}
+	query.Set("category", string(category))
 	if q.Interval != "" {
 		query.Set("timespan", string(q.Interval))
 	}
@@ -130,6 +148,8 @@ func (c *Client) GetFuturesBars(ctx context.Context, q FuturesBarsQuery) (*Batch
 type FuturesDepthQuery struct {
 	// Symbol is the futures contract symbol, for example "ESZ5".
 	Symbol string
+	// Category is the futures market category. Defaults to US_FUTURES if empty.
+	Category FuturesCategory
 	// Depth is the number of order-book levels to return: 1 for L1, 10 for the
 	// default L2 depth. Zero means the server default.
 	Depth int
@@ -144,7 +164,11 @@ func (c *Client) GetFuturesDepth(ctx context.Context, q FuturesDepthQuery) (*Quo
 	if q.Symbol != "" {
 		query.Set("symbol", q.Symbol)
 	}
-	query.Set("category", string(FuturesCategoryUS))
+	category := q.Category
+	if category == "" {
+		category = FuturesCategoryUS
+	}
+	query.Set("category", string(category))
 	if q.Depth > 0 {
 		query.Set("depth", strconv.Itoa(q.Depth))
 	}
@@ -161,6 +185,8 @@ func (c *Client) GetFuturesDepth(ctx context.Context, q FuturesDepthQuery) (*Quo
 type FuturesFootprintQuery struct {
 	// Symbols are the futures contract symbols to query, at most 20 per request.
 	Symbols []string
+	// Category is the futures market category. Defaults to US_FUTURES if empty.
+	Category FuturesCategory
 	// Timespan is the bar granularity. Required.
 	Timespan FootprintTimespan
 	// Count is the number of bars to return, between 1 and 1200. Zero means
@@ -178,7 +204,11 @@ func (c *Client) GetFuturesFootprint(ctx context.Context, q FuturesFootprintQuer
 	if len(q.Symbols) > 0 {
 		query.Set("symbols", strings.Join(q.Symbols, ","))
 	}
-	query.Set("category", string(FuturesCategoryUS))
+	category := q.Category
+	if category == "" {
+		category = FuturesCategoryUS
+	}
+	query.Set("category", string(category))
 	if q.Timespan != "" {
 		query.Set("timespan", string(q.Timespan))
 	}
