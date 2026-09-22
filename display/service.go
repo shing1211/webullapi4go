@@ -49,8 +49,17 @@ const (
 	HKProductionHTTP = "https://co-branding-openapi.webull.hk"
 	HKSandboxHTTP    = "https://hk-co-branding-openapi.uat.webullbroker.com"
 
-	displayTokenCreatePath = "/auth/client-tokens/create"
+	displayTokenCreatePath  = "/auth/client-tokens/create"
+	displayTokenRefreshPath = "/auth/client-tokens/refresh"
 )
+
+// ClientToken is an access/refresh token pair issued by the Display Solution.
+type ClientToken struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresAt        int64  `json:"expires_at"`
+	RefreshToken     string `json:"refresh_token"`
+	RefreshExpiresAt int64  `json:"refresh_expires_at"`
+}
 
 type Service struct {
 	appKey    string
@@ -159,6 +168,39 @@ func (s *Service) fetchToken(ctx context.Context) (string, error) {
 	}
 	s.token = &tok
 	return tok.AccessTokenValue(), nil
+}
+
+// RefreshClientToken exchanges a refresh token for a new access token using the
+// Client-to-Server credentials.
+func (s *Service) RefreshClientToken(ctx context.Context, refreshToken string) (*ClientToken, error) {
+	bodyBytes, err := json.Marshal(map[string]string{"refresh_token": refreshToken})
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeTransport, "encoding display refresh request", err)
+	}
+	req, err := s.buildSignedRequest(ctx, http.MethodPost, displayTokenRefreshPath, nil, bodyBytes)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeTransport, displayTokenRefreshPath, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errs.Wrap(errs.CodeTransport, "reading display refresh response", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, errs.FromHTTPStatus(resp.StatusCode, data)
+	}
+	var tok ClientToken
+	if err := json.Unmarshal(data, &tok); err != nil {
+		return nil, errs.Wrap(errs.CodeAPI, "decoding display refresh response", err)
+	}
+	return &tok, nil
 }
 
 func (s *Service) Do(ctx context.Context, method, path string, query url.Values, body, out any) error {

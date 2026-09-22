@@ -542,3 +542,31 @@ func itoa(i int) string {
 	}
 	return string(buf[pos:])
 }
+
+func TestRefreshClientToken(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.Path, "/auth/client-tokens/refresh"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(body), "rt1") {
+			t.Errorf("body = %s", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"at2","expires_at":123,"refresh_token":"rt2","refresh_expires_at":456}`))
+	}))
+	defer srv.Close()
+
+	svc := newTestService(srv)
+	tok, err := svc.RefreshClientToken(context.Background(), "rt1")
+	if err != nil {
+		t.Fatalf("RefreshClientToken() error = %v", err)
+	}
+	if tok.AccessToken != "at2" || tok.RefreshToken != "rt2" || tok.ExpiresAt != 123 {
+		t.Fatalf("token = %+v", tok)
+	}
+}
