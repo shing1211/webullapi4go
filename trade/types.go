@@ -155,7 +155,10 @@ type OptionStrategy string
 
 // Option strategy values.
 //
-// TODO(t8): confirm strategy wire values against live API.
+// TODO(t8): HK sandbox confirms that all multi-leg strategies (VERTICAL, STRADDLE,
+// STRANGLE, IRON_CONDOR, IRON_BUTTERFLY, BUTTERFLY, CALENDAR, DIAGONAL, RATIO,
+// COLLAR) are rejected with 417 errors — only SINGLE is accepted. US sandbox is
+// needed to confirm the exact multi-leg strategy wire strings.
 const (
 	// OptionStrategySingle is a single-leg options position.
 	OptionStrategySingle OptionStrategy = "SINGLE"

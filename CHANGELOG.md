@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-22
+
+HK sandbox probe: confirmed futures product-codes path, fixed FuturesInstrument.Unit
+flexible type to handle numeric API responses, fixed client_order_id length overflow
+in options-multi-leg example, and updated TODO markers with HK sandbox findings.
+
+### Fixed
+
+- `data/futures.go`: `FuturesInstrument.Unit` now uses a `StringOrNumber` flexible
+  type that handles both string (`"1-index points"`) and numeric (`1`) JSON values
+  from the live API.
+- `examples/options-multi-leg/main.go:193`: `client_order_id` now uses `Unix()` instead
+  of `UnixNano()` to stay within the 32-character limit.
+
+### Tests Added
+
+- `data/futures_test.go`: `TestGetFuturesInstrumentsNumericUnit` verifies numeric unit
+  deserialization.
+
+### Changed
+
+- `trade/types.go`: `TODO(t8)` comment updated to reflect HK sandbox finding that
+  multi-leg strategies are rejected (only SINGLE accepted).
+- `trade/options.go`: `TODO(t8)` comments updated to reflect HK sandbox findings.
+- `data/futures_market.go`: header comment notes that product-codes path is confirmed
+  while market data paths remain unconfirmed.
+
 ## [0.9.0] - 2026-09-22
 
 GoDoc coverage, HK options stubs, HK futures market data, new examples, and graceful credential handling.

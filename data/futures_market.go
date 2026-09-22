@@ -24,7 +24,8 @@ import (
 // Futures market data endpoints. Path convention follows the stock market
 // data pattern (/market-data/{asset}/{resource}/list). These paths are
 // inferred from the documented convention and are unconfirmed against the
-// live API.
+// live API. Note: the futures product-codes path in data/futures.go is
+// confirmed against HK sandbox.
 //
 // TODO(futures): Confirm exact paths against US sandbox.
 const (

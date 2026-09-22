@@ -190,7 +190,7 @@ func main() {
 			AccountID: accountID,
 			NewOrders: []trade.OrderRequest{
 				{
-					ClientOrderID:  fmt.Sprintf("probe-%s-%d", tc.strategy, time.Now().UnixNano()),
+					ClientOrderID:  fmt.Sprintf("probe-%d-%s", time.Now().Unix(), tc.strategy),
 					ComboType:      trade.ComboTypeNormal,
 					InstrumentType: trade.InstrumentTypeOption,
 					Market:         trade.MarketUS,

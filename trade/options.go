@@ -37,7 +37,9 @@ var optionOrderTypes = []OrderType{
 // offered for options. Treat this as an unconfirmed assumption rather than a
 // documented API guarantee.
 //
-// TODO(t8): confirm multi-leg order-type matrix and structural rules against live API
+// TODO(t8): HK sandbox confirms multi-leg strategies are rejected (only SINGLE
+// accepted); multi-leg order-type matrix and structural rules require US sandbox
+// for full confirmation.
 var optionMultiLegOrderTypes = []OrderType{
 	OrderTypeLimit,
 	OrderTypeStopLossLimit,
@@ -236,7 +238,9 @@ func canonicalStrike(s string) string {
 // no duplicate legs, and no degenerate set whose legs all share a side, option
 // type, and strike. Errors locate the offending leg as legs[i].
 //
-// TODO(t8): confirm multi-leg order-type matrix and structural rules against live API
+// TODO(t8): HK sandbox confirms multi-leg strategies are rejected (only SINGLE
+// accepted); multi-leg order-type matrix and structural rules require US sandbox
+// for full confirmation.
 //
 // It validates structure only: it does not price the strategy or evaluate its
 // risk profile.
