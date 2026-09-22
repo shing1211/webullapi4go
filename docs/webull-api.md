@@ -1,256 +1,164 @@
-# Webull API Master Reference
-
-This page maps every official [Webull OpenAPI](https://developer.webull.hk/apis/docs/) endpoint to its corresponding `webullapi4go` function, grouped by API category.
-
-## Official API Documentation
-
-Base URL: <https://developer.webull.hk/apis/docs/>
-
----
-
-## Market Data API
-
-### Non-Display Solution
-
-#### Stock
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/quotes/snapshot` | `data.GetSnapshot` | Batch snapshot |
-| `GET /market-data/quotes/tick` | `data.GetTick` | Single symbol tick |
-| `GET /market-data/bars/list` | `data.GetBars` | Single symbol historical bars |
-| `POST /market-data/bars/batch` | `data.GetBatchBars` | Multi-symbol historical bars |
-| `GET /market-data/depths/list` | `data.GetQuotes` | Order book depth |
-| `GET /market-data/footprints/list` | `data.GetFootprint` | Footprint bars |
-| `GET /market-data/nioi/bars` | `data.GetNOIIBars` | NOI bars |
-| `GET /market-data/nioi/snapshot` | `data.GetNOIISnapshot` | NOI snapshot |
-
-#### Options
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/options/ticks/list` | `data.GetOptionTick` | Option tick |
-| `GET /market-data/options/snapshots/list` | `data.GetOptionSnapshot` | Option snapshot (batch) |
-| `GET /market-data/options/bars/list` | `data.GetOptionBars` | Option historical bars |
-
-#### Futures
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/futures/ticks/list` | `data.GetFuturesTick` | Futures tick |
-| `GET /market-data/futures/snapshots/list` | `data.GetFuturesSnapshot` | Futures snapshot |
-| `GET /market-data/futures/bars/list` | `data.GetFuturesBars` | Futures historical bars |
-| `GET /market-data/futures/depths/list` | `data.GetFuturesDepth` | Futures order book depth |
-| `GET /market-data/futures/footprints/list` | `data.GetFuturesFootprint` | Futures footprint bars |
-
-#### News
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/news` | `data.GetNewsSummary` | SSE stream news summary |
-
-#### Screeners
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/screener/tickers` | `data.GetTopGainersLosers` | Top gainers/losers |
-| `GET /market-data/screener/top-active` | `data.GetMostActive` | Top actives |
-
-#### Watchlist
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/vip/wetal/simplelist` | `data.GetWatchlists` | List watchlists |
-| `POST /market-data/vip/wetal/simplelist` | `data.CreateWatchlist` | Create watchlist |
-| `PUT /market-data/vip/wetal/simplelist` | `data.UpdateWatchlist` | Update watchlist |
-| `DELETE /market-data/vip/wetal/simplelist` | `data.DeleteWatchlist` | Delete watchlist |
-| `GET /market-data/vip/wetal/stock/list` | `data.GetWatchlistInstruments` | Get watchlist instruments |
-| `POST /market-data/vip/wetal/stock/list` | `data.AddWatchlistInstruments` | Add instruments |
-| `DELETE /market-data/vip/wetal/stock/list` | `data.RemoveWatchlistInstruments` | Remove instruments |
-| `PUT /market-data/vip/wetal/stock/list` | `data.UpdateWatchlistInstruments` | Update instruments |
-
-#### Fundamentals
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/fundamental/capital-flow` | `data.GetCapitalFlow` | Capital flow |
-| `GET /market-data/fundamental/industry/compare` | `data.GetIndustryComparison` | Industry comparison |
-| `GET /market-data/fundamental/earnings-calendar` | `data.GetEarningsCalendar` | Earnings calendar |
-| `GET /market-data/fundamental/dividend-calendar` | `data.GetDividendCalendar` | Dividend calendar |
-| `GET /market-data/fundamental/filings` | `data.GetFilings` | SEC filings |
-| `GET /market-data/fundamental/financial/income` | `data.GetIncomeStatement` | Income statement |
-| `GET /market-data/fundamental/financial/balance-sheet` | `data.GetBalanceSheet` | Balance sheet |
-| `GET /market-data/fundamental/financial/cash-flow` | `data.GetCashFlow` | Cash flow |
-| `GET /market-data/fundamental/financial/indicator` | `data.GetFinancialIndicators` | Financial indicators |
-| `GET /market-data/fundamental/financial/alert` | `data.GetFinancialAlert` | Financial alert |
-| `GET /market-data/fundamental/forecast/eps` | `data.GetForecastEPS` | Forecast EPS |
-
-#### Fund Data
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/fund/funds/{ticker}/nav` | `data.GetFundNav` | Fund NAV |
-| `GET /market-data/fund/funds/{ticker}/info` | `data.GetFundInfo` | Fund info |
-| `GET /market-data/fund/funds/{ticker}/dividend` | `data.GetFundDividends` | Fund dividends |
-| `GET /market-data/fund/funds/list` | `data.GetFundList` | Fund list |
-
-!!! warning
-    Fund data endpoints are **unconfirmed** against live API. The HK sandbox returns `404`.
-
----
-
-### Display Solution
-
-#### Quotes
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/v1/snapshot` | `data.GetStockSnapshot` | Stock snapshot (Display) |
-| `POST /market-data/v1/bars` | `data.GetStockHistoricalBars` | Stock historical bars (Display) |
-| `GET /market-data/v1/tick` | `data.GetStockTick` | Stock tick (Display) |
-| `GET /market-data/v1/quotes` | `data.GetStockDepth` | Stock depth (Display) |
-
-#### Corporate Actions
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/v1/corp-action` | `data.GetCorporateActionsList` | Corporate actions |
-| `GET /market-data/v1/corp-action/market` | `data.GetCorporateActionsMarket` | Market corporate actions |
-
-#### Instruments
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/v1/instruments` | `data.GetStockInstruments` | Stock instruments |
-| `POST /market-data/v1/logo` | `data.GetLogosBatch` | Batch logos |
-| `GET /market-data/v1/company-profile` | `data.GetCompanyProfile` | Company profile |
-| `GET /market-data/v1/analyst-target-price` | `data.GetAnalystTargetPrice` | Analyst target price |
-| `GET /market-data/v1/analyst-rating` | `data.GetAnalystRating` | Analyst rating |
-
-#### Screeners (Display Solution)
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/screener/tickers` | `data.GetTopGainersLosers` | Top gainers/losers |
-| `GET /market-data/screener/top-active` | `data.GetMostActive` | Top actives |
-| `GET /market-data/screener/sectors` | `data.GetMarketSectors` | Market sectors |
-| `GET /market-data/screener/sector-detail` | `data.GetMarketSectorDetail` | Sector detail |
-| `GET /market-data/screener/high-dividend` | `data.GetHighDividendRank` | High dividend rank |
-| `GET /market-data/screener/week-52` | `data.GetWeek52HighLow` | 52-week high/low |
-
-#### News (Display Solution)
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /market-data/news` | `data.GetNewsSummary` | News summary (SSE) |
-
----
-
-## Trading API
-
-### Instruments
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /trading/instruments/options/contracts/list` | `data.GetOptionContracts` | Option contracts (chain) |
-
-!!! warning
-    Field mappings and wire values are **unconfirmed**. HK sandbox returns `404`. US sandbox credentials required.
-
-### Futures Instruments
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /trading/future/options/information` | `data.GetFuturesInstruments` | Futures instruments |
-| `GET /trading/future/options/product-codes` | `data.GetFuturesProductCodes` | Product codes |
-| `GET /trading/future/options/product-classes` | `data.GetFuturesProductClasses` | Product classes |
-
-### Order Lifecycle
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `POST /trading/v5/order/oderpreview` | `trade.PreviewOrder` | Preview order |
-| `POST /trading/v5/order/place` | `trade.PlaceOrder` | Place order |
-| `POST /trading/v5/order/cancel` | `trade.CancelOrder` | Cancel order |
-| `POST /trading/v5/order/modify` | `trade.ReplaceOrder` | Replace order |
-
-### Order Queries
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /trading/v5/order/query/current` | `trade.GetOpenOrders` | Current open orders |
-| `GET /trading/v5/order/query/history` | `trade.GetOrderHistory` | Order history |
-
-### Account & Asset
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /trading/v5/account/陶0` | `trade.ListAccounts` | List accounts |
-| `GET /trading/v5/account/balance` | `trade.GetBalance` | Account balance |
-| `GET /trading/v5/position/list` | `trade.GetPositions` | Positions |
-
----
-
-## Broker API
-
-### Broker API HK
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /broker/v1/account/陶0` | `broker.GetBrokerAccount` | Broker account |
-| `GET /broker/v1/position/list` | `broker.GetBrokerPositions` | Positions |
-| `GET /broker/v1/order/query/current` | `broker.GetBrokerOpenOrders` | Open orders |
-| `GET /broker/v1/order/query/history` | `broker.GetBrokerOrderHistory` | Order history |
-| `POST /broker/v1/order/place` | `broker.PlaceBrokerOrder` | Place order |
-| `POST /broker/v1/order/cancel` | `broker.CancelBrokerOrder` | Cancel order |
-
-!!! warning
-    Broker API HK returns `401 ROUTE_NOT_PERMITTED` in HK sandbox — the app lacks the required scope.
-
-### Broker FD API US
-
-| Official Endpoint | SDK Function | Notes |
-|-----------------|--------------|-------|
-| `GET /brokerfd/v1/account/summary` | `brokerfd.GetAccountsSummary` | Account summary |
-| `GET /brokerfd/v1/position/list` | `brokerfd.GetPositions` | Positions |
-| Event service (gRPC) | `brokerfd/events.New` | Push events |
-
-!!! warning
-    Broker FD API US returns `404` in HK sandbox — US-only endpoint.
-
----
-
-## Provisional (Unconfirmed Endpoints)
-
-The following are present in the SDK but have **not been confirmed** against the live Webull API. They are marked `TODO` in code and may change.
-
-| Function | Issue |
-|----------|-------|
-| `GetOptionContracts` field mappings | HK sandbox returns `404`; requires US sandbox |
-| `OptionStrategy` values (`VERTICAL`, `CALENDAR`, `STRANGLE`, `BUTTERFLY`, `RATIO`, `CONDOR`, `DIAGONAL`) | Wire values unconfirmed; only `SINGLE` confirmed in official docs |
-| `InstrumentTypeFutures` order support | Futures order validation provisional |
-| Fund data endpoints (`GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList`) | HK sandbox returns `404` |
-
----
-
-## Removed Functions
-
-The following were removed in v1.0.2 because they are **not documented** in the official Webull OpenAPI:
-
-| Removed Function | Reason |
-|-----------------|---------|
-| `GetOptionExpirations` | No such endpoint in official API; option chain response includes expirations |
-| `GetOptionChain` | Was using wrong path (`/market-data/options/contracts/list`); correct path is `/trading/instruments/options/contracts/list` |
-| `GetHKOptionExpirations` | Same as above — no standalone expiration endpoint |
-| `GetHKOptionChain` | Same as above |
-| `GetHKFuturesTick`, `GetHKFuturesSnapshot`, `GetHKFuturesBars`, `GetHKFuturesDepth`, `GetHKFuturesFootprint` | Redundant with non-HK variants; same paths with `category=HK` |
-| `GetCryptoBars`, `GetCryptoTick`, `GetCryptoDepth`, `GetCryptoSnapshot`, `GetCryptoProfile`, `GetCryptoList` | Not in official API; HK sandbox returns `417` |
-| `GetScreenerV2` | Not in official API; HK sandbox returns `404` |
-
----
-
-## Reference
-
-- Official Webull OpenAPI Docs: <https://developer.webull.hk/apis/docs/>
-- SDK pkg.go.dev: <https://pkg.go.dev/github.com/shing1211/webullapi4go>
-- This document: `docs/webull-api.md`
+# Webull API Reference
+
+`webullapi4go` implements the [Webull OpenAPI](https://developer.webull.hk/apis/docs).
+This section is generated from the **official OpenAPI definitions** and maps each
+documented endpoint to its Go method, request fields and response fields.
+
+- **Source of truth:** the machine-readable [`llms.txt`](https://developer.webull.hk/apis/llms.txt)
+  index and the `.md` variant of each reference page (which embeds the full
+  OpenAPI definition JSON). Broker FD US is documented on the
+  [US site](https://developer.webull.com/apis/llms.txt).
+- Every page below links back to the official reference for that endpoint.
+- The official `path` is authoritative. Where the SDK currently calls a
+  different path, it is flagged in the entry or in
+  [Path status](#path-status) below.
+
+Go type references live on pkg.go.dev:
+[`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) ·
+[`data`](https://pkg.go.dev/github.com/shing1211/webullapi4go/data) ·
+[`trade`](https://pkg.go.dev/github.com/shing1211/webullapi4go/trade) ·
+[`broker`](https://pkg.go.dev/github.com/shing1211/webullapi4go/broker) ·
+[`brokerfd`](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd) ·
+[`stream`](https://pkg.go.dev/github.com/shing1211/webullapi4go/stream) ·
+[`events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/events).
+
+## How to read an entry
+
+Each endpoint entry is laid out as:
+
+| Row | Meaning |
+|-----|---------|
+| `METHOD /path` | The official endpoint path from the OpenAPI definition. |
+| **SDK** | The `webullapi4go` method that calls it. |
+| **Reference** | The official page (`.md` variant). |
+| **Note** | SDK-specific caveats (provisional, sandbox behaviour, entitlements). |
+| **Request — parameters** | Query/path parameters with type, required flag, and enum values. |
+| **Request body** | JSON body schema; nested objects are shown as follow-up tables. |
+| **Response 200** | Success schema fields. |
+| **Errors** | `401` / `417` / `500`; see [Errors](errors.md) for the typed model. |
+
+Prices, sizes, and quantities are **strings on the wire** and are kept as strings
+in the Go DTOs to preserve precision.
+
+## Environments and base URLs
+
+| API | Service | Production | Sandbox |
+|-----|---------|------------|---------|
+| Trading API | HTTP | `api.webull.hk` | `api.sandbox.webull.hk` |
+| Trading API | Events (gRPC) | `events-api.webull.hk` | `events-api.sandbox.webull.hk` |
+| Market Data API | HTTP | `api.webull.hk` | `api.sandbox.webull.hk` |
+| Market Data API | Streaming (MQTT) | `data-api.webull.hk` | `data-api.sandbox.webull.hk` |
+| Broker API HK | HTTP | `broker-api.webull.hk` | `broker-api.sandbox.webull.hk` |
+| Display Solution | HTTP | `co-branding-openapi.webull.hk` | `hk-co-branding-openapi.uat.webullbroker.com` |
+
+Regions are selected with `client.WithRegion`; the endpoint set is derived by
+`client.EndpointsFor`. Only the HK hosts are officially published; other regions
+are inferred by analogy.
+
+## Authentication
+
+Webull uses a **dual layer**: a signed request plus an access token.
+
+- **Server-to-server (Trading, Broker, Non-Display Market Data)** — every request
+  carries the six `x-signature*`/`host` headers computed with **HMAC-SHA1** over a
+  canonical string (`x-app-key`, `x-signature-algorithm`, `x-signature-version`,
+  `x-signature-nonce`, `x-timestamp`, `host`, the upper-cased MD5 body digest,
+  and the request path), plus `x-access-token` and `x-version`.
+- **Client-to-server (Display Solution)** — a separate host using an OAuth-style
+  client token sent as `Authorization: Bearer`; the SDK fetches it via
+  `display.Service`.
+- **Events (gRPC)** — HMAC-SHA256 over the serialized request, sent as gRPC
+  metadata; no `host` participates.
+
+See [Authentication](webull-api/authentication.md) and the
+[Authentication](authentication.md) and [Errors](errors.md) guides.
+
+## API versioning
+
+`x-version` selects the interface version (`v2` or `v3`). The SDK defaults to
+`v2`, except paths under `/trading/`, which default to `v3`. Override with
+`client.WithAPIVersion` or `client.WithAPIVersionFor`.
+
+## Rate limits
+
+| Scope | Limit |
+|-------|-------|
+| Create / Check token | 10 req / 30s |
+| Client token create / refresh (Display) | 600 req / min |
+| Market data — general | 600 req / min |
+| Stock tick / snapshot / quotes / bars | 60 req / 60s |
+| Footprint | 600 req / min |
+| Streaming subscribe / unsubscribe | 60 req / 60s |
+| Order preview | 40 req / 10s |
+| Order place / replace / cancel | 15 req/s (US), 1 req/s (HK / A-share) |
+| Order open / history / detail | 40 req / 2s |
+| MQTT connections | max 5 concurrent per App Key |
+| MQTT throughput | ~3 messages/sec/connection |
+
+The SDK additionally applies client-side retry, rate limiting and a circuit
+breaker (`client.WithRetry`, `client.NewRateLimiter`, `client.NewBreaker`).
+
+## Errors
+
+Business failures return HTTP `417` with `{ "error_code", "message" }`;
+`401` is unauthorized and `500` is a server error. `401` on Display Solution
+means the client token expired and is refreshed automatically. The SDK maps all
+of these onto typed `errs` codes — see [Errors](errors.md).
+
+## Path status
+
+Most SDK paths match the official definition exactly. The following are called
+out because the SDK currently **does not** confirm them, or calls a different
+path:
+
+| Area | SDK function(s) | Status |
+|------|-----------------|--------|
+| Display Solution passthrough | `data.GetDisplay*`, `data.GetDS*`, `data.GetDSCompanyProfile`, `data.GetDSAnalystTargetPrice`, `data.GetDSAnalystRating` | SDK uses `/openapi/...` literals marked `TODO(ds)`; official paths are `/market-data/...`. Verify before use. |
+| Event-contract market data | `data.GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` | Host and paths unconfirmed (`TODO(event-market-data)`). |
+| Option contracts | `data.GetOptionContracts` | Path is the Trading API path; field mappings unconfirmed (HK sandbox `404`). |
+| Fund data | `data.GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` | Paths unconfirmed (HK sandbox `404`). |
+| Futures market data | `data.GetFuturesTick/Snapshot/Bars/Depth/Footprint` | Paths unconfirmed against live API. |
+| Broker FD US | all `brokerfd.*` | Provisional; HK sandbox `404`. |
+| Broker API HK | all `broker.*` | HK sandbox `401 ROUTE_NOT_PERMITTED` (missing scope). |
+
+## Provisional and unimplemented
+
+- **Multi-leg option strategies** — only `SINGLE` is documented; the SDK defines
+  `VERTICAL` … `RATIO` as best-effort/provisional (`TODO(t8)`).
+- **Futures order rules** — provisional (`TODO(t9)`); A-share futures unsupported.
+- **Crypto** — documented by Webull US but **not implemented** here (removed in
+  v1.0.2); the HK docs do not expose it.
+- **Fund performance / holdings / rating / splits / files / allocation** are
+  documented but have no SDK method.
+
+## Pages
+
+- [Authentication](webull-api/authentication.md) — create/check token, client token.
+- [Market Data — Stock](webull-api/market-data-stock.md)
+- [Market Data — Option](webull-api/market-data-option.md)
+- [Market Data — Futures](webull-api/market-data-futures.md)
+- [Market Data — News](webull-api/market-data-news.md)
+- [Market Data — Screener](webull-api/market-data-screener.md)
+- [Market Data — Watchlist](webull-api/market-data-watchlist.md)
+- [Fundamentals and Fund Data](webull-api/fundamentals.md)
+- [Event Contracts](webull-api/event-contracts.md)
+- [Trading API](webull-api/trading.md)
+- [Broker API — HK](webull-api/broker-hk.md)
+- [Broker API — FD (US)](webull-api/broker-fd-us.md)
+- [Display Solution](webull-api/display-solution.md)
+- [Streaming (MQTT)](webull-api/streaming.md)
+- [Events (gRPC)](webull-api/events.md)
+
+## Raw Webull data (verbatim)
+
+Complete snapshots of Webull's own published documentation, with no
+SDK-specific content:
+
+- **[Master Guides (verbatim)](webull-api/master-guides.md)** — authentication,
+  signature algorithm, token lifecycle, market-data and streaming guides,
+  trading rules, broker/connect guides, error codes, FAQ and changelog.
+- **[Master Reference (verbatim)](webull-api/master-reference.md)** — the
+  OpenAPI definition of every documented endpoint.
+- **[SDK ↔ API Reconciliation](reconciliation.md)** — for every documented
+  endpoint, whether the SDK implements it and whether the SDK path matches
+  the official definition.
