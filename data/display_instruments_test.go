@@ -39,7 +39,7 @@ func newDSInstrumentTestServer(t *testing.T) (*httptest.Server, *display.Service
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/stock/company-profile", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/fundamentals/company-profiles/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"symbol":       "AAPL",
@@ -51,7 +51,7 @@ func newDSInstrumentTestServer(t *testing.T) (*httptest.Server, *display.Service
 			"ceo":          "Tim Cook",
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/stock/analyst-target-price", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/fundamentals/analysis/target-prices/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"symbol":   "AAPL",
@@ -63,7 +63,7 @@ func newDSInstrumentTestServer(t *testing.T) (*httptest.Server, *display.Service
 			"currency": "USD",
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/stock/analyst-rating", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/fundamentals/analysis/ratings/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"symbol":   "AAPL",

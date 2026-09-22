@@ -153,8 +153,8 @@ func TestUpdateFDAccount(t *testing.T) {
 	if capturedReq.URL.Path != pathFDAccountUpdate {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDAccountUpdate)
 	}
-	if capturedReq.Method != http.MethodPut {
-		t.Fatalf("method = %s, want %s", capturedReq.Method, http.MethodPut)
+	if capturedReq.Method != http.MethodPost {
+		t.Fatalf("method = %s, want %s", capturedReq.Method, http.MethodPost)
 	}
 }
 

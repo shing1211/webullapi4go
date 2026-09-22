@@ -21,18 +21,14 @@ import (
 
 // Display Solution screener endpoints. These use the Display Solution host
 // (co-branding-openapi.webull.hk) with C2S Bearer token auth.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 const (
 	// pathDSGainersLosers is the Display Solution gainers/losers endpoint.
-	pathDSGainersLosers = "/openapi/market-data/screener/rank"
+	pathDSGainersLosers = "/market-data/screeners/gainers-losers/list"
 	// pathDSTopActive is the Display Solution top-active endpoint.
-	pathDSTopActive = "/openapi/market-data/screener/top-active"
+	pathDSTopActive = "/market-data/screeners/top-actives/list"
 )
 
 // GetDisplayGainersLosers retrieves gainers/losers via Display Solution.
-//
-// TODO(ds): path unconfirmed
 func (c *Client) GetDisplayGainersLosers(ctx context.Context, q GainersLosersQuery) ([]ScreenerStock, error) {
 	query := url.Values{}
 	if q.RankType != "" {
@@ -56,8 +52,6 @@ func (c *Client) GetDisplayGainersLosers(ctx context.Context, q GainersLosersQue
 }
 
 // GetDisplayTopActive retrieves top active stocks via Display Solution.
-//
-// TODO(ds): path unconfirmed
 func (c *Client) GetDisplayTopActive(ctx context.Context, q MostActiveQuery) ([]ScreenerStock, error) {
 	query := url.Values{}
 	if q.Category != "" {

@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	pathAgreements      = "/broker-fd/agreements"
-	pathAgreementDetail = "/broker-fd/agreements/detail"
+	pathAgreements      = "/broker/agreements/list"
+	pathAgreementDetail = "/broker/agreements/get"
 )
 
 // Agreement represents a legal or regulatory agreement in the Broker FD system.

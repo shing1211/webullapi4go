@@ -20,11 +20,9 @@ import (
 )
 
 // Display Solution streaming endpoints.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 const (
-	pathDSSubscribe   = "/openapi/market-data/streaming/subscribe"
-	pathDSUnsubscribe = "/openapi/market-data/streaming/unsubscribe"
+	pathDSSubscribe   = "/market-data/streaming/subscribe"
+	pathDSUnsubscribe = "/market-data/streaming/unsubscribe"
 )
 
 // DSSubscribeRequest is the request body for [Client.DSSubscribe].
@@ -39,16 +37,12 @@ type DSUnsubscribeRequest struct {
 
 // DSSubscribe subscribes to real-time streaming data for the given symbols
 // via the Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) DSSubscribe(ctx context.Context, req DSSubscribeRequest) error {
 	return c.DisplayService().Do(ctx, http.MethodPost, pathDSSubscribe, nil, req, nil)
 }
 
 // DSUnsubscribe unsubscribes from real-time streaming data for the given
 // symbols via the Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) DSUnsubscribe(ctx context.Context, req DSUnsubscribeRequest) error {
 	return c.DisplayService().Do(ctx, http.MethodPost, pathDSUnsubscribe, nil, req, nil)
 }

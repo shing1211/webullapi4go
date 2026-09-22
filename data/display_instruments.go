@@ -20,18 +20,14 @@ import (
 )
 
 // Display Solution instrument endpoints.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 const (
-	pathDSCompanyProfile = "/openapi/market-data/stock/company-profile"
-	pathDSAnalystTarget  = "/openapi/market-data/stock/analyst-target-price"
-	pathDSAnalystRating  = "/openapi/market-data/stock/analyst-rating"
+	pathDSCompanyProfile = "/market-data/fundamentals/company-profiles/get"
+	pathDSAnalystTarget  = "/market-data/fundamentals/analysis/target-prices/get"
+	pathDSAnalystRating  = "/market-data/fundamentals/analysis/ratings/get"
 )
 
 // GetDSCompanyProfile retrieves the company profile for symbol via the Display
 // Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSCompanyProfile(ctx context.Context, symbol string) (*CompanyProfile, error) {
 	query := url.Values{"symbol": {symbol}}
 	var out CompanyProfile
@@ -43,8 +39,6 @@ func (c *Client) GetDSCompanyProfile(ctx context.Context, symbol string) (*Compa
 
 // GetDSAnalystTargetPrice retrieves aggregate analyst target-price data for
 // symbol via the Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSAnalystTargetPrice(ctx context.Context, symbol string) (*AnalystTargetPrice, error) {
 	query := url.Values{"symbol": {symbol}}
 	var out AnalystTargetPrice
@@ -56,8 +50,6 @@ func (c *Client) GetDSAnalystTargetPrice(ctx context.Context, symbol string) (*A
 
 // GetDSAnalystRating retrieves aggregate analyst rating counts for symbol via
 // the Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSAnalystRating(ctx context.Context, symbol string) (*AnalystRating, error) {
 	query := url.Values{"symbol": {symbol}}
 	var out AnalystRating

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	pathFDActivities = "/broker-fd/activities"
+	pathFDActivities = "/broker/activities/cash-activities/list"
 )
 
 // FDActivity represents a single activity or transaction in a fractional shares account.

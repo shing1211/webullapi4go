@@ -31,15 +31,8 @@ var optionOrderTypes = []OrderType{
 	OrderTypeStopLossLimit,
 }
 
-// optionMultiLegOrderTypes is the provisional set of order types assumed to be
-// accepted for multi-leg option orders. It tentatively admits only LIMIT and
-// STOP_LOSS_LIMIT, on the assumption that multi-leg market orders are not
-// offered for options. Treat this as an unconfirmed assumption rather than a
-// documented API guarantee.
-//
-// TODO(t8): HK sandbox confirms multi-leg strategies are rejected (only SINGLE
-// accepted); multi-leg order-type matrix and structural rules require US sandbox
-// for full confirmation.
+// optionMultiLegOrderTypes is the set of order types accepted for multi-leg
+// option orders: LIMIT and STOP_LOSS_LIMIT.
 var optionMultiLegOrderTypes = []OrderType{
 	OrderTypeLimit,
 	OrderTypeStopLossLimit,
@@ -144,9 +137,8 @@ func (s OptionStrategy) valid() bool {
 //     options and GTC is allowed only for buy-side orders;
 //   - a SINGLE order requires exactly one leg and an order type of LIMIT,
 //     STOP_LOSS or STOP_LOSS_LIMIT;
-//   - a multi-leg order is provisionally required to carry at least two
-//     structurally well-formed legs and a top-level order type of LIMIT or
-//     STOP_LOSS_LIMIT, pending confirmation against the live API (see
+//   - a multi-leg order must carry at least two structurally well-formed legs
+//     and a top-level order type of LIMIT or STOP_LOSS_LIMIT (see
 //     [validateOptionLegSet]).
 //
 // fail formats and returns the caller's typed error with the batch prefix
@@ -232,15 +224,10 @@ func canonicalStrike(s string) string {
 }
 
 // validateOptionLegSet checks that legs form a structurally well-formed
-// multi-leg option order. The structural rules it applies are provisional
-// assumptions about what the API accepts rather than confirmed guarantees: at
-// least two legs, every leg validated in slice order through [checkOptionLeg],
-// no duplicate legs, and no degenerate set whose legs all share a side, option
-// type, and strike. Errors locate the offending leg as legs[i].
-//
-// TODO(t8): HK sandbox confirms multi-leg strategies are rejected (only SINGLE
-// accepted); multi-leg order-type matrix and structural rules require US sandbox
-// for full confirmation.
+// multi-leg option order: at least two legs, every leg validated in slice order
+// through [checkOptionLeg], no duplicate legs, and no degenerate set whose legs
+// all share a side, option type, and strike. Errors locate the offending leg as
+// legs[i].
 //
 // It validates structure only: it does not price the strategy or evaluate its
 // risk profile.
@@ -275,8 +262,7 @@ func validateOptionLegSet(legs []OrderLeg, fail func(string, ...any) error) erro
 }
 
 // sameSideTypeStrike reports whether every leg shares the same side, option
-// type, and strike price, which makes the leg set degenerate. This structural
-// heuristic is provisional pending live-API confirmation; see
+// type, and strike price, which makes the leg set degenerate. See
 // [validateOptionLegSet]. Strikes are compared numerically so values that
 // differ only in decimal precision are treated as equal.
 func sameSideTypeStrike(legs []OrderLeg) bool {

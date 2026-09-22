@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	pathFDStockInstruments      = "/broker-fd/instruments/stocks"
+	pathFDStockInstruments      = "/broker/instruments/stocks/profiles/list"
 	pathFDStockLocate           = "/broker-fd/instruments/stock-locate"
-	pathFDCorporateActions      = "/broker-fd/instruments/corporate-actions"
+	pathFDCorporateActions      = "/broker/instruments/stocks/corporate-actions/get"
 	pathFDCorporateActionDetail = "/broker-fd/instruments/corporate-action/detail"
-	pathFDECInstruments         = "/broker-fd/instruments/event-contracts"
+	pathFDECInstruments         = "/broker/instruments/event-contracts/markets/list"
 	pathFDECInstrumentDetail    = "/broker-fd/instruments/event-contract/detail"
 )
 

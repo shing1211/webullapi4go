@@ -40,7 +40,7 @@ func TestDSSubscribe(t *testing.T) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/streaming/subscribe", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/streaming/subscribe", func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -92,7 +92,7 @@ func TestDSUnsubscribe(t *testing.T) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/streaming/unsubscribe", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/streaming/unsubscribe", func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -143,7 +143,7 @@ func TestDSSubscribe_emptySymbols(t *testing.T) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/streaming/subscribe", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/streaming/subscribe", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 	})

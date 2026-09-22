@@ -40,25 +40,25 @@ func newDSNewsTestServer(t *testing.T) (*httptest.Server, *display.Service) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/news/watchlist-summary", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/news/summaries/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"title": "Watchlist News", "content": "Content 1", "source": "Reuters", "symbol": "AAPL"},
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/news/market", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/news/market-news/list", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"title": "Market News", "content": "Market content", "source": "Bloomberg", "symbol": "SPY"},
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/news/ticker", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/news/symbol-news/list", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"title": "Ticker News", "content": "AAPL update", "source": "CNBC", "symbol": "AAPL"},
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/news/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/news/latest-news/list", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"title": "Latest News", "content": "Breaking", "source": "AP", "symbol": ""},
@@ -173,7 +173,7 @@ func TestGetDSNewsSummary_bodyContainsSymbols(t *testing.T) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/openapi/market-data/news/watchlist-summary", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/news/summaries/get", func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{})

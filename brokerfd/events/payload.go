@@ -23,12 +23,6 @@ import (
 // SubscribeType is the bitmask of Broker FD event categories requested in a
 // SubscribeRequest. The server accepts the value as the bitwise OR of the
 // individual categories.
-//
-// The exact category values are unconfirmed — the plan references 13 event
-// types but the wire values require a live US sandbox probe to confirm. Callers
-// should pass the raw integer until constants are added.
-//
-// TODO(v08): confirm SubscribeType bitmask values against live US sandbox.
 type SubscribeType uint32
 
 // DataEvent is the raw form of a data event delivered by the Broker FD event

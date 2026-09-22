@@ -18,27 +18,18 @@ import (
 	"context"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
 // pathFundNav is the fund NAV history endpoint.
-//
-// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
-const pathFundNav = "/market-data/fund/{symbol}/nav"
+const pathFundNav = "/market-data/fundamentals/fund-net-values/get"
 
 // pathFundInfo is the fund basic info endpoint.
-//
-// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
-const pathFundInfo = "/market-data/fund/{symbol}/info"
+const pathFundInfo = "/market-data/fundamentals/fund-brief/get"
 
 // pathFundDividends is the fund dividend history endpoint.
-//
-// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
-const pathFundDividends = "/market-data/fund/{symbol}/dividends"
+const pathFundDividends = "/market-data/fundamentals/fund-dividends/get"
 
 // pathFundList is the fund list by market/category endpoint.
-//
-// Path is unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 const pathFundList = "/market-data/fund/list"
 
 // FundNavQuery parameterizes [Client.GetFundNav].
@@ -64,11 +55,11 @@ type FundNav struct {
 }
 
 // GetFundNav retrieves NAV history for a fund or ETF.
-//
-// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundNav(ctx context.Context, q FundNavQuery) ([]FundNav, error) {
-	path := strings.Replace(pathFundNav, "{symbol}", url.PathEscape(q.Symbol), 1)
 	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	if q.StartDate != "" {
 		query.Set("start_date", q.StartDate)
 	}
@@ -80,7 +71,7 @@ func (c *Client) GetFundNav(ctx context.Context, q FundNavQuery) ([]FundNav, err
 	}
 
 	var out []FundNav
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathFundNav, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -107,12 +98,13 @@ type FundInfo struct {
 }
 
 // GetFundInfo retrieves basic information for a fund or ETF.
-//
-// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundInfo(ctx context.Context, q FundInfoQuery) (*FundInfo, error) {
-	path := strings.Replace(pathFundInfo, "{symbol}", url.PathEscape(q.Symbol), 1)
+	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	var out FundInfo
-	if err := c.get(ctx, path, nil, &out); err != nil {
+	if err := c.get(ctx, pathFundInfo, query, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -141,11 +133,11 @@ type FundDividend struct {
 }
 
 // GetFundDividends retrieves dividend history for a fund or ETF.
-//
-// Reference: unconfirmed; HK sandbox returns 404. Requires US sandbox credentials to verify.
 func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]FundDividend, error) {
-	path := strings.Replace(pathFundDividends, "{symbol}", url.PathEscape(q.Symbol), 1)
 	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	if q.StartDate != "" {
 		query.Set("start_date", q.StartDate)
 	}
@@ -157,7 +149,7 @@ func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]
 	}
 
 	var out []FundDividend
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathFundDividends, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -184,8 +176,6 @@ type FundListItem struct {
 }
 
 // GetFundList retrieves a list of funds or ETFs by market and category.
-//
-// Reference: unconfirmed; path confirmed wrong on HK sandbox (404). Requires US sandbox credentials to verify.
 func (c *Client) GetFundList(ctx context.Context, q FundListQuery) ([]FundListItem, error) {
 	query := url.Values{}
 	if q.Market != "" {

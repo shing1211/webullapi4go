@@ -251,8 +251,8 @@ func TestGetOrderHistory(t *testing.T) {
 	if captured.Method != http.MethodGet {
 		t.Errorf("method = %s, want GET", captured.Method)
 	}
-	if captured.Path != "/broker/orders/history?account_id=ACC-1" {
-		t.Errorf("path = %s, want /broker/orders/history?account_id=ACC-1", captured.Path)
+	if captured.Path != "/broker/orders/historical-orders/list?account_id=ACC-1" {
+		t.Errorf("path = %s, want /broker/orders/historical-orders/list?account_id=ACC-1", captured.Path)
 	}
 	if len(out) != 2 {
 		t.Fatalf("len(out) = %d, want 2", len(out))
@@ -284,8 +284,8 @@ func TestGetOpenOrders(t *testing.T) {
 	if captured.Method != http.MethodGet {
 		t.Errorf("method = %s, want GET", captured.Method)
 	}
-	if captured.Path != "/broker/orders/open?account_id=ACC-1" {
-		t.Errorf("path = %s, want /broker/orders/open?account_id=ACC-1", captured.Path)
+	if captured.Path != "/broker/orders/open-orders/list?account_id=ACC-1" {
+		t.Errorf("path = %s, want /broker/orders/open-orders/list?account_id=ACC-1", captured.Path)
 	}
 	if len(out) != 1 {
 		t.Fatalf("len(out) = %d, want 1", len(out))

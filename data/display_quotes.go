@@ -23,19 +23,17 @@ import (
 )
 
 // Display Solution quote endpoints.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 const (
 	// pathDSSnapshot is the Display Solution snapshot endpoint.
 	pathDSSnapshot = "/openapi/market-data/stock/snapshot"
 	// pathDSBars is the Display Solution batch-bars endpoint (POST).
-	pathDSBars = "/openapi/market-data/stock/batch-bars"
+	pathDSBars = "/market-data/stocks/bars/list"
 	// pathDSBarsSingle is the Display Solution single-bar endpoint (GET).
-	pathDSBarsSingle = "/openapi/market-data/stock/bars"
+	pathDSBarsSingle = "/market-data/stocks/bars/get"
 	// pathDSTick is the Display Solution tick endpoint.
-	pathDSTick = "/openapi/market-data/stock/tick"
+	pathDSTick = "/market-data/stocks/ticks/list"
 	// pathDSDepth is the Display Solution depth/quotes endpoint.
-	pathDSDepth = "/openapi/market-data/stock/quotes"
+	pathDSDepth = "/market-data/stocks/depths/list"
 )
 
 // GetDisplaySnapshot retrieves real-time market snapshots via Display Solution.

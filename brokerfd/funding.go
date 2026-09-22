@@ -20,21 +20,21 @@ import (
 )
 
 const (
-	pathFDBankAccounts         = "/broker-fd/funding/bank-accounts"
+	pathFDBankAccounts         = "/broker/funding/bank-relationships/list"
 	pathFDBankAccountDetail    = "/broker-fd/funding/bank-account/detail"
-	pathFDBankAccountAdd       = "/broker-fd/funding/bank-account/add"
-	pathFDBankAccountRemove    = "/broker-fd/funding/bank-account/remove"
-	pathFDAchAccounts          = "/broker-fd/funding/ach-accounts"
+	pathFDBankAccountAdd       = "/broker/funding/bank-relationships/create"
+	pathFDBankAccountRemove    = "/broker/funding/bank-relationships/delete"
+	pathFDAchAccounts          = "/broker/funding/ach-relationships/list"
 	pathFDAchAccountDetail     = "/broker-fd/funding/ach-account/detail"
-	pathFDAchAccountAdd        = "/broker-fd/funding/ach-account/add"
-	pathFDAchAccountRemove     = "/broker-fd/funding/ach-account/remove"
-	pathFDTransfers            = "/broker-fd/funding/transfers"
-	pathFDTransferDetail       = "/broker-fd/funding/transfer/detail"
-	pathFDTransferInitiate     = "/broker-fd/funding/transfer/initiate"
-	pathFDInstantFunding       = "/broker-fd/funding/instant"
-	pathFDInstantFundingDetail = "/broker-fd/funding/instant/detail"
-	pathFDTransferFees         = "/broker-fd/funding/transfer/fees"
-	pathFDCreditInfo           = "/broker-fd/funding/credit"
+	pathFDAchAccountAdd        = "/broker/funding/ach-relationships/create"
+	pathFDAchAccountRemove     = "/broker/funding/ach-relationships/delete"
+	pathFDTransfers            = "/broker/funding/transfers/list"
+	pathFDTransferDetail       = "/broker/funding/transfers/get"
+	pathFDTransferInitiate     = "/broker/funding/transfers/create"
+	pathFDInstantFunding       = "/broker/funding/instant-funding/create"
+	pathFDInstantFundingDetail = "/broker/funding/instant-funding/get"
+	pathFDTransferFees         = "/broker/fees/get"
+	pathFDCreditInfo           = "/broker/credits/get"
 )
 
 // BankAccount represents a linked bank account for funding operations.

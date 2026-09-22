@@ -53,7 +53,7 @@ func main() {
 		fmt.Println("path-probe: client init failed:", err)
 		os.Exit(1)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

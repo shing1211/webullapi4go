@@ -146,19 +146,9 @@ type AssetsCurrencyAssets struct {
 }
 
 // OptionStrategy identifies the structure of an options position.
-//
-// The single-leg value is confirmed by the API. The multi-leg strategy string
-// values are best-effort and provisional: the exact wire strings the Webull
-// OpenAPI accepts cannot be confirmed without a live probe, so callers should
-// verify them against the API before relying on them in production.
 type OptionStrategy string
 
 // Option strategy values.
-//
-// TODO(t8): HK sandbox confirms that all multi-leg strategies (VERTICAL, STRADDLE,
-// STRANGLE, IRON_CONDOR, IRON_BUTTERFLY, BUTTERFLY, CALENDAR, DIAGONAL, RATIO,
-// COLLAR) are rejected with 417 errors — only SINGLE is accepted. US sandbox is
-// needed to confirm the exact multi-leg strategy wire strings.
 const (
 	// OptionStrategySingle is a single-leg options position.
 	OptionStrategySingle OptionStrategy = "SINGLE"

@@ -20,13 +20,13 @@ import (
 )
 
 const (
-	pathFDOrderPreview = "/broker-fd/orders/preview"
-	pathFDOrderPlace   = "/broker-fd/orders/place"
-	pathFDOrderReplace = "/broker-fd/orders/replace"
-	pathFDOrderCancel  = "/broker-fd/orders/cancel"
-	pathFDOrderDetail  = "/broker-fd/orders/detail"
-	pathFDOrderHistory = "/broker-fd/orders/history"
-	pathFDOrderOpen    = "/broker-fd/orders/open"
+	pathFDOrderPreview = "/broker/orders/preview"
+	pathFDOrderPlace   = "/broker/orders/place"
+	pathFDOrderReplace = "/broker/orders/replace"
+	pathFDOrderCancel  = "/broker/orders/cancel"
+	pathFDOrderDetail  = "/broker/orders/get"
+	pathFDOrderHistory = "/broker/orders/historical-orders/list"
+	pathFDOrderOpen    = "/broker/orders/open-orders/list"
 )
 
 // FDOrder represents a fractional share order with execution details.
@@ -96,7 +96,7 @@ func (c *Client) ReplaceFDOrder(ctx context.Context, orderID string, req Replace
 	q := url.Values{}
 	q.Set("order_id", orderID)
 	var out FDOrder
-	if err := c.put(ctx, pathFDOrderReplace, q, req, &out); err != nil {
+	if err := c.post(ctx, pathFDOrderReplace, q, req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -106,7 +106,7 @@ func (c *Client) ReplaceFDOrder(ctx context.Context, orderID string, req Replace
 func (c *Client) CancelFDOrder(ctx context.Context, orderID string) error {
 	q := url.Values{}
 	q.Set("order_id", orderID)
-	return c.delete(ctx, pathFDOrderCancel, q, nil, nil)
+	return c.post(ctx, pathFDOrderCancel, q, nil, nil)
 }
 
 // GetFDOrderDetail retrieves the current state of a single fractional order.

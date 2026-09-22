@@ -130,8 +130,8 @@ func TestPlaceFDOrder(t *testing.T) {
 func TestReplaceFDOrder(t *testing.T) {
 	var gotReq ReplaceFDOrderRequest
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut {
-			t.Errorf("expected PUT, got %s", r.Method)
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
 		}
 		if r.URL.Path != pathFDOrderReplace {
 			t.Errorf("expected %s, got %s", pathFDOrderReplace, r.URL.Path)
@@ -182,8 +182,8 @@ func TestReplaceFDOrder(t *testing.T) {
 
 func TestCancelFDOrder(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			t.Errorf("expected DELETE, got %s", r.Method)
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
 		}
 		if r.URL.Path != pathFDOrderCancel {
 			t.Errorf("expected %s, got %s", pathFDOrderCancel, r.URL.Path)

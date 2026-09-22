@@ -21,7 +21,7 @@ import (
 
 const (
 	pathFDCashJournal       = "/broker-fd/journals/cash"
-	pathFDCashJournalDetail = "/broker-fd/journals/cash/detail"
+	pathFDCashJournalDetail = "/broker/journals/cash-journals/get"
 )
 
 // FDCashJournal represents a cash journal entry recording a deposit, withdrawal, or other

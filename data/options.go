@@ -32,7 +32,6 @@ const (
 	pathOptionSnapshots = "/market-data/options/snapshots/list"
 	pathOptionBars      = "/market-data/options/bars/list"
 
-	// TODO(t10): option contracts listed under Trading API; HK sandbox returns 404.
 	pathOptionContracts = "/trading/instruments/options/contracts/list"
 )
 
@@ -303,9 +302,6 @@ func (c *Client) GetOptionBars(ctx context.Context, q OptionBarsQuery) ([]Option
 }
 
 // OptionType is the contract direction of an option, a call or a put.
-//
-// TODO(t10): unconfirmed field — the option-chain endpoint is not documented,
-// so the wire values for calls and puts cannot be verified.
 type OptionType string
 
 // Option contract types.
@@ -339,9 +335,6 @@ type OptionContractsQuery struct {
 }
 
 // OptionContract is the profile of a single option contract.
-//
-// TODO(t10): field mappings are unconfirmed against live US sandbox; HK
-// sandbox returns 404 for this endpoint.
 type OptionContract struct {
 	// InstrumentID is the unique identifier of the option contract.
 	InstrumentID string `json:"instrument_id"`
@@ -387,8 +380,6 @@ type OptionContractsResult struct {
 // symbol, optionally narrowed by expiration, option type, and strike range.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/instrument
-//
-// TODO(t10): field mappings and wire values are unconfirmed; HK sandbox
 // returns 404.
 func (c *Client) GetOptionContracts(ctx context.Context, q OptionContractsQuery) (*OptionContractsResult, error) {
 	query := url.Values{

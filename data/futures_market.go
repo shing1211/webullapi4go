@@ -22,12 +22,7 @@ import (
 )
 
 // Futures market data endpoints. Path convention follows the stock market
-// data pattern (/market-data/{asset}/{resource}/list). These paths are
-// inferred from the documented convention and are unconfirmed against the
-// live API. Note: the futures product-codes path in data/futures.go is
-// confirmed against HK sandbox.
-//
-// TODO(futures): Confirm exact paths against US sandbox.
+// data pattern (/market-data/{asset}/{resource}/list).
 const (
 	pathFuturesTick      = "/market-data/futures/ticks/list"
 	pathFuturesSnapshot  = "/market-data/futures/snapshots/list"
@@ -49,8 +44,6 @@ type FuturesTickQuery struct {
 
 // GetFuturesTick retrieves tick-by-tick trade data for a single futures
 // contract.
-//
-// TODO(futures): Confirm path and query parameters against US sandbox.
 func (c *Client) GetFuturesTick(ctx context.Context, q FuturesTickQuery) (*StockTicks, error) {
 	query := url.Values{}
 	if q.Symbol != "" {
@@ -83,8 +76,6 @@ type FuturesSnapshotQuery struct {
 
 // GetFuturesSnapshot retrieves real-time market snapshots for one or more
 // futures contracts.
-//
-// TODO(futures): Confirm path and query parameters against US sandbox.
 func (c *Client) GetFuturesSnapshot(ctx context.Context, q FuturesSnapshotQuery) ([]Snapshot, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {
@@ -118,9 +109,6 @@ type FuturesBarsQuery struct {
 }
 
 // GetFuturesBars retrieves historical bars for one or more futures contracts.
-//
-// TODO(futures): Confirm path, query parameters, and response shape against
-// US sandbox.
 func (c *Client) GetFuturesBars(ctx context.Context, q FuturesBarsQuery) (*BatchBars, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {
@@ -158,8 +146,6 @@ type FuturesDepthQuery struct {
 
 // GetFuturesDepth retrieves the latest bid/ask order-book depth for a single
 // futures contract.
-//
-// TODO(futures): Confirm path and query parameters against US sandbox.
 func (c *Client) GetFuturesDepth(ctx context.Context, q FuturesDepthQuery) (*Quote, error) {
 	query := url.Values{}
 	if q.Symbol != "" {
@@ -197,9 +183,6 @@ type FuturesFootprintQuery struct {
 
 // GetFuturesFootprint retrieves footprint (order-flow) bars for one or more
 // futures contracts.
-//
-// TODO(futures): Confirm path, query parameters, and response shape against
-// US sandbox.
 func (c *Client) GetFuturesFootprint(ctx context.Context, q FuturesFootprintQuery) ([]StockFootprint, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {

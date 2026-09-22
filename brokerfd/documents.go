@@ -22,8 +22,8 @@ import (
 const (
 	pathDocuments        = "/broker-fd/documents"
 	pathDocumentDetail   = "/broker-fd/documents/detail"
-	pathDocumentUpload   = "/broker-fd/documents/upload"
-	pathDocumentDownload = "/broker-fd/documents/download"
+	pathDocumentUpload   = "/broker/documents/upload"
+	pathDocumentDownload = "/broker/documents/download"
 )
 
 // Document represents a document stored in the Broker FD system.

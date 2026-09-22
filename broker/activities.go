@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	pathActivities = "/broker/activities/list"
+	pathActivities = "/broker/activities/cash-activities/list"
 )
 
 type CashActivity struct {

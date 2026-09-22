@@ -56,7 +56,7 @@ func newDisplayScreenerTestServer(t *testing.T) (*httptest.Server, *display.Serv
 		})
 	})
 
-	mux.HandleFunc("/openapi/market-data/screener/rank", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/screeners/gainers-losers/list", func(w http.ResponseWriter, r *http.Request) {
 		sv.path = r.URL.Path
 		q := r.URL.Query()
 		sv.rankType = q.Get("rank_type")
@@ -67,7 +67,7 @@ func newDisplayScreenerTestServer(t *testing.T) (*httptest.Server, *display.Serv
 		_, _ = w.Write([]byte(dsScreenerBody))
 	})
 
-	mux.HandleFunc("/openapi/market-data/screener/top-active", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/screeners/top-actives/list", func(w http.ResponseWriter, r *http.Request) {
 		sv.path = r.URL.Path
 		q := r.URL.Query()
 		sv.category = q.Get("category")
@@ -101,8 +101,8 @@ func TestGetDisplayGainersLosers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayGainersLosers() error = %v", err)
 	}
-	if sv.path != "/openapi/market-data/screener/rank" {
-		t.Errorf("path = %q, want %q", sv.path, "/openapi/market-data/screener/rank")
+	if sv.path != "/market-data/screeners/gainers-losers/list" {
+		t.Errorf("path = %q, want %q", sv.path, "/market-data/screeners/gainers-losers/list")
 	}
 	if sv.rankType != "DAY_1" {
 		t.Errorf("rank_type = %q, want %q", sv.rankType, "DAY_1")
@@ -142,8 +142,8 @@ func TestGetDisplayTopActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayTopActive() error = %v", err)
 	}
-	if sv.path != "/openapi/market-data/screener/top-active" {
-		t.Errorf("path = %q, want %q", sv.path, "/openapi/market-data/screener/top-active")
+	if sv.path != "/market-data/screeners/top-actives/list" {
+		t.Errorf("path = %q, want %q", sv.path, "/market-data/screeners/top-actives/list")
 	}
 	if sv.category != "US_STOCK" {
 		t.Errorf("category = %q, want %q", sv.category, "US_STOCK")

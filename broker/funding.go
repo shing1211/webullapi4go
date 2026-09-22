@@ -23,10 +23,10 @@ const (
 	pathFXRate                = "/broker/funding/fx-rates/get"
 	pathFXExchange            = "/broker/funding/fx-exchanges/create"
 	pathFXExchangeDetail      = "/broker/funding/fx-exchanges/get"
-	pathInstantExchange       = "/broker/funding/instant-fx/create"
-	pathInstantExchangeDetail = "/broker/funding/instant-fx/get"
-	pathInstantFunding        = "/broker/funding/instant/create"
-	pathInstantFundingDetail  = "/broker/funding/instant/get"
+	pathInstantExchange       = "/broker/funding/instant-exchanges/create"
+	pathInstantExchangeDetail = "/broker/funding/instant-exchanges/get"
+	pathInstantFunding        = "/broker/funding/instant-funding/create"
+	pathInstantFundingDetail  = "/broker/funding/instant-funding/get"
 )
 
 type FXRate struct {

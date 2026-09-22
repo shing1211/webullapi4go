@@ -21,8 +21,8 @@ import (
 
 const (
 	pathFDAssetsSummary   = "/broker-fd/assets/summary"
-	pathFDAssetsDetail    = "/broker-fd/assets/detail"
-	pathFDAssetsPositions = "/broker-fd/assets/positions"
+	pathFDAssetsDetail    = "/broker/assets/balances/get"
+	pathFDAssetsPositions = "/broker/assets/positions/list"
 )
 
 // FDAssetsSummary contains aggregate asset data for a fractional shares account.

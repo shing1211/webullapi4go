@@ -152,7 +152,7 @@ func TestCreateInstantExchange(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/broker/funding/instant-fx/create"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-exchanges/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -192,7 +192,7 @@ func TestGetInstantExchangeDetail(t *testing.T) {
 	const body = `{"client_request_id":"IE1","account_id":"ACC1","from_currency":"USD","to_currency":"HKD","amount":"1000.00","rate":"7.85","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/broker/funding/instant-fx/get"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-exchanges/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {
@@ -225,7 +225,7 @@ func TestCreateInstantFunding(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if got, want := r.URL.Path, "/broker/funding/instant/create"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-funding/create"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		body, err := io.ReadAll(r.Body)
@@ -267,7 +267,7 @@ func TestGetInstantFundingDetail(t *testing.T) {
 	const body = `{"client_request_id":"IF1","account_id":"ACC1","amount":"5000.00","currency":"USD","status":"COMPLETED","reason":""}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.URL.Path, "/broker/funding/instant/get"; got != want {
+		if got, want := r.URL.Path, "/broker/funding/instant-funding/get"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {

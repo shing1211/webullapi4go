@@ -34,7 +34,7 @@ func TestGetCashActivities(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/broker/activities/list"; got != want {
+		if got, want := r.URL.Path, "/broker/activities/cash-activities/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		if got, want := r.URL.Query().Get("account_id"), "ACC1"; got != want {

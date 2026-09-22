@@ -25,8 +25,8 @@ const (
 	pathOrderReplace = "/broker/orders/replace"
 	pathOrderCancel  = "/broker/orders/cancel"
 	pathOrderDetail  = "/broker/orders/get"
-	pathOrderHistory = "/broker/orders/history"
-	pathOpenOrders   = "/broker/orders/open"
+	pathOrderHistory = "/broker/orders/historical-orders/list"
+	pathOpenOrders   = "/broker/orders/open-orders/list"
 )
 
 type BrokerOrder struct {

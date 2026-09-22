@@ -24,7 +24,7 @@ import (
 // pathLogosBatch is the batch logos endpoint.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/batch-logo-using-post
-const pathLogosBatch = "/market-data/instruments/logos/batch"
+const pathLogosBatch = "/market-data/fundamentals/logos/list"
 
 // LogoQuery parameterizes [Client.GetLogos].
 type LogoQuery struct {

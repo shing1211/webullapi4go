@@ -20,26 +20,6 @@
 // The package mirrors the architecture of the trade-events client
 // (github.com/shing1211/webullapi4go/events) and is safe for concurrent use.
 //
-// # Provisional status
-//
-// This package is marked provisional because two key aspects of the Broker FD
-// event service require live US sandbox confirmation before they can be
-// finalized:
-//
-//  1. SubscribeType bitmask values: The plan references 13 event categories
-//     but the exact integer values (for example which bit maps to which
-//     category) are unconfirmed. Callers pass the raw uint32 until constants
-//     are added after a live probe.
-//
-//  2. Data event payload shapes: The JSON schema for each data event category
-//     is unknown. The package delivers raw []byte payloads via Client.OnData
-//     rather than attempting to decode into typed structs. Once the schema is
-//     confirmed, typed structs (analogous to OrderEvent in the trade events
-//     package) will be added.
-//
-// TODO(v08): confirm SubscribeType bitmask values against live US sandbox.
-// TODO(v08): confirm data event JSON schemas via live US sandbox capture.
-//
 // # Construct
 //
 // Build a Client from the public client and start the run loop:

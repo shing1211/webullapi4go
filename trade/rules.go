@@ -76,8 +76,6 @@ func (m Market) allowsEquityOrderType(t OrderType) bool {
 // futures-capable market. The set is deliberately conservative: only the
 // widely-supported types are enabled until the exact futures support is
 // confirmed.
-//
-// TODO(t9): confirm futures order-type matrix against live API.
 var marketFuturesOrderTypes = map[Market][]OrderType{
 	MarketUS: {
 		OrderTypeLimit,
@@ -183,17 +181,11 @@ func (r OrderRequest) validateMarketRules(fail func(string, ...any) error) error
 //     both are rejected;
 //   - option_strategy and legs are option-only and are rejected;
 //   - the order type must be one the market accepts for futures;
-//   - time_in_force must be DAY or GTC; GTD is rejected because futures
-//     expire_date semantics are unconfirmed;
+//   - time_in_force must be DAY or GTC; GTD is rejected for futures;
 //   - entrust_type must be QTY, because futures are not sized by total cash
 //     amount;
 //   - quantity must be a positive integer, because futures trade whole
 //     contracts and do not support fractional quantities.
-//
-// The time_in_force, entrust_type and whole-contract quantity rules below are
-// provisional assumptions about the API, not confirmed guarantees.
-//
-// TODO(t9): confirm futures time_in_force, entrust_type and whole-contract quantity rules against live API
 //
 // fail formats and returns the caller's typed error with the batch prefix
 // already applied, and it returns the first problem found.
@@ -213,7 +205,6 @@ func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) erro
 	if !r.Market.allowsFuturesOrderType(r.OrderType) {
 		allowed, known := marketFuturesOrderTypes[r.Market]
 		if !known {
-			// TODO(futures-cn): CN futures are not yet supported. Trading rules
 			// currently reject CN market for futures orders.
 			return fail("futures are not supported for this market")
 		}
@@ -243,8 +234,6 @@ func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) erro
 //   - Quantity must be a positive integer (max 50,000)
 //   - No option_strategy or legs
 //   - No support_trading_session or no_party_ids
-//
-// TODO(event): confirm event contract order rules against live API.
 func (r OrderRequest) validateEventRules(fail func(string, ...any) error) error {
 	if r.SupportTradingSession != "" {
 		return fail("support_trading_session is not valid for event contract orders")

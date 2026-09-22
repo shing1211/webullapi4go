@@ -26,10 +26,13 @@ import (
 func TestGetFundNav_pathAndQuery(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/market-data/fund/SPY/nav" {
-			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fund/SPY/nav")
+		if r.URL.Path != "/market-data/fundamentals/fund-net-values/get" {
+			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fundamentals/fund-net-values/get")
 		}
 		q := r.URL.Query()
+		if q.Get("symbol") != "SPY" {
+			t.Errorf("symbol = %q, want %q", q.Get("symbol"), "SPY")
+		}
 		if q.Get("start_date") != "2026-01-01" {
 			t.Errorf("start_date = %q, want %q", q.Get("start_date"), "2026-01-01")
 		}
@@ -81,8 +84,11 @@ func TestGetFundNav_responseFields(t *testing.T) {
 func TestGetFundInfo_path(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/market-data/fund/VOO/info" {
-			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fund/VOO/info")
+		if r.URL.Path != "/market-data/fundamentals/fund-brief/get" {
+			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fundamentals/fund-brief/get")
+		}
+		if r.URL.Query().Get("symbol") != "VOO" {
+			t.Errorf("symbol = %q, want %q", r.URL.Query().Get("symbol"), "VOO")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{}`))
@@ -121,10 +127,13 @@ func TestGetFundInfo_responseFields(t *testing.T) {
 func TestGetFundDividends_pathAndQuery(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/market-data/fund/SPY/dividends" {
-			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fund/SPY/dividends")
+		if r.URL.Path != "/market-data/fundamentals/fund-dividends/get" {
+			t.Errorf("path = %q, want %q", r.URL.Path, "/market-data/fundamentals/fund-dividends/get")
 		}
 		q := r.URL.Query()
+		if q.Get("symbol") != "SPY" {
+			t.Errorf("symbol = %q, want %q", q.Get("symbol"), "SPY")
+		}
 		if q.Get("start_date") != "2026-01-01" {
 			t.Errorf("start_date = %q, want %q", q.Get("start_date"), "2026-01-01")
 		}

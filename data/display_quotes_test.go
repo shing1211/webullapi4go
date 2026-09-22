@@ -99,7 +99,7 @@ func newDisplayQuotesTestServer(t *testing.T) (*httptest.Server, *display.Servic
 		_, _ = w.Write([]byte(dsSnapshotBody))
 	})
 
-	mux.HandleFunc("/openapi/market-data/stock/batch-bars", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/stocks/bars/list", func(w http.ResponseWriter, r *http.Request) {
 		sv.barsPath = r.URL.Path
 		body, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(body, &sv.barsBody)
@@ -107,7 +107,7 @@ func newDisplayQuotesTestServer(t *testing.T) (*httptest.Server, *display.Servic
 		_, _ = w.Write([]byte(dsBarsBody))
 	})
 
-	mux.HandleFunc("/openapi/market-data/stock/bars", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/stocks/bars/get", func(w http.ResponseWriter, r *http.Request) {
 		sv.singleBarsPath = r.URL.Path
 		sv.singleBarsSym = r.URL.Query().Get("symbol")
 		sv.singleBarsCat = r.URL.Query().Get("category")
@@ -116,7 +116,7 @@ func newDisplayQuotesTestServer(t *testing.T) (*httptest.Server, *display.Servic
 		_, _ = w.Write([]byte(dsSingleBarBody))
 	})
 
-	mux.HandleFunc("/openapi/market-data/stock/tick", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/stocks/ticks/list", func(w http.ResponseWriter, r *http.Request) {
 		sv.tickPath = r.URL.Path
 		sv.tickSym = r.URL.Query().Get("symbol")
 		sv.tickCat = r.URL.Query().Get("category")
@@ -124,7 +124,7 @@ func newDisplayQuotesTestServer(t *testing.T) (*httptest.Server, *display.Servic
 		_, _ = w.Write([]byte(dsTickBody))
 	})
 
-	mux.HandleFunc("/openapi/market-data/stock/quotes", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/stocks/depths/list", func(w http.ResponseWriter, r *http.Request) {
 		sv.depthPath = r.URL.Path
 		sv.depthSym = r.URL.Query().Get("symbol")
 		sv.depthCat = r.URL.Query().Get("category")
@@ -192,8 +192,8 @@ func TestGetDisplayBars(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayBars() error = %v", err)
 	}
-	if sv.barsPath != "/openapi/market-data/stock/batch-bars" {
-		t.Errorf("path = %q, want %q", sv.barsPath, "/openapi/market-data/stock/batch-bars")
+	if sv.barsPath != "/market-data/stocks/bars/list" {
+		t.Errorf("path = %q, want %q", sv.barsPath, "/market-data/stocks/bars/list")
 	}
 	if len(sv.barsBody.Symbols) != 1 || sv.barsBody.Symbols[0] != "AAPL" {
 		t.Errorf("body symbols = %v, want [AAPL]", sv.barsBody.Symbols)
@@ -236,8 +236,8 @@ func TestGetDisplayBarsSingle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayBarsSingle() error = %v", err)
 	}
-	if sv.singleBarsPath != "/openapi/market-data/stock/bars" {
-		t.Errorf("path = %q, want %q", sv.singleBarsPath, "/openapi/market-data/stock/bars")
+	if sv.singleBarsPath != "/market-data/stocks/bars/get" {
+		t.Errorf("path = %q, want %q", sv.singleBarsPath, "/market-data/stocks/bars/get")
 	}
 	if sv.singleBarsSym != "AAPL" {
 		t.Errorf("symbol = %q, want AAPL", sv.singleBarsSym)
@@ -273,8 +273,8 @@ func TestGetDisplayTick(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayTick() error = %v", err)
 	}
-	if sv.tickPath != "/openapi/market-data/stock/tick" {
-		t.Errorf("path = %q, want %q", sv.tickPath, "/openapi/market-data/stock/tick")
+	if sv.tickPath != "/market-data/stocks/ticks/list" {
+		t.Errorf("path = %q, want %q", sv.tickPath, "/market-data/stocks/ticks/list")
 	}
 	if sv.tickSym != "AAPL" {
 		t.Errorf("symbol = %q, want AAPL", sv.tickSym)
@@ -308,8 +308,8 @@ func TestGetDisplayDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDisplayDepth() error = %v", err)
 	}
-	if sv.depthPath != "/openapi/market-data/stock/quotes" {
-		t.Errorf("path = %q, want %q", sv.depthPath, "/openapi/market-data/stock/quotes")
+	if sv.depthPath != "/market-data/stocks/depths/list" {
+		t.Errorf("path = %q, want %q", sv.depthPath, "/market-data/stocks/depths/list")
 	}
 	if sv.depthSym != "AAPL" {
 		t.Errorf("symbol = %q, want AAPL", sv.depthSym)

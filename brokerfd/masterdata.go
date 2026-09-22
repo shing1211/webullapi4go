@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	pathFDEnums         = "/broker-fd/master-data/enums"
-	pathFDTradeCalendar = "/broker-fd/master-data/trade-calendar"
+	pathFDEnums         = "/broker/master-data/enums/list"
+	pathFDTradeCalendar = "/broker/master-data/trading-calendars/list"
 )
 
 // FDEnum represents a key-value pair with a human-readable label, returned by the

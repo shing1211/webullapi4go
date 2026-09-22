@@ -20,12 +20,12 @@ import (
 )
 
 const (
-	pathFDAccountList       = "/broker-fd/account/list"
-	pathFDAccountDetail     = "/broker-fd/account/detail"
-	pathFDAccountCreate     = "/broker-fd/account/create"
-	pathFDAccountUpdate     = "/broker-fd/account/update"
-	pathFDAccountClose      = "/broker-fd/account/close"
-	pathFDAccountForms      = "/broker-fd/account/forms"
+	pathFDAccountList       = "/broker/accounts/list"
+	pathFDAccountDetail     = "/broker/accounts/get"
+	pathFDAccountCreate     = "/broker/accounts/create"
+	pathFDAccountUpdate     = "/broker/accounts/update"
+	pathFDAccountClose      = "/broker/accounts/close"
+	pathFDAccountForms      = "/broker/forms/list"
 	pathFDAccountFormDetail = "/broker-fd/account/form/detail"
 	pathFDAccountFormSubmit = "/broker-fd/account/form/submit"
 	pathFDAccountFormStatus = "/broker-fd/account/form/status"
@@ -88,7 +88,7 @@ type UpdateFDAccountRequest struct {
 // UpdateFDAccount updates an existing Broker FD account and returns the updated account.
 func (c *Client) UpdateFDAccount(ctx context.Context, req UpdateFDAccountRequest) (*FDAccount, error) {
 	var out FDAccount
-	if err := c.put(ctx, pathFDAccountUpdate, nil, req, &out); err != nil {
+	if err := c.post(ctx, pathFDAccountUpdate, nil, req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

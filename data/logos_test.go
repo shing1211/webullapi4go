@@ -38,7 +38,7 @@ func newLogosTestServer(t *testing.T) (*httptest.Server, *display.Service) {
 			"refresh_expires_at": 0,
 		})
 	})
-	mux.HandleFunc("/market-data/instruments/logos/batch", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/market-data/fundamentals/logos/list", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]string{
 			{"symbol": "AAPL", "logo": "https://logo.example.com/AAPL.png"},

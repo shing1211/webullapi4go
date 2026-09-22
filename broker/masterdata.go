@@ -16,10 +16,11 @@ package broker
 
 import (
 	"context"
+	"net/url"
 )
 
 const (
-	pathTradeCalendar = "/broker/master-data/trade-calendar/query"
+	pathTradeCalendar = "/broker/master-data/trading-calendars/list"
 )
 
 type TradeCalendar struct {
@@ -30,20 +31,19 @@ type TradeCalendar struct {
 	CloseTime string `json:"close_time"`
 }
 
-type tradeCalendarRequest struct {
-	Market    string `json:"market"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-}
-
 func (c *Client) GetTradeCalendar(ctx context.Context, market, startDate, endDate string) ([]TradeCalendar, error) {
-	body := tradeCalendarRequest{
-		Market:    market,
-		StartDate: startDate,
-		EndDate:   endDate,
+	query := url.Values{}
+	if market != "" {
+		query.Set("market", market)
+	}
+	if startDate != "" {
+		query.Set("start_date", startDate)
+	}
+	if endDate != "" {
+		query.Set("end_date", endDate)
 	}
 	var out []TradeCalendar
-	if err := c.post(ctx, pathTradeCalendar, nil, body, &out); err != nil {
+	if err := c.get(ctx, pathTradeCalendar, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

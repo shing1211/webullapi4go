@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	pathStockInstruments       = "/broker/instruments/stocks/list"
-	pathStockLocate            = "/broker/instruments/stock-locate/get"
-	pathCorporateActionsDetail = "/broker/instruments/corporate-actions/get"
+	pathStockInstruments       = "/broker/instruments/stocks/profiles/list"
+	pathStockLocate            = "/broker/instruments/stock-locates/get"
+	pathCorporateActionsDetail = "/broker/instruments/stocks/corporate-actions/get"
 )
 
 type StockInstrument struct {

@@ -22,8 +22,6 @@ import (
 )
 
 // Event contract market data endpoints.
-//
-// TODO(event-market-data): Confirm host and paths against US sandbox.
 const (
 	pathEventSnapshot = "/market-data/event-contracts/snapshots/list"
 	pathEventDepth    = "/market-data/event-contracts/depths/list"
@@ -62,8 +60,6 @@ type EventSnapshot struct {
 
 // GetEventSnapshot retrieves real-time market snapshots for one or more event
 // contract symbols.
-//
-// TODO(event-market-data): Confirm host and paths against US sandbox.
 func (c *Client) GetEventSnapshot(ctx context.Context, q EventSnapshotQuery) ([]EventSnapshot, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {
@@ -113,8 +109,6 @@ type EventDepth struct {
 
 // GetEventDepth retrieves the bid/ask order-book depth for a single event
 // contract symbol.
-//
-// TODO(event-market-data): Confirm host and paths against US sandbox.
 func (c *Client) GetEventDepth(ctx context.Context, q EventDepthQuery) (*EventDepth, error) {
 	query := url.Values{}
 	if q.Symbol != "" {
@@ -173,8 +167,6 @@ type EventBar struct {
 
 // GetEventBars retrieves historical bars for one or more event contract
 // symbols.
-//
-// TODO(event-market-data): Confirm host and paths against US sandbox.
 func (c *Client) GetEventBars(ctx context.Context, q EventBarsQuery) ([]EventBar, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {
@@ -231,8 +223,6 @@ type EventTick struct {
 
 // GetEventTick retrieves tick-by-tick trade data for a single event contract
 // symbol.
-//
-// TODO(event-market-data): Confirm host and paths against US sandbox.
 func (c *Client) GetEventTick(ctx context.Context, q EventTickQuery) ([]EventTick, error) {
 	query := url.Values{}
 	if q.Symbol != "" {

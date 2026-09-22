@@ -21,13 +21,11 @@ import (
 )
 
 // Display Solution news endpoints.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 const (
-	pathDSNewsSummary = "/openapi/market-data/news/watchlist-summary"
-	pathDSMarketNews  = "/openapi/market-data/news/market"
-	pathDSSymbolNews  = "/openapi/market-data/news/ticker"
-	pathDSLatestNews  = "/openapi/market-data/news/latest"
+	pathDSNewsSummary = "/market-data/news/summaries/get"
+	pathDSMarketNews  = "/market-data/news/market-news/list"
+	pathDSSymbolNews  = "/market-data/news/symbol-news/list"
+	pathDSLatestNews  = "/market-data/news/latest-news/list"
 )
 
 // DSNewsSummaryItem is a single news item returned by the Display Solution
@@ -44,8 +42,6 @@ type DSNewsSummaryItem struct {
 
 // GetDSNewsSummary retrieves news summaries for the given symbols via the
 // Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSNewsSummary(ctx context.Context, symbols []string) ([]DSNewsSummaryItem, error) {
 	var out []DSNewsSummaryItem
 	if err := c.DisplayService().Do(ctx, http.MethodPost, pathDSNewsSummary, nil, symbols, &out); err != nil {
@@ -56,8 +52,6 @@ func (c *Client) GetDSNewsSummary(ctx context.Context, symbols []string) ([]DSNe
 
 // GetDSMarketNews retrieves market-wide news for the given category via the
 // Display Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSMarketNews(ctx context.Context, category string) ([]DSNewsSummaryItem, error) {
 	query := url.Values{"category": {category}}
 	var out []DSNewsSummaryItem
@@ -69,8 +63,6 @@ func (c *Client) GetDSMarketNews(ctx context.Context, category string) ([]DSNews
 
 // GetDSSymbolNews retrieves news for a specific symbol via the Display
 // Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSSymbolNews(ctx context.Context, symbol string) ([]DSNewsSummaryItem, error) {
 	query := url.Values{"symbol": {symbol}}
 	var out []DSNewsSummaryItem
@@ -82,8 +74,6 @@ func (c *Client) GetDSSymbolNews(ctx context.Context, symbol string) ([]DSNewsSu
 
 // GetDSLatestNews retrieves the latest news headlines via the Display
 // Solution endpoint.
-//
-// TODO(ds): Confirm exact paths against US sandbox.
 func (c *Client) GetDSLatestNews(ctx context.Context) ([]DSNewsSummaryItem, error) {
 	var out []DSNewsSummaryItem
 	if err := c.DisplayService().Get(ctx, pathDSLatestNews, nil, &out); err != nil {

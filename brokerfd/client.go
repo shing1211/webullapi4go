@@ -53,15 +53,5 @@ func (c *Client) post(ctx context.Context, path string, query url.Values, body, 
 	return c.do(ctx, http.MethodPost, path, query, body, out)
 }
 
-// put issues a PUT request to the Broker FD API.
-func (c *Client) put(ctx context.Context, path string, query url.Values, body, out any) error {
-	return c.do(ctx, http.MethodPut, path, query, body, out)
-}
-
-// delete issues a DELETE request to the Broker FD API.
-func (c *Client) delete(ctx context.Context, path string, query url.Values, body, out any) error {
-	return c.do(ctx, http.MethodDelete, path, query, body, out)
-}
-
 // Close is a placeholder for future resource cleanup. Currently returns nil.
 func (c *Client) Close() error { return nil }
