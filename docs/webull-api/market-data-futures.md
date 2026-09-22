@@ -1,5 +1,7 @@
 # Market Data — Futures
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Futures market data and instruments.
 
 [<- Webull API Reference](../webull-api.md)

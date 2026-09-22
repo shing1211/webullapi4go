@@ -1,5 +1,7 @@
 # Events (gRPC)
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Server-streaming gRPC subscriptions, signed with HMAC-SHA256 over the serialized request.
 
 [<- Webull API Reference](../webull-api.md)

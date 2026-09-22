@@ -1,5 +1,7 @@
 # Streaming (MQTT)
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Real-time market data over MQTT. Subscribe/unsubscribe are HTTP calls that register the session; pushes arrive over MQTT. At most 5 concurrent connections per App Key.
 
 [<- Webull API Reference](../webull-api.md)

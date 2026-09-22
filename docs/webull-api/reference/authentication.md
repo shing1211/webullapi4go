@@ -1,5 +1,7 @@
 # Authentication — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Webull uses a dual layer: an HMAC-SHA1 request signature plus an access token. Server-to-server endpoints sign every request; Display Solution (Client-to-Server) uses an OAuth-style client token.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

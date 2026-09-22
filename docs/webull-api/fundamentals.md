@@ -1,5 +1,7 @@
 # Fundamentals and Fund Data
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Company fundamentals, analyst data, financial statements and fund data under the Non-Display Solution.
 
 [<- Webull API Reference](../webull-api.md)

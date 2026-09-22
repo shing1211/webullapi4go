@@ -1,5 +1,7 @@
 # Market Data — News — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > News summaries. The Non-Display endpoint streams Server-Sent Events.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

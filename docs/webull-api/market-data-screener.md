@@ -1,5 +1,7 @@
 # Market Data — Screener
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Ranked lists and sector data. Some rankers require the Display Solution entitlement (marked below).
 
 [<- Webull API Reference](../webull-api.md)

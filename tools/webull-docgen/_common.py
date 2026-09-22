@@ -85,7 +85,7 @@ AREAS["market-data-option"] = (
     ],
 )
 
-AREAS["crypto"] = (
+AREAS["market-data-crypto"] = (
     "Market Data — Crypto",
     "Crypto market data and instruments (US only).",
     [

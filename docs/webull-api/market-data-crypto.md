@@ -1,5 +1,7 @@
 # Market Data — Crypto
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Crypto market data and instruments (US only).
 
 [<- Webull API Reference](../webull-api.md)

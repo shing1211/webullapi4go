@@ -1,5 +1,7 @@
 # Trading API
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Accounts, assets, the order lifecycle, order queries and instruments. Requests require an access token and default to API version `v3`.
 
 [<- Webull API Reference](../webull-api.md)

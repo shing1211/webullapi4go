@@ -1,5 +1,7 @@
 # Market Data — Option — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Option tick, snapshot and historical bars (Non-Display Solution), plus the option contract list used to build an option chain.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

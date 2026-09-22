@@ -1,5 +1,7 @@
 # Market Data — Stock
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 HTTP on-demand stock/ETF market data (Non-Display Solution).
 
 [<- Webull API Reference](../webull-api.md)

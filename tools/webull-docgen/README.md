@@ -19,6 +19,10 @@ python docgen.py all             # all of the above
 
 `docs/webull-api.md` (the reference hub) is hand-written and is not generated.
 
+Every generated file starts with a "Generated file — do not edit" banner; if you
+find yourself editing one, change the template in `docgen.py` (or the manifest in
+`_common.py`) and regenerate instead.
+
 ## Sources
 
 - HK: <https://developer.webull.hk/apis/llms.txt>

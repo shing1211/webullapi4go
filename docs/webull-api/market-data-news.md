@@ -1,5 +1,7 @@
 # Market Data — News
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 News summaries. The Non-Display endpoint streams Server-Sent Events.
 
 [<- Webull API Reference](../webull-api.md)

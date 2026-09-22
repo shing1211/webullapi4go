@@ -35,6 +35,10 @@ import _common as c
 HK_LLMS = "https://developer.webull.hk/apis/llms.txt"
 US_LLMS = "https://developer.webull.com/apis/llms.txt"
 
+BANNER = ("> ⚠️ **Generated file — do not edit.** Regenerate with "
+          "`python tools/webull-docgen/docgen.py <target>` "
+          "(`reference`, `master`, `reconciliation` or `all`).")
+
 
 # --------------------------------------------------------------------------
 # Target: SDK-mapped reference pages
@@ -42,7 +46,7 @@ US_LLMS = "https://developer.webull.com/apis/llms.txt"
 def generate_reference():
     os.makedirs(c.REFERENCE_OUT, exist_ok=True)
     for area, (title, blurb, eps) in c.AREAS.items():
-        parts = ["# %s" % title, "", blurb, "",
+        parts = ["# %s" % title, "", BANNER, "", blurb, "",
                  "[<- Webull API Reference](../webull-api.md)", ""]
         for (label, url, sdk, note) in eps:
             try:
@@ -66,6 +70,8 @@ def generate_master():
 
     guides = [
         "# Webull OpenAPI — Master Guides (verbatim)",
+        "",
+        BANNER,
         "",
         "> Verbatim snapshot of Webull's published OpenAPI **guides**. No "
         "SDK-specific content. Prices/sizes are strings on the wire; see the "
@@ -102,6 +108,8 @@ def generate_master():
     ref = [
         "# Webull OpenAPI — Master Reference (verbatim)",
         "",
+        BANNER,
+        "",
         "> Verbatim snapshot of every Webull-published **endpoint definition** "
         "(OpenAPI schema), split by area. No SDK-specific content. See "
         "[Master Guides](master-guides.md) for authentication, streaming "
@@ -131,6 +139,8 @@ def generate_master():
     for area, (title, blurb, eps) in c.AREAS.items():
         parts = [
             "# %s — Verbatim Reference" % title,
+            "",
+            BANNER,
             "",
             "> %s" % blurb,
             "",
@@ -345,6 +355,8 @@ def generate_reconciliation():
 
     out = [
         "# SDK ↔ Webull API Reconciliation",
+        "",
+        BANNER,
         "",
         "> Reconciles every implemented `webullapi4go` function against the "
         "official Webull OpenAPI. **Official (OpenAPI JSON)** is the canonical "

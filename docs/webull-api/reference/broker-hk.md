@@ -1,5 +1,7 @@
 # Broker API — HK — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Institutional Broker API for Hong Kong. Uses the `DoBroker` transport. The HK sandbox returns `401 ROUTE_NOT_PERMITTED` (missing app scope).
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

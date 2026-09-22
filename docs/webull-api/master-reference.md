@@ -1,5 +1,7 @@
 # Webull OpenAPI — Master Reference (verbatim)
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Verbatim snapshot of every Webull-published **endpoint definition** (OpenAPI schema), split by area. No SDK-specific content. See [Master Guides](master-guides.md) for authentication, streaming protocol, trading rules and error codes.
 
 | | |
@@ -16,7 +18,7 @@
 - [Authentication](reference/authentication.md) — 4 endpoints
 - [Market Data — Stock](reference/market-data-stock.md) — 7 endpoints
 - [Market Data — Option](reference/market-data-option.md) — 4 endpoints
-- [Market Data — Crypto](reference/crypto.md) — 3 endpoints
+- [Market Data — Crypto](reference/market-data-crypto.md) — 3 endpoints
 - [Market Data — Futures](reference/market-data-futures.md) — 8 endpoints
 - [Market Data — News](reference/market-data-news.md) — 1 endpoints
 - [Market Data — Screener](reference/market-data-screener.md) — 6 endpoints

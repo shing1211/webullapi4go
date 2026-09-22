@@ -1,5 +1,7 @@
 # Market Data — Crypto — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Crypto market data and instruments (US only).
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

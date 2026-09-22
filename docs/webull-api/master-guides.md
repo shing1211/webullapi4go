@@ -1,5 +1,7 @@
 # Webull OpenAPI — Master Guides (verbatim)
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Verbatim snapshot of Webull's published OpenAPI **guides**. No SDK-specific content. Prices/sizes are strings on the wire; see the endpoint fields in [Master Reference](master-reference.md).
 
 | | |

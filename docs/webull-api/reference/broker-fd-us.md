@@ -1,5 +1,7 @@
 # Broker API — FD (US) — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > US Broker FD surface. Documented on the US site only.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.

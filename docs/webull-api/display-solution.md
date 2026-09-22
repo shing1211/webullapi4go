@@ -1,5 +1,7 @@
 # Display Solution
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 Hosted Display Solution: a separate entitlement and host with Client-to-Server (Bearer) authentication. The SDK routes these through `display.Service`.
 
 [<- Webull API Reference](../webull-api.md)

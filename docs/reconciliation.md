@@ -1,5 +1,7 @@
 # SDK ↔ Webull API Reconciliation
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Reconciles every implemented `webullapi4go` function against the official Webull OpenAPI. **Official (OpenAPI JSON)** is the canonical path embedded in the docs; **Official (llms.txt summary)** is the path in Webull's machine-readable index (they disagree for some endpoints). **SDK path** is what the code actually calls.
 
 | | |

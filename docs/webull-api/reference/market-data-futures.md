@@ -1,5 +1,7 @@
 # Market Data — Futures — Verbatim Reference
 
+> ⚠️ **Generated file — do not edit.** Regenerate with `python tools/webull-docgen/docgen.py <target>` (`reference`, `master`, `reconciliation` or `all`).
+
 > Futures market data and instruments.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.
