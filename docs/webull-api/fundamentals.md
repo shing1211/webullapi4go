@@ -589,7 +589,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFundInfo` |
 | **Reference** | [fund-brief.md](https://developer.webull.hk/apis/docs/reference/fund-brief.md) |
-| **Note** | Paths unconfirmed; HK sandbox returns 404. |
 
 **Request — parameters**
 
@@ -634,9 +633,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundPerformance` |
 | **Reference** | [fund-performance.md](https://developer.webull.hk/apis/docs/reference/fund-performance.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 
@@ -672,7 +670,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFundNav` |
 | **Reference** | [fund-net-value.md](https://developer.webull.hk/apis/docs/reference/fund-net-value.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -703,9 +700,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundHoldings` |
 | **Reference** | [fund-holdings.md](https://developer.webull.hk/apis/docs/reference/fund-holdings.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 
@@ -739,7 +735,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFundDividends` |
 | **Reference** | [fund-dividends.md](https://developer.webull.hk/apis/docs/reference/fund-dividends.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -776,9 +771,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundRating` |
 | **Reference** | [fund-rating.md](https://developer.webull.hk/apis/docs/reference/fund-rating.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 
@@ -808,9 +802,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundSplits` |
 | **Reference** | [fund-splits.md](https://developer.webull.hk/apis/docs/reference/fund-splits.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 
@@ -841,9 +834,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundFiles` |
 | **Reference** | [fund-files.md](https://developer.webull.hk/apis/docs/reference/fund-files.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 
@@ -873,9 +865,8 @@ Array of objects:
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundAllocation` |
 | **Reference** | [fund-allocation.md](https://developer.webull.hk/apis/docs/reference/fund-allocation.md) |
-| **Note** | Documented but no SDK method. |
 
 **Request — parameters**
 

@@ -91,7 +91,7 @@ Webull uses a dual layer: an HMAC-SHA1 request signature plus an access token. S
 
 | | |
 |---|---|
-| **SDK** | `not exposed` |
+| **SDK** | `display.Service.RefreshClientToken` |
 | **Reference** | [refresh-client-token.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/refresh-client-token.md) |
 | **Note** | The SDK re-creates the client token instead of refreshing it. |
 

@@ -1,6 +1,6 @@
 # Display Solution — Verbatim Reference
 
-> Hosted Display Solution: a separate entitlement and host with Client-to-Server (Bearer) authentication. The SDK routes these through `display.Service`. Several SDK path literals are marked `TODO(ds)` and are shown with a warning.
+> Hosted Display Solution: a separate entitlement and host with Client-to-Server (Bearer) authentication. The SDK routes these through `display.Service`.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.
 

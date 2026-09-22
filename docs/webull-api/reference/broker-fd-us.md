@@ -1,6 +1,6 @@
 # Broker API — FD (US) — Verbatim Reference
 
-> US Broker FD surface. Documented on the US site only and marked **provisional** in this SDK: all paths require live-probe confirmation and the HK sandbox returns 404.
+> US Broker FD surface. Documented on the US site only.
 
 > Verbatim snapshot of Webull's published OpenAPI definitions. No SDK-specific content.
 

@@ -1,6 +1,6 @@
 # Broker API — FD (US)
 
-US Broker FD surface. Documented on the US site only and marked **provisional** in this SDK: all paths require live-probe confirmation and the HK sandbox returns 404.
+US Broker FD surface. Documented on the US site only.
 
 [<- Webull API Reference](../webull-api.md)
 
@@ -14,7 +14,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.ListFDAccounts` |
 | **Reference** | [list-accounts.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-accounts.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -50,7 +49,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.GetFDAccountDetail` |
 | **Reference** | [get-account-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-account-detail.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -89,7 +87,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.CreateFDAccount` |
 | **Reference** | [create-account-apply.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-account-apply.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -133,7 +130,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.UpdateFDAccount` |
 | **Reference** | [update-account-apply.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/update-account-apply.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -176,7 +172,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.CloseFDAccount` |
 | **Reference** | [close-account.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/close-account.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -205,7 +200,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [get-account-application-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-account-application-detail.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -439,7 +433,6 @@ US Broker FD surface. Documented on the US site only and marked **provisional** 
 |---|---|
 | **SDK** | `brokerfd.ListAccountForms` |
 | **Reference** | [get-form-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-list.md) |
-| **Note** | Provisional. |
 
 **Response 200**
 
@@ -457,7 +450,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [get-form-version-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-version-list.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -481,7 +473,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [get-form-content.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-content.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -518,7 +509,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `brokerfd.UploadDocument` |
 | **Reference** | [document-upload.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/document-upload.md) |
-| **Note** | Provisional. |
 
 **Response 200**
 
@@ -538,7 +528,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `brokerfd.DownloadDocument` |
 | **Reference** | [document-download.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/document-download.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -567,7 +556,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `brokerfd.GetAccountsSummary / GetFDAssetsSummary` |
 | **Reference** | [summary.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/summary.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -642,7 +630,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `brokerfd.GetFDAssetsDetail` |
 | **Reference** | [account-balance.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/account-balance.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -696,7 +683,6 @@ Array of `string`.
 |---|---|
 | **SDK** | `brokerfd.GetFDPositions / GetPositions` |
 | **Reference** | [account-position.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/account-position.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -732,7 +718,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDActivities` |
 | **Reference** | [broker-cash-activity-by-type.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-cash-activity-by-type.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -778,7 +763,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.AddFDBankAccount` |
 | **Reference** | [create-bank-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-bank-relationship.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -847,7 +831,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.RemoveFDBankAccount` |
 | **Reference** | [delete-bank-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/delete-bank-relationship.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -875,7 +858,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.ListFDBankAccounts` |
 | **Reference** | [list-linked-bank-accounts.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-linked-bank-accounts.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -925,7 +907,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.AddFDAchAccount` |
 | **Reference** | [create-ach-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-ach-relationship.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -963,7 +944,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.RemoveFDAchAccount` |
 | **Reference** | [delete-ach-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/delete-ach-relationship.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -991,7 +971,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.ListFDAchAccounts` |
 | **Reference** | [list-ach-relationships.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-ach-relationships.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1027,7 +1006,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.InitiateFDTransfer` |
 | **Reference** | [create-transfer.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-transfer.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1073,7 +1051,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.ListFDTransfers` |
 | **Reference** | [transfer-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/transfer-list.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1125,7 +1102,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDTransferDetail` |
 | **Reference** | [transfer-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/transfer-detail.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1165,7 +1141,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [cancel-transfer.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/cancel-transfer.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1194,7 +1169,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.CreateFDInstantFunding` |
 | **Reference** | [broker-funding-instant-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-instant-create.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1233,7 +1207,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDInstantFundingDetail` |
 | **Reference** | [broker-funding-instant-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-instant-query.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1269,7 +1242,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-funding-fee-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-fee-create.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1310,7 +1282,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDTransferFees` |
 | **Reference** | [broker-funding-fee-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-fee-query.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1347,7 +1318,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-funding-credit-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-credit-create.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1388,7 +1358,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDCreditInfo` |
 | **Reference** | [broker-funding-credit-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-credit-query.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1425,7 +1394,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDStockInstruments` |
 | **Reference** | [list-stock-instruments.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-stock-instruments.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1481,7 +1449,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-event-categories-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-categories-list.md) |
-| **Note** | Provisional. |
 
 **Response 200**
 
@@ -1505,7 +1472,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-event-series-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-series-list.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1544,7 +1510,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-event-events-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-events-list.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1581,7 +1546,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDECInstruments` |
 | **Reference** | [broker-event-market-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-market-list.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1643,7 +1607,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDCorporateActions` |
 | **Reference** | [broker-corporate-actions-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-corporate-actions-detail.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1722,7 +1685,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.PreviewFDOrder` |
 | **Reference** | [common-order-preview.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-preview.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1773,7 +1735,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.PlaceFDOrder` |
 | **Reference** | [common-order-place.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-place.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1825,7 +1786,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.ReplaceFDOrder` |
 | **Reference** | [common-order-replace.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-replace.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1865,7 +1825,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.CancelFDOrder` |
 | **Reference** | [common-order-cancel.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-cancel.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -1893,7 +1852,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDOpenOrders` |
 | **Reference** | [order-open.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-open.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -1976,7 +1934,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDOrderDetail` |
 | **Reference** | [order-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-detail.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2052,7 +2009,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDOrderHistory` |
 | **Reference** | [order-history.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-history.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2137,7 +2093,6 @@ Array of objects:
 |---|---|
 | **SDK** | `—` |
 | **Reference** | [broker-journal-cash-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-journal-cash-create.md) |
-| **Note** | Provisional. |
 
 **Request body**
 
@@ -2176,7 +2131,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDCashJournalDetail` |
 | **Reference** | [broker-journal-cash-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-journal-cash-query.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2212,7 +2166,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDEnums` |
 | **Reference** | [list-enums.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-enums.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2243,7 +2196,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetFDTradeCalendar` |
 | **Reference** | [list-trade-calendar.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-trade-calendar.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2277,7 +2229,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.ListAgreements` |
 | **Reference** | [broker-list-agreements-by-type.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-list-agreements-by-type.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 
@@ -2308,7 +2259,6 @@ Array of objects:
 |---|---|
 | **SDK** | `brokerfd.GetAgreementDetail` |
 | **Reference** | [broker-get-agreement-details.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-get-agreement-details.md) |
-| **Note** | Provisional. |
 
 **Request — parameters**
 

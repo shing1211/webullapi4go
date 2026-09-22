@@ -67,6 +67,7 @@ nav:
       - Authentication: webull-api/authentication.md
       - Market Data — Stock: webull-api/market-data-stock.md
       - Market Data — Option: webull-api/market-data-option.md
+      - Market Data — Crypto: webull-api/crypto.md
       - Market Data — Futures: webull-api/market-data-futures.md
       - Market Data — News: webull-api/market-data-news.md
       - Market Data — Screener: webull-api/market-data-screener.md
@@ -79,12 +80,14 @@ nav:
       - Display Solution: webull-api/display-solution.md
       - Streaming (MQTT): webull-api/streaming.md
       - Events (gRPC): webull-api/events.md
+      - Connect API (OAuth): webull-api/connect-api.md
       - Master Data — Guides: webull-api/master-guides.md
       - Master Data — Reference:
           - Overview: webull-api/master-reference.md
           - Authentication: webull-api/reference/authentication.md
           - Market Data — Stock: webull-api/reference/market-data-stock.md
           - Market Data — Option: webull-api/reference/market-data-option.md
+          - Market Data — Crypto: webull-api/reference/crypto.md
           - Market Data — Futures: webull-api/reference/market-data-futures.md
           - Market Data — News: webull-api/reference/market-data-news.md
           - Market Data — Screener: webull-api/reference/market-data-screener.md
@@ -97,6 +100,7 @@ nav:
           - Display Solution: webull-api/reference/display-solution.md
           - Streaming (MQTT): webull-api/reference/streaming.md
           - Events (gRPC): webull-api/reference/events.md
+          - Connect API (OAuth): webull-api/reference/connect-api.md
       - SDK ↔ API Reconciliation: reconciliation.md
   - Troubleshooting: troubleshooting.md
   - Architecture Decisions:

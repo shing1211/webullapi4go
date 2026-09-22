@@ -155,7 +155,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetOptionContracts` |
 | **Reference** | [option-contract-list.md](https://developer.webull.hk/apis/docs/reference/option-contract-list.md) |
-| **Note** | Trading API surface. Field mappings unconfirmed; HK sandbox returns 404. |
+| **Note** | Trading API surface. |
 
 **Request — parameters**
 

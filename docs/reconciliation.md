@@ -6,13 +6,13 @@
 |---|---|
 | **Snapshot** | 2026-09-22 |
 | **Sources** | [HK llms.txt](https://developer.webull.hk/apis/llms.txt), [US llms.txt](https://developer.webull.com/apis/llms.txt) |
-| **Implemented endpoints** | 193 |
-| **Documented-only endpoints (gaps)** | 16 |
-| ✅ Path matches OpenAPI JSON | 90 |
+| **Implemented endpoints** | 209 |
+| **Documented-only endpoints (gaps)** | 0 |
+| ✅ Path matches OpenAPI JSON | 180 |
 | 🟡 Matches docs summary only | 4 |
-| ⚠️ Path differs from both | 69 |
-| ❓ Unresolved | 23 |
-| ℹ️ Intentionally not implemented | 7 |
+| ⚠️ Path differs from both | 0 |
+| ❓ Unresolved | 25 |
+| ℹ️ Intentionally not implemented | 0 |
 
 ## Implemented endpoints
 
@@ -60,10 +60,11 @@ Reference: [create-client-token.md](https://developer.webull.hk/apis/docs/refere
 
 | | |
 |---|---|
-| **SDK** | `not exposed` |
+| **SDK** | `display.Service.RefreshClientToken` |
 | **Official (OpenAPI JSON)** | `POST /auth/client-tokens/refresh` |
 | **Official (llms.txt summary)** | `/openapi/auth/client/token/refresh` |
-| **Status** | ℹ️ intentionally not implemented |
+| **SDK path** | `/auth/client-tokens/refresh` (displayTokenRefreshPath) |
+| **Status** | ✅ match |
 | **Note** | The SDK re-creates the client token instead of refreshing it. |
 
 Reference: [refresh-client-token.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/refresh-client-token.md)
@@ -199,9 +200,45 @@ Reference: [option-historical-bars.md](https://developer.webull.hk/apis/docs/ref
 | **Official (OpenAPI JSON)** | `GET /trading/instruments/options/contracts/list` |
 | **SDK path** | `/trading/instruments/options/contracts/list` (pathOptionContracts) |
 | **Status** | ✅ match |
-| **Note** | Trading API surface. Field mappings unconfirmed; HK sandbox returns 404. |
+| **Note** | Trading API surface. |
 
 Reference: [option-contract-list.md](https://developer.webull.hk/apis/docs/reference/option-contract-list.md)
+
+## Market Data — Crypto
+
+### Crypto Snapshot
+
+| | |
+|---|---|
+| **SDK** | `data.GetCryptoSnapshot` |
+| **Official (OpenAPI JSON)** | `GET /market-data/crypto/snapshots/list` |
+| **SDK path** | `/market-data/crypto/snapshots/list` (pathCryptoSnapshots) |
+| **Status** | ✅ match |
+
+Reference: [crypto-snapshot.md](https://developer.webull.com/apis/docs/reference/crypto-snapshot.md)
+
+### Crypto Bars
+
+| | |
+|---|---|
+| **SDK** | `data.GetCryptoBars` |
+| **Official (OpenAPI JSON)** | `GET /market-data/crypto/bars/list` |
+| **SDK path** | `/market-data/crypto/bars/list` (pathCryptoBars) |
+| **Status** | ✅ match |
+
+Reference: [crypto-bars.md](https://developer.webull.com/apis/docs/reference/crypto-bars.md)
+
+### Crypto Instruments
+
+| | |
+|---|---|
+| **SDK** | `data.GetCryptoInstruments` |
+| **Official (OpenAPI JSON)** | `GET /trading/instruments/crypto/profiles/list` |
+| **SDK path** | `/trading/instruments/crypto/profiles/list` (pathCryptoInstruments) |
+| **Status** | ✅ match |
+| **Note** | Trading API surface. |
+
+Reference: [crypto-instrument-list.md](https://developer.webull.com/apis/docs/reference/crypto-instrument-list.md)
 
 ## Market Data — Futures
 
@@ -213,7 +250,6 @@ Reference: [option-contract-list.md](https://developer.webull.hk/apis/docs/refer
 | **Official (OpenAPI JSON)** | `GET /market-data/futures/ticks/list` |
 | **SDK path** | `/market-data/futures/ticks/list` (pathFuturesTick) |
 | **Status** | ✅ match |
-| **Note** | Paths unconfirmed against live API. |
 
 Reference: [futures-tick.md](https://developer.webull.hk/apis/docs/reference/futures-tick.md)
 
@@ -225,7 +261,6 @@ Reference: [futures-tick.md](https://developer.webull.hk/apis/docs/reference/fut
 | **Official (OpenAPI JSON)** | `GET /market-data/futures/snapshots/list` |
 | **SDK path** | `/market-data/futures/snapshots/list` (pathFuturesSnapshot) |
 | **Status** | ✅ match |
-| **Note** | Paths unconfirmed. |
 
 Reference: [futures-snapshot.md](https://developer.webull.hk/apis/docs/reference/futures-snapshot.md)
 
@@ -237,7 +272,6 @@ Reference: [futures-snapshot.md](https://developer.webull.hk/apis/docs/reference
 | **Official (OpenAPI JSON)** | `GET /market-data/futures/footprints/list` |
 | **SDK path** | `/market-data/futures/footprints/list` (pathFuturesFootprint) |
 | **Status** | ✅ match |
-| **Note** | Paths unconfirmed. |
 
 Reference: [futures-footprint.md](https://developer.webull.hk/apis/docs/reference/futures-footprint.md)
 
@@ -249,7 +283,6 @@ Reference: [futures-footprint.md](https://developer.webull.hk/apis/docs/referenc
 | **Official (OpenAPI JSON)** | `GET /market-data/futures/depths/list` |
 | **SDK path** | `/market-data/futures/depths/list` (pathFuturesDepth) |
 | **Status** | ✅ match |
-| **Note** | Paths unconfirmed. |
 
 Reference: [futures-depth-of-book.md](https://developer.webull.hk/apis/docs/reference/futures-depth-of-book.md)
 
@@ -261,7 +294,6 @@ Reference: [futures-depth-of-book.md](https://developer.webull.hk/apis/docs/refe
 | **Official (OpenAPI JSON)** | `GET /market-data/futures/bars/list` |
 | **SDK path** | `/market-data/futures/bars/list` (pathFuturesBars) |
 | **Status** | ✅ match |
-| **Note** | Paths unconfirmed. |
 
 Reference: [futures-historical-bars.md](https://developer.webull.hk/apis/docs/reference/futures-historical-bars.md)
 
@@ -273,7 +305,6 @@ Reference: [futures-historical-bars.md](https://developer.webull.hk/apis/docs/re
 | **Official (OpenAPI JSON)** | `GET /trading/instruments/futures/contracts/list` |
 | **SDK path** | `/trading/instruments/futures/contracts/list` (pathFuturesInstruments) |
 | **Status** | ✅ match |
-| **Note** | Product-codes path confirmed against HK sandbox. |
 
 Reference: [futures-instrument-list.md](https://developer.webull.hk/apis/docs/reference/futures-instrument-list.md)
 
@@ -285,7 +316,6 @@ Reference: [futures-instrument-list.md](https://developer.webull.hk/apis/docs/re
 | **Official (OpenAPI JSON)** | `GET /trading/instruments/futures/product-codes/list` |
 | **SDK path** | `/trading/instruments/futures/product-codes/list` (pathFuturesProductCodes) |
 | **Status** | ✅ match |
-| **Note** | Confirmed against HK sandbox. |
 
 Reference: [futures-products.md](https://developer.webull.hk/apis/docs/reference/futures-products.md)
 
@@ -297,7 +327,6 @@ Reference: [futures-products.md](https://developer.webull.hk/apis/docs/reference
 | **Official (OpenAPI JSON)** | `GET /trading/instruments/futures/product-classes/list` |
 | **SDK path** | `/trading/instruments/futures/product-classes/list` (pathFuturesProductClasses) |
 | **Status** | ✅ match |
-| **Note** | Unconfirmed. |
 
 Reference: [futures-products-class.md](https://developer.webull.hk/apis/docs/reference/futures-products-class.md)
 
@@ -645,9 +674,8 @@ Reference: [forecast-eps.md](https://developer.webull.hk/apis/docs/reference/for
 |---|---|
 | **SDK** | `data.GetFundInfo` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-brief/get` |
-| **SDK path** | `/market-data/fund/{symbol}/info` (pathFundInfo) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Paths unconfirmed; HK sandbox returns 404. |
+| **SDK path** | `/market-data/fundamentals/fund-brief/get` (pathFundInfo) |
+| **Status** | ✅ match |
 
 Reference: [fund-brief.md](https://developer.webull.hk/apis/docs/reference/fund-brief.md)
 
@@ -655,10 +683,10 @@ Reference: [fund-brief.md](https://developer.webull.hk/apis/docs/reference/fund-
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundPerformance` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-performances/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-performances/get` (pathFundPerformance) |
+| **Status** | ✅ match |
 
 Reference: [fund-performance.md](https://developer.webull.hk/apis/docs/reference/fund-performance.md)
 
@@ -668,9 +696,8 @@ Reference: [fund-performance.md](https://developer.webull.hk/apis/docs/reference
 |---|---|
 | **SDK** | `data.GetFundNav` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-net-values/get` |
-| **SDK path** | `/market-data/fund/{symbol}/nav` (pathFundNav) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Paths unconfirmed. |
+| **SDK path** | `/market-data/fundamentals/fund-net-values/get` (pathFundNav) |
+| **Status** | ✅ match |
 
 Reference: [fund-net-value.md](https://developer.webull.hk/apis/docs/reference/fund-net-value.md)
 
@@ -678,10 +705,10 @@ Reference: [fund-net-value.md](https://developer.webull.hk/apis/docs/reference/f
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundHoldings` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-holdings/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-holdings/get` (pathFundHoldings) |
+| **Status** | ✅ match |
 
 Reference: [fund-holdings.md](https://developer.webull.hk/apis/docs/reference/fund-holdings.md)
 
@@ -691,9 +718,8 @@ Reference: [fund-holdings.md](https://developer.webull.hk/apis/docs/reference/fu
 |---|---|
 | **SDK** | `data.GetFundDividends` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-dividends/get` |
-| **SDK path** | `/market-data/fund/{symbol}/dividends` (pathFundDividends) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Paths unconfirmed. |
+| **SDK path** | `/market-data/fundamentals/fund-dividends/get` (pathFundDividends) |
+| **Status** | ✅ match |
 
 Reference: [fund-dividends.md](https://developer.webull.hk/apis/docs/reference/fund-dividends.md)
 
@@ -701,10 +727,10 @@ Reference: [fund-dividends.md](https://developer.webull.hk/apis/docs/reference/f
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundRating` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-ratings/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-ratings/get` (pathFundRating) |
+| **Status** | ✅ match |
 
 Reference: [fund-rating.md](https://developer.webull.hk/apis/docs/reference/fund-rating.md)
 
@@ -712,10 +738,10 @@ Reference: [fund-rating.md](https://developer.webull.hk/apis/docs/reference/fund
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundSplits` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-splits/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-splits/get` (pathFundSplits) |
+| **Status** | ✅ match |
 
 Reference: [fund-splits.md](https://developer.webull.hk/apis/docs/reference/fund-splits.md)
 
@@ -723,10 +749,10 @@ Reference: [fund-splits.md](https://developer.webull.hk/apis/docs/reference/fund
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundFiles` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-files/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-files/get` (pathFundFiles) |
+| **Status** | ✅ match |
 
 Reference: [fund-files.md](https://developer.webull.hk/apis/docs/reference/fund-files.md)
 
@@ -734,10 +760,10 @@ Reference: [fund-files.md](https://developer.webull.hk/apis/docs/reference/fund-
 
 | | |
 |---|---|
-| **SDK** | `not implemented` |
+| **SDK** | `data.GetFundAllocation` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/fund-allocations/get` |
-| **Status** | ℹ️ intentionally not implemented |
-| **Note** | Documented but no SDK method. |
+| **SDK path** | `/market-data/fundamentals/fund-allocations/get` (pathFundAllocation) |
+| **Status** | ✅ match |
 
 Reference: [fund-allocation.md](https://developer.webull.hk/apis/docs/reference/fund-allocation.md)
 
@@ -796,7 +822,6 @@ Reference: [event-market-list.md](https://developer.webull.com/apis/docs/referen
 | **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/snapshots/list` |
 | **SDK path** | `/market-data/event-contracts/snapshots/list` (pathEventSnapshot) |
 | **Status** | ✅ match |
-| **Note** | Host/paths unconfirmed. |
 
 Reference: [event-snapshot.md](https://developer.webull.com/apis/docs/reference/event-snapshot.md)
 
@@ -808,7 +833,6 @@ Reference: [event-snapshot.md](https://developer.webull.com/apis/docs/reference/
 | **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/depths/list` |
 | **SDK path** | `/market-data/event-contracts/depths/list` (pathEventDepth) |
 | **Status** | ✅ match |
-| **Note** | Host/paths unconfirmed. |
 
 Reference: [event-depth.md](https://developer.webull.com/apis/docs/reference/event-depth.md)
 
@@ -820,7 +844,6 @@ Reference: [event-depth.md](https://developer.webull.com/apis/docs/reference/eve
 | **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/bars/list` |
 | **SDK path** | `/market-data/event-contracts/bars/list` (pathEventBars) |
 | **Status** | ✅ match |
-| **Note** | Host/paths unconfirmed. |
 
 Reference: [event-bars.md](https://developer.webull.com/apis/docs/reference/event-bars.md)
 
@@ -832,9 +855,129 @@ Reference: [event-bars.md](https://developer.webull.com/apis/docs/reference/even
 | **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/ticks/list` |
 | **SDK path** | `/market-data/event-contracts/ticks/list` (pathEventTick) |
 | **Status** | ✅ match |
-| **Note** | Host/paths unconfirmed. |
 
 Reference: [event-tick.md](https://developer.webull.com/apis/docs/reference/event-tick.md)
+
+### Event Contract Tags
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventContractTags` |
+| **Official (OpenAPI JSON)** | `GET /market-data/instruments/event-contracts/categories/tags/list` |
+| **SDK path** | `/market-data/instruments/event-contracts/categories/tags/list` (pathEventTags) |
+| **Status** | ✅ match |
+
+Reference: [all-tags-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/all-tags-using-get.md)
+
+### Event Contract Events List
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventContractEventsList` |
+| **Official (OpenAPI JSON)** | `GET /market-data/instruments/event-contracts/events/list` |
+| **SDK path** | `/market-data/instruments/event-contracts/events/list` (pathEventEventsList) |
+| **Status** | ✅ match |
+
+Reference: [event-list-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-list-using-get.md)
+
+### Event Contract Milestones
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventContractMilestones` |
+| **Official (OpenAPI JSON)** | `GET /market-data/instruments/event-contracts/milestones/list` |
+| **SDK path** | `/market-data/instruments/event-contracts/milestones/list` (pathEventMilestones) |
+| **Status** | ✅ match |
+
+Reference: [milestones-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/milestones-using-get.md)
+
+### Event Contract Series List
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventContractSeriesList` |
+| **Official (OpenAPI JSON)** | `GET /market-data/instruments/event-contracts/series/list` |
+| **SDK path** | `/market-data/instruments/event-contracts/series/list` (pathEventSeriesList) |
+| **Status** | ✅ match |
+
+Reference: [series-list-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/series-list-using-get.md)
+
+### Event Contract Sports Filters
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventContractSportsFilters` |
+| **Official (OpenAPI JSON)** | `GET /market-data/instruments/event-contracts/sports-filters/list` |
+| **SDK path** | `/market-data/instruments/event-contracts/sports-filters/list` (pathEventSportsFilters) |
+| **Status** | ✅ match |
+
+Reference: [sports-filter-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/sports-filter-using-get.md)
+
+### Event Game Stats
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventGameStats` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/game-stats/get` |
+| **SDK path** | `/market-data/event-contracts/game-stats/get` (pathEventGameStats) |
+| **Status** | ✅ match |
+
+Reference: [event-game-stats-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-game-stats-using-get.md)
+
+### Event Live Data
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventLiveData` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/live-data/get` |
+| **SDK path** | `/market-data/event-contracts/live-data/get` (pathEventLiveData) |
+| **Status** | ✅ match |
+
+Reference: [event-live-data-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-live-data-using-get.md)
+
+### Event Market Bars
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventMarketBars` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/markets/bars/list` |
+| **SDK path** | `/market-data/event-contracts/markets/bars/list` (pathEventMarketBars) |
+| **Status** | ✅ match |
+
+Reference: [event-market-bars-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-using-get.md)
+
+### Event Market Bars By Event
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventMarketBarsByEvent` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/markets/bars/list-by-event` |
+| **SDK path** | `/market-data/event-contracts/markets/bars/list-by-event` (pathEventMarketBarsEvt) |
+| **Status** | ✅ match |
+
+Reference: [event-market-bars-by-event-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-by-event-using-get.md)
+
+### Event Market Depth
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventMarketDepth` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/markets/depths/list` |
+| **SDK path** | `/market-data/event-contracts/markets/depths/list` (pathEventMarketDepths) |
+| **Status** | ✅ match |
+
+Reference: [event-market-depth-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-depth-using-get.md)
+
+### Event Market Snapshot
+
+| | |
+|---|---|
+| **SDK** | `data.GetEventMarketSnapshot` |
+| **Official (OpenAPI JSON)** | `GET /market-data/event-contracts/markets/snapshots/list` |
+| **SDK path** | `/market-data/event-contracts/markets/snapshots/list` (pathEventMarketSnapshot) |
+| **Status** | ✅ match |
+
+Reference: [event-market-snapshot-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-snapshot-using-get.md)
 
 ## Trading API
 
@@ -1047,8 +1190,8 @@ Reference: [broker-account-list.md](https://developer.webull.hk/apis/docs/refere
 |---|---|
 | **SDK** | `broker.GetStockInstruments` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/stocks/profiles/list` |
-| **SDK path** | `/broker/instruments/stocks/list` (pathStockInstruments) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/instruments/stocks/profiles/list` (pathStockInstruments) |
+| **Status** | ✅ match |
 
 Reference: [broker-instrument-list.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-instrument-list.md)
 
@@ -1058,8 +1201,8 @@ Reference: [broker-instrument-list.md](https://developer.webull.hk/apis/docs/ref
 |---|---|
 | **SDK** | `broker.GetStockLocate` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/stock-locates/get` |
-| **SDK path** | `/broker/instruments/stock-locate/get` (pathStockLocate) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/instruments/stock-locates/get` (pathStockLocate) |
+| **Status** | ✅ match |
 
 Reference: [broker-stock-locate-detail.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-stock-locate-detail.md)
 
@@ -1069,8 +1212,8 @@ Reference: [broker-stock-locate-detail.md](https://developer.webull.hk/apis/docs
 |---|---|
 | **SDK** | `broker.GetCorporateActionsDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/stocks/corporate-actions/get` |
-| **SDK path** | `/broker/instruments/corporate-actions/get` (pathCorporateActionsDetail) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/instruments/stocks/corporate-actions/get` (pathCorporateActionsDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-corporate-actions-detail.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-corporate-actions-detail.md)
 
@@ -1080,8 +1223,8 @@ Reference: [broker-corporate-actions-detail.md](https://developer.webull.hk/apis
 |---|---|
 | **SDK** | `broker.GetCashActivities` |
 | **Official (OpenAPI JSON)** | `GET /broker/activities/cash-activities/list` |
-| **SDK path** | `/broker/activities/list` (pathActivities) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/activities/cash-activities/list` (pathActivities) |
+| **Status** | ✅ match |
 
 Reference: [broker-activity-by-type.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-activity-by-type.md)
 
@@ -1168,8 +1311,8 @@ Reference: [broker-order-detail.md](https://developer.webull.hk/apis/docs/refere
 |---|---|
 | **SDK** | `broker.GetOrderHistory` |
 | **Official (OpenAPI JSON)** | `GET /broker/orders/historical-orders/list` |
-| **SDK path** | `/broker/orders/history` (pathOrderHistory) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/orders/historical-orders/list` (pathOrderHistory) |
+| **Status** | ✅ match |
 
 Reference: [broker-order-history.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-order-history.md)
 
@@ -1179,8 +1322,8 @@ Reference: [broker-order-history.md](https://developer.webull.hk/apis/docs/refer
 |---|---|
 | **SDK** | `broker.GetOpenOrders` |
 | **Official (OpenAPI JSON)** | `GET /broker/orders/open-orders/list` |
-| **SDK path** | `/broker/orders/open` (pathOpenOrders) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/orders/open-orders/list` (pathOpenOrders) |
+| **Status** | ✅ match |
 
 Reference: [broker-order-open.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-order-open.md)
 
@@ -1223,8 +1366,8 @@ Reference: [broker-funding-query-fx.md](https://developer.webull.hk/apis/docs/re
 |---|---|
 | **SDK** | `broker.CreateInstantExchange` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/instant-exchanges/create` |
-| **SDK path** | `/broker/funding/instant-fx/create` (pathInstantExchange) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/funding/instant-exchanges/create` (pathInstantExchange) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-create-instant-fx.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-funding-create-instant-fx.md)
 
@@ -1234,8 +1377,8 @@ Reference: [broker-funding-create-instant-fx.md](https://developer.webull.hk/api
 |---|---|
 | **SDK** | `broker.GetInstantExchangeDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/instant-exchanges/get` |
-| **SDK path** | `/broker/funding/instant-fx/get` (pathInstantExchangeDetail) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/funding/instant-exchanges/get` (pathInstantExchangeDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-query-instant-fx.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-funding-query-instant-fx.md)
 
@@ -1245,8 +1388,8 @@ Reference: [broker-funding-query-instant-fx.md](https://developer.webull.hk/apis
 |---|---|
 | **SDK** | `broker.CreateInstantFunding` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/instant-funding/create` |
-| **SDK path** | `/broker/funding/instant/create` (pathInstantFunding) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/funding/instant-funding/create` (pathInstantFunding) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-instant-create.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-funding-instant-create.md)
 
@@ -1256,8 +1399,8 @@ Reference: [broker-funding-instant-create.md](https://developer.webull.hk/apis/d
 |---|---|
 | **SDK** | `broker.GetInstantFundingDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/instant-funding/get` |
-| **SDK path** | `/broker/funding/instant/get` (pathInstantFundingDetail) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/funding/instant-funding/get` (pathInstantFundingDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-instant-query.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-funding-instant-query.md)
 
@@ -1311,8 +1454,8 @@ Reference: [broker-journal-position-query.md](https://developer.webull.hk/apis/d
 |---|---|
 | **SDK** | `broker.GetTradeCalendar` |
 | **Official (OpenAPI JSON)** | `GET /broker/master-data/trading-calendars/list` |
-| **SDK path** | `/broker/master-data/trade-calendar/query` (pathTradeCalendar) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/broker/master-data/trading-calendars/list` (pathTradeCalendar) |
+| **Status** | ✅ match |
 
 Reference: [broker-trade-calendar.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-trade-calendar.md)
 
@@ -1401,9 +1544,8 @@ Reference: [broker-master-data-events.md](https://developer.webull.hk/apis/docs/
 |---|---|
 | **SDK** | `brokerfd.ListFDAccounts` |
 | **Official (OpenAPI JSON)** | `GET /broker/accounts/list` |
-| **SDK path** | `/broker-fd/account/list` (pathFDAccountList) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/accounts/list` (pathFDAccountList) |
+| **Status** | ✅ match |
 
 Reference: [list-accounts.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-accounts.md)
 
@@ -1413,9 +1555,8 @@ Reference: [list-accounts.md](https://developer.webull.com/apis/docs/reference/b
 |---|---|
 | **SDK** | `brokerfd.GetFDAccountDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/accounts/get` |
-| **SDK path** | `/broker-fd/account/detail` (pathFDAccountDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/accounts/get` (pathFDAccountDetail) |
+| **Status** | ✅ match |
 
 Reference: [get-account-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-account-detail.md)
 
@@ -1425,9 +1566,8 @@ Reference: [get-account-detail.md](https://developer.webull.com/apis/docs/refere
 |---|---|
 | **SDK** | `brokerfd.CreateFDAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/accounts/create` |
-| **SDK path** | `/broker-fd/account/create` (pathFDAccountCreate) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/accounts/create` (pathFDAccountCreate) |
+| **Status** | ✅ match |
 
 Reference: [create-account-apply.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-account-apply.md)
 
@@ -1437,9 +1577,8 @@ Reference: [create-account-apply.md](https://developer.webull.com/apis/docs/refe
 |---|---|
 | **SDK** | `brokerfd.UpdateFDAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/accounts/update` |
-| **SDK path** | `/broker-fd/account/update` (pathFDAccountUpdate) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/accounts/update` (pathFDAccountUpdate) |
+| **Status** | ✅ match |
 
 Reference: [update-account-apply.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/update-account-apply.md)
 
@@ -1449,9 +1588,8 @@ Reference: [update-account-apply.md](https://developer.webull.com/apis/docs/refe
 |---|---|
 | **SDK** | `brokerfd.CloseFDAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/accounts/close` |
-| **SDK path** | `/broker-fd/account/close` (pathFDAccountClose) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/accounts/close` (pathFDAccountClose) |
+| **Status** | ✅ match |
 
 Reference: [close-account.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/close-account.md)
 
@@ -1462,7 +1600,6 @@ Reference: [close-account.md](https://developer.webull.com/apis/docs/reference/b
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/accounts/applications/get` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [get-account-application-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-account-application-detail.md)
 
@@ -1472,9 +1609,8 @@ Reference: [get-account-application-detail.md](https://developer.webull.com/apis
 |---|---|
 | **SDK** | `brokerfd.ListAccountForms` |
 | **Official (OpenAPI JSON)** | `GET /broker/forms/list` |
-| **SDK path** | `/broker-fd/account/forms` (pathFDAccountForms) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/forms/list` (pathFDAccountForms) |
+| **Status** | ✅ match |
 
 Reference: [get-form-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-list.md)
 
@@ -1485,7 +1621,6 @@ Reference: [get-form-list.md](https://developer.webull.com/apis/docs/reference/b
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/forms/versions/list` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [get-form-version-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-version-list.md)
 
@@ -1496,7 +1631,6 @@ Reference: [get-form-version-list.md](https://developer.webull.com/apis/docs/ref
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/forms/get` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [get-form-content.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-content.md)
 
@@ -1506,9 +1640,8 @@ Reference: [get-form-content.md](https://developer.webull.com/apis/docs/referenc
 |---|---|
 | **SDK** | `brokerfd.UploadDocument` |
 | **Official (OpenAPI JSON)** | `POST /broker/documents/upload` |
-| **SDK path** | `/broker-fd/documents/upload` (pathDocumentUpload) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/documents/upload` (pathDocumentUpload) |
+| **Status** | ✅ match |
 
 Reference: [document-upload.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/document-upload.md)
 
@@ -1518,9 +1651,8 @@ Reference: [document-upload.md](https://developer.webull.com/apis/docs/reference
 |---|---|
 | **SDK** | `brokerfd.DownloadDocument` |
 | **Official (OpenAPI JSON)** | `GET /broker/documents/download` |
-| **SDK path** | `/broker-fd/documents/download` (pathDocumentDownload) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/documents/download` (pathDocumentDownload) |
+| **Status** | ✅ match |
 
 Reference: [document-download.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/document-download.md)
 
@@ -1531,7 +1663,6 @@ Reference: [document-download.md](https://developer.webull.com/apis/docs/referen
 | **SDK** | `brokerfd.GetAccountsSummary / GetFDAssetsSummary` |
 | **Official (OpenAPI JSON)** | `GET /broker/assets/summaries/get` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [summary.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/summary.md)
 
@@ -1541,9 +1672,8 @@ Reference: [summary.md](https://developer.webull.com/apis/docs/reference/broker-
 |---|---|
 | **SDK** | `brokerfd.GetFDAssetsDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/assets/balances/get` |
-| **SDK path** | `/broker-fd/assets/detail` (pathFDAssetsDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/assets/balances/get` (pathFDAssetsDetail) |
+| **Status** | ✅ match |
 
 Reference: [account-balance.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/account-balance.md)
 
@@ -1553,9 +1683,8 @@ Reference: [account-balance.md](https://developer.webull.com/apis/docs/reference
 |---|---|
 | **SDK** | `brokerfd.GetFDPositions / GetPositions` |
 | **Official (OpenAPI JSON)** | `GET /broker/assets/positions/list` |
-| **SDK path** | `/broker-fd/assets/positions` (pathFDAssetsPositions) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/assets/positions/list` (pathFDAssetsPositions) |
+| **Status** | ✅ match |
 
 Reference: [account-position.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/account-position.md)
 
@@ -1565,9 +1694,8 @@ Reference: [account-position.md](https://developer.webull.com/apis/docs/referenc
 |---|---|
 | **SDK** | `brokerfd.GetFDActivities` |
 | **Official (OpenAPI JSON)** | `GET /broker/activities/cash-activities/list` |
-| **SDK path** | `/broker-fd/activities` (pathFDActivities) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/activities/cash-activities/list` (pathFDActivities) |
+| **Status** | ✅ match |
 
 Reference: [broker-cash-activity-by-type.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-cash-activity-by-type.md)
 
@@ -1577,9 +1705,8 @@ Reference: [broker-cash-activity-by-type.md](https://developer.webull.com/apis/d
 |---|---|
 | **SDK** | `brokerfd.AddFDBankAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/bank-relationships/create` |
-| **SDK path** | `/broker-fd/funding/bank-account/add` (pathFDBankAccountAdd) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/bank-relationships/create` (pathFDBankAccountAdd) |
+| **Status** | ✅ match |
 
 Reference: [create-bank-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-bank-relationship.md)
 
@@ -1589,9 +1716,8 @@ Reference: [create-bank-relationship.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `brokerfd.RemoveFDBankAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/bank-relationships/delete` |
-| **SDK path** | `/broker-fd/funding/bank-account/remove` (pathFDBankAccountRemove) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/bank-relationships/delete` (pathFDBankAccountRemove) |
+| **Status** | ✅ match |
 
 Reference: [delete-bank-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/delete-bank-relationship.md)
 
@@ -1601,9 +1727,8 @@ Reference: [delete-bank-relationship.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `brokerfd.ListFDBankAccounts` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/bank-relationships/list` |
-| **SDK path** | `/broker-fd/funding/bank-accounts` (pathFDBankAccounts) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/bank-relationships/list` (pathFDBankAccounts) |
+| **Status** | ✅ match |
 
 Reference: [list-linked-bank-accounts.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-linked-bank-accounts.md)
 
@@ -1613,9 +1738,8 @@ Reference: [list-linked-bank-accounts.md](https://developer.webull.com/apis/docs
 |---|---|
 | **SDK** | `brokerfd.AddFDAchAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/ach-relationships/create` |
-| **SDK path** | `/broker-fd/funding/ach-account/add` (pathFDAchAccountAdd) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/ach-relationships/create` (pathFDAchAccountAdd) |
+| **Status** | ✅ match |
 
 Reference: [create-ach-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-ach-relationship.md)
 
@@ -1625,9 +1749,8 @@ Reference: [create-ach-relationship.md](https://developer.webull.com/apis/docs/r
 |---|---|
 | **SDK** | `brokerfd.RemoveFDAchAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/ach-relationships/delete` |
-| **SDK path** | `/broker-fd/funding/ach-account/remove` (pathFDAchAccountRemove) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/ach-relationships/delete` (pathFDAchAccountRemove) |
+| **Status** | ✅ match |
 
 Reference: [delete-ach-relationship.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/delete-ach-relationship.md)
 
@@ -1637,9 +1760,8 @@ Reference: [delete-ach-relationship.md](https://developer.webull.com/apis/docs/r
 |---|---|
 | **SDK** | `brokerfd.ListFDAchAccounts` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/ach-relationships/list` |
-| **SDK path** | `/broker-fd/funding/ach-accounts` (pathFDAchAccounts) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/ach-relationships/list` (pathFDAchAccounts) |
+| **Status** | ✅ match |
 
 Reference: [list-ach-relationships.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-ach-relationships.md)
 
@@ -1649,9 +1771,8 @@ Reference: [list-ach-relationships.md](https://developer.webull.com/apis/docs/re
 |---|---|
 | **SDK** | `brokerfd.InitiateFDTransfer` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/transfers/create` |
-| **SDK path** | `/broker-fd/funding/transfer/initiate` (pathFDTransferInitiate) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/transfers/create` (pathFDTransferInitiate) |
+| **Status** | ✅ match |
 
 Reference: [create-transfer.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/create-transfer.md)
 
@@ -1661,9 +1782,8 @@ Reference: [create-transfer.md](https://developer.webull.com/apis/docs/reference
 |---|---|
 | **SDK** | `brokerfd.ListFDTransfers` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/transfers/list` |
-| **SDK path** | `/broker-fd/funding/transfers` (pathFDTransfers) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/transfers/list` (pathFDTransfers) |
+| **Status** | ✅ match |
 
 Reference: [transfer-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/transfer-list.md)
 
@@ -1673,9 +1793,8 @@ Reference: [transfer-list.md](https://developer.webull.com/apis/docs/reference/b
 |---|---|
 | **SDK** | `brokerfd.GetFDTransferDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/transfers/get` |
-| **SDK path** | `/broker-fd/funding/transfer/detail` (pathFDTransferDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/transfers/get` (pathFDTransferDetail) |
+| **Status** | ✅ match |
 
 Reference: [transfer-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/transfer-detail.md)
 
@@ -1686,7 +1805,6 @@ Reference: [transfer-detail.md](https://developer.webull.com/apis/docs/reference
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/transfers/cancel` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [cancel-transfer.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/cancel-transfer.md)
 
@@ -1696,9 +1814,8 @@ Reference: [cancel-transfer.md](https://developer.webull.com/apis/docs/reference
 |---|---|
 | **SDK** | `brokerfd.CreateFDInstantFunding` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/instant-funding/create` |
-| **SDK path** | `/broker-fd/funding/instant` (pathFDInstantFunding) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/instant-funding/create` (pathFDInstantFunding) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-instant-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-instant-create.md)
 
@@ -1708,9 +1825,8 @@ Reference: [broker-funding-instant-create.md](https://developer.webull.com/apis/
 |---|---|
 | **SDK** | `brokerfd.GetFDInstantFundingDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/funding/instant-funding/get` |
-| **SDK path** | `/broker-fd/funding/instant/detail` (pathFDInstantFundingDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/funding/instant-funding/get` (pathFDInstantFundingDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-instant-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-instant-query.md)
 
@@ -1721,7 +1837,6 @@ Reference: [broker-funding-instant-query.md](https://developer.webull.com/apis/d
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/fees/create` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-funding-fee-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-fee-create.md)
 
@@ -1731,9 +1846,8 @@ Reference: [broker-funding-fee-create.md](https://developer.webull.com/apis/docs
 |---|---|
 | **SDK** | `brokerfd.GetFDTransferFees` |
 | **Official (OpenAPI JSON)** | `GET /broker/fees/get` |
-| **SDK path** | `/broker-fd/funding/transfer/fees` (pathFDTransferFees) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/fees/get` (pathFDTransferFees) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-fee-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-fee-query.md)
 
@@ -1744,7 +1858,6 @@ Reference: [broker-funding-fee-query.md](https://developer.webull.com/apis/docs/
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/credits/create` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-funding-credit-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-credit-create.md)
 
@@ -1754,9 +1867,8 @@ Reference: [broker-funding-credit-create.md](https://developer.webull.com/apis/d
 |---|---|
 | **SDK** | `brokerfd.GetFDCreditInfo` |
 | **Official (OpenAPI JSON)** | `GET /broker/credits/get` |
-| **SDK path** | `/broker-fd/funding/credit` (pathFDCreditInfo) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/credits/get` (pathFDCreditInfo) |
+| **Status** | ✅ match |
 
 Reference: [broker-funding-credit-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-credit-query.md)
 
@@ -1766,9 +1878,8 @@ Reference: [broker-funding-credit-query.md](https://developer.webull.com/apis/do
 |---|---|
 | **SDK** | `brokerfd.GetFDStockInstruments` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/stocks/profiles/list` |
-| **SDK path** | `/broker-fd/instruments/stocks` (pathFDStockInstruments) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/instruments/stocks/profiles/list` (pathFDStockInstruments) |
+| **Status** | ✅ match |
 
 Reference: [list-stock-instruments.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-stock-instruments.md)
 
@@ -1779,7 +1890,6 @@ Reference: [list-stock-instruments.md](https://developer.webull.com/apis/docs/re
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/categories/list` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-event-categories-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-categories-list.md)
 
@@ -1790,7 +1900,6 @@ Reference: [broker-event-categories-list.md](https://developer.webull.com/apis/d
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/series/list` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-event-series-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-series-list.md)
 
@@ -1801,7 +1910,6 @@ Reference: [broker-event-series-list.md](https://developer.webull.com/apis/docs/
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/events/list` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-event-events-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-events-list.md)
 
@@ -1811,9 +1919,8 @@ Reference: [broker-event-events-list.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `brokerfd.GetFDECInstruments` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/markets/list` |
-| **SDK path** | `/broker-fd/instruments/event-contracts` (pathFDECInstruments) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/instruments/event-contracts/markets/list` (pathFDECInstruments) |
+| **Status** | ✅ match |
 
 Reference: [broker-event-market-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-market-list.md)
 
@@ -1823,9 +1930,8 @@ Reference: [broker-event-market-list.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `brokerfd.GetFDCorporateActions` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/stocks/corporate-actions/get` |
-| **SDK path** | `/broker-fd/instruments/corporate-actions` (pathFDCorporateActions) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/instruments/stocks/corporate-actions/get` (pathFDCorporateActions) |
+| **Status** | ✅ match |
 
 Reference: [broker-corporate-actions-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-corporate-actions-detail.md)
 
@@ -1835,9 +1941,8 @@ Reference: [broker-corporate-actions-detail.md](https://developer.webull.com/api
 |---|---|
 | **SDK** | `brokerfd.PreviewFDOrder` |
 | **Official (OpenAPI JSON)** | `POST /broker/orders/preview` |
-| **SDK path** | `/broker-fd/orders/preview` (pathFDOrderPreview) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/preview` (pathFDOrderPreview) |
+| **Status** | ✅ match |
 
 Reference: [common-order-preview.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-preview.md)
 
@@ -1847,9 +1952,8 @@ Reference: [common-order-preview.md](https://developer.webull.com/apis/docs/refe
 |---|---|
 | **SDK** | `brokerfd.PlaceFDOrder` |
 | **Official (OpenAPI JSON)** | `POST /broker/orders/place` |
-| **SDK path** | `/broker-fd/orders/place` (pathFDOrderPlace) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/place` (pathFDOrderPlace) |
+| **Status** | ✅ match |
 
 Reference: [common-order-place.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-place.md)
 
@@ -1859,9 +1963,8 @@ Reference: [common-order-place.md](https://developer.webull.com/apis/docs/refere
 |---|---|
 | **SDK** | `brokerfd.ReplaceFDOrder` |
 | **Official (OpenAPI JSON)** | `POST /broker/orders/replace` |
-| **SDK path** | `/broker-fd/orders/replace` (pathFDOrderReplace) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/replace` (pathFDOrderReplace) |
+| **Status** | ✅ match |
 
 Reference: [common-order-replace.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-replace.md)
 
@@ -1871,9 +1974,8 @@ Reference: [common-order-replace.md](https://developer.webull.com/apis/docs/refe
 |---|---|
 | **SDK** | `brokerfd.CancelFDOrder` |
 | **Official (OpenAPI JSON)** | `POST /broker/orders/cancel` |
-| **SDK path** | `/broker-fd/orders/cancel` (pathFDOrderCancel) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/cancel` (pathFDOrderCancel) |
+| **Status** | ✅ match |
 
 Reference: [common-order-cancel.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/common-order-cancel.md)
 
@@ -1883,9 +1985,8 @@ Reference: [common-order-cancel.md](https://developer.webull.com/apis/docs/refer
 |---|---|
 | **SDK** | `brokerfd.GetFDOpenOrders` |
 | **Official (OpenAPI JSON)** | `GET /broker/orders/open-orders/list` |
-| **SDK path** | `/broker-fd/orders/open` (pathFDOrderOpen) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/open-orders/list` (pathFDOrderOpen) |
+| **Status** | ✅ match |
 
 Reference: [order-open.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-open.md)
 
@@ -1895,9 +1996,8 @@ Reference: [order-open.md](https://developer.webull.com/apis/docs/reference/brok
 |---|---|
 | **SDK** | `brokerfd.GetFDOrderDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/orders/get` |
-| **SDK path** | `/broker-fd/orders/detail` (pathFDOrderDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/get` (pathFDOrderDetail) |
+| **Status** | ✅ match |
 
 Reference: [order-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-detail.md)
 
@@ -1907,9 +2007,8 @@ Reference: [order-detail.md](https://developer.webull.com/apis/docs/reference/br
 |---|---|
 | **SDK** | `brokerfd.GetFDOrderHistory` |
 | **Official (OpenAPI JSON)** | `GET /broker/orders/historical-orders/list` |
-| **SDK path** | `/broker-fd/orders/history` (pathFDOrderHistory) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/orders/historical-orders/list` (pathFDOrderHistory) |
+| **Status** | ✅ match |
 
 Reference: [order-history.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/order-history.md)
 
@@ -1920,7 +2019,6 @@ Reference: [order-history.md](https://developer.webull.com/apis/docs/reference/b
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/journals/cash-journals/create` |
 | **Status** | ❓ SDK path unresolved |
-| **Note** | Provisional. |
 
 Reference: [broker-journal-cash-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-journal-cash-create.md)
 
@@ -1930,9 +2028,8 @@ Reference: [broker-journal-cash-create.md](https://developer.webull.com/apis/doc
 |---|---|
 | **SDK** | `brokerfd.GetFDCashJournalDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/journals/cash-journals/get` |
-| **SDK path** | `/broker-fd/journals/cash/detail` (pathFDCashJournalDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/journals/cash-journals/get` (pathFDCashJournalDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-journal-cash-query.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-journal-cash-query.md)
 
@@ -1942,9 +2039,8 @@ Reference: [broker-journal-cash-query.md](https://developer.webull.com/apis/docs
 |---|---|
 | **SDK** | `brokerfd.GetFDEnums` |
 | **Official (OpenAPI JSON)** | `GET /broker/master-data/enums/list` |
-| **SDK path** | `/broker-fd/master-data/enums` (pathFDEnums) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/master-data/enums/list` (pathFDEnums) |
+| **Status** | ✅ match |
 
 Reference: [list-enums.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-enums.md)
 
@@ -1954,9 +2050,8 @@ Reference: [list-enums.md](https://developer.webull.com/apis/docs/reference/brok
 |---|---|
 | **SDK** | `brokerfd.GetFDTradeCalendar` |
 | **Official (OpenAPI JSON)** | `GET /broker/master-data/trading-calendars/list` |
-| **SDK path** | `/broker-fd/master-data/trade-calendar` (pathFDTradeCalendar) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/master-data/trading-calendars/list` (pathFDTradeCalendar) |
+| **Status** | ✅ match |
 
 Reference: [list-trade-calendar.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/list-trade-calendar.md)
 
@@ -1966,9 +2061,8 @@ Reference: [list-trade-calendar.md](https://developer.webull.com/apis/docs/refer
 |---|---|
 | **SDK** | `brokerfd.ListAgreements` |
 | **Official (OpenAPI JSON)** | `GET /broker/agreements/list` |
-| **SDK path** | `/broker-fd/agreements` (pathAgreements) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/agreements/list` (pathAgreements) |
+| **Status** | ✅ match |
 
 Reference: [broker-list-agreements-by-type.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-list-agreements-by-type.md)
 
@@ -1978,9 +2072,8 @@ Reference: [broker-list-agreements-by-type.md](https://developer.webull.com/apis
 |---|---|
 | **SDK** | `brokerfd.GetAgreementDetail` |
 | **Official (OpenAPI JSON)** | `GET /broker/agreements/get` |
-| **SDK path** | `/broker-fd/agreements/detail` (pathAgreementDetail) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Provisional. |
+| **SDK path** | `/broker/agreements/get` (pathAgreementDetail) |
+| **Status** | ✅ match |
 
 Reference: [broker-get-agreement-details.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-get-agreement-details.md)
 
@@ -1992,9 +2085,8 @@ Reference: [broker-get-agreement-details.md](https://developer.webull.com/apis/d
 |---|---|
 | **SDK** | `data.GetDisplayGainersLosers` |
 | **Official (OpenAPI JSON)** | `GET /market-data/screeners/gainers-losers/list` |
-| **SDK path** | `/openapi/market-data/screener/rank` (pathDSGainersLosers) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/screeners/gainers-losers/list` (pathDSGainersLosers) |
+| **Status** | ✅ match |
 
 Reference: [top-gainers-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-gainers-using-get-new.md)
 
@@ -2004,9 +2096,8 @@ Reference: [top-gainers-using-get-new.md](https://developer.webull.hk/apis/docs/
 |---|---|
 | **SDK** | `data.GetDisplayTopActive` |
 | **Official (OpenAPI JSON)** | `GET /market-data/screeners/top-actives/list` |
-| **SDK path** | `/openapi/market-data/screener/top-active` (pathDSTopActive) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/screeners/top-actives/list` (pathDSTopActive) |
+| **Status** | ✅ match |
 
 Reference: [top-active-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-active-using-get-new.md)
 
@@ -2019,7 +2110,6 @@ Reference: [top-active-using-get-new.md](https://developer.webull.hk/apis/docs/r
 | **Official (llms.txt summary)** | `/openapi/market-data/stock/snapshot` |
 | **SDK path** | `/openapi/market-data/stock/snapshot` (pathDSSnapshot) |
 | **Status** | 🟡 SDK matches docs summary, not OpenAPI JSON |
-| **Note** | Path unconfirmed. |
 
 Reference: [snapshot-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/snapshot-using-get.md)
 
@@ -2029,9 +2119,8 @@ Reference: [snapshot-using-get.md](https://developer.webull.hk/apis/docs/referen
 |---|---|
 | **SDK** | `data.GetDisplayBars` |
 | **Official (OpenAPI JSON)** | `POST /market-data/stocks/bars/list` |
-| **SDK path** | `/openapi/market-data/stock/batch-bars` (pathDSBars) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/stocks/bars/list` (pathDSBars) |
+| **Status** | ✅ match |
 
 Reference: [query-batch-bars-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/query-batch-bars-using-post.md)
 
@@ -2041,9 +2130,8 @@ Reference: [query-batch-bars-using-post.md](https://developer.webull.hk/apis/doc
 |---|---|
 | **SDK** | `data.GetDisplayBarsSingle` |
 | **Official (OpenAPI JSON)** | `GET /market-data/stocks/bars/get` |
-| **SDK path** | `/openapi/market-data/stock/bars` (pathDSBarsSingle) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/stocks/bars/get` (pathDSBarsSingle) |
+| **Status** | ✅ match |
 
 Reference: [bars-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/bars-using-get.md)
 
@@ -2053,9 +2141,8 @@ Reference: [bars-using-get.md](https://developer.webull.hk/apis/docs/reference/m
 |---|---|
 | **SDK** | `data.GetDisplayTick` |
 | **Official (OpenAPI JSON)** | `GET /market-data/stocks/ticks/list` |
-| **SDK path** | `/openapi/market-data/stock/tick` (pathDSTick) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/stocks/ticks/list` (pathDSTick) |
+| **Status** | ✅ match |
 
 Reference: [tick-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/tick-using-get.md)
 
@@ -2065,9 +2152,8 @@ Reference: [tick-using-get.md](https://developer.webull.hk/apis/docs/reference/m
 |---|---|
 | **SDK** | `data.GetDisplayDepth` |
 | **Official (OpenAPI JSON)** | `GET /market-data/stocks/depths/list` |
-| **SDK path** | `/openapi/market-data/stock/quotes` (pathDSDepth) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/stocks/depths/list` (pathDSDepth) |
+| **Status** | ✅ match |
 
 Reference: [quotes-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/quotes-using-get.md)
 
@@ -2077,9 +2163,8 @@ Reference: [quotes-using-get.md](https://developer.webull.hk/apis/docs/reference
 |---|---|
 | **SDK** | `data.GetDSNewsSummary` |
 | **Official (OpenAPI JSON)** | `POST /market-data/news/summaries/get` |
-| **SDK path** | `/openapi/market-data/news/watchlist-summary` (pathDSNewsSummary) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/news/summaries/get` (pathDSNewsSummary) |
+| **Status** | ✅ match |
 
 Reference: [watchlist-summary-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/watchlist-summary-using-post.md)
 
@@ -2089,9 +2174,8 @@ Reference: [watchlist-summary-using-post.md](https://developer.webull.hk/apis/do
 |---|---|
 | **SDK** | `data.GetDSMarketNews` |
 | **Official (OpenAPI JSON)** | `GET /market-data/news/market-news/list` |
-| **SDK path** | `/openapi/market-data/news/market` (pathDSMarketNews) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/news/market-news/list` (pathDSMarketNews) |
+| **Status** | ✅ match |
 
 Reference: [list-news-by-market-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-market-using-get.md)
 
@@ -2101,9 +2185,8 @@ Reference: [list-news-by-market-using-get.md](https://developer.webull.hk/apis/d
 |---|---|
 | **SDK** | `data.GetDSSymbolNews` |
 | **Official (OpenAPI JSON)** | `GET /market-data/news/symbol-news/list` |
-| **SDK path** | `/openapi/market-data/news/ticker` (pathDSSymbolNews) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/news/symbol-news/list` (pathDSSymbolNews) |
+| **Status** | ✅ match |
 
 Reference: [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-ticker-using-get.md)
 
@@ -2113,9 +2196,8 @@ Reference: [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/d
 |---|---|
 | **SDK** | `data.GetDSLatestNews` |
 | **Official (OpenAPI JSON)** | `GET /market-data/news/latest-news/list` |
-| **SDK path** | `/openapi/market-data/news/latest` (pathDSLatestNews) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/news/latest-news/list` (pathDSLatestNews) |
+| **Status** | ✅ match |
 
 Reference: [list-latest-news-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-latest-news-using-get.md)
 
@@ -2158,8 +2240,8 @@ Reference: [list-using-get.md](https://developer.webull.hk/apis/docs/reference/m
 |---|---|
 | **SDK** | `data.GetLogos` |
 | **Official (OpenAPI JSON)** | `POST /market-data/fundamentals/logos/list` |
-| **SDK path** | `/market-data/instruments/logos/batch` (pathLogosBatch) |
-| **Status** | ⚠️ path differs from both |
+| **SDK path** | `/market-data/fundamentals/logos/list` (pathLogosBatch) |
+| **Status** | ✅ match |
 
 Reference: [batch-logo-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/batch-logo-using-post.md)
 
@@ -2169,9 +2251,8 @@ Reference: [batch-logo-using-post.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `data.GetDSCompanyProfile` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/company-profiles/get` |
-| **SDK path** | `/openapi/market-data/stock/company-profile` (pathDSCompanyProfile) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/fundamentals/company-profiles/get` (pathDSCompanyProfile) |
+| **Status** | ✅ match |
 
 Reference: [list-company-profile-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-company-profile-using-get.md)
 
@@ -2181,9 +2262,8 @@ Reference: [list-company-profile-using-get.md](https://developer.webull.hk/apis/
 |---|---|
 | **SDK** | `data.GetDSAnalystTargetPrice` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/analysis/target-prices/get` |
-| **SDK path** | `/openapi/market-data/stock/analyst-target-price` (pathDSAnalystTarget) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/fundamentals/analysis/target-prices/get` (pathDSAnalystTarget) |
+| **Status** | ✅ match |
 
 Reference: [list-analyst-target-price-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-target-price-using-get.md)
 
@@ -2193,9 +2273,8 @@ Reference: [list-analyst-target-price-using-get.md](https://developer.webull.hk/
 |---|---|
 | **SDK** | `data.GetDSAnalystRating` |
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/analysis/ratings/get` |
-| **SDK path** | `/openapi/market-data/stock/analyst-rating` (pathDSAnalystRating) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | Path unconfirmed. |
+| **SDK path** | `/market-data/fundamentals/analysis/ratings/get` (pathDSAnalystRating) |
+| **Status** | ✅ match |
 
 Reference: [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-rating-using-get.md)
 
@@ -2205,9 +2284,9 @@ Reference: [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/d
 |---|---|
 | **SDK** | `data.DSSubscribe` |
 | **Official (OpenAPI JSON)** | `POST /market-data/streaming/subscribe` |
-| **SDK path** | `/openapi/market-data/streaming/subscribe` (pathDSSubscribe) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | US-site reference; path unconfirmed. |
+| **SDK path** | `/market-data/streaming/subscribe` (pathDSSubscribe) |
+| **Status** | ✅ match |
+| **Note** | US-site reference. |
 
 Reference: [subscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/subscribe-using-post.md)
 
@@ -2217,9 +2296,9 @@ Reference: [subscribe-using-post.md](https://developer.webull.com/apis/docs/refe
 |---|---|
 | **SDK** | `data.DSUnsubscribe` |
 | **Official (OpenAPI JSON)** | `POST /market-data/streaming/unsubscribe` |
-| **SDK path** | `/openapi/market-data/streaming/unsubscribe` (pathDSUnsubscribe) |
-| **Status** | ⚠️ path differs from both |
-| **Note** | US-site reference; path unconfirmed. |
+| **SDK path** | `/market-data/streaming/unsubscribe` (pathDSUnsubscribe) |
+| **Status** | ✅ match |
+| **Note** | US-site reference. |
 
 Reference: [unsubscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/unsubscribe-using-post.md)
 
@@ -2282,42 +2361,33 @@ Reference: [subscribe-position-events.md](https://developer.webull.com/apis/docs
 | **SDK** | `brokerfd/events` |
 | **Official** | _no OpenAPI schema_ |
 | **Status** | ❓ no OpenAPI schema on page |
-| **Note** | Provisional; subscribe types unconfirmed. |
 
 Reference: [subscribe-events.md](https://developer.webull.com/apis/docs/reference/fd-events/subscribe-events.md)
+
+## Connect API (OAuth)
+
+### Authorization Code
+
+| | |
+|---|---|
+| **SDK** | `connect.AuthorizationURL` |
+| **Official (OpenAPI JSON)** | `GET /oauth2/auth-codes/get` |
+| **Status** | ❓ SDK path unresolved |
+| **Note** | Browser redirect URL builder. |
+
+Reference: [get-authorization-code.md](https://developer.webull.com/apis/docs/reference/connect-api/get-authorization-code.md)
+
+### Create Token
+
+| | |
+|---|---|
+| **SDK** | `connect.CreateToken` |
+| **Official (OpenAPI JSON)** | `POST /oauth2/tokens/create` |
+| **Status** | ❓ SDK path unresolved |
+
+Reference: [create-and-refresh-token.md](https://developer.webull.com/apis/docs/reference/connect-api/create-and-refresh-token.md)
 
 ## Documented but not implemented
 
 Unique official endpoints (deduplicated by method and path) that `webullapi4go` does not implement. Duplicate HK/US references to the same endpoint are collapsed into one row.
-
-### Connect API (OAuth)
-
-| Method | Path | Reference |
-|---|---|---|
-| GET | `/oauth2/auth-codes/get` | [get-authorization-code.md](https://developer.webull.com/apis/docs/reference/connect-api/get-authorization-code.md) |
-| POST | `/oauth2/tokens/create` | [create-and-refresh-token.md](https://developer.webull.com/apis/docs/reference/connect-api/create-and-refresh-token.md) |
-
-### Crypto
-
-| Method | Path | Reference |
-|---|---|---|
-| GET | `/market-data/crypto/bars/list` | [crypto-bars.md](https://developer.webull.com/apis/docs/reference/crypto-bars.md) |
-| GET | `/market-data/crypto/snapshots/list` | [crypto-snapshot.md](https://developer.webull.com/apis/docs/reference/crypto-snapshot.md) |
-| GET | `/trading/instruments/crypto/profiles/list` | [crypto-instrument-list.md](https://developer.webull.com/apis/docs/reference/crypto-instrument-list.md) |
-
-### Display Event Contracts
-
-| Method | Path | Reference |
-|---|---|---|
-| GET | `/market-data/event-contracts/game-stats/get` | [event-game-stats-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-game-stats-using-get.md) |
-| GET | `/market-data/event-contracts/live-data/get` | [event-live-data-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-live-data-using-get.md) |
-| GET | `/market-data/event-contracts/markets/bars/list` | [event-market-bars-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-using-get.md) |
-| GET | `/market-data/event-contracts/markets/bars/list-by-event` | [event-market-bars-by-event-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-by-event-using-get.md) |
-| GET | `/market-data/event-contracts/markets/depths/list` | [event-market-depth-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-depth-using-get.md) |
-| GET | `/market-data/event-contracts/markets/snapshots/list` | [event-market-snapshot-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-snapshot-using-get.md) |
-| GET | `/market-data/instruments/event-contracts/categories/tags/list` | [all-tags-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/all-tags-using-get.md) |
-| GET | `/market-data/instruments/event-contracts/events/list` | [event-list-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-list-using-get.md) |
-| GET | `/market-data/instruments/event-contracts/milestones/list` | [milestones-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/milestones-using-get.md) |
-| GET | `/market-data/instruments/event-contracts/series/list` | [series-list-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/series-list-using-get.md) |
-| GET | `/market-data/instruments/event-contracts/sports-filters/list` | [sports-filter-using-get.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/sports-filter-using-get.md) |
 

@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import datetime
+import json
 import os
 import re
 import sys
@@ -224,7 +225,7 @@ def _status_row(status):
     }.get(status, status)
 
 
-def generate_reconciliation():
+def _reconcile_data():
     consts = c.parse_consts()
 
     hk_llms = c.fetch(HK_LLMS)
@@ -292,6 +293,35 @@ def generate_reconciliation():
     counts = {}
     for r in rows:
         counts[r[9]] = counts.get(r[9], 0) + 1
+    return rows, gaps_by_cat, counts
+
+
+def generate_changes():
+    """Emit a machine-readable change list for the differing paths."""
+    rows, gaps_by_cat, counts = _reconcile_data()
+    changes = []
+    for (area, label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note) in rows:
+        if status != "differs":
+            continue
+        changes.append({
+            "area": area,
+            "label": label,
+            "sdk_func": sdk,
+            "sdk_const": sdk_const,
+            "sdk_path": sdk_path,
+            "official_method": omethod,
+            "official_path": opath,
+            "reference": url,
+        })
+    os.makedirs(c.CACHE, exist_ok=True)
+    out = os.path.join(c.CACHE, "changes.json")
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump({"count": len(changes), "changes": changes}, fh, indent=2)
+    print("wrote %s (%d changes)" % (out, len(changes)))
+
+
+def generate_reconciliation():
+    rows, gaps_by_cat, counts = _reconcile_data()
     gaps_total = sum(len(v) for v in gaps_by_cat.values())
 
     def render(label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note):
@@ -370,7 +400,7 @@ def generate_reconciliation():
 
 def main():
     ap = argparse.ArgumentParser(description="Webull API documentation generator")
-    ap.add_argument("target", choices=["reference", "master", "reconciliation", "all"])
+    ap.add_argument("target", choices=["reference", "master", "reconciliation", "changes", "all"])
     args = ap.parse_args()
     if args.target in ("reference", "all"):
         generate_reference()
@@ -378,6 +408,8 @@ def main():
         generate_master()
     if args.target in ("reconciliation", "all"):
         generate_reconciliation()
+    if args.target in ("changes", "all"):
+        generate_changes()
 
 
 if __name__ == "__main__":

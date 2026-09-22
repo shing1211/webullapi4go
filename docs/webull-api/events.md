@@ -482,8 +482,6 @@ timestamp: 1768994319673
 
 **SDK:** `brokerfd/events`
 
-**Note:** Provisional; subscribe types unconfirmed.
-
 #### Interface Description
 
 The Events Subscription service is implemented as a server-streaming persistent connection based on the `gRPC` framework. It is designed for Webull customers

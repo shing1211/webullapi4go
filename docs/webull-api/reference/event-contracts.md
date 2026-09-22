@@ -3817,3 +3817,3900 @@ Retrieves tick-by-tick trades for an event contract, sorted latest first.
 }
 ```
 
+## Event Contract Tags
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/all-tags-using-get.md>
+
+### List All Tags
+
+Retrieves all available category tags for event contract series. Use the returned tags to filter series via the tags parameter in the Series List endpoint.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/instruments/event-contracts/categories/tags/list",
+  "method": "get",
+  "tags": [
+    "Instruments"
+  ],
+  "description": "Retrieves all available category tags for event contract series. Use the returned tags to filter series via the tags parameter in the Series List endpoint.",
+  "operationId": "allTagsUsingGET",
+  "parameters": [
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tags": {
+                  "type": "array",
+                  "description": "Category Tag list",
+                  "example": "['Basketball', 'Baseball','Football']",
+                  "items": {
+                    "type": "string",
+                    "description": "Category Tag list",
+                    "example": "['Basketball', 'Baseball','Football']"
+                  }
+                },
+                "category_id": {
+                  "type": "integer",
+                  "description": "Category ID",
+                  "format": "int32",
+                  "example": 1
+                },
+                "category_name": {
+                  "type": "string",
+                  "description": "Category Name",
+                  "example": "Sports"
+                },
+                "category_code": {
+                  "type": "string",
+                  "description": "Category Code",
+                  "example": "SPORTS"
+                }
+              },
+              "description": "Serise Category Information",
+              "title": "SeriseCategory"
+            }
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List All Tags",
+    "description": {
+      "content": "Retrieves all available category tags for event contract series. Use the returned tags to filter series via the tags parameter in the Series List endpoint.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "instruments",
+        "event-contracts",
+        "categories",
+        "tags",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Contract Events List
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-list-using-get.md>
+
+### List Events
+
+Retrieves a list of tradable events under a series. Each event represents a specific question or market (e.g., '2026-27 College Football National Championship Winner'). Filter by series_symbol to get events for a specific series.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/instruments/event-contracts/events/list",
+  "method": "get",
+  "tags": [
+    "Instruments"
+  ],
+  "description": "Retrieves a list of tradable events under a series. Each event represents a specific question or market (e.g., '2026-27 College Football National Championship Winner'). Filter by series_symbol to get events for a specific series.",
+  "operationId": "eventListUsingGET",
+  "parameters": [
+    {
+      "name": "series_symbol",
+      "in": "query",
+      "description": "series symbol",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNCAAF"
+    },
+    {
+      "name": "status",
+      "in": "query",
+      "description": "status, ACTIVE=event is open for trading; INACTIVE=event is closed or settled, default:ACTIVE",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "default": "ACTIVE"
+      },
+      "example": "ACTIVE"
+    },
+    {
+      "name": "pagination_key",
+      "in": "query",
+      "description": "Pagination key returned from previous page response. Pass null or omit for first page.",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "description": "Data list",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "symbol": {
+                      "type": "string",
+                      "description": "Event symbol",
+                      "example": "KXNCAAF-27"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Event name",
+                      "example": "College Football National Championship Winner"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "status, eg:ACTIVE=event is open for trading；INACTIVE=event is closed or settled, default:ACTIVE",
+                      "example": "ACTIVE"
+                    },
+                    "series_id": {
+                      "type": "integer",
+                      "description": "Series ID",
+                      "format": "int32",
+                      "example": 152917
+                    },
+                    "event_id": {
+                      "type": "integer",
+                      "description": "Event ID",
+                      "format": "int32",
+                      "example": 152006
+                    },
+                    "short_name": {
+                      "type": "string",
+                      "description": "Event short name",
+                      "example": "2026-27"
+                    },
+                    "strike_date": {
+                      "type": "string",
+                      "description": "strike date,Only present for sports category events. Represents the settlement date/period of the event.",
+                      "example": "2026-10-28"
+                    },
+                    "strike_period": {
+                      "type": "string",
+                      "description": "strike period, Only present for sports category events. Represents the settlement date/period of the event."
+                    },
+                    "mutually_exclusive": {
+                      "type": "boolean",
+                      "description": "mutually exclusive, true or false",
+                      "example": true
+                    }
+                  },
+                  "description": "Data list",
+                  "title": "EventVo"
+                }
+              },
+              "pagination_key": {
+                "type": "string",
+                "description": "Pagination key for next page. null means no more data.",
+                "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+              }
+            },
+            "title": "EventVoPageResponse"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Events",
+    "description": {
+      "content": "Retrieves a list of tradable events under a series. Each event represents a specific question or market (e.g., '2026-27 College Football National Championship Winner'). Filter by series_symbol to get events for a specific series.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "instruments",
+        "event-contracts",
+        "events",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "series symbol",
+            "type": "text/plain"
+          },
+          "key": "series_symbol",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "status, ACTIVE=event is open for trading; INACTIVE=event is closed or settled, default:ACTIVE",
+            "type": "text/plain"
+          },
+          "key": "status",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Pagination key returned from previous page response. Pass null or omit for first page.",
+            "type": "text/plain"
+          },
+          "key": "pagination_key",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Contract Milestones
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/milestones-using-get.md>
+
+### List Event Milestones
+
+Retrieves a paginated list of milestones (individual game or economic release events). Each milestone contains match details, team info, and related event contract symbols.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/instruments/event-contracts/milestones/list",
+  "method": "get",
+  "tags": [
+    "Instruments"
+  ],
+  "description": "Retrieves a paginated list of milestones (individual game or economic release events). Each milestone contains match details, team info, and related event contract symbols.",
+  "operationId": "milestonesUsingGET",
+  "parameters": [
+    {
+      "name": "minimum_start_date",
+      "in": "query",
+      "description": "Query data with match start time (millisecond timestamp) that is later than that time.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "example": 1715100000000
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "category code",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "SPORTS"
+    },
+    {
+      "name": "competition",
+      "in": "query",
+      "description": "competition name",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "College Football"
+    },
+    {
+      "name": "related_event_symbol",
+      "in": "query",
+      "description": "related event symbol",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNCAAFGAME-26AUG29UNCTCU"
+    },
+    {
+      "name": "pagination_key",
+      "in": "query",
+      "description": "Pagination key returned from previous page response. Pass null or omit for first page.",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "description": "Data list",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "type": "string",
+                      "description": "Category Code",
+                      "example": "SPORTS"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Milestone type",
+                      "example": "football_game"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Milestone title",
+                      "example": "North Carolina at TCU"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "description": "Detail fields vary by type. Refer to SportsGameDetails when type=$SPORTS_GAME, EconomicReleaseDetails when type=ECONOMIC_RELEASE.",
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "venue": {
+                                "type": "string",
+                                "description": "Venue of the game",
+                                "example": "Amon G. Carter Stadium"
+                              },
+                              "home_team_id": {
+                                "type": "string",
+                                "description": "Home team ID",
+                                "example": "NCAAF:TCU"
+                              },
+                              "home_team_name": {
+                                "type": "string",
+                                "description": "Home team full name",
+                                "example": "TCU Horned Frogs"
+                              },
+                              "home_team_short_name": {
+                                "type": "string",
+                                "description": "Home team short name",
+                                "example": "TCU"
+                              },
+                              "away_team_id": {
+                                "type": "string",
+                                "description": "Away team ID",
+                                "example": "NCAAF:UNC"
+                              },
+                              "away_team_name": {
+                                "type": "string",
+                                "description": "Away team full name",
+                                "example": "North Carolina Tar Heels"
+                              },
+                              "away_team_short_name": {
+                                "type": "string",
+                                "description": "Away team short name",
+                                "example": "UNC"
+                              }
+                            },
+                            "description": "Details when type=SPORTS_GAME",
+                            "title": "SportsGameDetails"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source": {
+                                "type": "string",
+                                "description": "Data source institution",
+                                "example": "Bureau of Labor Statistics"
+                              },
+                              "indicator": {
+                                "type": "string",
+                                "description": "Economic indicator name",
+                                "example": "Non-Farm Payrolls"
+                              }
+                            },
+                            "description": "Details when type=ECONOMIC_RELEASE",
+                            "title": "EconomicReleaseDetails"
+                          }
+                        ]
+                      },
+                      "description": "Detail fields vary by type. Refer to SportsGameDetails when type=$SPORTS_GAME, EconomicReleaseDetails when type=ECONOMIC_RELEASE."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "status, eg:NOT_STARTED,INPROGRESS,CLOSED,CANCELLED,POSTPONED,DELAYED,SUSPENDED,UNKNOWN",
+                      "example": "not_started"
+                    },
+                    "milestone_id": {
+                      "type": "string",
+                      "description": "Milestone Unique Identifier",
+                      "example": "2526d351-9ffc-4182-8414-495cc84a0b64"
+                    },
+                    "start_date": {
+                      "type": "string",
+                      "description": "Start date",
+                      "example": "2026-08-29T16:00:00Z"
+                    },
+                    "end_date": {
+                      "type": "string",
+                      "description": "End date",
+                      "example": "2026-08-29T16:00:00Z"
+                    },
+                    "related_event_symbols": {
+                      "type": "array",
+                      "description": "related event symbol",
+                      "example": "KXNCAAFGAME-26AUG29UNCTCU",
+                      "items": {
+                        "type": "string",
+                        "description": "related event symbol",
+                        "example": "KXNCAAFGAME-26AUG29UNCTCU"
+                      }
+                    },
+                    "primary_event_symbols": {
+                      "type": "array",
+                      "description": "primary event symbol",
+                      "example": "KXNCAAFGAME-26AUG29UNCTCU",
+                      "items": {
+                        "type": "string",
+                        "description": "primary event symbol",
+                        "example": "KXNCAAFGAME-26AUG29UNCTCU"
+                      }
+                    }
+                  },
+                  "description": "Data list",
+                  "title": "MilestoneVo"
+                }
+              },
+              "pagination_key": {
+                "type": "string",
+                "description": "Pagination key for next page. null means no more data.",
+                "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+              }
+            },
+            "title": "MilestoneVoPageResponse"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Milestones",
+    "description": {
+      "content": "Retrieves a paginated list of milestones (individual game or economic release events). Each milestone contains match details, team info, and related event contract symbols.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "instruments",
+        "event-contracts",
+        "milestones",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "Query data with match start time (millisecond timestamp) that is later than that time.",
+            "type": "text/plain"
+          },
+          "key": "minimum_start_date",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "category code",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "competition name",
+            "type": "text/plain"
+          },
+          "key": "competition",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "related event symbol",
+            "type": "text/plain"
+          },
+          "key": "related_event_symbol",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Pagination key returned from previous page response. Pass null or omit for first page.",
+            "type": "text/plain"
+          },
+          "key": "pagination_key",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Contract Series List
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/series-list-using-get.md>
+
+### List Event Series
+
+Retrieves a paginated list of event contract series. A series represents a recurring competition or event category (e.g., CFP National Champion). Use category and tags to filter by sport type.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/instruments/event-contracts/series/list",
+  "method": "get",
+  "tags": [
+    "Instruments"
+  ],
+  "description": "Retrieves a paginated list of event contract series. A series represents a recurring competition or event category (e.g., CFP National Champion). Use category and tags to filter by sport type.",
+  "operationId": "seriesListUsingGET",
+  "parameters": [
+    {
+      "name": "category",
+      "in": "query",
+      "description": "category code",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "SPORTS"
+    },
+    {
+      "name": "tags",
+      "in": "query",
+      "description": "tag name",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "Baseball,Football"
+    },
+    {
+      "name": "symbols",
+      "in": "query",
+      "description": "series symbols",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNCAAF, KXHEISMAN"
+    },
+    {
+      "name": "pagination_key",
+      "in": "query",
+      "description": "Pagination key returned from previous page response. Pass null or omit for first page.",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "description": "Data list",
+                "items": {
+                  "required": [
+                    "frequency"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "symbol": {
+                      "type": "string",
+                      "description": "Series Symbol",
+                      "example": "KXNCAAF"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Series Name",
+                      "example": "CFP National Champion"
+                    },
+                    "category": {
+                      "type": "string",
+                      "description": "Category Code",
+                      "example": "SPORTS"
+                    },
+                    "frequency": {
+                      "type": "string",
+                      "description": "frequency, e.g., HOURLY,DAILY,WEEKLY,MONTHLY,ANNUAL,ONE_OFF,CUSTOM.",
+                      "example": "ANNUAL"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "description": "tags name",
+                      "example": "['Football']",
+                      "items": {
+                        "type": "string",
+                        "description": "tags name",
+                        "example": "['Football']"
+                      }
+                    },
+                    "series_id": {
+                      "type": "integer",
+                      "description": "Series ID",
+                      "format": "int32",
+                      "example": 152917
+                    }
+                  },
+                  "description": "Series Information",
+                  "title": "EventSeries"
+                }
+              },
+              "pagination_key": {
+                "type": "string",
+                "description": "Pagination key for next page. null means no more data.",
+                "example": "eyJ2IjoxLCJwYWdlSW5kZXgiOjJ9"
+              }
+            },
+            "title": "EventSeriesPageResponse"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Series",
+    "description": {
+      "content": "Retrieves a paginated list of event contract series. A series represents a recurring competition or event category (e.g., CFP National Champion). Use category and tags to filter by sport type.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "instruments",
+        "event-contracts",
+        "series",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "category code",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "tag name",
+            "type": "text/plain"
+          },
+          "key": "tags",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "series symbols",
+            "type": "text/plain"
+          },
+          "key": "symbols",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Pagination key returned from previous page response. Pass null or omit for first page.",
+            "type": "text/plain"
+          },
+          "key": "pagination_key",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Contract Sports Filters
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/sports-filter-using-get.md>
+
+### List Sports Filters
+
+Retrieves available filter options for sports event contracts, including sport tags, competitions, and scopes. Use this to populate filter UI or discover available sports categories before querying series or events.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/instruments/event-contracts/sports-filters/list",
+  "method": "get",
+  "tags": [
+    "Instruments"
+  ],
+  "description": "Retrieves available filter options for sports event contracts, including sport tags, competitions, and scopes. Use this to populate filter UI or discover available sports categories before querying series or events.",
+  "operationId": "sportsFilterUsingGET",
+  "parameters": [
+    {
+      "name": "tag",
+      "in": "query",
+      "description": "tag name",
+      "required": false,
+      "schema": {
+        "type": "string"
+      },
+      "example": "Football"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tag": {
+                  "type": "string",
+                  "description": "Tag name",
+                  "example": "Basketball"
+                },
+                "competitions": {
+                  "type": "array",
+                  "description": "competition list",
+                  "example": "College Football,Pro Football",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "competition": {
+                        "type": "string",
+                        "description": "Competition name (e.g., College Football, Pro Football).",
+                        "example": "College Football"
+                      },
+                      "scopes": {
+                        "type": "array",
+                        "description": "scope list",
+                        "example": "['Games', 'Futures','Awards']",
+                        "items": {
+                          "type": "string",
+                          "description": "scope list",
+                          "example": "['Games', 'Futures','Awards']"
+                        }
+                      }
+                    },
+                    "description": "Competition Information",
+                    "example": "College Football,Pro Football",
+                    "title": "Competition"
+                  }
+                },
+                "scopes": {
+                  "type": "array",
+                  "description": "List of available scope categories under this tag (e.g., Games, Futures, Awards).",
+                  "example": "['Games', 'Futures','Awards']",
+                  "items": {
+                    "type": "string",
+                    "description": "List of available scope categories under this tag (e.g., Games, Futures, Awards).",
+                    "example": "['Games', 'Futures','Awards']"
+                  }
+                }
+              },
+              "description": "Tag Information",
+              "title": "EventTag"
+            }
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Sports Filters",
+    "description": {
+      "content": "Retrieves available filter options for sports event contracts, including sport tags, competitions, and scopes. Use this to populate filter UI or discover available sports categories before querying series or events.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "instruments",
+        "event-contracts",
+        "sports-filters",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "tag name",
+            "type": "text/plain"
+          },
+          "key": "tag",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Game Stats
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-game-stats-using-get.md>
+
+### Get Game Stats
+
+Retrieves detailed play-by-play or drive-by-drive game statistics for a live sporting event. The response is a flat structure (wide table) containing fields for all sport types. Only fields relevant to the queried milestone's sport will be populated; others will be absent.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/game-stats/get",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves detailed play-by-play or drive-by-drive game statistics for a live sporting event. The response is a flat structure (wide table) containing fields for all sport types. Only fields relevant to the queried milestone's sport will be populated; others will be absent.",
+  "operationId": "eventGameStatsUsingGET",
+  "parameters": [
+    {
+      "name": "milestone_id",
+      "in": "query",
+      "description": "Milestone ID. A milestone represents a specific game or real-world occurrence tied to events.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "MS-NBA-20250514-LAL-BOS"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "required": [
+              "milestone_id"
+            ],
+            "type": "object",
+            "properties": {
+              "milestone_id": {
+                "type": "string",
+                "description": "Milestone ID",
+                "example": "MS-NBA-20250514-LAL-BOS"
+              },
+              "periods": {
+                "type": "array",
+                "description": "Game periods/innings list",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "period_number": {
+                      "type": "integer",
+                      "description": "Period/inning number",
+                      "format": "int32",
+                      "example": 1
+                    },
+                    "period_type": {
+                      "type": "string",
+                      "description": "Period type, e.g. quarter, top, bottom, period, half. Varies by sport.",
+                      "example": "quarter"
+                    },
+                    "events": {
+                      "type": "array",
+                      "description": "Event list for this period",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "Event type identifier, e.g. football_drive, basketball_play, baseball_play, hockey_play, soccer_event.",
+                            "example": "basketball_play"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Event description.",
+                            "example": "LeBron James makes 3-point jump shot"
+                          },
+                          "attribution": {
+                            "type": "string",
+                            "description": "Attribution team/player ID.",
+                            "example": "LAL-001"
+                          },
+                          "away_points": {
+                            "type": "integer",
+                            "description": "Away team points at this event.",
+                            "format": "int32",
+                            "example": 3
+                          },
+                          "home_points": {
+                            "type": "integer",
+                            "description": "Home team points at this event.",
+                            "format": "int32",
+                            "example": 0
+                          },
+                          "clock": {
+                            "type": "string",
+                            "description": "Game clock.",
+                            "example": "11:24"
+                          },
+                          "possession": {
+                            "type": "string",
+                            "description": "Possession team ID.",
+                            "example": "BOS-001"
+                          },
+                          "event_type": {
+                            "type": "string",
+                            "description": "Event sub-type (e.g. three_point_made, field_goal_made, goal, yellow_card). May appear in basketball, soccer.",
+                            "example": "three_point_made"
+                          },
+                          "wall_clock": {
+                            "type": "integer",
+                            "description": "Event wall clock UTC timestamp in seconds. May appear in basketball.",
+                            "format": "int64",
+                            "example": 1778640099
+                          },
+                          "half": {
+                            "type": "string",
+                            "description": "Half inning indicator. May appear in baseball.",
+                            "example": "top"
+                          },
+                          "strength": {
+                            "type": "string",
+                            "description": "Strength status, e.g. even/powerplay/shorthanded. May appear in hockey.",
+                            "example": "powerplay"
+                          },
+                          "competitor": {
+                            "type": "string",
+                            "description": "Competitor side: home/away. May appear in soccer.",
+                            "example": "home"
+                          },
+                          "match_time": {
+                            "type": "integer",
+                            "description": "Match time in minutes. May appear in soccer.",
+                            "format": "int32",
+                            "example": 22
+                          },
+                          "player_name": {
+                            "type": "string",
+                            "description": "Player name. May appear in soccer.",
+                            "example": "Vinicius Jr"
+                          },
+                          "stoppage_time": {
+                            "type": "integer",
+                            "description": "Stoppage time in minutes. May appear in soccer.",
+                            "format": "int32",
+                            "example": 0
+                          },
+                          "def_points": {
+                            "type": "integer",
+                            "description": "Defensive points. May appear in football.",
+                            "format": "int32",
+                            "example": 0
+                          },
+                          "end_reason": {
+                            "type": "string",
+                            "description": "Drive end reason. May appear in football.",
+                            "example": "touchdown"
+                          },
+                          "gain": {
+                            "type": "integer",
+                            "description": "Drive gain in yards. May appear in football.",
+                            "format": "int32",
+                            "example": 75
+                          },
+                          "off_points": {
+                            "type": "integer",
+                            "description": "Offensive points. May appear in football.",
+                            "format": "int32",
+                            "example": 7
+                          },
+                          "play_count": {
+                            "type": "integer",
+                            "description": "Number of plays in drive. May appear in football.",
+                            "format": "int32",
+                            "example": 8
+                          },
+                          "plays": {
+                            "type": "array",
+                            "description": "Play details list. May appear in football.",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "description": "Play type identifier.",
+                                  "example": "football_play"
+                                },
+                                "clock": {
+                                  "type": "string",
+                                  "description": "Game clock.",
+                                  "example": "15:00"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "description": "Play description.",
+                                  "example": "Jalen Hurts pass to A.J. Brown for 22 yards"
+                                },
+                                "down": {
+                                  "type": "integer",
+                                  "description": "Current down number.",
+                                  "format": "int32",
+                                  "example": 1
+                                },
+                                "yfd": {
+                                  "type": "integer",
+                                  "description": "Yards to first down.",
+                                  "format": "int32",
+                                  "example": 10
+                                }
+                              },
+                              "description": "EventContractGameStatsPlayVo",
+                              "title": "EventContractGameStatsPlayVo"
+                            }
+                          }
+                        },
+                        "description": "EventContractGameStatsEventVo",
+                        "title": "EventContractGameStatsEventVo"
+                      }
+                    },
+                    "period_name": {
+                      "type": "string",
+                      "description": "Period name. May appear in baseball, soccer.",
+                      "example": "Top 1st"
+                    },
+                    "attribution": {
+                      "type": "string",
+                      "description": "Attribution team ID. May appear in baseball.",
+                      "example": "NYY-001"
+                    },
+                    "half": {
+                      "type": "string",
+                      "description": "Half inning indicator. May appear in baseball.",
+                      "example": "top"
+                    },
+                    "away_score": {
+                      "type": "integer",
+                      "description": "Away team current score. May appear in baseball, hockey, soccer.",
+                      "format": "int32",
+                      "example": 2
+                    },
+                    "away_team_id": {
+                      "type": "string",
+                      "description": "Away team ID. May appear in baseball, hockey, soccer.",
+                      "example": "NYY-001"
+                    },
+                    "home_score": {
+                      "type": "integer",
+                      "description": "Home team current score. May appear in baseball, hockey, soccer.",
+                      "format": "int32",
+                      "example": 0
+                    },
+                    "home_team_id": {
+                      "type": "string",
+                      "description": "Home team ID. May appear in baseball, hockey, soccer.",
+                      "example": "BOS-001"
+                    }
+                  },
+                  "description": "EventContractGameStatsPeriodVo",
+                  "title": "EventContractGameStatsPeriodVo"
+                }
+              }
+            },
+            "description": "EventContractGameStatsVo",
+            "title": "EventContractGameStatsVo"
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "Get Game Stats",
+    "description": {
+      "content": "Retrieves detailed play-by-play or drive-by-drive game statistics for a live sporting event. The response is a flat structure (wide table) containing fields for all sport types. Only fields relevant to the queried milestone's sport will be populated; others will be absent.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "game-stats",
+        "get"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Milestone ID. A milestone represents a specific game or real-world occurrence tied to events.",
+            "type": "text/plain"
+          },
+          "key": "milestone_id",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Live Data
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-live-data-using-get.md>
+
+### Get Event Live Data
+
+Retrieves real-time live game/event data for a specified milestone, including scores, game clock, period, and winner information. Use this to display live match status alongside event contract prices.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/live-data/get",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves real-time live game/event data for a specified milestone, including scores, game clock, period, and winner information. Use this to display live match status alongside event contract prices.",
+  "operationId": "eventLiveDataUsingGET",
+  "parameters": [
+    {
+      "name": "milestone_id",
+      "in": "query",
+      "description": "Milestone ID. A milestone represents a specific game or real-world occurrence tied to events.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "MS-NBA-20250514-LAL-BOS"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "required": [
+              "milestone_id",
+              "status",
+              "type"
+            ],
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Sport type identifier, e.g. basketball_game, baseball_game, baseball_tournament, football_game, hockey_match, hockey_tournament, soccer_tournament_multi_leg, tennis_tournament_singles, golf_tournament, cricket_match.",
+                "example": "basketball_game"
+              },
+              "milestone_id": {
+                "type": "string",
+                "description": "Milestone ID.",
+                "example": "MS-NBA-20250514-LAL-BOS"
+              },
+              "status": {
+                "type": "string",
+                "description": "Game status. Values: NOT_STARTED (not begun), INPROGRESS (underway), CLOSED (concluded with result), CANCELLED (cancelled, contracts may be voided), POSTPONED (delayed to future date), DELAYED (temporarily paused, expected to resume), SUSPENDED (indefinitely paused, outcome pending).",
+                "example": "INPROGRESS"
+              },
+              "winner": {
+                "type": "string",
+                "description": "Winner identifier. Empty string or absent if not yet determined.",
+                "example": "LAL"
+              },
+              "last_play": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Last play description.",
+                    "example": "LeBron James makes 3-point jump shot"
+                  },
+                  "occurence_ts": {
+                    "type": "integer",
+                    "description": "Occurrence timestamp in seconds.",
+                    "format": "int64",
+                    "example": 1778640200
+                  }
+                },
+                "description": "EventContractLiveLastPlayVo",
+                "title": "EventContractLiveLastPlayVo"
+              },
+              "last_updated_ts": {
+                "type": "integer",
+                "description": "Last updated timestamp in seconds.",
+                "format": "int64",
+                "example": 1778640200
+              },
+              "details": {
+                "type": "object",
+                "description": "Sport-specific details. Structure varies by type field.<br/> Type mapping:<br/>• basketball_game → EventContractLiveBasketballDetailsVo<br/>• baseball_game → EventContractLiveBaseballDetailsVo<br/>• baseball_tournament → EventContractLiveBaseballDetailsVo<br/>• football_game → EventContractLiveFootballDetailsVo<br/>• hockey_match → EventContractLiveHockeyDetailsVo<br/>• hockey_tournament → EventContractLiveHockeyDetailsVo<br/>• soccer_tournament_multi_leg → EventContractLiveSoccerDetailsVo<br/>• tennis_tournament_singles → EventContractLiveTennisDetailsVo<br/>• golf_tournament → EventContractLiveGolfDetailsVo<br/>• cricket_match → EventContractLiveCricketDetailsVo",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "away_points": {
+                        "type": "integer",
+                        "description": "Away team score.",
+                        "format": "int32",
+                        "example": 87
+                      },
+                      "home_points": {
+                        "type": "integer",
+                        "description": "Home team score.",
+                        "format": "int32",
+                        "example": 92
+                      },
+                      "last_event_created_ts": {
+                        "type": "integer",
+                        "description": "Last event created timestamp in seconds.",
+                        "format": "int64",
+                        "example": 1778640200
+                      },
+                      "last_event_is_timeout": {
+                        "type": "boolean",
+                        "description": "Whether last event is a timeout.",
+                        "example": false
+                      },
+                      "period": {
+                        "type": "integer",
+                        "description": "Current period number.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "period_remaining_time": {
+                        "type": "string",
+                        "description": "Remaining time in current period.",
+                        "example": "04:32"
+                      },
+                      "period_type": {
+                        "type": "string",
+                        "description": "Period type, e.g. quarter, half, overtime. Varies by sport.",
+                        "example": "quarter"
+                      },
+                      "possession": {
+                        "type": "string",
+                        "description": "Ball possession side, e.g. away, home.",
+                        "example": "home"
+                      },
+                      "score_last_updated_ts": {
+                        "type": "integer",
+                        "description": "Score last updated timestamp in seconds.",
+                        "format": "int64",
+                        "example": 1778640200
+                      }
+                    },
+                    "description": "Basketball game details (type=basketball_game)",
+                    "title": "EventContractLiveBasketballDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "away_points": {
+                        "type": "integer",
+                        "description": "Away team score.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "home_points": {
+                        "type": "integer",
+                        "description": "Home team score.",
+                        "format": "int32",
+                        "example": 5
+                      },
+                      "balls": {
+                        "type": "integer",
+                        "description": "Current ball count.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "bases": {
+                        "type": "array",
+                        "description": "Base occupancy. Array of 4 booleans: [home, 1st, 2nd, 3rd].",
+                        "example": [
+                          false,
+                          true,
+                          false,
+                          true
+                        ],
+                        "items": {
+                          "type": "boolean",
+                          "description": "Base occupancy. Array of 4 booleans: [home, 1st, 2nd, 3rd].",
+                          "example": false
+                        }
+                      },
+                      "inning": {
+                        "type": "integer",
+                        "description": "Current inning number.",
+                        "format": "int32",
+                        "example": 6
+                      },
+                      "inning_half": {
+                        "type": "integer",
+                        "description": "Current half inning. 0=top, 1=bottom.",
+                        "format": "int32",
+                        "example": 0
+                      },
+                      "outs": {
+                        "type": "integer",
+                        "description": "Out count.",
+                        "format": "int32",
+                        "example": 1
+                      },
+                      "strikes": {
+                        "type": "integer",
+                        "description": "Strike count.",
+                        "format": "int32",
+                        "example": 1
+                      }
+                    },
+                    "description": "Baseball game details (type=baseball_game, baseball_tournament)",
+                    "title": "EventContractLiveBaseballDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "away_points": {
+                        "type": "integer",
+                        "description": "Away team score.",
+                        "format": "int32",
+                        "example": 14
+                      },
+                      "home_points": {
+                        "type": "integer",
+                        "description": "Home team score.",
+                        "format": "int32",
+                        "example": 21
+                      },
+                      "clock": {
+                        "type": "string",
+                        "description": "Game clock.",
+                        "example": "07:23"
+                      },
+                      "quarter": {
+                        "type": "integer",
+                        "description": "Current quarter number.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "situation": {
+                        "type": "object",
+                        "properties": {
+                          "down": {
+                            "type": "integer",
+                            "description": "Current down number.",
+                            "format": "int32",
+                            "example": 2
+                          },
+                          "goal_to_go": {
+                            "type": "boolean",
+                            "description": "Whether it is goal to go.",
+                            "example": false
+                          },
+                          "possession_team_id": {
+                            "type": "string",
+                            "description": "Possession team ID.",
+                            "example": "PHI-001"
+                          },
+                          "side_team_id": {
+                            "type": "string",
+                            "description": "Ball side team ID.",
+                            "example": "KC-001"
+                          },
+                          "yardline": {
+                            "type": "integer",
+                            "description": "Yard line position.",
+                            "format": "int32",
+                            "example": 35
+                          },
+                          "yfd": {
+                            "type": "integer",
+                            "description": "Yards to first down.",
+                            "format": "int32",
+                            "example": 7
+                          }
+                        },
+                        "description": "EventContractLiveFootballSituationVo",
+                        "title": "EventContractLiveFootballSituationVo"
+                      }
+                    },
+                    "description": "Football game details (type=football_game)",
+                    "title": "EventContractLiveFootballDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "away_points": {
+                        "type": "integer",
+                        "description": "Away team score.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "home_points": {
+                        "type": "integer",
+                        "description": "Home team score.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "period": {
+                        "type": "integer",
+                        "description": "Current period number.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "period_remaining_time": {
+                        "type": "string",
+                        "description": "Remaining time in current period.",
+                        "example": "08:15"
+                      }
+                    },
+                    "description": "Hockey match details (type=hockey_match, hockey_tournament)",
+                    "title": "EventContractLiveHockeyDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "aggregate_text": {
+                        "type": "string",
+                        "description": "Aggregate score text.",
+                        "example": "Agg: 3-2"
+                      },
+                      "away_aggregate_score": {
+                        "type": "integer",
+                        "description": "Away team aggregate score (multi-leg).",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "away_penalties": {
+                        "type": "array",
+                        "description": "Away team penalty results list.",
+                        "items": {
+                          "type": "string",
+                          "description": "Away team penalty results list."
+                        }
+                      },
+                      "away_same_game_score": {
+                        "type": "integer",
+                        "description": "Away team current game score.",
+                        "format": "int32",
+                        "example": 1
+                      },
+                      "away_significant_events": {
+                        "type": "array",
+                        "description": "Away team significant events list.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "event_type": {
+                              "type": "string",
+                              "description": "Event type, e.g. goal, yellow_card, red_card.",
+                              "example": "goal"
+                            },
+                            "player": {
+                              "type": "string",
+                              "description": "Player name.",
+                              "example": "Vinicius Jr"
+                            },
+                            "time": {
+                              "type": "string",
+                              "description": "Event time.",
+                              "example": "22'"
+                            }
+                          },
+                          "description": "EventContractLiveSoccerSignificantEventVo",
+                          "title": "EventContractLiveSoccerSignificantEventVo"
+                        }
+                      },
+                      "half": {
+                        "type": "string",
+                        "description": "Current half, e.g. 1H, 2H, FT.",
+                        "example": "2H"
+                      },
+                      "home_aggregate_score": {
+                        "type": "integer",
+                        "description": "Home team aggregate score (multi-leg).",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "home_penalties": {
+                        "type": "array",
+                        "description": "Home team penalty results list.",
+                        "items": {
+                          "type": "string",
+                          "description": "Home team penalty results list."
+                        }
+                      },
+                      "home_same_game_score": {
+                        "type": "integer",
+                        "description": "Home team current game score.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "home_significant_events": {
+                        "type": "array",
+                        "description": "Home team significant events list.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "event_type": {
+                              "type": "string",
+                              "description": "Event type, e.g. goal, yellow_card, red_card.",
+                              "example": "goal"
+                            },
+                            "player": {
+                              "type": "string",
+                              "description": "Player name.",
+                              "example": "Vinicius Jr"
+                            },
+                            "time": {
+                              "type": "string",
+                              "description": "Event time.",
+                              "example": "22'"
+                            }
+                          },
+                          "description": "EventContractLiveSoccerSignificantEventVo",
+                          "title": "EventContractLiveSoccerSignificantEventVo"
+                        }
+                      },
+                      "penalties_text": {
+                        "type": "string",
+                        "description": "Penalty shootout text."
+                      },
+                      "show_penalties": {
+                        "type": "boolean",
+                        "description": "Whether to show penalty shootout.",
+                        "example": false
+                      },
+                      "status_text": {
+                        "type": "string",
+                        "description": "Status text.",
+                        "example": "2nd Half"
+                      },
+                      "time": {
+                        "type": "string",
+                        "description": "Match time.",
+                        "example": "62"
+                      }
+                    },
+                    "description": "Soccer match details (type=soccer_tournament_multi_leg)",
+                    "title": "EventContractLiveSoccerDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "advantage": {
+                        "type": "string",
+                        "description": "Advantage holder ID. Empty if deuce."
+                      },
+                      "away_overall_score": {
+                        "type": "integer",
+                        "description": "Away player overall score.",
+                        "format": "int32",
+                        "example": 1
+                      },
+                      "competitor1_current_round_score": {
+                        "type": "integer",
+                        "description": "Competitor 1 current round score.",
+                        "format": "int32",
+                        "example": 4
+                      },
+                      "competitor1_id": {
+                        "type": "string",
+                        "description": "Competitor 1 ID.",
+                        "example": "SINNER-001"
+                      },
+                      "competitor1_is_home": {
+                        "type": "boolean",
+                        "description": "Whether competitor 1 is home.",
+                        "example": true
+                      },
+                      "competitor1_overall_score": {
+                        "type": "integer",
+                        "description": "Competitor 1 overall score (sets won).",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "competitor1_round_scores": {
+                        "type": "array",
+                        "description": "Competitor 1 round scores.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "outcome": {
+                              "type": "string",
+                              "description": "Round outcome. Values: won, lost, or empty (in progress).",
+                              "example": "won"
+                            },
+                            "score": {
+                              "type": "integer",
+                              "description": "Games won in this set.",
+                              "format": "int32",
+                              "example": 6
+                            },
+                            "tiebreak_score": {
+                              "type": "integer",
+                              "description": "Tiebreak score. Null if no tiebreak.",
+                              "format": "int32"
+                            }
+                          },
+                          "description": "EventContractLiveTennisRoundScoreVo",
+                          "title": "EventContractLiveTennisRoundScoreVo"
+                        }
+                      },
+                      "competitor1_seed": {
+                        "type": "integer",
+                        "description": "Competitor 1 seed ranking.",
+                        "format": "int32",
+                        "example": 1
+                      },
+                      "competitor1_statistics": {
+                        "type": "object",
+                        "properties": {
+                          "gamescore": {
+                            "type": "string",
+                            "description": "Current game score.",
+                            "example": "30"
+                          }
+                        },
+                        "description": "EventContractLiveTennisStatisticsVo",
+                        "title": "EventContractLiveTennisStatisticsVo"
+                      },
+                      "competitor2_current_round_score": {
+                        "type": "integer",
+                        "description": "Competitor 2 current round score.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "competitor2_id": {
+                        "type": "string",
+                        "description": "Competitor 2 ID.",
+                        "example": "ALCARAZ-001"
+                      },
+                      "competitor2_overall_score": {
+                        "type": "integer",
+                        "description": "Competitor 2 overall score (sets won).",
+                        "format": "int32",
+                        "example": 1
+                      },
+                      "competitor2_round_scores": {
+                        "type": "array",
+                        "description": "Competitor 2 round scores.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "outcome": {
+                              "type": "string",
+                              "description": "Round outcome. Values: won, lost, or empty (in progress).",
+                              "example": "won"
+                            },
+                            "score": {
+                              "type": "integer",
+                              "description": "Games won in this set.",
+                              "format": "int32",
+                              "example": 6
+                            },
+                            "tiebreak_score": {
+                              "type": "integer",
+                              "description": "Tiebreak score. Null if no tiebreak.",
+                              "format": "int32"
+                            }
+                          },
+                          "description": "EventContractLiveTennisRoundScoreVo",
+                          "title": "EventContractLiveTennisRoundScoreVo"
+                        }
+                      },
+                      "competitor2_seed": {
+                        "type": "integer",
+                        "description": "Competitor 2 seed ranking.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "competitor2_statistics": {
+                        "type": "object",
+                        "properties": {
+                          "gamescore": {
+                            "type": "string",
+                            "description": "Current game score.",
+                            "example": "30"
+                          }
+                        },
+                        "description": "EventContractLiveTennisStatisticsVo",
+                        "title": "EventContractLiveTennisStatisticsVo"
+                      },
+                      "completed_rounds": {
+                        "type": "integer",
+                        "description": "Number of completed rounds.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "home_overall_score": {
+                        "type": "integer",
+                        "description": "Home player overall score.",
+                        "format": "int32",
+                        "example": 2
+                      },
+                      "round_winners": {
+                        "type": "array",
+                        "description": "Round winners ID list.",
+                        "items": {
+                          "type": "string",
+                          "description": "Round winners ID list."
+                        }
+                      },
+                      "server": {
+                        "type": "string",
+                        "description": "Current server ID.",
+                        "example": "SINNER-001"
+                      }
+                    },
+                    "description": "Tennis match details (type=tennis_tournament_singles)",
+                    "title": "EventContractLiveTennisDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "current_round": {
+                        "type": "integer",
+                        "description": "Current round number.",
+                        "format": "int32",
+                        "example": 3
+                      },
+                      "leaderboard": {
+                        "type": "array",
+                        "description": "Leaderboard entries.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "competitor_id": {
+                              "type": "string",
+                              "description": "Competitor ID.",
+                              "example": "SCHEFFLER-001"
+                            },
+                            "current_round_score": {
+                              "type": "integer",
+                              "description": "Current round score (strokes relative to par).",
+                              "format": "int32",
+                              "example": -4
+                            },
+                            "current_round_thru": {
+                              "type": "integer",
+                              "description": "Holes completed in current round.",
+                              "format": "int32",
+                              "example": 14
+                            },
+                            "finished_current_round": {
+                              "type": "boolean",
+                              "description": "Whether current round is finished.",
+                              "example": false
+                            },
+                            "position": {
+                              "type": "integer",
+                              "description": "Current leaderboard position.",
+                              "format": "int32",
+                              "example": 1
+                            },
+                            "started_current_round": {
+                              "type": "boolean",
+                              "description": "Whether current round has started.",
+                              "example": true
+                            },
+                            "total_score": {
+                              "type": "integer",
+                              "description": "Total score (strokes relative to par).",
+                              "format": "int32",
+                              "example": -12
+                            }
+                          },
+                          "description": "EventContractLiveGolfLeaderboardEntryVo",
+                          "title": "EventContractLiveGolfLeaderboardEntryVo"
+                        }
+                      },
+                      "round_label": {
+                        "type": "string",
+                        "description": "Round label.",
+                        "example": "Round 3"
+                      }
+                    },
+                    "description": "Golf tournament details (type=golf_tournament)",
+                    "title": "EventContractLiveGolfDetailsVo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "away_overs": {
+                        "type": "integer",
+                        "description": "Away team overs.",
+                        "format": "int32",
+                        "example": 18
+                      },
+                      "away_score": {
+                        "type": "integer",
+                        "description": "Away team score.",
+                        "format": "int32",
+                        "example": 156
+                      },
+                      "away_wickets": {
+                        "type": "integer",
+                        "description": "Away team wickets.",
+                        "format": "int32",
+                        "example": 6
+                      },
+                      "batting": {
+                        "type": "string",
+                        "description": "Current batting side. Values: home, away.",
+                        "example": "home"
+                      },
+                      "home_overs": {
+                        "type": "integer",
+                        "description": "Home team overs.",
+                        "format": "int32",
+                        "example": 12
+                      },
+                      "home_score": {
+                        "type": "integer",
+                        "description": "Home team score.",
+                        "format": "int32",
+                        "example": 98
+                      },
+                      "home_wickets": {
+                        "type": "integer",
+                        "description": "Home team wickets.",
+                        "format": "int32",
+                        "example": 3
+                      }
+                    },
+                    "description": "Cricket match details (type=cricket_match)",
+                    "title": "EventContractLiveCricketDetailsVo"
+                  }
+                ]
+              }
+            },
+            "description": "EventContractLiveDataVo",
+            "title": "EventContractLiveDataVo"
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "Get Event Live Data",
+    "description": {
+      "content": "Retrieves real-time live game/event data for a specified milestone, including scores, game clock, period, and winner information. Use this to display live match status alongside event contract prices.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "live-data",
+        "get"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Milestone ID. A milestone represents a specific game or real-world occurrence tied to events.",
+            "type": "text/plain"
+          },
+          "key": "milestone_id",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Market Bars
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-using-get.md>
+
+### List Event Market Bars
+
+Retrieves historical OHLCV bar data for one or more event contract markets, keyed by market symbol. Use this endpoint to build price charts for individual contract markets. Maximum 100 symbols per request.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/markets/bars/list",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves historical OHLCV bar data for one or more event contract markets, keyed by market symbol. Use this endpoint to build price charts for individual contract markets. Maximum 100 symbols per request.",
+  "operationId": "eventMarketBarsUsingGET",
+  "parameters": [
+    {
+      "name": "symbols",
+      "in": "query",
+      "description": "Comma-separated market symbols. A market is a single binary contract within an event. Maximum 100 symbols.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNBA-LAL-BOS-0415-ML,KXNBA-LAL-BOS-0415-SPREAD"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "start_time",
+      "in": "query",
+      "description": "Start time (unix timestamp in milliseconds). Empty means no lower bound.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "example": 1700000000000
+    },
+    {
+      "name": "end_time",
+      "in": "query",
+      "description": "End time (unix timestamp in milliseconds). Empty means no upper bound.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "example": 1700100000000
+    },
+    {
+      "name": "count",
+      "in": "query",
+      "description": "Number of bars. Range: 1-1200, default 200.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "default": 200
+      },
+      "example": 200
+    },
+    {
+      "name": "timespan",
+      "in": "query",
+      "description": "Bar time granularity. M1=1min, M5=5min, M15=15min, M30=30min, M60=1hour, M120=2hour, M240=4hour, D=Daily, W=Weekly, M=Monthly, Y=Yearly.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "M5"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "JSON object where key is market_symbol (string) and value is array of candlestick bar objects. See schema below for bar object fields.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": {
+              "required": [
+                "end_period_time",
+                "volume"
+              ],
+              "type": "object",
+              "properties": {
+                "end_period_time": {
+                  "type": "string",
+                  "description": "Bar end period time (UTC datetime)",
+                  "example": "2021-12-28T09:00:09.945+0000"
+                },
+                "volume": {
+                  "type": "string",
+                  "description": "Volume during period",
+                  "example": "450.0"
+                },
+                "open": {
+                  "type": "string",
+                  "description": "Open price (nullable)",
+                  "example": "0.53"
+                },
+                "high": {
+                  "type": "string",
+                  "description": "High price (nullable)",
+                  "example": "0.57"
+                },
+                "low": {
+                  "type": "string",
+                  "description": "Low price (nullable)",
+                  "example": "0.51"
+                },
+                "close": {
+                  "type": "string",
+                  "description": "Close price (nullable)",
+                  "example": "0.56"
+                }
+              },
+              "description": "EventContractCandlestickVo",
+              "title": "EventContractCandlestickVo"
+            }
+          },
+          "example": {
+            "KXNBAGAME-26MAY12MINSAS-MIN": [
+              {
+                "open": "0.23",
+                "high": "0.24",
+                "low": "0.18",
+                "close": "0.19",
+                "end_period_time": "2026-05-12T04:00:00.000+0000",
+                "volume": "286472.18"
+              }
+            ],
+            "KXNBAGAME-26MAY12MINSAS-SAS": [
+              {
+                "open": "0.78",
+                "high": "0.95",
+                "low": "0.71",
+                "close": "0.94",
+                "end_period_time": "2026-05-12T04:00:00.000+0000",
+                "volume": "149897.77"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Market Bars",
+    "description": {
+      "content": "Retrieves historical OHLCV bar data for one or more event contract markets, keyed by market symbol. Use this endpoint to build price charts for individual contract markets. Maximum 100 symbols per request.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "markets",
+        "bars",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Comma-separated market symbols. A market is a single binary contract within an event. Maximum 100 symbols.",
+            "type": "text/plain"
+          },
+          "key": "symbols",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Start time (unix timestamp in milliseconds). Empty means no lower bound.",
+            "type": "text/plain"
+          },
+          "key": "start_time",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "End time (unix timestamp in milliseconds). Empty means no upper bound.",
+            "type": "text/plain"
+          },
+          "key": "end_time",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Number of bars. Range: 1-1200, default 200.",
+            "type": "text/plain"
+          },
+          "key": "count",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Bar time granularity. M1=1min, M5=5min, M15=15min, M30=30min, M60=1hour, M120=2hour, M240=4hour, D=Daily, W=Weekly, M=Monthly, Y=Yearly.",
+            "type": "text/plain"
+          },
+          "key": "timespan",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Market Bars By Event
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-bars-by-event-using-get.md>
+
+### List Event Bars by Event
+
+Retrieves historical OHLCV bar data for all markets under a given event, keyed by market symbol. Use this endpoint to compare price movements across all contract outcomes within a single event.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/markets/bars/list-by-event",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves historical OHLCV bar data for all markets under a given event, keyed by market symbol. Use this endpoint to compare price movements across all contract outcomes within a single event.",
+  "operationId": "eventMarketBarsByEventUsingGET",
+  "parameters": [
+    {
+      "name": "event_symbol",
+      "in": "query",
+      "description": "Event unique identifier. An event contains multiple markets (binary contracts).",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNBA-LAL-BOS-0415"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "start_time",
+      "in": "query",
+      "description": "Start time (unix timestamp in milliseconds). Empty means no lower bound.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "example": 1700000000000
+    },
+    {
+      "name": "end_time",
+      "in": "query",
+      "description": "End time (unix timestamp in milliseconds). Empty means no upper bound.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "example": 1700100000000
+    },
+    {
+      "name": "count",
+      "in": "query",
+      "description": "Number of bars. Range: 1-1200, default 200.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "default": 200
+      },
+      "example": 200
+    },
+    {
+      "name": "timespan",
+      "in": "query",
+      "description": "Bar time granularity. M1=1min, M5=5min, M15=15min, M30=30min, M60=1hour, M120=2hour, M240=4hour, D=Daily, W=Weekly, M=Monthly, Y=Yearly.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "M5"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "JSON object where key is market_symbol (string) and value is array of candlestick bar objects. See schema below for bar object fields.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "array",
+            "items": {
+              "required": [
+                "end_period_time",
+                "volume"
+              ],
+              "type": "object",
+              "properties": {
+                "end_period_time": {
+                  "type": "string",
+                  "description": "Bar end period time (UTC datetime)",
+                  "example": "2021-12-28T09:00:09.945+0000"
+                },
+                "volume": {
+                  "type": "string",
+                  "description": "Volume during period",
+                  "example": "450.0"
+                },
+                "open": {
+                  "type": "string",
+                  "description": "Open price (nullable)",
+                  "example": "0.53"
+                },
+                "high": {
+                  "type": "string",
+                  "description": "High price (nullable)",
+                  "example": "0.57"
+                },
+                "low": {
+                  "type": "string",
+                  "description": "Low price (nullable)",
+                  "example": "0.51"
+                },
+                "close": {
+                  "type": "string",
+                  "description": "Close price (nullable)",
+                  "example": "0.56"
+                }
+              },
+              "description": "EventContractCandlestickVo",
+              "title": "EventContractCandlestickVo"
+            }
+          },
+          "example": {
+            "KXNBAGAME-26MAY12MINSAS-MIN": [
+              {
+                "open": "0.23",
+                "high": "0.24",
+                "low": "0.18",
+                "close": "0.19",
+                "end_period_time": "2026-05-12T04:00:00.000+0000",
+                "volume": "286472.18"
+              }
+            ],
+            "KXNBAGAME-26MAY12MINSAS-SAS": [
+              {
+                "open": "0.78",
+                "high": "0.95",
+                "low": "0.71",
+                "close": "0.94",
+                "end_period_time": "2026-05-12T04:00:00.000+0000",
+                "volume": "149897.77"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Bars by Event",
+    "description": {
+      "content": "Retrieves historical OHLCV bar data for all markets under a given event, keyed by market symbol. Use this endpoint to compare price movements across all contract outcomes within a single event.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "markets",
+        "bars",
+        "list-by-event"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Event unique identifier. An event contains multiple markets (binary contracts).",
+            "type": "text/plain"
+          },
+          "key": "event_symbol",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Start time (unix timestamp in milliseconds). Empty means no lower bound.",
+            "type": "text/plain"
+          },
+          "key": "start_time",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "End time (unix timestamp in milliseconds). Empty means no upper bound.",
+            "type": "text/plain"
+          },
+          "key": "end_time",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Number of bars. Range: 1-1200, default 200.",
+            "type": "text/plain"
+          },
+          "key": "count",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Bar time granularity. M1=1min, M5=5min, M15=15min, M30=30min, M60=1hour, M120=2hour, M240=4hour, D=Daily, W=Weekly, M=Monthly, Y=Yearly.",
+            "type": "text/plain"
+          },
+          "key": "timespan",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Market Depth
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-depth-using-get.md>
+
+### List Event Market Depthes
+
+Retrieves the order book (bid/ask depth) for a single event contract market. Each level shows the price and aggregate size (quantity of open orders) at that price point.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/markets/depths/list",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves the order book (bid/ask depth) for a single event contract market. Each level shows the price and aggregate size (quantity of open orders) at that price point.",
+  "operationId": "eventMarketDepthUsingGET",
+  "parameters": [
+    {
+      "name": "symbol",
+      "in": "query",
+      "description": "Market symbol. A market is a single binary contract within an event.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNBAGAME-26MAY11OKCLAL-LAL"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "depth",
+      "in": "query",
+      "description": "Market depth levels. Range: 0-100. Default 0 returns all available levels.",
+      "required": false,
+      "schema": {
+        "type": "integer",
+        "default": 0
+      },
+      "example": 10
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "required": [
+              "instrument_id",
+              "no_asks",
+              "no_bids",
+              "symbol",
+              "yes_asks",
+              "yes_bids"
+            ],
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Contract symbol",
+                "example": "KXNBAGAME-26MAY11OKCLAL-LAL"
+              },
+              "instrument_id": {
+                "type": "string",
+                "description": "Contract instrument ID",
+                "example": "505640444"
+              },
+              "yes_asks": {
+                "type": "array",
+                "description": "Yes side ask orders, sorted by price ascending",
+                "items": {
+                  "required": [
+                    "price",
+                    "size"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "price": {
+                      "type": "string",
+                      "description": "Price",
+                      "example": "0.19"
+                    },
+                    "size": {
+                      "type": "string",
+                      "description": "Size (Quantity)",
+                      "example": "3068826.79"
+                    }
+                  },
+                  "description": "EventContractAskBidVo",
+                  "title": "EventContractAskBidVo"
+                }
+              },
+              "yes_bids": {
+                "type": "array",
+                "description": "Yes side bid orders, sorted by price descending",
+                "items": {
+                  "required": [
+                    "price",
+                    "size"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "price": {
+                      "type": "string",
+                      "description": "Price",
+                      "example": "0.19"
+                    },
+                    "size": {
+                      "type": "string",
+                      "description": "Size (Quantity)",
+                      "example": "3068826.79"
+                    }
+                  },
+                  "description": "EventContractAskBidVo",
+                  "title": "EventContractAskBidVo"
+                }
+              },
+              "no_asks": {
+                "type": "array",
+                "description": "No side ask orders, sorted by price ascending",
+                "items": {
+                  "required": [
+                    "price",
+                    "size"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "price": {
+                      "type": "string",
+                      "description": "Price",
+                      "example": "0.19"
+                    },
+                    "size": {
+                      "type": "string",
+                      "description": "Size (Quantity)",
+                      "example": "3068826.79"
+                    }
+                  },
+                  "description": "EventContractAskBidVo",
+                  "title": "EventContractAskBidVo"
+                }
+              },
+              "no_bids": {
+                "type": "array",
+                "description": "No side bid orders, sorted by price descending",
+                "items": {
+                  "required": [
+                    "price",
+                    "size"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "price": {
+                      "type": "string",
+                      "description": "Price",
+                      "example": "0.19"
+                    },
+                    "size": {
+                      "type": "string",
+                      "description": "Size (Quantity)",
+                      "example": "3068826.79"
+                    }
+                  },
+                  "description": "EventContractAskBidVo",
+                  "title": "EventContractAskBidVo"
+                }
+              }
+            },
+            "description": "EventContractDepthVo",
+            "title": "EventContractDepthVo"
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Market Depthes",
+    "description": {
+      "content": "Retrieves the order book (bid/ask depth) for a single event contract market. Each level shows the price and aggregate size (quantity of open orders) at that price point.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "markets",
+        "depths",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Market symbol. A market is a single binary contract within an event.",
+            "type": "text/plain"
+          },
+          "key": "symbol",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Market depth levels. Range: 0-100. Default 0 returns all available levels.",
+            "type": "text/plain"
+          },
+          "key": "depth",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+
+## Event Market Snapshot
+
+> Source: <https://developer.webull.com/apis/docs/reference/broker-market-data-api/event-market-snapshot-using-get.md>
+
+### List Event Market Snapshots
+
+Retrieves the latest market snapshot for a single event contract market, including yes/no bid-ask prices, last trade price, volume, open interest, and market status.
+
+### OpenAPI definition
+
+```json
+{
+  "info": {
+    "title": "Webull Open API Reference",
+    "description": "application.yml\\ncom\\ni18n\\nMETA-INF\\nstatic\\n\\r\\n",
+    "contact": {
+      "name": "",
+      "url": "",
+      "email": ""
+    },
+    "version": "2.0",
+    "x-logo": {
+      "url": "static/png/logo.png"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-global-openapi.uat.webullbroker.com"
+    }
+  ],
+  "path": "/market-data/event-contracts/markets/snapshots/list",
+  "method": "get",
+  "tags": [
+    "Event Contract Market Data"
+  ],
+  "description": "Retrieves the latest market snapshot for a single event contract market, including yes/no bid-ask prices, last trade price, volume, open interest, and market status.",
+  "operationId": "eventMarketSnapshotUsingGET",
+  "parameters": [
+    {
+      "name": "symbol",
+      "in": "query",
+      "description": "Market symbol. A market is a single binary contract within an event.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      },
+      "example": "KXNBA-LAL-BOS-0415-ML"
+    },
+    {
+      "name": "category",
+      "in": "query",
+      "description": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+      "required": false,
+      "schema": {
+        "type": "string",
+        "enum": [
+          "US_EVENT"
+        ],
+        "default": "US_EVENT"
+      },
+      "example": "US_EVENT"
+    },
+    {
+      "name": "access_token",
+      "in": "header",
+      "description": "User's authenticated token.",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "reqid",
+      "in": "header",
+      "description": "The unique ID for this request. Suggest using UUID.",
+      "schema": {
+        "type": "string"
+      },
+      "example": "2e46d5a4-bef9-4507-8cda-98f85d2f770c"
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "required": [
+              "instrument_id",
+              "symbol"
+            ],
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "description": "Contract symbol",
+                "example": "KXNBA-LAL-BOS-0415-ML"
+              },
+              "instrument_id": {
+                "type": "string",
+                "description": "Contract instrument ID",
+                "example": "9878278271"
+              },
+              "event_symbol": {
+                "type": "string",
+                "description": "Parent event symbol",
+                "example": "KXNBA-LAL-BOS-0415"
+              },
+              "yes_sub_title": {
+                "type": "string",
+                "description": "Yes side subtitle (e.g. 'Lakers Win')",
+                "example": "Lakers Win"
+              },
+              "no_sub_title": {
+                "type": "string",
+                "description": "No side subtitle (e.g. 'Celtics Win')",
+                "example": "Celtics Win"
+              },
+              "status": {
+                "type": "string",
+                "description": "Market status. ACTIVE=Market is open for trading; INACTIVE=Market is closed, no new orders accepted.",
+                "example": "ACTIVE"
+              },
+              "yes_bid": {
+                "type": "string",
+                "description": "Yes side best bid price",
+                "example": "0.56"
+              },
+              "yes_ask": {
+                "type": "string",
+                "description": "Yes side best ask price",
+                "example": "0.58"
+              },
+              "no_bid": {
+                "type": "string",
+                "description": "No side best bid price",
+                "example": "0.42"
+              },
+              "no_ask": {
+                "type": "string",
+                "description": "No side best ask price",
+                "example": "0.44"
+              },
+              "price": {
+                "type": "string",
+                "description": "Price for the last traded YES contract on this market in dollars.",
+                "example": "0.57"
+              },
+              "volume": {
+                "type": "string",
+                "description": "String representation of the market volume in contracts.",
+                "example": "12500.0"
+              },
+              "open_interest": {
+                "type": "string",
+                "description": "String representation of the number of contracts bought on this market disregarding netting.",
+                "example": "8500.0"
+              },
+              "last_trade_time": {
+                "type": "string",
+                "description": "Timestamp of the most recent trade. Format: ISO 8601 with timezone offset.",
+                "example": "2026-05-27T09:03:50.000+0000"
+              }
+            },
+            "description": "EventContractSnapshotVo",
+            "title": "EventContractSnapshotVo"
+          }
+        }
+      }
+    },
+    "401": {
+      "description": "Unauthorized: Authentication required",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNAUTHORIZED",
+            "message": "Insufficient permission"
+          }
+        }
+      }
+    },
+    "417": {
+      "description": "A business logic error triggered when the request cannot be processed due to domain-specific constraints.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string",
+                "description": "Internal logic error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            },
+            "description": "ErrorResponseVo",
+            "title": "ErrorResponseVo"
+          },
+          "example": {
+            "error_code": "UNSUPPORTED_CATEGORY",
+            "message": "Unsupported category:US_EVENTS"
+          }
+        }
+      }
+    }
+  },
+  "postman": {
+    "name": "List Event Market Snapshots",
+    "description": {
+      "content": "Retrieves the latest market snapshot for a single event contract market, including yes/no bid-ask prices, last trade price, volume, open interest, and market status.",
+      "type": "text/plain"
+    },
+    "url": {
+      "path": [
+        "market-data",
+        "event-contracts",
+        "markets",
+        "snapshots",
+        "list"
+      ],
+      "host": [
+        "{{baseUrl}}"
+      ],
+      "query": [
+        {
+          "disabled": false,
+          "description": {
+            "content": "(Required) Market symbol. A market is a single binary contract within an event.",
+            "type": "text/plain"
+          },
+          "key": "symbol",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "description": {
+            "content": "Category, default is US_EVENT, currently only US_EVENT is supported.",
+            "type": "text/plain"
+          },
+          "key": "category",
+          "value": ""
+        }
+      ],
+      "variable": []
+    },
+    "header": [
+      {
+        "disabled": false,
+        "description": {
+          "content": "(Required) User's authenticated token.",
+          "type": "text/plain"
+        },
+        "key": "access_token",
+        "value": ""
+      },
+      {
+        "disabled": false,
+        "description": {
+          "content": "The unique ID for this request. Suggest using UUID.",
+          "type": "text/plain"
+        },
+        "key": "reqid",
+        "value": ""
+      },
+      {
+        "key": "Accept",
+        "value": "application/json"
+      }
+    ],
+    "method": "GET"
+  }
+}
+```
+

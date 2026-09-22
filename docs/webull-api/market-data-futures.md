@@ -14,7 +14,6 @@ Futures market data and instruments.
 |---|---|
 | **SDK** | `data.GetFuturesTick` |
 | **Reference** | [futures-tick.md](https://developer.webull.hk/apis/docs/reference/futures-tick.md) |
-| **Note** | Paths unconfirmed against live API. |
 
 **Request — parameters**
 
@@ -53,7 +52,6 @@ Futures market data and instruments.
 |---|---|
 | **SDK** | `data.GetFuturesSnapshot` |
 | **Reference** | [futures-snapshot.md](https://developer.webull.hk/apis/docs/reference/futures-snapshot.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -100,7 +98,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesFootprint` |
 | **Reference** | [futures-footprint.md](https://developer.webull.hk/apis/docs/reference/futures-footprint.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -148,7 +145,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesDepth` |
 | **Reference** | [futures-depth-of-book.md](https://developer.webull.hk/apis/docs/reference/futures-depth-of-book.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -194,7 +190,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesBars` |
 | **Reference** | [futures-historical-bars.md](https://developer.webull.hk/apis/docs/reference/futures-historical-bars.md) |
-| **Note** | Paths unconfirmed. |
 
 **Request — parameters**
 
@@ -242,7 +237,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesInstruments` |
 | **Reference** | [futures-instrument-list.md](https://developer.webull.hk/apis/docs/reference/futures-instrument-list.md) |
-| **Note** | Product-codes path confirmed against HK sandbox. |
 
 **Request — parameters**
 
@@ -292,7 +286,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesProductCodes` |
 | **Reference** | [futures-products.md](https://developer.webull.hk/apis/docs/reference/futures-products.md) |
-| **Note** | Confirmed against HK sandbox. |
 
 **Request — parameters**
 
@@ -325,7 +318,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetFuturesProductClasses` |
 | **Reference** | [futures-products-class.md](https://developer.webull.hk/apis/docs/reference/futures-products-class.md) |
-| **Note** | Unconfirmed. |
 
 **Request — parameters**
 

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-22
+
+Full SDK parity with the official Webull OpenAPI.
+
+### Added
+
+- `connect/`: OAuth 2.0 authorization-code flow (`AuthorizationURL`,
+  `CreateToken`) with `GrantTypeAuthorizationCode`/`GrantTypeRefreshToken`.
+- `data/`: crypto (`GetCryptoBars`, `GetCryptoSnapshot`, `GetCryptoInstruments`),
+  Display event contracts (`GetEventContractTags`, `GetEventContractEventsList`,
+  `GetEventContractMilestones`, `GetEventContractSeriesList`,
+  `GetEventContractSportsFilters`, `GetEventGameStats`, `GetEventLiveData`,
+  `GetEventMarketBars`, `GetEventMarketBarsByEvent`, `GetEventMarketDepth`,
+  `GetEventMarketSnapshot`), and fund extras (`GetFundPerformance`,
+  `GetFundHoldings`, `GetFundRating`, `GetFundSplits`, `GetFundFiles`,
+  `GetFundAllocation`).
+- `display`: `Service.RefreshClientToken`.
+
+### Changed
+
+- Aligned 69 SDK paths to the official OpenAPI definition across `broker`,
+  `brokerfd` and `data`. `broker.GetTradeCalendar` is now `GET` with query
+  parameters; Broker FD account-update, order-replace and order-cancel are now
+  `POST`.
+- Removed all 41 provisional TODO markers. The SDK now covers every documented
+  endpoint (0 gaps, 0 path discrepancies in `docs/reconciliation.md`).
+
 ## [1.0.3] - 2026-09-22
 
 Documentation release: verbatim Webull master reference, an SDK↔API

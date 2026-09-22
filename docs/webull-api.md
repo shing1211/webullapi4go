@@ -136,6 +136,7 @@ path:
 - [Authentication](webull-api/authentication.md) — create/check token, client token.
 - [Market Data — Stock](webull-api/market-data-stock.md)
 - [Market Data — Option](webull-api/market-data-option.md)
+- [Market Data — Crypto](webull-api/crypto.md)
 - [Market Data — Futures](webull-api/market-data-futures.md)
 - [Market Data — News](webull-api/market-data-news.md)
 - [Market Data — Screener](webull-api/market-data-screener.md)
@@ -148,6 +149,7 @@ path:
 - [Display Solution](webull-api/display-solution.md)
 - [Streaming (MQTT)](webull-api/streaming.md)
 - [Events (gRPC)](webull-api/events.md)
+- [Connect API (OAuth)](webull-api/connect-api.md)
 
 ## Raw Webull data (verbatim)
 

@@ -1,6 +1,6 @@
 # Display Solution
 
-Hosted Display Solution: a separate entitlement and host with Client-to-Server (Bearer) authentication. The SDK routes these through `display.Service`. Several SDK path literals are marked `TODO(ds)` and are shown with a warning.
+Hosted Display Solution: a separate entitlement and host with Client-to-Server (Bearer) authentication. The SDK routes these through `display.Service`.
 
 [<- Webull API Reference](../webull-api.md)
 
@@ -14,7 +14,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayGainersLosers` |
 | **Reference** | [top-gainers-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-gainers-using-get-new.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -67,7 +66,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayTopActive` |
 | **Reference** | [top-active-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-active-using-get-new.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -121,7 +119,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplaySnapshot` |
 | **Reference** | [snapshot-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/snapshot-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request body**
 
@@ -198,7 +195,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayBars` |
 | **Reference** | [query-batch-bars-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/query-batch-bars-using-post.md) |
-| **Note** | Path unconfirmed. |
 
 **Request body**
 
@@ -268,7 +264,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayBarsSingle` |
 | **Reference** | [bars-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/bars-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -332,7 +327,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayTick` |
 | **Reference** | [tick-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/tick-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -373,7 +367,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDisplayDepth` |
 | **Reference** | [quotes-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/quotes-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -435,7 +428,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSNewsSummary` |
 | **Reference** | [watchlist-summary-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/watchlist-summary-using-post.md) |
-| **Note** | Path unconfirmed. |
 
 **Request body**
 
@@ -473,7 +465,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSMarketNews` |
 | **Reference** | [list-news-by-market-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-market-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -507,7 +498,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSSymbolNews` |
 | **Reference** | [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-ticker-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -542,7 +532,6 @@ Hosted Display Solution: a separate entitlement and host with Client-to-Server (
 |---|---|
 | **SDK** | `data.GetDSLatestNews` |
 | **Reference** | [list-latest-news-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-latest-news-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -736,7 +725,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSCompanyProfile` |
 | **Reference** | [list-company-profile-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-company-profile-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -772,7 +760,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSAnalystTargetPrice` |
 | **Reference** | [list-analyst-target-price-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-target-price-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -806,7 +793,6 @@ Array of objects:
 |---|---|
 | **SDK** | `data.GetDSAnalystRating` |
 | **Reference** | [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-rating-using-get.md) |
-| **Note** | Path unconfirmed. |
 
 **Request — parameters**
 
@@ -841,7 +827,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.DSSubscribe` |
 | **Reference** | [subscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/subscribe-using-post.md) |
-| **Note** | US-site reference; path unconfirmed. |
+| **Note** | US-site reference. |
 
 **Request body**
 
@@ -872,7 +858,7 @@ Array of objects:
 |---|---|
 | **SDK** | `data.DSUnsubscribe` |
 | **Reference** | [unsubscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/unsubscribe-using-post.md) |
-| **Note** | US-site reference; path unconfirmed. |
+| **Note** | US-site reference. |
 
 **Request body**
 
