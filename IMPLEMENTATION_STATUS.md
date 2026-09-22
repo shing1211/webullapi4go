@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-22 (v1.0.0 release) · Current version: **v1.0.0**
+Last updated: 2026-09-22 (v1.0.1 release) · Current version: **v1.0.1**
 
 ## Summary
 
@@ -52,6 +52,7 @@ Last updated: 2026-09-22 (v1.0.0 release) · Current version: **v1.0.0**
 | v0.9.1 | 2026-09-21 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
 | v0.9.2 | 2026-09-22 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
 | v1.0.0 | 2026-09-22 | Futures market data bug fix (Category field added to all 5 query structs); v1.0 API stability audit completed; all 49 TODOs remain provisional (require US sandbox) | Done (provisional) |
+| v1.0.1 | 2026-09-22 | FuturesInstrument.Unit flexible type (StringOrNumber handles numeric API responses); client_order_id length fix in options-multi-leg example; HK sandbox probe findings documented | Done |
 
 ## Feature Coverage
 
@@ -134,6 +135,7 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 - `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint`
 - Paths inferred from pattern; response shape unconfirmed for bars and footprint
 - **v1.0.0 fix:** All 5 query structs now have a `Category` field (defaults to `US_FUTURES` if empty) — previously hardcoded US category regardless of query parameter
+- Note: `GetFuturesProductCodes` in `data/futures.go` confirmed via HK sandbox; `data/futures_market.go` market data paths (tick/snapshot/bars/depth/footprint) remain unconfirmed
 
 **Event contract market data** (`data/eventcontracts_market.go`) — 5 TODO(event-market-data)
 - `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick`
@@ -247,6 +249,7 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 8. **Rate limits**: Token endpoint allows 10 requests/30s; max 5 MQTT connections per App Key
 9. **Broker API HK sandbox limitation**: Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in the HK sandbox — the app lacks the required scope, not a path issue. Broker HK remains unverified pending production or US sandbox access.
 10. **SSE news 504**: SSE news upstream returns `504 Gateway Timeout` in the HK sandbox.
+11. **Multi-leg options strategies blocked in HK sandbox**: All multi-leg strategies (VERTICAL, STRADDLE, STRANGLE, IRON_CONDOR, IRON_BUTTERFLY, BUTTERFLY, CALENDAR, DIAGONAL, RATIO, COLLAR) are rejected with 417 errors — only SINGLE is accepted in HK sandbox. US sandbox needed to confirm the multi-leg strategy wire values.
 
 ## Module Structure
 
@@ -259,7 +262,7 @@ Every function below has real HTTP/gRPC logic but hits paths or uses wire values
 
 ## Next Steps
 
-v1.0.0 is released. All 49 TODO items require US sandbox credentials to verify and cannot be confirmed with the current HK sandbox setup.
+v1.0.1 is released. All 49 TODO items require US sandbox credentials to verify and cannot be confirmed with the current HK sandbox setup.
 
 1. **Obtain US sandbox credentials** (`WEBULL_APP_KEY`, `WEBULL_APP_SECRET` for US) — required to verify all 49 provisional items
 2. **Run futures-probe** (`examples/futures-probe/`): probe HK futures discovery + market data; requires `WEBULL_FUTURES_TEST=1`
