@@ -59,6 +59,10 @@ These are secrets.
 - Treat any exposed credential as compromised and rotate it in the Webull
   developer portal immediately.
 
+**Exception:** Shared public test accounts published by Webull on their
+official documentation pages are not secrets. They may be referenced in
+documentation and test files.
+
 If you believe a credential was exposed in this repository, report it through
 the private channel above so it can be rotated and the repository history can be
 cleaned.

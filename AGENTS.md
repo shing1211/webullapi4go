@@ -146,14 +146,17 @@ make generate
 - Credentials are never committed. Read them from the environment:
   `WEBULL_APP_KEY`, `WEBULL_APP_SECRET`, `WEBULL_REGION`,
   `WEBULL_ENVIRONMENT`, `WEBULL_BASE_URL`, `WEBULL_MQTT_URL`.
+  **Exception:** Shared public test accounts published by Webull on their
+  official docs (<https://developer.webull.hk/apis/docs/sdk#test-accounts>)
+  may appear in documentation and test fixtures.
 - The only sandbox host that may appear in committed material is
   `api.sandbox.webull.hk` (and the corresponding `data-api.sandbox.webull.hk`
   MQTT hosts). App keys, app secrets, and access tokens are per-account secrets.
 - Sandbox integration tests are gated by `WEBULL_SANDBOX=1` plus
   `WEBULL_APP_KEY` and `WEBULL_APP_SECRET`; MQTT-over-WebSocket tests also need
   `WEBULL_MQTT_WEBSOCKET=1`.
-- `.env` is gitignored. Never paste real credentials into issues, PRs, docs, or
-  tests.
+- `.env` is gitignored. Never paste private credentials into issues, PRs, docs,
+  or tests.
 
 ## Known constraints
 

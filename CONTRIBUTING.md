@@ -75,7 +75,9 @@ Internal run artifacts under `docs/runs/` are excluded from the published site.
 ### Sandbox integration tests
 
 Integration tests hit the Webull sandbox and are skipped unless explicitly
-enabled. They require a sandbox App Key and App Secret.
+enabled. Webull publishes shared public test accounts for the HK sandbox —
+see [Sandbox > Test credentials](sandbox.md#test-credentials) for the
+values.
 
 ```sh
 # macOS / Linux
@@ -93,8 +95,8 @@ $env:WEBULL_APP_SECRET = "your-sandbox-app-secret"
 go test ./... -run Integration
 ```
 
-Never commit these values. Keep them in your shell environment or an untracked
-`.env` file (already covered by [`.gitignore`](.gitignore)).
+Private credentials must never be committed. The shared public test accounts
+published by Webull are the exception — they are public by design.
 
 ## Branch naming
 

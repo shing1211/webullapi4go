@@ -27,8 +27,27 @@ Webull publishes shared sandbox test accounts for both regions:
 
 Use them to try the API without applying for access.
 
-Credentials are not reproduced in this repository and must never be committed.
-Supply the sandbox app key and secret at run time:
+### Shared HK sandbox accounts
+
+Webull publishes these shared accounts for immediate use — no application
+required. They are public and shared across all developers.
+
+| # | Account ID | App Key | App Secret |
+|---|-----------|---------|------------|
+| 1 | `V4H6R3L4VRI33UQ4TGR2NM1VI9` | `4b2b7acd2bf0d30d8aea173fceefa238` | `840b4353a6a31ce3ab91e2f99a510272` |
+| 2 | `OGG4RRLC6EDE98HI920KRBVSKB` | `42bd186fb65ea76de309d69cf12f024e` | `29feb64b59d6b1b6b2d2aa8cea8a1b8d` |
+| 3 | `2DHSQ9B1DMPBFPMPFU2R5SDPB8` | `64fc722617af8b5ebb746f50a910e91f` | `a268416fc681d438533f9e9316bab576` |
+
+!!! caution
+    These are shared public accounts. Other users may place orders on them
+    at any time. Use them for read-only exploration and testing only. For
+    dedicated sandbox accounts, apply through the
+    [Sandbox environment application](https://developer.webull.hk/apis/docs/authentication/TradingAPIApplication).
+
+### Setting credentials
+
+Private credentials must never be committed. Supply the sandbox app key and
+secret at run time:
 
 ```sh
 export WEBULL_APP_KEY="your-sandbox-app-key"

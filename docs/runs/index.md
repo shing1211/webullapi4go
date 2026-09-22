@@ -20,3 +20,4 @@
 | 2026-09-22 | broker-paths-fix | BUILD | released v0.9.2 | 44299b2 |
 | 2026-09-22 | hk-sandbox-probe | BUILD | done (released v1.0.1) | fabd98b |
 | 2026-09-21 | lint-ci | BUILD | done (no-op — already configured) | 1617d1f |
+| 2026-09-22 | sandbox-integration-tests | TEST | 20/20 pass (18 pass + 2 skip) | (post-v1.1.0) |
