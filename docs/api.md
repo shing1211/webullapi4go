@@ -76,14 +76,11 @@ The Market Data HTTP client. Construct it with `data.New(*client.Client)`.
   `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments`
 - Derivatives and news: `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`,
   `GetNewsSummary`
-- Option discovery: `GetOptionExpirations`, `GetOptionChain`, with
-  `OptionExpirationQuery`, `OptionChainQuery`, `OptionContract`, and
-  `OptionType` (`Call`/`Put`). **Speculative:** not in the published Webull
-  OpenAPI — the paths, parameters, and response shapes are unconfirmed and the
-  calls may return empty results
-- Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` (paths unconfirmed)
-- Crypto data: `GetCryptoBars`, `GetCryptoTick`, `GetCryptoDepth`, `GetCryptoSnapshot` (paths unconfirmed)
-- Screener v2: `GetScreenerV2` (POST, path unconfirmed)
+- Option contracts: `GetOptionContracts` with `OptionContractsQuery`,
+  `OptionContract`, and `OptionType` (`Call`/`Put`). Uses the Trading API
+  path `/trading/instruments/options/contracts/list`; **TODO(t10):** field
+  mappings are unconfirmed (HK sandbox returns `404`)
+- Fund data: `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` (paths unconfirmed; HK sandbox returns `404`)
 - Fundamentals: `GetCapitalFlow`, `GetIndustryComparison`,
   `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`,
   `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`,

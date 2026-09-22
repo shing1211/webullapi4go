@@ -161,49 +161,7 @@ func TestGetOptionBars(t *testing.T) {
 	}
 }
 
-func TestGetOptionExpirations(t *testing.T) {
-	t.Parallel()
-
-	const body = `{"data":["2026-01-16","2026-02-20"],"pagination_key":"page-2"}`
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
-		}
-		if got, want := r.URL.Path, "/market-data/options/expirations/list"; got != want {
-			t.Errorf("path = %q, want %q", got, want)
-		}
-		q := r.URL.Query()
-		if got, want := q.Get("symbol"), "AAPL"; got != want {
-			t.Errorf("symbol = %q, want %q", got, want)
-		}
-		if got, want := q.Get("category"), "US_OPTION"; got != want {
-			t.Errorf("category = %q, want %q", got, want)
-		}
-		if got, want := q.Get("pagination_key"), "page-1"; got != want {
-			t.Errorf("pagination_key = %q, want %q", got, want)
-		}
-		_, _ = w.Write([]byte(body))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv.URL)
-	got, err := c.GetOptionExpirations(context.Background(), data.OptionExpirationQuery{
-		Symbol:        "AAPL",
-		PaginationKey: "page-1",
-	})
-	if err != nil {
-		t.Fatalf("GetOptionExpirations() error = %v", err)
-	}
-	if len(got.Expirations) != 2 || got.Expirations[0] != "2026-01-16" {
-		t.Errorf("expirations = %+v", got.Expirations)
-	}
-	if got.PaginationKey != "page-2" {
-		t.Errorf("paginationKey = %q, want %q", got.PaginationKey, "page-2")
-	}
-}
-
-func TestGetOptionChain(t *testing.T) {
+func TestGetOptionContracts(t *testing.T) {
 	t.Parallel()
 
 	const body = `{"data":[{"instrument_id":"470059643",` +
@@ -216,7 +174,7 @@ func TestGetOptionChain(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if got, want := r.URL.Path, "/market-data/options/contracts/list"; got != want {
+		if got, want := r.URL.Path, "/trading/instruments/options/contracts/list"; got != want {
 			t.Errorf("path = %q, want %q", got, want)
 		}
 		q := r.URL.Query()
@@ -246,7 +204,7 @@ func TestGetOptionChain(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	got, err := c.GetOptionChain(context.Background(), data.OptionChainQuery{
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{
 		Symbol:        "AAPL",
 		Expiration:    "2026-01-16",
 		OptionType:    data.OptionTypeCall,
@@ -255,7 +213,7 @@ func TestGetOptionChain(t *testing.T) {
 		PaginationKey: "page-1",
 	})
 	if err != nil {
-		t.Fatalf("GetOptionChain() error = %v", err)
+		t.Fatalf("GetOptionContracts() error = %v", err)
 	}
 	if len(got.Contracts) != 1 {
 		t.Fatalf("got %d contracts, want 1", len(got.Contracts))
@@ -281,7 +239,7 @@ func TestGetOptionChain(t *testing.T) {
 	}
 }
 
-func TestGetOptionChainOmitsOptionalParams(t *testing.T) {
+func TestGetOptionContractsOmitsOptionalParams(t *testing.T) {
 	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -299,18 +257,18 @@ func TestGetOptionChainOmitsOptionalParams(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	got, err := c.GetOptionChain(context.Background(), data.OptionChainQuery{Symbol: "AAPL"})
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
 	if err != nil {
-		t.Fatalf("GetOptionChain() error = %v", err)
+		t.Fatalf("GetOptionContracts() error = %v", err)
 	}
 	if len(got.Contracts) != 0 {
 		t.Fatalf("got %d contracts, want 0", len(got.Contracts))
 	}
 }
 
-// TestGetOptionChainPartialOptionalParams confirms each optional filter is
+// TestGetOptionContractsPartialOptionalParams confirms each optional filter is
 // omitted independently and that a call-put selector is forwarded verbatim.
-func TestGetOptionChainPartialOptionalParams(t *testing.T) {
+func TestGetOptionContractsPartialOptionalParams(t *testing.T) {
 	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -337,43 +295,16 @@ func TestGetOptionChainPartialOptionalParams(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	got, err := c.GetOptionChain(context.Background(), data.OptionChainQuery{
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{
 		Symbol:     "AAPL",
 		OptionType: data.OptionTypePut,
 		StrikeMin:  "100",
 	})
 	if err != nil {
-		t.Fatalf("GetOptionChain() error = %v", err)
+		t.Fatalf("GetOptionContracts() error = %v", err)
 	}
 	if got == nil || len(got.Contracts) != 0 {
-		t.Fatalf("GetOptionChain() = %+v, want empty result", got)
-	}
-}
-
-// TestGetOptionExpirationsOmitsOptionalParams confirms the pagination key is
-// omitted when unset.
-func TestGetOptionExpirationsOmitsOptionalParams(t *testing.T) {
-	t.Parallel()
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		if got, want := q.Get("symbol"), "AAPL"; got != want {
-			t.Errorf("symbol = %q, want %q", got, want)
-		}
-		if got := q.Get("pagination_key"); got != "" {
-			t.Errorf("pagination_key = %q, want omitted", got)
-		}
-		_, _ = w.Write([]byte(`{"data":[]}`))
-	}))
-	defer srv.Close()
-
-	c := newTestClient(t, srv.URL)
-	got, err := c.GetOptionExpirations(context.Background(), data.OptionExpirationQuery{Symbol: "AAPL"})
-	if err != nil {
-		t.Fatalf("GetOptionExpirations() error = %v", err)
-	}
-	if got == nil || len(got.Expirations) != 0 || got.PaginationKey != "" {
-		t.Fatalf("GetOptionExpirations() = %+v, want empty result", got)
+		t.Fatalf("GetOptionContracts() = %+v, want empty result", got)
 	}
 }
 
@@ -423,23 +354,11 @@ func TestOptionEmptyAndMissingData(t *testing.T) {
 			},
 		},
 		{
-			name: "expirations empty object",
-			path: "/market-data/options/expirations/list",
+			name: "contracts missing data",
+			path: "/trading/instruments/options/contracts/list",
 			body: `{}`,
 			call: func(c *data.Client) (int, error) {
-				res, err := c.GetOptionExpirations(context.Background(), data.OptionExpirationQuery{Symbol: "AAPL"})
-				if res == nil {
-					return 0, err
-				}
-				return len(res.Expirations), err
-			},
-		},
-		{
-			name: "chain missing data",
-			path: "/market-data/options/contracts/list",
-			body: `{}`,
-			call: func(c *data.Client) (int, error) {
-				res, err := c.GetOptionChain(context.Background(), data.OptionChainQuery{Symbol: "AAPL"})
+				res, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
 				if res == nil {
 					return 0, err
 				}
@@ -447,11 +366,11 @@ func TestOptionEmptyAndMissingData(t *testing.T) {
 			},
 		},
 		{
-			name: "chain null data",
-			path: "/market-data/options/contracts/list",
+			name: "contracts null data",
+			path: "/trading/instruments/options/contracts/list",
 			body: `{"data":null,"pagination_key":""}`,
 			call: func(c *data.Client) (int, error) {
-				res, err := c.GetOptionChain(context.Background(), data.OptionChainQuery{Symbol: "AAPL"})
+				res, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
 				if res == nil {
 					return 0, err
 				}

@@ -62,6 +62,7 @@ nav:
   - Sandbox: sandbox.md
   - Errors: errors.md
   - API Reference: api.md
+  - Webull API Map: webull-api.md
   - Troubleshooting: troubleshooting.md
   - Architecture Decisions:
       - Overview: adr/index.md
