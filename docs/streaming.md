@@ -3,6 +3,14 @@
 The `stream` package delivers real-time Market Data over MQTT. Subscribe and
 unsubscribe are HTTP calls made through the core client; the MQTT connection
 only carries pushes. Requires a valid token (see [Authentication](authentication.md)).
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 Build a streaming client from a configured
 `*client.Client`:
 

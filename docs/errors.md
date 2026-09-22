@@ -4,6 +4,10 @@ Every SDK function returns a normal Go `error`. Errors produced by the SDK are
 typed, carry a stable machine-readable code, and wrap their underlying cause, so
 they work with the standard library's `errors.Is` and `errors.As` traversal.
 
+!!! note "Prerequisites"
+    - Familiarity with Go's `errors` package (`errors.Is`, `errors.As`)
+    - An SDK client returning errors — see [Getting Started](getting-started.md)
+
 ## Error shape
 
 A Webull error formats as:
@@ -123,3 +127,9 @@ for i := 0; i < maxRetries; i++ {
 
 See [Authentication](authentication.md) for the token lifecycle and
 [Troubleshooting](troubleshooting.md) for sandbox-specific error causes.
+
+## Related
+
+- [Troubleshooting](troubleshooting.md) — common symptoms and fixes.
+- [Authentication](authentication.md) — token lifecycle and refresh.
+- [Patterns](patterns.md) — error handling patterns and conventions.

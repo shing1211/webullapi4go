@@ -129,23 +129,49 @@ None — every endpoint documented by Webull is implemented. See
 
 ## Pages
 
+### Authentication
+
 - [Authentication](webull-api/authentication.md) — create/check token, client token.
-- [Market Data — Stock](webull-api/market-data-stock.md)
-- [Market Data — Option](webull-api/market-data-option.md)
-- [Market Data — Crypto](webull-api/market-data-crypto.md)
-- [Market Data — Futures](webull-api/market-data-futures.md)
-- [Market Data — News](webull-api/market-data-news.md)
-- [Market Data — Screener](webull-api/market-data-screener.md)
-- [Market Data — Watchlist](webull-api/market-data-watchlist.md)
-- [Fundamentals and Fund Data](webull-api/fundamentals.md)
-- [Event Contracts](webull-api/event-contracts.md)
-- [Trading API](webull-api/trading.md)
-- [Broker API — HK](webull-api/broker-hk.md)
-- [Broker API — FD (US)](webull-api/broker-fd-us.md)
-- [Display Solution](webull-api/display-solution.md)
-- [Streaming (MQTT)](webull-api/streaming.md)
-- [Events (gRPC)](webull-api/events.md)
-- [Connect API (OAuth)](webull-api/connect-api.md)
+
+### Market Data
+
+- [Stock](webull-api/market-data-stock.md) — snapshots, quotes, historical candles, technical indicators.
+- [Option](webull-api/market-data-option.md) — option chain, Greeks, expiry.
+- [Crypto](webull-api/market-data-crypto.md) — crypto snapshots and bars.
+- [Futures](webull-api/market-data-futures.md) — futures snapshots, candles, depth.
+- [News](webull-api/market-data-news.md) — SSE news feed.
+- [Screener](webull-api/market-data-screener.md) — stock/crypto/futures screening.
+- [Watchlist](webull-api/market-data-watchlist.md) — user watchlists.
+
+### Fundamentals
+
+- [Fundamentals and Fund Data](webull-api/fundamentals.md) — capital flow, earnings, financials, fund data.
+
+### Event Contracts
+
+- [Event Contracts](webull-api/event-contracts.md) — binary-outcome prediction markets.
+
+### Trading
+
+- [Trading API](webull-api/trading.md) — accounts, orders, positions, instruments.
+
+### Broker
+
+- [Broker API — HK](webull-api/broker-hk.md) — Hong Kong broker API.
+- [Broker API — FD (US)](webull-api/broker-fd-us.md) — US broker FD API.
+
+### Streaming and Display
+
+- [Streaming (MQTT)](webull-api/streaming.md) — real-time Market Data over MQTT.
+- [Display Solution](webull-api/display-solution.md) — hosted display tokens and non-display data.
+
+### Events
+
+- [Events (gRPC)](webull-api/events.md) — gRPC trading event stream.
+
+### Connect
+
+- [Connect API (OAuth)](webull-api/connect-api.md) — OAuth 2.0 authorization-code flow.
 
 ## Raw Webull data (verbatim)
 

@@ -3,6 +3,11 @@
 The `broker` package provides the Webull Broker API for Hong Kong. It is a
 separate Go module that shares the core `client.Client` for signing and transport.
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
 ## Install
 
 ```sh

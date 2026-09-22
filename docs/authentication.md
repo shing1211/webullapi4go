@@ -6,6 +6,11 @@ for signing; signing headers are built per-request in `Client.Do`. `Client.Ensur
 creates and activates an access token and installs it as the `x-access-token`
 header on later requests.
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - App key and app secret — see [Getting Started](getting-started.md#credentials)
+    - Go 1.26+
+
 ## Request signing
 
 Every request is signed with **HMAC-SHA1** over a percent-encoded canonical
@@ -103,6 +108,19 @@ Poll defaults are `client.DefaultTokenPollInterval` (5s) and
 | `INVALID` | Invalid or was never used |
 | `EXPIRED` | Verification was not completed within five minutes; create a new token |
 
+### Token lifecycle diagram
+
+```
+CreateToken ──> PENDING ──(2FA / auto)──> NORMAL ──(15 days)──> EXPIRED
+                      │                        │
+                      │                        └──> INVALID (if never used)
+                      └──> EXPIRED (5 min timeout)
+```
+
+- **Sandbox**: `CreateToken` returns `NORMAL` immediately (no 2FA).
+- **Production**: `CreateToken` returns `PENDING`; complete Webull App 2FA within 5 minutes.
+- `EnsureToken` polls `CheckToken` until the token becomes `NORMAL`, becomes terminal, or the poll timeout elapses.
+
 Sandbox tokens are issued as `NORMAL` automatically, with no 2FA step.
 Production tokens start `PENDING` and become `NORMAL` after verification.
 `EnsureToken` polls `CheckToken` until the token becomes `NORMAL`, becomes
@@ -140,3 +158,10 @@ manager. Shared sandbox test accounts (no application required) are published at
 <https://developer.webull.hk/apis/docs/sdk#test-accounts> (HK) and
 <https://developer.webull.com/apis/docs/sdk#test-accounts> (US). The token
 endpoint allows 10 requests per 30 seconds.
+
+## Related
+
+- [Getting Started](getting-started.md) — install, credentials, and first call.
+- [Patterns](patterns.md) — client construction and shared conventions.
+- [Errors](errors.md) — typed errors and retry patterns.
+- [Streaming](streaming.md) — real-time Market Data over MQTT.

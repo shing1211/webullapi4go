@@ -4,6 +4,11 @@ The `brokerfd` package provides the Webull Broker FD (US) HTTP API. It shares th
 core `client.Client` for signing and transport. The `brokerfd/events` sub-package
 provides the corresponding gRPC event stream.
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
 ## Construct
 
 ```go

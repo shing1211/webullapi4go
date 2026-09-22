@@ -19,6 +19,15 @@ paths, so validate any order with `PreviewOrder` before placing it. See
 [Options orders](#options-orders), [Futures orders](#futures-orders), and
 [Event contract orders](#event-contract-orders).
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+    - A trading account with order permissions — see [Sandbox](sandbox.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 ## Authentication
 
 Trading requests require an access token, sent as the `x-access-token` header.

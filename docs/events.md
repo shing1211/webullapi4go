@@ -23,6 +23,15 @@ if err != nil {
 defer func() { _ = ev.Close() }()
 ```
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - App key and app secret (HMAC-SHA256 signing, no access token required)
+    - A trading account ID — see [Trading](trading.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 ## Service and endpoint
 
 The service is the server-streaming RPC

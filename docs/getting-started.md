@@ -118,6 +118,17 @@ func main() {
 and error handling are shared across every request. For streaming, see
 [Streaming](streaming.md).
 
+## Common first-call failures
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `UNAUTHORIZED: http 401` | Bad app key or secret | Check `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` — no trailing whitespace |
+| `INVALID_TOKEN: http 417` | Wrong region or expired token | Ensure `WEBULL_REGION` matches your account; call `EnsureToken` again |
+| Token stays `PENDING` | Production 2FA not completed | In production, complete the Webull App verification within 5 minutes; in sandbox, tokens are `NORMAL` immediately |
+| `FORBIDDEN: http 403` | Missing entitlement | The endpoint requires a paid subscription (e.g., Footprint, Display Solution) |
+| `417 Invalid Symbol` | Symbol not in sandbox | Sandbox data is limited to `AAPL`; try that symbol first |
+| Connection refused | Wrong host or network | Verify `WEBULL_ENVIRONMENT` is `sandbox`; check firewall and DNS |
+
 ## Next steps
 
 - [Authentication](authentication.md) — how requests are signed and tokens are managed.

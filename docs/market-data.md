@@ -4,6 +4,14 @@ Market Data is available over two transports: HTTP for on-demand queries and
 MQTT for real-time streaming. Both share the same authentication described in
 [Authentication](authentication.md).
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 ## HTTP
 
 The `data` package exposes the HTTP Market Data API. Build it from the public

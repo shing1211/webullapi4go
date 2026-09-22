@@ -2,6 +2,11 @@
 
 Shared patterns and conventions used across the SDK.
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - Basic familiarity with Go's functional options pattern
+
 ## Client construction
 
 Every API package follows the same construction pattern:
