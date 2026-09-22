@@ -16,6 +16,8 @@ The generated reference documentation lives on pkg.go.dev:
 | Broker FD event protobuf types | https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1 |
 | Broker API HK | https://pkg.go.dev/github.com/shing1211/webullapi4go/broker |
 | Broker FD events | https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd/events |
+| Connect API (OAuth) | https://pkg.go.dev/github.com/shing1211/webullapi4go/connect |
+| Display Solution | https://pkg.go.dev/github.com/shing1211/webullapi4go/display |
 | Shared domain types | https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types |
 | Module root | https://pkg.go.dev/github.com/shing1211/webullapi4go |
 

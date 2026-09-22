@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added prerequisites to streaming, trading, and events docs.
 - Documented previously undocumented types and functions across authentication,
   streaming, events, trading, broker-fd, and connect-api docs.
+- Added prerequisites admonitions to all 10 guide pages (authentication,
+  market-data, streaming, trading, events, fundamentals, errors, patterns,
+  broker-hk, broker-fd-us).
+- Added error handling tips to 5 guide pages (market-data, streaming, trading,
+  events, fundamentals).
+- Created glossary (`glossary.md`) with 30+ SDK-specific terms.
+- Added ASCII token lifecycle diagram to authentication guide.
+- Restructured API reference index (`webull-api.md`) with service-level grouping.
+- Added common first-call failures table to getting started guide.
+- Added `connect` and `display` packages to Go Packages reference (`api.md`).
+- Added Documentation Standards section to `CONTRIBUTING.md`.
+- Fixed broken Options table in streaming guide.
 
 ## [1.1.0] - 2026-09-22
 

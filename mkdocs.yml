@@ -107,6 +107,7 @@ nav:
           - Connect API (OAuth): webull-api/reference/connect-api.md
   - Coverage:
       - SDK ↔ API Reconciliation: reconciliation.md
+      - Implementation Status: implementation-status.md
   - Architecture Decisions:
       - Overview: adr/index.md
       - "0001: Record architecture decisions": adr/0001-record-architecture-decisions.md
