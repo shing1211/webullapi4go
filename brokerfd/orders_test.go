@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestPreviewFDOrder(t *testing.T) {
@@ -39,8 +40,8 @@ func TestPreviewFDOrder(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(FDOrderPreview{
 			OrderID:        "prev123",
-			EstimatedFee:   "0.99",
-			EstimatedTotal: "100.99",
+			EstimatedFee:   money.Must(money.NewFromString("0.99")),
+			EstimatedTotal: money.Must(money.NewFromString("100.99")),
 		})
 	}))
 	defer srv.Close()
@@ -56,8 +57,8 @@ func TestPreviewFDOrder(t *testing.T) {
 		Symbol:      "AAPL",
 		OrderType:   "LIMIT",
 		Side:        "BUY",
-		Quantity:    "10",
-		LimitPrice:  "150.00",
+		Quantity:    func() *money.Money { m := money.Must(money.NewFromString("10")); return &m }(),
+		LimitPrice:  func() *money.Money { m := money.Must(money.NewFromString("150.00")); return &m }(),
 		TimeInForce: "DAY",
 	}
 	got, err := c.PreviewFDOrder(context.Background(), req)
@@ -91,11 +92,11 @@ func TestPlaceFDOrder(t *testing.T) {
 			Symbol:         "AAPL",
 			OrderType:      "LIMIT",
 			Side:           "BUY",
-			Quantity:       "10",
-			LimitPrice:     "150.00",
+			Quantity:       money.Must(money.NewFromString("10")),
+			LimitPrice:     money.Must(money.NewFromString("150.00")),
 			TimeInForce:    "DAY",
 			Status:         "SUBMITTED",
-			FilledQuantity: "0",
+			FilledQuantity: money.Must(money.NewFromString("0")),
 		})
 	}))
 	defer srv.Close()
@@ -111,8 +112,8 @@ func TestPlaceFDOrder(t *testing.T) {
 		Symbol:      "AAPL",
 		OrderType:   "LIMIT",
 		Side:        "BUY",
-		Quantity:    "10",
-		LimitPrice:  "150.00",
+		Quantity:    func() *money.Money { m := money.Must(money.NewFromString("10")); return &m }(),
+		LimitPrice:  func() *money.Money { m := money.Must(money.NewFromString("150.00")); return &m }(),
 		TimeInForce: "DAY",
 	}
 	got, err := c.PlaceFDOrder(context.Background(), req)
@@ -149,8 +150,8 @@ func TestReplaceFDOrder(t *testing.T) {
 			Symbol:      "AAPL",
 			OrderType:   "LIMIT",
 			Side:        "BUY",
-			Quantity:    "20",
-			LimitPrice:  "155.00",
+			Quantity:    money.Must(money.NewFromString("20")),
+			LimitPrice:  money.Must(money.NewFromString("155.00")),
 			TimeInForce: "DAY",
 			Status:      "SUBMITTED",
 		})
@@ -165,8 +166,8 @@ func TestReplaceFDOrder(t *testing.T) {
 
 	req := ReplaceFDOrderRequest{
 		OrderID:    "ord123",
-		LimitPrice: "155.00",
-		Quantity:   "20",
+		LimitPrice: func() *money.Money { m := money.Must(money.NewFromString("155.00")); return &m }(),
+		Quantity:   func() *money.Money { m := money.Must(money.NewFromString("20")); return &m }(),
 	}
 	got, err := c.ReplaceFDOrder(context.Background(), "ord123", req)
 	if err != nil {
@@ -175,8 +176,8 @@ func TestReplaceFDOrder(t *testing.T) {
 	if got.OrderID != "ord123" {
 		t.Errorf("expected order_id ord123, got %s", got.OrderID)
 	}
-	if gotReq.LimitPrice != "155.00" {
-		t.Errorf("expected limit_price 155.00, got %s", gotReq.LimitPrice)
+	if gotReq.LimitPrice == nil || gotReq.LimitPrice.Cmp(money.Must(money.NewFromString("155.00"))) != 0 {
+		t.Errorf("expected limit_price 155.00, got %v", gotReq.LimitPrice)
 	}
 }
 
@@ -224,12 +225,12 @@ func TestGetFDOrderDetail(t *testing.T) {
 			Symbol:         "AAPL",
 			OrderType:      "LIMIT",
 			Side:           "BUY",
-			Quantity:       "10",
-			LimitPrice:     "150.00",
+			Quantity:       money.Must(money.NewFromString("10")),
+			LimitPrice:     money.Must(money.NewFromString("150.00")),
 			TimeInForce:    "DAY",
 			Status:         "FILLED",
-			FilledQuantity: "10",
-			AvgFillPrice:   "150.25",
+			FilledQuantity: money.Must(money.NewFromString("10")),
+			AvgFillPrice:   money.Must(money.NewFromString("150.25")),
 		})
 	}))
 	defer srv.Close()

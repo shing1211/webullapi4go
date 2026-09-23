@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -26,14 +28,14 @@ const (
 // FDActivity represents a single activity or transaction in a fractional shares account.
 // Amount is a string to preserve numeric precision; type and status are free-form strings.
 type FDActivity struct {
-	ActivityID  string `json:"activity_id"`
-	AccountID   string `json:"account_id"`
-	Type        string `json:"type"`
-	Amount      string `json:"amount"`
-	Currency    string `json:"currency"`
-	Status      string `json:"status"`
-	CreateTime  string `json:"create_time"`
-	Description string `json:"description"`
+	ActivityID  string      `json:"activity_id"`
+	AccountID   string      `json:"account_id"`
+	Type        string      `json:"type"`
+	Amount      money.Money `json:"amount"`
+	Currency    string      `json:"currency"`
+	Status      string      `json:"status"`
+	CreateTime  string      `json:"create_time"`
+	Description string      `json:"description"`
 }
 
 // GetFDActivities retrieves all account activities for a fractional shares account,

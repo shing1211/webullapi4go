@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetFDStockInstruments(t *testing.T) {
@@ -62,7 +63,7 @@ func TestGetFDStockLocate(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDStockLocate{
-			{Symbol: "AAPL", LocateQuantity: "1000", Available: "800", Rate: "0.05"},
+			{Symbol: "AAPL", LocateQuantity: "1000", Available: "800", Rate: money.Must(money.NewFromString("0.05"))},
 		})
 	}))
 	defer srv.Close()
@@ -156,7 +157,7 @@ func TestGetFDECInstruments(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDECInstrument{
-			{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: "150.00", ExpirationDate: "2026-06-20", Status: "active"},
+			{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: money.Must(money.NewFromString("150.00")), ExpirationDate: "2026-06-20", Status: "active"},
 		})
 	}))
 	defer srv.Close()
@@ -187,7 +188,7 @@ func TestGetFDECInstrumentDetail(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(FDECInstrument{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: "150.00", ExpirationDate: "2026-06-20", Status: "active"})
+		_ = json.NewEncoder(w).Encode(FDECInstrument{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: money.Must(money.NewFromString("150.00")), ExpirationDate: "2026-06-20", Status: "active"})
 	}))
 	defer srv.Close()
 
@@ -207,7 +208,7 @@ func TestGetFDECInstrumentDetail(t *testing.T) {
 	if capturedReq.URL.Query().Get("symbol") != "EC2026AAPL" {
 		t.Fatalf("symbol = %s, want EC2026AAPL", capturedReq.URL.Query().Get("symbol"))
 	}
-	if got.StrikePrice != "150.00" {
-		t.Fatalf("StrikePrice = %s, want 150.00", got.StrikePrice)
+	if got.StrikePrice.Cmp(money.Must(money.NewFromString("150.00"))) != 0 {
+		t.Fatalf("StrikePrice = %v, want 150.00", got.StrikePrice)
 	}
 }

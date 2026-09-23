@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestListFDCashJournals(t *testing.T) {
@@ -30,8 +31,8 @@ func TestListFDCashJournals(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDCashJournal{
-			{JournalID: "J1", AccountID: "A1", Type: "DEPOSIT", Amount: "1000", Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
-			{JournalID: "J2", AccountID: "A1", Type: "WITHDRAWAL", Amount: "500", Currency: "USD", Status: "completed", CreateTime: "2026-01-02"},
+			{JournalID: "J1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
+			{JournalID: "J2", AccountID: "A1", Type: "WITHDRAWAL", Amount: money.Must(money.NewFromString("500")), Currency: "USD", Status: "completed", CreateTime: "2026-01-02"},
 		})
 	}))
 	defer srv.Close()
@@ -63,7 +64,7 @@ func TestGetFDCashJournalDetail(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(FDCashJournal{
-			JournalID: "J1", AccountID: "A1", Type: "DEPOSIT", Amount: "1000", Currency: "USD", Status: "completed", CreateTime: "2026-01-01",
+			JournalID: "J1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01",
 		})
 	}))
 	defer srv.Close()

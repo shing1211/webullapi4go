@@ -18,6 +18,8 @@ import (
 	"context"
 	"net/url"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -52,10 +54,10 @@ func (c *Client) GetFDStockInstruments(ctx context.Context, symbols []string) ([
 
 // FDStockLocate represents locate (borrowed shares) information for a fractional share.
 type FDStockLocate struct {
-	Symbol         string `json:"symbol"`
-	LocateQuantity string `json:"locate_quantity"`
-	Available      string `json:"available"`
-	Rate           string `json:"rate"`
+	Symbol         string      `json:"symbol"`
+	LocateQuantity string      `json:"locate_quantity"`
+	Available      string      `json:"available"`
+	Rate           money.Money `json:"rate"`
 }
 
 // GetFDStockLocate retrieves locate information for a fractional share symbol.
@@ -104,12 +106,12 @@ func (c *Client) GetFDCorporateActionDetail(ctx context.Context, actionID string
 
 // FDECInstrument represents an event contract (EC) instrument for fractional shares.
 type FDECInstrument struct {
-	Symbol         string `json:"symbol"`
-	EventID        string `json:"event_id"`
-	SeriesID       string `json:"series_id"`
-	StrikePrice    string `json:"strike_price"`
-	ExpirationDate string `json:"expiration_date"`
-	Status         string `json:"status"`
+	Symbol         string      `json:"symbol"`
+	EventID        string      `json:"event_id"`
+	SeriesID       string      `json:"series_id"`
+	StrikePrice    money.Money `json:"strike_price"`
+	ExpirationDate string      `json:"expiration_date"`
+	Status         string      `json:"status"`
 }
 
 // GetFDECInstruments retrieves event contract instruments by event ID.

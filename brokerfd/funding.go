@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -149,13 +151,13 @@ func (c *Client) RemoveFDAchAccount(ctx context.Context, achID string) error {
 
 // Transfer represents a fund transfer transaction.
 type Transfer struct {
-	TransferID string `json:"transfer_id"`
-	AccountID  string `json:"account_id"`
-	Type       string `json:"type"`
-	Amount     string `json:"amount"`
-	Currency   string `json:"currency"`
-	Status     string `json:"status"`
-	CreateTime string `json:"create_time"`
+	TransferID string      `json:"transfer_id"`
+	AccountID  string      `json:"account_id"`
+	Type       string      `json:"type"`
+	Amount     money.Money `json:"amount"`
+	Currency   string      `json:"currency"`
+	Status     string      `json:"status"`
+	CreateTime string      `json:"create_time"`
 }
 
 // ListFDTransfers retrieves all fund transfers for a broker FD account.
@@ -182,10 +184,10 @@ func (c *Client) GetFDTransferDetail(ctx context.Context, transferID string) (*T
 
 // InitiateTransferRequest contains the parameters to initiate a fund transfer.
 type InitiateTransferRequest struct {
-	AccountID string `json:"account_id"`
-	Type      string `json:"type"`
-	Amount    string `json:"amount"`
-	Currency  string `json:"currency"`
+	AccountID string       `json:"account_id"`
+	Type      string       `json:"type"`
+	Amount    *money.Money `json:"amount"`
+	Currency  string       `json:"currency"`
 }
 
 // InitiateFDTransfer initiates a new fund transfer for the broker FD account.
@@ -199,11 +201,11 @@ func (c *Client) InitiateFDTransfer(ctx context.Context, req InitiateTransferReq
 
 // InstantFunding represents an instant funding transaction.
 type InstantFunding struct {
-	FundingID  string `json:"funding_id"`
-	AccountID  string `json:"account_id"`
-	Amount     string `json:"amount"`
-	Status     string `json:"status"`
-	CreateTime string `json:"create_time"`
+	FundingID  string      `json:"funding_id"`
+	AccountID  string      `json:"account_id"`
+	Amount     money.Money `json:"amount"`
+	Status     string      `json:"status"`
+	CreateTime string      `json:"create_time"`
 }
 
 // CreateFDInstantFunding creates an instant funding transaction for immediate funds.
@@ -231,9 +233,9 @@ func (c *Client) GetFDInstantFundingDetail(ctx context.Context, fundingID string
 
 // TransferFee represents the fee associated with a transfer type.
 type TransferFee struct {
-	Type     string `json:"type"`
-	Amount   string `json:"amount"`
-	Currency string `json:"currency"`
+	Type     string      `json:"type"`
+	Amount   money.Money `json:"amount"`
+	Currency string      `json:"currency"`
 }
 
 // GetFDTransferFees retrieves all available transfer fees.
@@ -247,10 +249,10 @@ func (c *Client) GetFDTransferFees(ctx context.Context) ([]TransferFee, error) {
 
 // CreditInfo represents credit/margin information for a broker FD account.
 type CreditInfo struct {
-	AccountID       string `json:"account_id"`
-	CreditLimit     string `json:"credit_limit"`
-	UsedCredit      string `json:"used_credit"`
-	AvailableCredit string `json:"available_credit"`
+	AccountID       string      `json:"account_id"`
+	CreditLimit     money.Money `json:"credit_limit"`
+	UsedCredit      money.Money `json:"used_credit"`
+	AvailableCredit money.Money `json:"available_credit"`
 }
 
 // GetFDCreditInfo retrieves credit information for a broker FD account.

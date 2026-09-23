@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetFDActivities(t *testing.T) {
@@ -30,8 +31,8 @@ func TestGetFDActivities(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDActivity{
-			{ActivityID: "ACT1", AccountID: "A1", Type: "DEPOSIT", Amount: "1000", Currency: "USD", Status: "completed", CreateTime: "2026-01-01", Description: "Deposit"},
-			{ActivityID: "ACT2", AccountID: "A1", Type: "WITHDRAWAL", Amount: "500", Currency: "USD", Status: "completed", CreateTime: "2026-01-02", Description: "Withdrawal"},
+			{ActivityID: "ACT1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01", Description: "Deposit"},
+			{ActivityID: "ACT2", AccountID: "A1", Type: "WITHDRAWAL", Amount: money.Must(money.NewFromString("500")), Currency: "USD", Status: "completed", CreateTime: "2026-01-02", Description: "Withdrawal"},
 		})
 	}))
 	defer srv.Close()
@@ -85,7 +86,7 @@ func TestGetFDActivitiesSingle(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDActivity{
-			{ActivityID: "ACT3", AccountID: "A1", Type: "DIVIDEND", Amount: "50", Currency: "USD", Status: "completed", CreateTime: "2026-01-03", Description: "Dividend"},
+			{ActivityID: "ACT3", AccountID: "A1", Type: "DIVIDEND", Amount: money.Must(money.NewFromString("50")), Currency: "USD", Status: "completed", CreateTime: "2026-01-03", Description: "Dividend"},
 		})
 	}))
 	defer srv.Close()

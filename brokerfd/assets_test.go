@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetFDAssetsSummary(t *testing.T) {
@@ -31,12 +32,12 @@ func TestGetFDAssetsSummary(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(FDAssetsSummary{
 			AccountID:    "A1",
-			TotalEquity:  "100000",
-			CashBalance:  "50000",
-			MarketValue:  "50000",
-			BuyingPower:  "100000",
-			UnrealizedPL: "1000",
-			RealizedPL:   "500",
+			TotalEquity:  money.Must(money.NewFromString("100000")),
+			CashBalance:  money.Must(money.NewFromString("50000")),
+			MarketValue:  money.Must(money.NewFromString("50000")),
+			BuyingPower:  money.Must(money.NewFromString("100000")),
+			UnrealizedPL: money.Must(money.NewFromString("1000")),
+			RealizedPL:   money.Must(money.NewFromString("500")),
 			Currency:     "USD",
 		})
 	}))
@@ -55,8 +56,8 @@ func TestGetFDAssetsSummary(t *testing.T) {
 	if got.AccountID != "A1" {
 		t.Fatalf("AccountID = %s, want A1", got.AccountID)
 	}
-	if got.TotalEquity != "100000" {
-		t.Fatalf("TotalEquity = %s, want 100000", got.TotalEquity)
+	if got.TotalEquity.Cmp(money.Must(money.NewFromString("100000"))) != 0 {
+		t.Fatalf("TotalEquity = %v, want 100000", got.TotalEquity)
 	}
 	if capturedReq.URL.Path != pathFDAssetsSummary {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDAssetsSummary)
@@ -72,8 +73,8 @@ func TestGetFDAssetsDetail(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDAssetDetail{
-			{Currency: "USD", CashBalance: "50000", MarketValue: "50000", BuyingPower: "100000", AvailableCash: "40000"},
-			{Currency: "HKD", CashBalance: "100000", MarketValue: "0", BuyingPower: "200000", AvailableCash: "100000"},
+			{Currency: "USD", CashBalance: money.Must(money.NewFromString("50000")), MarketValue: money.Must(money.NewFromString("50000")), BuyingPower: money.Must(money.NewFromString("100000")), AvailableCash: money.Must(money.NewFromString("40000"))},
+			{Currency: "HKD", CashBalance: money.Must(money.NewFromString("100000")), MarketValue: money.Must(money.NewFromString("0")), BuyingPower: money.Must(money.NewFromString("200000")), AvailableCash: money.Must(money.NewFromString("100000"))},
 		})
 	}))
 	defer srv.Close()
@@ -108,8 +109,8 @@ func TestGetFDPositions(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]FDPosition{
-			{PositionID: "P1", AccountID: "A1", Symbol: "AAPL", Quantity: "100", AverageCost: "150.00", MarketValue: "17500", UnrealizedPL: "2500", RealizedPL: "0", InstrumentType: "STOCK", Currency: "USD"},
-			{PositionID: "P2", AccountID: "A1", Symbol: "TSLA", Quantity: "50", AverageCost: "200.00", MarketValue: "10000", UnrealizedPL: "0", RealizedPL: "500", InstrumentType: "STOCK", Currency: "USD"},
+			{PositionID: "P1", AccountID: "A1", Symbol: "AAPL", Quantity: "100", AverageCost: money.Must(money.NewFromString("150.00")), MarketValue: money.Must(money.NewFromString("17500")), UnrealizedPL: money.Must(money.NewFromString("2500")), RealizedPL: money.Must(money.NewFromString("0")), InstrumentType: "STOCK", Currency: "USD"},
+			{PositionID: "P2", AccountID: "A1", Symbol: "TSLA", Quantity: "50", AverageCost: money.Must(money.NewFromString("200.00")), MarketValue: money.Must(money.NewFromString("10000")), UnrealizedPL: money.Must(money.NewFromString("0")), RealizedPL: money.Must(money.NewFromString("500")), InstrumentType: "STOCK", Currency: "USD"},
 		})
 	}))
 	defer srv.Close()

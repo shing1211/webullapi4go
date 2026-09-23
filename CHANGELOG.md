@@ -102,6 +102,16 @@ Phase 2 production hardening: public API restructuring and type-safe numeric fie
 - Direct use of `client.Client`: consider `webull.New()` or `webull.Client`
   type alias instead.
 
+## [2.0.2] - 2026-09-23
+
+### Changed (breaking)
+
+- All numeric string fields in `brokerfd/` converted to `*money.Money`
+  (optional/request-side) or `money.Money` (required/response-side).
+  Approximately 30 fields affected across `assets.go`, `orders.go`,
+  `funding.go`, `activity.go`, `journals.go`, and `instruments.go`.
+  JSON serialization is preserved (decimal strings).
+
 ## [1.1.1] - 2026-09-23
 
 ### Dev/Tooling

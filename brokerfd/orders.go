@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -31,38 +33,38 @@ const (
 
 // FDOrder represents a fractional share order with execution details.
 type FDOrder struct {
-	OrderID        string `json:"order_id"`
-	AccountID      string `json:"account_id"`
-	Symbol         string `json:"symbol"`
-	OrderType      string `json:"order_type"`
-	Side           string `json:"side"`
-	Quantity       string `json:"quantity"`
-	LimitPrice     string `json:"limit_price,omitempty"`
-	StopPrice      string `json:"stop_price,omitempty"`
-	TimeInForce    string `json:"time_in_force"`
-	Status         string `json:"status"`
-	FilledQuantity string `json:"filled_quantity"`
-	AvgFillPrice   string `json:"avg_fill_price,omitempty"`
-	CreateTime     string `json:"create_time"`
+	OrderID        string      `json:"order_id"`
+	AccountID      string      `json:"account_id"`
+	Symbol         string      `json:"symbol"`
+	OrderType      string      `json:"order_type"`
+	Side           string      `json:"side"`
+	Quantity       money.Money `json:"quantity"`
+	LimitPrice     money.Money `json:"limit_price,omitempty"`
+	StopPrice      money.Money `json:"stop_price,omitempty"`
+	TimeInForce    string      `json:"time_in_force"`
+	Status         string      `json:"status"`
+	FilledQuantity money.Money `json:"filled_quantity"`
+	AvgFillPrice   money.Money `json:"avg_fill_price,omitempty"`
+	CreateTime     string      `json:"create_time"`
 }
 
 // FDOrderPreviewRequest contains the order parameters for a preview request.
 type FDOrderPreviewRequest struct {
-	AccountID   string `json:"account_id"`
-	Symbol      string `json:"symbol"`
-	OrderType   string `json:"order_type"`
-	Side        string `json:"side"`
-	Quantity    string `json:"quantity"`
-	LimitPrice  string `json:"limit_price,omitempty"`
-	StopPrice   string `json:"stop_price,omitempty"`
-	TimeInForce string `json:"time_in_force"`
+	AccountID   string       `json:"account_id"`
+	Symbol      string       `json:"symbol"`
+	OrderType   string       `json:"order_type"`
+	Side        string       `json:"side"`
+	Quantity    *money.Money `json:"quantity"`
+	LimitPrice  *money.Money `json:"limit_price,omitempty"`
+	StopPrice   *money.Money `json:"stop_price,omitempty"`
+	TimeInForce string       `json:"time_in_force"`
 }
 
 // FDOrderPreview contains the estimated cost breakdown for a fractional order.
 type FDOrderPreview struct {
-	OrderID        string `json:"order_id"`
-	EstimatedFee   string `json:"estimated_fee"`
-	EstimatedTotal string `json:"estimated_total"`
+	OrderID        string      `json:"order_id"`
+	EstimatedFee   money.Money `json:"estimated_fee"`
+	EstimatedTotal money.Money `json:"estimated_total"`
 }
 
 // PreviewFDOrder submits a fractional order for fee and cost estimation without execution.
@@ -85,10 +87,10 @@ func (c *Client) PlaceFDOrder(ctx context.Context, req FDOrderPreviewRequest) (*
 
 // ReplaceFDOrderRequest contains the fields that may be updated on an existing fractional order.
 type ReplaceFDOrderRequest struct {
-	OrderID    string `json:"order_id"`
-	LimitPrice string `json:"limit_price,omitempty"`
-	StopPrice  string `json:"stop_price,omitempty"`
-	Quantity   string `json:"quantity,omitempty"`
+	OrderID    string       `json:"order_id"`
+	LimitPrice *money.Money `json:"limit_price,omitempty"`
+	StopPrice  *money.Money `json:"stop_price,omitempty"`
+	Quantity   *money.Money `json:"quantity,omitempty"`
 }
 
 // ReplaceFDOrder modifies an existing fractional order with new parameters.

@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -28,14 +30,14 @@ const (
 // FDAssetsSummary contains aggregate asset data for a fractional shares account.
 // Values are presented as strings to preserve numeric precision.
 type FDAssetsSummary struct {
-	AccountID    string `json:"account_id"`
-	TotalEquity  string `json:"total_equity"`
-	CashBalance  string `json:"cash_balance"`
-	MarketValue  string `json:"market_value"`
-	BuyingPower  string `json:"buying_power"`
-	UnrealizedPL string `json:"unrealized_pl"`
-	RealizedPL   string `json:"realized_pl"`
-	Currency     string `json:"currency"`
+	AccountID    string      `json:"account_id"`
+	TotalEquity  money.Money `json:"total_equity"`
+	CashBalance  money.Money `json:"cash_balance"`
+	MarketValue  money.Money `json:"market_value"`
+	BuyingPower  money.Money `json:"buying_power"`
+	UnrealizedPL money.Money `json:"unrealized_pl"`
+	RealizedPL   money.Money `json:"realized_pl"`
+	Currency     string      `json:"currency"`
 }
 
 // GetFDAssetsSummary retrieves the aggregate asset summary for a fractional shares account.
@@ -53,11 +55,11 @@ func (c *Client) GetFDAssetsSummary(ctx context.Context, accountID string) (*FDA
 // FDAssetDetail provides a per-currency breakdown of cash and buying power
 // for a fractional shares account. Values are presented as strings to preserve numeric precision.
 type FDAssetDetail struct {
-	Currency      string `json:"currency"`
-	CashBalance   string `json:"cash_balance"`
-	MarketValue   string `json:"market_value"`
-	BuyingPower   string `json:"buying_power"`
-	AvailableCash string `json:"available_cash"`
+	Currency      string      `json:"currency"`
+	CashBalance   money.Money `json:"cash_balance"`
+	MarketValue   money.Money `json:"market_value"`
+	BuyingPower   money.Money `json:"buying_power"`
+	AvailableCash money.Money `json:"available_cash"`
 }
 
 // GetFDAssetsDetail retrieves per-currency asset detail for a fractional shares account.
@@ -75,16 +77,16 @@ func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) ([]FDA
 // FDPosition represents a single position held in a fractional shares account.
 // Values such as quantity, cost, and P/L are strings to preserve numeric precision.
 type FDPosition struct {
-	PositionID     string `json:"position_id"`
-	AccountID      string `json:"account_id"`
-	Symbol         string `json:"symbol"`
-	Quantity       string `json:"quantity"`
-	AverageCost    string `json:"average_cost"`
-	MarketValue    string `json:"market_value"`
-	UnrealizedPL   string `json:"unrealized_pl"`
-	RealizedPL     string `json:"realized_pl"`
-	InstrumentType string `json:"instrument_type"`
-	Currency       string `json:"currency"`
+	PositionID     string      `json:"position_id"`
+	AccountID      string      `json:"account_id"`
+	Symbol         string      `json:"symbol"`
+	Quantity       string      `json:"quantity"`
+	AverageCost    money.Money `json:"average_cost"`
+	MarketValue    money.Money `json:"market_value"`
+	UnrealizedPL   money.Money `json:"unrealized_pl"`
+	RealizedPL     money.Money `json:"realized_pl"`
+	InstrumentType string      `json:"instrument_type"`
+	Currency       string      `json:"currency"`
 }
 
 // GetFDPositions retrieves all open positions for a fractional shares account.

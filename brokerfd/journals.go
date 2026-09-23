@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const (
@@ -27,13 +29,13 @@ const (
 // FDCashJournal represents a cash journal entry recording a deposit, withdrawal, or other
 // cash movement for a broker-fd account.
 type FDCashJournal struct {
-	JournalID  string `json:"journal_id"`
-	AccountID  string `json:"account_id"`
-	Type       string `json:"type"`
-	Amount     string `json:"amount"`
-	Currency   string `json:"currency"`
-	Status     string `json:"status"`
-	CreateTime string `json:"create_time"`
+	JournalID  string      `json:"journal_id"`
+	AccountID  string      `json:"account_id"`
+	Type       string      `json:"type"`
+	Amount     money.Money `json:"amount"`
+	Currency   string      `json:"currency"`
+	Status     string      `json:"status"`
+	CreateTime string      `json:"create_time"`
 }
 
 // ListFDCashJournals returns all cash journal entries for the specified broker-fd account.

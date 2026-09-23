@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-23 (v2.0.1 release) · Current version: **v2.0.1**
+Last updated: 2026-09-23 (v2.0.2 release) · Current version: **v2.0.2**
 
 ## Summary
 
@@ -51,6 +51,7 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v1.1.1 | 2026-09-23 | Production hardening: Makefile targets, `gosec`/`govulncheck`/coverage CI, multi-OS matrix, dependabot, `goleak` goroutine-leak detection, fuzz deserialization tests | Done |
 | v2.0.0 | 2026-09-23 | Phase 2 production hardening: `pkg/errors`, `pkg/transport`, `pkg/resilience`, `pkg/domain/money`, `pkg/domain/order` public API; `webull/` facade package | Done |
 | v2.0.1 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `trade/` and `data/` packages; `money.Rat()` bug fix | Done |
+| v2.0.2 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `brokerfd/` package | Done |
 
 ## Feature Coverage
 

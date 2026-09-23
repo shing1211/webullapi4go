@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestListFDBankAccounts(t *testing.T) {
@@ -214,7 +215,7 @@ func TestListFDTransfers(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]Transfer{
-			{TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: "1000", Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
+			{TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
 		})
 	}))
 	defer srv.Close()
@@ -243,7 +244,7 @@ func TestGetFDTransferDetail(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(Transfer{
-			TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: "1000", Currency: "USD", Status: "completed", CreateTime: "2026-01-01",
+			TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01",
 		})
 	}))
 	defer srv.Close()
@@ -272,7 +273,7 @@ func TestInitiateFDTransfer(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(Transfer{
-			TransferID: "T2", AccountID: "A1", Type: "DEPOSIT", Amount: "500", Currency: "USD", Status: "pending", CreateTime: "2026-01-02",
+			TransferID: "T2", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("500")), Currency: "USD", Status: "pending", CreateTime: "2026-01-02",
 		})
 	}))
 	defer srv.Close()
@@ -284,7 +285,7 @@ func TestInitiateFDTransfer(t *testing.T) {
 	c := New(cl)
 
 	got, err := c.InitiateFDTransfer(context.Background(), InitiateTransferRequest{
-		AccountID: "A1", Type: "DEPOSIT", Amount: "500", Currency: "USD",
+		AccountID: "A1", Type: "DEPOSIT", Amount: func() *money.Money { m := money.Must(money.NewFromString("500")); return &m }(), Currency: "USD",
 	})
 	if err != nil {
 		t.Fatalf("InitiateFDTransfer error = %v", err)
@@ -306,7 +307,7 @@ func TestCreateFDInstantFunding(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(InstantFunding{
-			FundingID: "F1", AccountID: "A1", Amount: "1000", Status: "pending", CreateTime: "2026-01-01",
+			FundingID: "F1", AccountID: "A1", Amount: money.Must(money.NewFromString("1000")), Status: "pending", CreateTime: "2026-01-01",
 		})
 	}))
 	defer srv.Close()
@@ -341,7 +342,7 @@ func TestGetFDInstantFundingDetail(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(InstantFunding{
-			FundingID: "F1", AccountID: "A1", Amount: "1000", Status: "completed", CreateTime: "2026-01-01",
+			FundingID: "F1", AccountID: "A1", Amount: money.Must(money.NewFromString("1000")), Status: "completed", CreateTime: "2026-01-01",
 		})
 	}))
 	defer srv.Close()
@@ -370,8 +371,8 @@ func TestGetFDTransferFees(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]TransferFee{
-			{Type: "ACH", Amount: "0", Currency: "USD"},
-			{Type: "WIRE", Amount: "25", Currency: "USD"},
+			{Type: "ACH", Amount: money.Must(money.NewFromString("0")), Currency: "USD"},
+			{Type: "WIRE", Amount: money.Must(money.NewFromString("25")), Currency: "USD"},
 		})
 	}))
 	defer srv.Close()
@@ -400,7 +401,7 @@ func TestGetFDCreditInfo(t *testing.T) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(CreditInfo{
-			AccountID: "A1", CreditLimit: "10000", UsedCredit: "2000", AvailableCredit: "8000",
+			AccountID: "A1", CreditLimit: money.Must(money.NewFromString("10000")), UsedCredit: money.Must(money.NewFromString("2000")), AvailableCredit: money.Must(money.NewFromString("8000")),
 		})
 	}))
 	defer srv.Close()
