@@ -49,6 +49,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Documentation Standards section to `CONTRIBUTING.md`.
 - Fixed broken Options table in streaming guide.
 
+## [2.0.1] - 2026-09-23
+
+Phase 2 production hardening: public API restructuring and type-safe numeric fields.
+
+### Added
+
+- `pkg/errors`: typed errors (`Error` with `Code` and `Message`) extracted from
+  `internal/errs` to the public `pkg/errors/` package. A deprecated shim at
+  `internal/errs/errs.go` preserves backward compatibility with existing imports.
+- `pkg/transport/http.go`: public `Doer` interface (`Do(ctx, method, path, query,
+  req, resp) error`) extracted from `client.Client`. New `pkg/transport/mqtt/`
+  sub-package for MQTT transport types. A deprecated shim at
+  `internal/transport/http.go` preserves backward compatibility.
+- `pkg/resilience/{breaker,clock,ratelimit,retry}/`: public resilience primitives
+  extracted from `internal/resilience`. A deprecated shim at
+  `internal/resilience/resilience.go` preserves backward compatibility.
+- `pkg/domain/money`: type-safe `Money` wrapper around `shopspring/decimal`
+  (`github.com/shopspring/decimal v1.4.0`). Provides JSON round-trip fidelity,
+  decimal arithmetic, `MarshalJSON`/`UnmarshalJSON`, and `Rat()` for rational
+  arithmetic. Package-level helpers: `NewFromString`, `Must`, `ParseMoney`,
+  `ParseDecimal`, `Zero`.
+- `pkg/domain/order`: OMS state machine (`StateMachine`, `ApplyEvent`,
+  `FromWebullStatus`) for order lifecycle tracking.
+- `webull/`: type-alias facade package re-exporting `client.Client`,
+  `client.New`, `client.Option`, `client.Region`, `client.Endpoints`,
+  `client.Environment`, `trade.Client`, `trade.New`, and all trade option
+  constructors. Recommended import path for new users.
+
+### Changed (breaking)
+
+- `pkg/errors` is now the canonical import path. Old `internal/errs` is
+  deprecated and will be removed in a future release.
+- `pkg/transport` is now the canonical import path for `Doer`. Old
+  `internal/transport` is deprecated.
+- `pkg/resilience` is now the canonical import path. Old `internal/resilience`
+  is deprecated.
+- All numeric string fields converted to `*money.Money` (optional/request-side)
+  or `money.Money` (required/response-side) throughout `trade/` and `data/`
+  packages. Approximately 250 fields affected. JSON serialization is preserved
+  (decimal strings); the change is transparent for most callers.
+- `shopspring/decimal` is now a direct dependency (v1.4.0). Previously it was
+  an indirect dependency.
+- `money.Rat()` now delegates to the shopspring library's built-in `Rat()`
+  method, fixing a bug where fractional quantities were incorrectly computed.
+
+### Deprecated
+
+- `internal/errs/errs.go`: use `pkg/errors` instead.
+- `internal/transport/http.go`: use `pkg/transport` instead.
+- `internal/resilience/resilience.go`: use `pkg/resilience` instead.
+- Direct use of `client.Client`: consider `webull.New()` or `webull.Client`
+  type alias instead.
+
 ## [1.1.1] - 2026-09-23
 
 ### Dev/Tooling

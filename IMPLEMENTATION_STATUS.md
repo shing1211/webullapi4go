@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-22 (v1.1.0 release) · Current version: **v1.1.0**
+Last updated: 2026-09-23 (v2.0.1 release) · Current version: **v2.0.1**
 
 ## Summary
 
@@ -48,6 +48,9 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v1.0.2 | 2026-09-22 | Reconciled the codebase against the official Webull API: removed undocumented functions (crypto, screener v2, option expirations, HK futures duplicates) and corrected `GetOptionContracts` to the Trading API path | Done |
 | v1.0.3 | 2026-09-22 | Verbatim Webull master guides/reference, SDK↔API reconciliation and coverage gaps, doc-generator CLI (`tools/webull-docgen`), HK-sandbox path probe (`examples/path-probe`) | Done |
 | v1.1.0 | 2026-09-22 | Full SDK parity with the official OpenAPI: aligned 69 differing paths, implemented the 23 remaining endpoints (Connect OAuth, crypto, Display event contracts, fund extras, Display refresh), removed all provisional TODO markers, added `connect/` package | Done |
+| v1.1.1 | 2026-09-23 | Production hardening: Makefile targets, `gosec`/`govulncheck`/coverage CI, multi-OS matrix, dependabot, `goleak` goroutine-leak detection, fuzz deserialization tests | Done |
+| v2.0.0 | 2026-09-23 | Phase 2 production hardening: `pkg/errors`, `pkg/transport`, `pkg/resilience`, `pkg/domain/money`, `pkg/domain/order` public API; `webull/` facade package | Done |
+| v2.0.1 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `trade/` and `data/` packages; `money.Rat()` bug fix | Done |
 
 ## Feature Coverage
 

@@ -18,7 +18,7 @@ statements.
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v1.1.1)
+## Feature matrix (v2.0.1)
 
 | Area | Status | Details |
 |------|--------|---------|
