@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -80,7 +81,7 @@ func TestGetCashActivities(t *testing.T) {
 	if a.Currency != "USD" || a.Market != "US" || a.Symbol != "AAPL" {
 		t.Errorf("market data = %+v", a)
 	}
-	if a.TradeDate != "2025-11-11" || a.NetAmount != "-17950.00" {
+	if a.TradeDate != "2025-11-11" || a.NetAmount.Cmp(money.Must(money.NewFromString("-17950"))) != 0 {
 		t.Errorf("trade data = %+v", a)
 	}
 }

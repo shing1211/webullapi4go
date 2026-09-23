@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -35,8 +36,8 @@ func validReplaceRequest() trade.ReplaceOrderRequest {
 		ModifyOrders: []trade.ModifyOrderRequest{
 			{
 				ClientOrderID: "test-order-1",
-				Quantity:      "2",
-				LimitPrice:    "175.50",
+				Quantity:      mp("2"),
+				LimitPrice:    mp("175.50"),
 			},
 		},
 	}
@@ -74,7 +75,7 @@ func TestReplaceOrder(t *testing.T) {
 			t.Errorf("body = %+v, want account ACC1 with 1 modify order", body)
 		}
 		o := body.ModifyOrders[0]
-		if o.ClientOrderID != "test-order-1" || o.Quantity != "2" || o.LimitPrice != "175.50" {
+		if o.ClientOrderID != "test-order-1" || o.Quantity.Cmp(money.Must(money.NewFromString("2"))) != 0 || o.LimitPrice.Cmp(money.Must(money.NewFromString("175.50"))) != 0 {
 			t.Errorf("modify order = %+v", o)
 		}
 		w.Header().Set("Content-Type", "application/json")

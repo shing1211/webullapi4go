@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -120,7 +121,7 @@ type CashActivity struct {
 	Market          string           `json:"market"`
 	Symbol          string           `json:"symbol"`
 	TradeDate       string           `json:"trade_date"`
-	NetAmount       string           `json:"net_amount"`
+	NetAmount       money.Money      `json:"net_amount"`
 	BizTime         string           `json:"biz_time"`
 }
 

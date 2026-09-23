@@ -179,7 +179,7 @@ func TestSandboxReplaceCancelNonexistent(t *testing.T) {
 	rres, rerr := trading.ReplaceOrder(ctx, trade.ReplaceOrderRequest{
 		AccountID: accountID,
 		ModifyOrders: []trade.ModifyOrderRequest{
-			{ClientOrderID: id, LimitPrice: "1.00"},
+			{ClientOrderID: id, LimitPrice: mp("1.00")},
 		},
 	})
 	if rerr == nil {

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -89,23 +90,23 @@ type Order struct {
 	// TimeInForce is how long the order remains active.
 	TimeInForce TimeInForce `json:"time_in_force"`
 	// TotalQuantity is the total order quantity, as a decimal string.
-	TotalQuantity string `json:"total_quantity"`
+	TotalQuantity money.Money `json:"total_quantity"`
 	// FilledQuantity is the quantity executed so far, as a decimal string.
-	FilledQuantity string `json:"filled_quantity"`
+	FilledQuantity money.Money `json:"filled_quantity"`
 	// FilledPrice is the average execution price, as a decimal string. It may
 	// be zero or empty when nothing has filled.
-	FilledPrice string `json:"filled_price"`
+	FilledPrice money.Money `json:"filled_price"`
 	// LimitPrice is the limit price, as a decimal string.
-	LimitPrice string `json:"limit_price"`
+	LimitPrice money.Money `json:"limit_price"`
 	// StopPrice is the stop trigger price, as a decimal string.
-	StopPrice string `json:"stop_price"`
+	StopPrice money.Money `json:"stop_price"`
 	// TrailingType is how TrailingStopStep is expressed.
 	TrailingType TrailingType `json:"trailing_type"`
 	// TrailingStopStep is the trailing spread, as a decimal string.
-	TrailingStopStep string `json:"trailing_stop_step"`
+	TrailingStopStep money.Money `json:"trailing_stop_step"`
 	// TrailingLimitPriceOffset is the offset between the triggered stop price
 	// and the submitted limit price, as a decimal string.
-	TrailingLimitPriceOffset string `json:"trailing_limit_price_offset"`
+	TrailingLimitPriceOffset money.Money `json:"trailing_limit_price_offset"`
 	// TriggerPriceType is the market price a touch or stop order triggers on.
 	TriggerPriceType TriggerPriceType `json:"trigger_price_type"`
 	// PlaceTimeAt is the order placement time in ISO8601 UTC form, for example
@@ -131,7 +132,7 @@ type OrderLegDetail struct {
 	// Side is the intended direction of the leg.
 	Side OrderSide `json:"side"`
 	// Quantity is the leg quantity, as a decimal string.
-	Quantity string `json:"quantity"`
+	Quantity money.Money `json:"quantity"`
 	// OptionType is whether the leg is a call or a put.
 	OptionType OptionType `json:"option_type"`
 	// OptionCategory is the option's exercise style, for example AMERICAN.
@@ -139,13 +140,13 @@ type OrderLegDetail struct {
 	// OptionStrategy identifies the option strategy, for example SINGLE.
 	OptionStrategy OptionStrategy `json:"option_strategy"`
 	// StrikePrice is the option strike, as a decimal string.
-	StrikePrice string `json:"strike_price"`
+	StrikePrice money.Money `json:"strike_price"`
 	// OptionContractMultiplier is the number of shares one contract
 	// represents, as a decimal string.
-	OptionContractMultiplier string `json:"option_contract_multiplier"`
+	OptionContractMultiplier money.Money `json:"option_contract_multiplier"`
 	// OptionContractDeliverable is the number of shares delivered on exercise
 	// of one contract, as a decimal string.
-	OptionContractDeliverable string `json:"option_contract_deliverable"`
+	OptionContractDeliverable money.Money `json:"option_contract_deliverable"`
 	// OptionExpireDate is the option expiry in yyyy-MM-dd form.
 	OptionExpireDate string `json:"option_expire_date"`
 }
@@ -153,10 +154,10 @@ type OrderLegDetail struct {
 // OrderCommission is the commission breakdown of a filled order.
 type OrderCommission struct {
 	// ActualCommission is the commission collected, as a decimal string.
-	ActualCommission string `json:"actual_commission"`
+	ActualCommission money.Money `json:"actual_commission"`
 	// ReceivableCommission is the commission still receivable, as a decimal
 	// string.
-	ReceivableCommission string `json:"receivable_commission"`
+	ReceivableCommission money.Money `json:"receivable_commission"`
 }
 
 // OrderFee is a single fee line of a filled order.
@@ -164,9 +165,9 @@ type OrderFee struct {
 	// Type is the fee type, for example "FINRA_CAT_REGULATORY_FEE".
 	Type string `json:"type"`
 	// ActualValue is the fee collected, as a decimal string.
-	ActualValue string `json:"actual_value"`
+	ActualValue money.Money `json:"actual_value"`
 	// ReceivableValue is the fee still receivable, as a decimal string.
-	ReceivableValue string `json:"receivable_value"`
+	ReceivableValue money.Money `json:"receivable_value"`
 }
 
 // OrderHistoryQuery parameterizes [Client.GetOrderHistory] and

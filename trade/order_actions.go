@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -46,21 +47,21 @@ type ModifyOrderRequest struct {
 	// TimeInForce changes how long the order remains active.
 	TimeInForce TimeInForce `json:"time_in_force,omitempty"`
 	// Quantity changes the order quantity, as a decimal string.
-	Quantity string `json:"quantity,omitempty"`
+	Quantity *money.Money `json:"quantity,omitempty"`
 	// ExpireDate changes the GTD expiry in yyyy-MM-dd form. It is relevant only
 	// when TimeInForce is GTD.
 	ExpireDate string `json:"expire_date,omitempty"`
 	// LimitPrice changes the limit price, as a decimal string.
-	LimitPrice string `json:"limit_price,omitempty"`
+	LimitPrice *money.Money `json:"limit_price,omitempty"`
 	// StopPrice changes the trigger price, as a decimal string.
-	StopPrice string `json:"stop_price,omitempty"`
+	StopPrice *money.Money `json:"stop_price,omitempty"`
 	// TrailingType changes how TrailingStopStep is expressed.
 	TrailingType TrailingType `json:"trailing_type,omitempty"`
 	// TrailingStopStep changes the trailing spread, as a decimal string.
-	TrailingStopStep string `json:"trailing_stop_step,omitempty"`
+	TrailingStopStep *money.Money `json:"trailing_stop_step,omitempty"`
 	// TrailingLimitPriceOffset changes the offset between the triggered stop
 	// price and the submitted limit price, as a decimal string.
-	TrailingLimitPriceOffset string `json:"trailing_limit_price_offset,omitempty"`
+	TrailingLimitPriceOffset *money.Money `json:"trailing_limit_price_offset,omitempty"`
 	// TriggerPriceType changes the market price a touch or stop order triggers
 	// on.
 	TriggerPriceType TriggerPriceType `json:"trigger_price_type,omitempty"`

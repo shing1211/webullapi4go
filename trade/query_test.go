@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -83,7 +84,7 @@ func TestGetOpenOrders(t *testing.T) {
 	if o.OrderType != trade.OrderTypeLimit || o.InstrumentType != trade.InstrumentTypeEquity {
 		t.Errorf("order enums = %+v", o)
 	}
-	if o.TotalQuantity != "1" || o.LimitPrice != "180.00" || o.TimeInForce != trade.TimeInForceDay {
+	if o.TotalQuantity.Cmp(money.Must(money.NewFromString("1"))) != 0 || o.LimitPrice.Cmp(money.Must(money.NewFromString("180.00"))) != 0 || o.TimeInForce != trade.TimeInForceDay {
 		t.Errorf("order terms = %+v", o)
 	}
 	if o.PlaceTimeAt != "2025-11-11T05:44:35.385Z" || o.SupportTradingSession != trade.TradingSessionCore {
@@ -336,7 +337,7 @@ func TestGetOrderDetail(t *testing.T) {
 		t.Fatalf("GetOrderDetail() = %+v", got)
 	}
 	o := got.Orders[0]
-	if o.Status != trade.OrderStatusFilled || o.FilledQuantity != "1" || o.FilledPrice != "179.50" {
+	if o.Status != trade.OrderStatusFilled || o.FilledQuantity.Cmp(money.Must(money.NewFromString("1"))) != 0 || o.FilledPrice.Cmp(money.Must(money.NewFromString("179.50"))) != 0 {
 		t.Errorf("fill state = %+v", o)
 	}
 	if len(o.Legs) != 1 {
@@ -346,13 +347,13 @@ func TestGetOrderDetail(t *testing.T) {
 	if leg.OptionType != trade.OptionTypeCall || leg.OptionStrategy != trade.OptionStrategySingle {
 		t.Errorf("leg enums = %+v", leg)
 	}
-	if leg.StrikePrice != "190.0" || leg.OptionContractMultiplier != "100" || leg.OptionExpireDate != "2025-11-21" {
+	if leg.StrikePrice.Cmp(money.Must(money.NewFromString("190.0"))) != 0 || leg.OptionContractMultiplier.Cmp(money.Must(money.NewFromString("100"))) != 0 || leg.OptionExpireDate != "2025-11-21" {
 		t.Errorf("leg terms = %+v", leg)
 	}
-	if o.Commission == nil || o.Commission.ActualCommission != "1.0" {
+	if o.Commission == nil || o.Commission.ActualCommission.Cmp(money.Must(money.NewFromString("1.0"))) != 0 {
 		t.Errorf("commission = %+v", o.Commission)
 	}
-	if len(o.Fees) != 1 || o.Fees[0].Type != "FINRA_CAT_REGULATORY_FEE" || o.Fees[0].ActualValue != "0.01" {
+	if len(o.Fees) != 1 || o.Fees[0].Type != "FINRA_CAT_REGULATORY_FEE" || o.Fees[0].ActualValue.Cmp(money.Must(money.NewFromString("0.01"))) != 0 {
 		t.Errorf("fees = %+v", o.Fees)
 	}
 }

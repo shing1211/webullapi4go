@@ -14,6 +14,8 @@
 
 package trade
 
+import "github.com/shing1211/webullapi4go/pkg/domain/money"
+
 // Market identifies a tradable market for order routing and instrument
 // lookup.
 type Market string
@@ -106,13 +108,13 @@ type AssetsBalance struct {
 	// TotalAssetCurrency is the currency the balance totals are expressed in.
 	TotalAssetCurrency string `json:"total_asset_currency"`
 	// TotalCashBalance is the total cash across currencies.
-	TotalCashBalance string `json:"total_cash_balance"`
+	TotalCashBalance money.Money `json:"total_cash_balance"`
 	// TotalMarketValue is the total market value of held positions.
-	TotalMarketValue string `json:"total_market_value"`
+	TotalMarketValue money.Money `json:"total_market_value"`
 	// TotalUnrealizedProfitLoss is the total open profit or loss.
-	TotalUnrealizedProfitLoss string `json:"total_unrealized_profit_loss"`
+	TotalUnrealizedProfitLoss money.Money `json:"total_unrealized_profit_loss"`
 	// InitMargin is the total initial margin requirement.
-	InitMargin string `json:"init_margin"`
+	InitMargin money.Money `json:"init_margin"`
 	// AccountCurrencyAssets breaks the balance down by currency.
 	AccountCurrencyAssets []AssetsCurrencyAssets `json:"account_currency_assets"`
 }
@@ -122,27 +124,27 @@ type AssetsCurrencyAssets struct {
 	// Currency is the currency this breakdown applies to.
 	Currency string `json:"currency"`
 	// CashBalance is the total cash balance in Currency.
-	CashBalance string `json:"cash_balance"`
+	CashBalance money.Money `json:"cash_balance"`
 	// SettledCash is the settled portion of the cash balance.
-	SettledCash string `json:"settled_cash"`
+	SettledCash money.Money `json:"settled_cash"`
 	// UnsettledCash is the portion of the cash balance still settling.
-	UnsettledCash string `json:"unsettled_cash"`
+	UnsettledCash money.Money `json:"unsettled_cash"`
 	// MarketValue is the market value of positions held in Currency.
-	MarketValue string `json:"market_value"`
+	MarketValue money.Money `json:"market_value"`
 	// HeldAmount is the funds committed to open orders.
-	HeldAmount string `json:"held_amount"`
+	HeldAmount money.Money `json:"held_amount"`
 	// FrozenAmount is the funds frozen by the broker.
-	FrozenAmount string `json:"frozen_amount"`
+	FrozenAmount money.Money `json:"frozen_amount"`
 	// BuyingPower is the funds available to open new positions.
-	BuyingPower string `json:"buying_power"`
+	BuyingPower money.Money `json:"buying_power"`
 	// UnrealizedProfitLoss is the open profit or loss in Currency.
-	UnrealizedProfitLoss string `json:"unrealized_profit_loss"`
+	UnrealizedProfitLoss money.Money `json:"unrealized_profit_loss"`
 	// AvailableWithdrawal is the amount available to withdraw.
-	AvailableWithdrawal string `json:"available_withdrawal"`
+	AvailableWithdrawal money.Money `json:"available_withdrawal"`
 	// InterestsUnpaid is the accrued interest not yet paid.
-	InterestsUnpaid string `json:"interests_unpaid"`
+	InterestsUnpaid money.Money `json:"interests_unpaid"`
 	// InitMargin is the initial margin requirement in Currency.
-	InitMargin string `json:"init_margin"`
+	InitMargin money.Money `json:"init_margin"`
 }
 
 // OptionStrategy identifies the structure of an options position.
@@ -214,7 +216,7 @@ type Position struct {
 	// Currency is the currency the position is denominated in.
 	Currency string `json:"currency"`
 	// Quantity is the held quantity, as a decimal string.
-	Quantity string `json:"quantity"`
+	Quantity money.Money `json:"quantity"`
 	// Symbol is the trading symbol of the held instrument.
 	Symbol string `json:"symbol"`
 	// OptionStrategy is the options strategy, empty for non-option
@@ -223,11 +225,11 @@ type Position struct {
 	// InstrumentType is the kind of instrument held.
 	InstrumentType InstrumentType `json:"instrument_type"`
 	// LastPrice is the latest market price, as a decimal string.
-	LastPrice string `json:"last_price"`
+	LastPrice money.Money `json:"last_price"`
 	// CostPrice is the average cost basis, as a decimal string.
-	CostPrice string `json:"cost_price"`
+	CostPrice money.Money `json:"cost_price"`
 	// UnrealizedProfitLoss is the open profit or loss, as a decimal string.
-	UnrealizedProfitLoss string `json:"unrealized_profit_loss"`
+	UnrealizedProfitLoss money.Money `json:"unrealized_profit_loss"`
 	// Legs lists the legs of a multi-leg option position. It is empty for
 	// single-leg and non-option positions.
 	Legs []PositionLeg `json:"legs"`
@@ -238,19 +240,19 @@ type PositionLeg struct {
 	// Symbol is the trading symbol of the leg.
 	Symbol string `json:"symbol"`
 	// Quantity is the leg quantity, as a decimal string.
-	Quantity string `json:"quantity"`
+	Quantity money.Money `json:"quantity"`
 	// OptionType is whether the leg is a call or a put.
 	OptionType OptionType `json:"option_type"`
 	// OptionExpireDate is the leg expiration date in yyyy-MM-dd form.
 	OptionExpireDate string `json:"option_expire_date"`
 	// OptionExercisePrice is the strike price, as a decimal string.
-	OptionExercisePrice string `json:"option_exercise_price"`
+	OptionExercisePrice money.Money `json:"option_exercise_price"`
 	// OptionContractMultiplier is the number of shares one contract
 	// represents, as a decimal string.
-	OptionContractMultiplier string `json:"option_contract_multiplier"`
+	OptionContractMultiplier money.Money `json:"option_contract_multiplier"`
 	// OptionContractDeliverable is the number of shares delivered on
 	// exercise of one contract, as a decimal string.
-	OptionContractDeliverable string `json:"option_contract_deliverable"`
+	OptionContractDeliverable money.Money `json:"option_contract_deliverable"`
 	// ExpirationType is the option expiration style, for example "AM".
 	ExpirationType string `json:"expiration_type"`
 }

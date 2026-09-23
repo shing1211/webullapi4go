@@ -184,6 +184,10 @@ func (m *Money) UnmarshalJSON(data []byte) error {
 		}
 		return err
 	}
+	if s == "" {
+		m.d = decimal.Zero
+		return nil
+	}
 	d, err := decimal.NewFromString(s)
 	if err != nil {
 		return ErrInvalidFormat

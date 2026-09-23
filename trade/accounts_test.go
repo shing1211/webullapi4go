@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -104,20 +105,20 @@ func TestGetBalance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetBalance() error = %v", err)
 	}
-	if got.TotalAssetCurrency != "USD" || got.TotalCashBalance != "485705.0" {
+	if got.TotalAssetCurrency != "USD" || got.TotalCashBalance.Cmp(money.Must(money.NewFromString("485705.0"))) != 0 {
 		t.Errorf("totals = %+v", got)
 	}
-	if got.TotalUnrealizedProfitLoss != "227689.0" || got.InitMargin != "18000.0" {
+	if got.TotalUnrealizedProfitLoss.Cmp(money.Must(money.NewFromString("227689.0"))) != 0 || got.InitMargin.Cmp(money.Must(money.NewFromString("18000.0"))) != 0 {
 		t.Errorf("profit/init margin = %+v", got)
 	}
 	if len(got.AccountCurrencyAssets) != 1 {
 		t.Fatalf("got %d currency assets, want 1", len(got.AccountCurrencyAssets))
 	}
 	cur := got.AccountCurrencyAssets[0]
-	if cur.Currency != "USD" || cur.CashBalance != "485705.95" || cur.BuyingPower != "484551" {
+	if cur.Currency != "USD" || cur.CashBalance.Cmp(money.Must(money.NewFromString("485705.95"))) != 0 || cur.BuyingPower.Cmp(money.Must(money.NewFromString("484551"))) != 0 {
 		t.Errorf("currency assets = %+v", cur)
 	}
-	if cur.AvailableWithdrawal != "3.0558743194E8" || cur.InterestsUnpaid != "0.0" {
+	if cur.AvailableWithdrawal.Cmp(money.Must(money.NewFromString("3.0558743194E8"))) != 0 || cur.InterestsUnpaid.Cmp(money.Must(money.NewFromString("0.0"))) != 0 {
 		t.Errorf("withdrawal/interest = %+v", cur)
 	}
 }
@@ -157,7 +158,7 @@ func TestGetPositions(t *testing.T) {
 		t.Fatalf("got %d positions, want 1", len(got))
 	}
 	pos := got[0]
-	if pos.PositionID != "POS1" || pos.Symbol != "AAPL" || pos.Quantity != "1" {
+	if pos.PositionID != "POS1" || pos.Symbol != "AAPL" || pos.Quantity.Cmp(money.Must(money.NewFromString("1"))) != 0 {
 		t.Errorf("identity = %+v", pos)
 	}
 	if pos.InstrumentType != trade.InstrumentTypeOption {
@@ -170,10 +171,10 @@ func TestGetPositions(t *testing.T) {
 		t.Fatalf("got %d legs, want 1", len(pos.Legs))
 	}
 	leg := pos.Legs[0]
-	if leg.OptionType != trade.OptionTypeCall || leg.OptionExercisePrice != "11.0" {
+	if leg.OptionType != trade.OptionTypeCall || leg.OptionExercisePrice.Cmp(money.Must(money.NewFromString("11.0"))) != 0 {
 		t.Errorf("leg = %+v", leg)
 	}
-	if leg.OptionContractMultiplier != "100" || leg.ExpirationType != "AM" {
+	if leg.OptionContractMultiplier.Cmp(money.Must(money.NewFromString("100"))) != 0 || leg.ExpirationType != "AM" {
 		t.Errorf("leg contract/expiration = %+v", leg)
 	}
 }
