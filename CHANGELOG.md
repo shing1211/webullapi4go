@@ -49,6 +49,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Documentation Standards section to `CONTRIBUTING.md`.
 - Fixed broken Options table in streaming guide.
 
+## [1.1.1] - 2026-09-23
+
+### Dev/Tooling
+
+- Added `Makefile` targets: `build`, `test`, `test-race`, `cover`, `lint`,
+  `fuzz`, `vuln`, `docs`.
+- Enabled `gosec` in `.golangci.yml`; excluded `internal/auth`
+  (protocol-mandated HMAC-SHA1/MD5 body digest) and
+  `internal/resilience/retry` (intentional `math/rand` jitter).
+- Expanded CI matrix to ubuntu/macos/windows; added coverage job
+  (baseline measurement) and `govulncheck` job.
+- Added `.github/dependabot.yml` (weekly gomod + github-actions updates).
+- Added `go.uber.org/goleak` for goroutine-leak detection; `TestMain` with
+  `goleak.VerifyTestMain` for `client`, `stream`, `data`, `internal/mqtt`.
+- Added `data/fuzz_test.go` with `FuzzDecodeQuote`/`Snapshot`/`Tick`
+  JSON deserialization fuzz tests.
+
 ## [1.1.0] - 2026-09-22
 
 Full SDK parity with the official Webull OpenAPI.

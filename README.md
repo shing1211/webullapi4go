@@ -18,7 +18,7 @@ statements.
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v1.1.0)
+## Feature matrix (v1.1.1)
 
 | Area | Status | Details |
 |------|--------|---------|
@@ -349,6 +349,19 @@ MQTT on port 1883).
 - Architecture decisions: [ADR index](docs/adr/index.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Development
+
+| Target | Description |
+|--------|-------------|
+| `make build` | compile all packages |
+| `make test` | unit tests (sandbox tests need `WEBULL_SANDBOX=1` and valid creds) |
+| `make test-race` | tests with the race detector |
+| `make cover` | coverage profiling |
+| `make lint` | `golangci-lint` (includes `gosec`) |
+| `make fuzz` | fuzz the data deserializers |
+| `make vuln` | `govulncheck` |
+| `make docs` | build the MkDocs site (`mkdocs build --strict`) |
 
 ## License
 

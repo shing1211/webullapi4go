@@ -1,6 +1,6 @@
 # Enhancement / Production Hardening Plan
 
-Status: **Approved · pending execution** · Target release: **`v2.0.0`** (breaking Go-API changes)
+Status: **Approved · Phase 1 complete · Phases 2–7 pending** · Target release: **`v2.0.0`** (breaking Go-API changes)
 
 > Approving this plan explicitly authorizes edits to `.github/workflows/ci.yml` and `.golangci.yml` that AGENTS.md otherwise restricts.
 
