@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Combo orders are a US-equity-only feature. These are the documented per-role

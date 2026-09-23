@@ -18,22 +18,22 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
-	imqtt "github.com/shing1211/webullapi4go/internal/mqtt"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 )
 
 // Default streaming parameters. Most mirror the low-level MQTT defaults.
 const (
 	// DefaultKeepAlive is the MQTT keep-alive interval.
-	DefaultKeepAlive = imqtt.DefaultKeepAlive
+	DefaultKeepAlive = mqtt.DefaultKeepAlive
 	// DefaultConnectTimeout bounds a single MQTT connection attempt.
-	DefaultConnectTimeout = imqtt.DefaultConnectTimeout
+	DefaultConnectTimeout = mqtt.DefaultConnectTimeout
 	// DefaultWriteTimeout bounds writing an MQTT control packet.
-	DefaultWriteTimeout = imqtt.DefaultWriteTimeout
+	DefaultWriteTimeout = mqtt.DefaultWriteTimeout
 	// DefaultMessageChannelDepth is the inbound message buffer size.
-	DefaultMessageChannelDepth = imqtt.DefaultMessageChannelDepth
+	DefaultMessageChannelDepth = mqtt.DefaultMessageChannelDepth
 	// DefaultMaxReconnectInterval caps the reconnect backoff.
-	DefaultMaxReconnectInterval = imqtt.DefaultMaxReconnectInterval
+	DefaultMaxReconnectInterval = mqtt.DefaultMaxReconnectInterval
 	// DefaultResubscribeTimeout bounds the whole re-subscription sequence
 	// issued after a reconnect.
 	DefaultResubscribeTimeout = 30 * time.Second

@@ -24,7 +24,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/events"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
 

@@ -24,8 +24,8 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	"github.com/shing1211/webullapi4go/internal/errs"
-	imqtt "github.com/shing1211/webullapi4go/internal/mqtt"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 )
 
 // password is sent as the MQTT password. Webull documents that any value is
@@ -41,7 +41,7 @@ const password = "webullapi4go"
 type Client struct {
 	core *client.Client
 	cfg  config
-	mqtt *imqtt.Client
+	mqtt *mqtt.Client
 
 	closeOnce sync.Once
 
@@ -97,7 +97,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	mc, err := imqtt.New(imqtt.Config{
+	mc, err := mqtt.New(mqtt.Config{
 		Broker:               broker,
 		ClientID:             cfg.sessionID,
 		Username:             cl.Config().AppKey,
@@ -171,11 +171,11 @@ func (c *Client) Connect(ctx context.Context) error {
 // the Webull-specific cases.
 func streamConnectError(err error) error {
 	switch {
-	case errors.Is(err, imqtt.ErrConnectionLimit):
+	case errors.Is(err, mqtt.ErrConnectionLimit):
 		return errs.Wrap(errs.CodeTransport,
 			"stream: connect rejected: exceeds the 5 concurrent connections per App Key (Webull code 105); wait about 1 minute after a disconnect before reconnecting",
 			err)
-	case errors.Is(err, imqtt.ErrConnectionRefused):
+	case errors.Is(err, mqtt.ErrConnectionRefused):
 		return errs.Wrap(errs.CodeTransport,
 			"stream: connect refused by broker; verify the App Key and that the session id is not already in use",
 			err)
@@ -291,7 +291,7 @@ func (c *Client) OnDisconnect(fn func(error)) {
 
 // handleMessage is the low-level callback. It reports dispatch failures to the
 // error handlers.
-func (c *Client) handleMessage(m imqtt.Message) {
+func (c *Client) handleMessage(m mqtt.Message) {
 	if err := c.dispatch(m.Topic, m.Payload); err != nil {
 		c.emitError(err)
 	}

@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // DoStream sends a signed request and returns the raw, open response for

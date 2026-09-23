@@ -27,7 +27,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/data"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 func TestGetNewsSummary(t *testing.T) {

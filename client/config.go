@@ -18,8 +18,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
 
 // Defaults applied by [DefaultConfig].

@@ -28,7 +28,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 type capture struct {

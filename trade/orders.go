@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Stock and option order endpoint paths.

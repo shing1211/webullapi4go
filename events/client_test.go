@@ -29,7 +29,7 @@ import (
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/events"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // capture holds what the fake server observed for one Subscribe call.

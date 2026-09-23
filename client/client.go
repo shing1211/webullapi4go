@@ -18,8 +18,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/transport"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/transport"
 )
 
 // Client is the Webull OpenAPI HTTP client. It owns the resolved [Config] and

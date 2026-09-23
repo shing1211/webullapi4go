@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/resilience/retry"
-	"github.com/shing1211/webullapi4go/internal/transport"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
+	"github.com/shing1211/webullapi4go/pkg/transport"
 )
 
 // Headers that the SDK sets on every request but that do not participate in the

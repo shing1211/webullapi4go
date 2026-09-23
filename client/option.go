@@ -19,9 +19,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/resilience/breaker"
-	"github.com/shing1211/webullapi4go/internal/resilience/ratelimit"
-	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+	"github.com/shing1211/webullapi4go/pkg/resilience/breaker"
+	"github.com/shing1211/webullapi4go/pkg/resilience/ratelimit"
+	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
 
 // Option mutates a [Config] during [New]. Options are applied in order on top

@@ -41,8 +41,8 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/transport"
+	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/transport"
 )
 
 const (

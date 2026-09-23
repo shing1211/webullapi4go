@@ -19,7 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // DefaultGRPCPort is the default port for gRPC connections (443).

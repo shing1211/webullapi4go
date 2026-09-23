@@ -12,203 +12,113 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package errs defines the typed error model shared by every webullapi4go
-// package.
-//
-// An [Error] carries a stable [Code] for programmatic classification, a
-// human-readable message, and an optional wrapped cause. It participates in
-// [errors.Is] and [errors.As] through [Error.Unwrap] and [Error.Is], so callers
-// can branch on a category without matching strings.
+// Package errs is a deprecated alias for [github.com/shing1211/webullapi4go/pkg/errors].
+// New code should import that package directly. This package will be removed in v3.
 package errs
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net/http"
-	"strings"
+	pkgres "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Code is a stable, machine-readable classification of an error.
-type Code string
+//
+// Deprecated: use [pkgres.Code].
+type Code = pkgres.Code
 
 const (
-	// CodeInvalidConfig indicates that the client configuration is invalid.
-	CodeInvalidConfig Code = "invalid_config"
-	// CodeUnsupported indicates an operation the SDK does not support.
-	CodeUnsupported Code = "unsupported"
-	// CodeAuth indicates an authentication, signing, or token failure.
-	CodeAuth Code = "auth"
-	// CodeTransport indicates a network or HTTP transport failure.
-	CodeTransport Code = "transport"
-	// CodeAPI indicates a non-success response returned by the Webull API.
-	CodeAPI Code = "api"
-	// CodeUnauthorized indicates an HTTP 401 response: the request was not
-	// authenticated.
-	CodeUnauthorized Code = "UNAUTHORIZED"
-	// CodeForbidden indicates an HTTP 403 response: the caller lacks the
-	// permission or data subscription required by the endpoint.
-	CodeForbidden Code = "FORBIDDEN"
-	// CodeInvalidToken indicates an HTTP 417 response: the access token is
-	// missing, expired, or otherwise invalid.
-	CodeInvalidToken Code = "INVALID_TOKEN"
-	// CodeRateLimited indicates an HTTP 429 response: the request exceeded the
-	// endpoint's rate limit.
-	CodeRateLimited Code = "RATE_LIMITED"
-	// CodeServer indicates an HTTP 5xx response: the Webull service failed.
-	CodeServer Code = "SERVER_ERROR"
+	// CodeInvalidConfig is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeInvalidConfig].
+	CodeInvalidConfig = pkgres.CodeInvalidConfig
+	// CodeUnsupported is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeUnsupported].
+	CodeUnsupported = pkgres.CodeUnsupported
+	// CodeAuth is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeAuth].
+	CodeAuth = pkgres.CodeAuth
+	// CodeTransport is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeTransport].
+	CodeTransport = pkgres.CodeTransport
+	// CodeAPI is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeAPI].
+	CodeAPI = pkgres.CodeAPI
+	// CodeUnauthorized is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeUnauthorized].
+	CodeUnauthorized = pkgres.CodeUnauthorized
+	// CodeForbidden is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeForbidden].
+	CodeForbidden = pkgres.CodeForbidden
+	// CodeInvalidToken is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeInvalidToken].
+	CodeInvalidToken = pkgres.CodeInvalidToken
+	// CodeRateLimited is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeRateLimited].
+	CodeRateLimited = pkgres.CodeRateLimited
+	// CodeServer is deprecated.
+	//
+	// Deprecated: use [pkgres.CodeServer].
+	CodeServer = pkgres.CodeServer
 )
 
-// Error is the SDK's typed error. It is safe to return by value as *Error and
-// to compare by [Code] via [errors.Is].
-type Error struct {
-	// Code is the stable error category.
-	Code Code
-	// Message is a human-readable description of what went wrong.
-	Message string
-	// Status is the HTTP status code of the response that caused the error, or
-	// zero when the error did not originate from an HTTP response.
-	Status int
-	// Err is the optional underlying cause.
-	Err error
-}
+// Error is the SDK's typed error.
+//
+// Deprecated: use [pkgres.Error].
+type Error = pkgres.Error
 
-// Error implements the error interface.
-func (e *Error) Error() string {
-	if e == nil {
-		return "<nil>"
-	}
-	switch {
-	case e.Err != nil && e.Message != "":
-		return fmt.Sprintf("webull: %s: %s: %v", e.Code, e.Message, e.Err)
-	case e.Message != "":
-		return fmt.Sprintf("webull: %s: %s", e.Code, e.Message)
-	case e.Err != nil:
-		return fmt.Sprintf("webull: %s: %v", e.Code, e.Err)
-	default:
-		return fmt.Sprintf("webull: %s", e.Code)
-	}
-}
+// ErrUnsupported is the sentinel for unsupported operations.
+//
+// Deprecated: use [pkgres.ErrUnsupported].
+var ErrUnsupported = pkgres.ErrUnsupported
 
-// Unwrap returns the wrapped cause, if any, so the error can be inspected with
-// [errors.Is] and [errors.As].
-func (e *Error) Unwrap() error {
-	if e == nil {
-		return nil
-	}
-	return e.Err
-}
+// ErrUnauthorized matches CodeUnauthorized.
+//
+// Deprecated: use [pkgres.ErrUnauthorized].
+var ErrUnauthorized = pkgres.ErrUnauthorized
 
-// Is reports whether e matches target. Two Errors match when they share a
-// [Code]; otherwise matching delegates to the wrapped cause.
-func (e *Error) Is(target error) bool {
-	if e == nil {
-		return false
-	}
-	var t *Error
-	if errors.As(target, &t) {
-		return t.Code == e.Code
-	}
-	return errors.Is(e.Err, target)
-}
+// ErrForbidden matches CodeForbidden.
+//
+// Deprecated: use [pkgres.ErrForbidden].
+var ErrForbidden = pkgres.ErrForbidden
+
+// ErrInvalidToken matches CodeInvalidToken.
+//
+// Deprecated: use [pkgres.ErrInvalidToken].
+var ErrInvalidToken = pkgres.ErrInvalidToken
+
+// ErrRateLimited matches CodeRateLimited.
+//
+// Deprecated: use [pkgres.ErrRateLimited].
+var ErrRateLimited = pkgres.ErrRateLimited
+
+// ErrServer matches CodeServer.
+//
+// Deprecated: use [pkgres.ErrServer].
+var ErrServer = pkgres.ErrServer
 
 // New returns an *Error with the given code and message.
-func New(code Code, message string) *Error {
-	return &Error{Code: code, Message: message}
-}
+//
+// Deprecated: use [pkgres.New].
+func New(code Code, message string) *Error { return pkgres.New(code, message) }
 
 // Wrap returns an *Error with the given code and message that wraps cause.
-func Wrap(code Code, message string, cause error) *Error {
-	return &Error{Code: code, Message: message, Err: cause}
-}
+//
+// Deprecated: use [pkgres.Wrap].
+func Wrap(code Code, message string, cause error) *Error { return pkgres.Wrap(code, message, cause) }
 
 // Is reports whether err is an *Error carrying the given code.
-func Is(err error, code Code) bool {
-	var e *Error
-	return errors.As(err, &e) && e.Code == code
-}
+//
+// Deprecated: use [pkgres.Is].
+func Is(err error, code Code) bool { return pkgres.Is(err, code) }
 
-// ErrUnsupported is the sentinel for operations the SDK does not support. It
-// also satisfies errors.Is(err, errors.ErrUnsupported).
-var ErrUnsupported = Wrap(CodeUnsupported, "operation not supported", errors.ErrUnsupported)
-
-// Sentinel errors for the HTTP status classifications returned by
-// [FromHTTPStatus]. [errors.Is] matches them by [Code], so callers can write
-// errors.Is(err, errs.ErrUnauthorized) without depending on message text.
-var (
-	// ErrUnauthorized matches [CodeUnauthorized].
-	ErrUnauthorized = New(CodeUnauthorized, "unauthorized")
-	// ErrForbidden matches [CodeForbidden].
-	ErrForbidden = New(CodeForbidden, "forbidden")
-	// ErrInvalidToken matches [CodeInvalidToken].
-	ErrInvalidToken = New(CodeInvalidToken, "invalid token")
-	// ErrRateLimited matches [CodeRateLimited].
-	ErrRateLimited = New(CodeRateLimited, "rate limited")
-	// ErrServer matches [CodeServer].
-	ErrServer = New(CodeServer, "server error")
-)
-
-// FromHTTPStatus maps a non-2xx HTTP response status to a typed [Error]. When
-// the response body carries an API error message (a JSON object with a
-// "message", "msg", "error_msg", "errorMessage", or "error_description"
-// field), that message is included; otherwise the raw body is included when it
-// is short enough to be readable, and the standard status text is used as a
-// last resort. The returned error's [Error.Status] is always status.
-func FromHTTPStatus(status int, body []byte) *Error {
-	e := &Error{Code: httpStatusCode(status), Status: status}
-	msg := apiMessage(body)
-	if msg == "" {
-		msg = http.StatusText(status)
-	}
-	if msg == "" {
-		msg = "unexpected HTTP status"
-	}
-	e.Message = fmt.Sprintf("http %d: %s", status, msg)
-	return e
-}
-
-// httpStatusCode classifies status as one of the SDK's HTTP error codes.
-func httpStatusCode(status int) Code {
-	switch {
-	case status == http.StatusUnauthorized:
-		return CodeUnauthorized
-	case status == http.StatusForbidden:
-		return CodeForbidden
-	case status == http.StatusExpectationFailed:
-		return CodeInvalidToken
-	case status == http.StatusTooManyRequests:
-		return CodeRateLimited
-	case status >= 500:
-		return CodeServer
-	default:
-		return CodeAPI
-	}
-}
-
-// apiMessage extracts a human-readable message from a Webull error body. It
-// recognizes the JSON field names used across Webull services and falls back to
-// the raw, trimmed body when no recognized field is present.
-func apiMessage(body []byte) string {
-	trimmed := strings.TrimSpace(string(body))
-	if trimmed == "" {
-		return ""
-	}
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(body, &fields) == nil {
-		for _, name := range []string{"message", "msg", "error_msg", "errorMessage", "error_description"} {
-			raw, ok := fields[name]
-			if !ok {
-				continue
-			}
-			var s string
-			if json.Unmarshal(raw, &s) == nil && s != "" {
-				return s
-			}
-		}
-	}
-	const maxRaw = 512
-	if len(trimmed) > maxRaw {
-		return trimmed[:maxRaw] + "..."
-	}
-	return trimmed
-}
+// FromHTTPStatus maps a non-2xx HTTP response status to a typed Error.
+//
+// Deprecated: use [pkgres.FromHTTPStatus].
+func FromHTTPStatus(status int, body []byte) *Error { return pkgres.FromHTTPStatus(status, body) }

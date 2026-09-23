@@ -12,109 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package transport is a deprecated alias for [github.com/shing1211/webullapi4go/pkg/transport].
+// New code should import that package directly. This package will be removed in v3.
 package transport
 
 import (
-	"bytes"
-	"context"
-	"errors"
-	"io"
 	"net/http"
-	"net/url"
-	"strings"
+
+	pkgtrans "github.com/shing1211/webullapi4go/pkg/transport"
 )
 
-// ErrNilHTTPClient is returned by [New] when no *http.Client is supplied.
-var ErrNilHTTPClient = errors.New("transport: http client is required")
-
-// Client is a thin HTTP executor. It joins request paths onto a fixed base URL,
-// applies a default User-Agent, and delegates the actual round trip to the
-// configured *http.Client, which owns timeouts and connection pooling.
+// Doer is the minimal interface for an HTTP executor.
 //
-// A Client is safe for concurrent use.
-type Client struct {
-	baseURL   *url.URL
-	http      *http.Client
-	userAgent string
-}
+// Deprecated: use [pkgtrans.Doer].
+type Doer = pkgtrans.Doer
 
-// New returns a Client that sends requests rooted at baseURL using hc. The
-// baseURL must be an absolute http or https URL (for example
-// "https://api.webull.hk"); its path, if any, is preserved as a prefix.
-// Requests carry userAgent when it is non-empty. hc must not be nil.
+// ErrNilHTTPClient is returned by [New] when no *http.Client is supplied.
+//
+// Deprecated: use [pkgtrans.ErrNilHTTPClient].
+var ErrNilHTTPClient = pkgtrans.ErrNilHTTPClient
+
+// Client is a thin HTTP executor.
+//
+// Deprecated: use [pkgtrans.Client].
+type Client = pkgtrans.Client
+
+// New returns a Client that sends requests rooted at baseURL using hc.
+//
+// Deprecated: use [pkgtrans.New].
 func New(baseURL string, hc *http.Client, userAgent string) (*Client, error) {
-	if hc == nil {
-		return nil, ErrNilHTTPClient
-	}
-	u, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return nil, err
-	}
-	if u.Scheme == "" || u.Host == "" {
-		return nil, errors.New("transport: base URL must be absolute and include a host")
-	}
-	return &Client{baseURL: u, http: hc, userAgent: userAgent}, nil
-}
-
-// BaseURL returns the resolved base URL.
-func (c *Client) BaseURL() *url.URL {
-	u := *c.baseURL
-	return &u
-}
-
-// HTTPClient returns the underlying *http.Client.
-func (c *Client) HTTPClient() *http.Client { return c.http }
-
-// NewRequest builds a request for method against the client's base URL. path is
-// appended to the base path and query, when non-nil, becomes the encoded query
-// string. body, when non-empty, is sent verbatim. The returned request is bound
-// to ctx.
-func (c *Client) NewRequest(ctx context.Context, method, path string, query url.Values, body []byte) (*http.Request, error) {
-	u := *c.baseURL
-	// Parse the full path to correctly separate path and query components
-	// when path contains a '?' character.
-	full, err := url.Parse(joinPath(c.baseURL.Path, path))
-	if err != nil {
-		return nil, err
-	}
-	u.Path = full.Path
-	u.RawQuery = full.RawQuery
-	if query != nil {
-		u.RawQuery = query.Encode()
-	}
-	var reader io.Reader
-	if len(body) > 0 {
-		reader = bytes.NewReader(body)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), reader)
-	if err != nil {
-		return nil, err
-	}
-	if c.userAgent != "" {
-		req.Header.Set("User-Agent", c.userAgent)
-	}
-	return req, nil
-}
-
-// Do sends req and returns the raw response. The caller owns the response body.
-func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	return c.http.Do(req)
-}
-
-// CloseIdleConnections releases idle connections held by the underlying
-// transport. It is safe to call more than once. It does not close connections
-// that are still in use.
-func (c *Client) CloseIdleConnections() {
-	c.http.CloseIdleConnections()
-}
-
-// joinPath appends path to base, ensuring exactly one "/" between them.
-func joinPath(base, path string) string {
-	if path == "" {
-		return base
-	}
-	if strings.HasPrefix(path, "/") {
-		return strings.TrimRight(base, "/") + path
-	}
-	return strings.TrimRight(base, "/") + "/" + path
+	return pkgtrans.New(baseURL, hc, userAgent)
 }

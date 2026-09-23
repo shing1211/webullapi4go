@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // API interface versions accepted by the Webull OpenAPI x-version header.
