@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -224,14 +225,14 @@ type OrderLeg struct {
 	Symbol string `json:"symbol"`
 	// Side is the intended direction of the leg.
 	Side OrderSide `json:"side"`
-	// StrikePrice is the option strike, as a decimal string.
-	StrikePrice string `json:"strike_price,omitempty"`
+	// StrikePrice is the option strike price.
+	StrikePrice *money.Money `json:"strike_price,omitempty"`
 	// OptionExpireDate is the option expiry in yyyy-MM-dd form.
 	OptionExpireDate string `json:"option_expire_date,omitempty"`
 	// OptionType is whether the leg is a call or a put.
 	OptionType OptionType `json:"option_type,omitempty"`
-	// Quantity is the leg quantity, as a decimal string.
-	Quantity string `json:"quantity,omitempty"`
+	// Quantity is the leg quantity.
+	Quantity *money.Money `json:"quantity,omitempty"`
 }
 
 // PartyID identifies a party to a Hong Kong order for regulatory reporting.
@@ -247,8 +248,7 @@ type PartyID struct {
 	PartyRole string `json:"party_role"`
 }
 
-// OrderRequest is a single order within a [PlaceOrderRequest]. Numeric values
-// are strings to preserve precision.
+// OrderRequest is a single order within a [PlaceOrderRequest].
 //
 // The fields required for every order are ClientOrderID, ComboType,
 // InstrumentType, Market, Symbol, OrderType, Side, EntrustType, and
@@ -269,9 +269,9 @@ type OrderRequest struct {
 	OrderType OrderType `json:"order_type"`
 	// Side is the intended trading direction.
 	Side OrderSide `json:"side"`
-	// Quantity is the order quantity, as a decimal string. Required when
-	// EntrustType is QTY; ignored when EntrustType is AMOUNT.
-	Quantity string `json:"quantity,omitempty"`
+	// Quantity is the order quantity. Required when EntrustType is QTY;
+	// ignored when EntrustType is AMOUNT.
+	Quantity *money.Money `json:"quantity,omitempty"`
 	// EntrustType is whether the order is sized by quantity or cash amount.
 	EntrustType EntrustType `json:"entrust_type"`
 	// TimeInForce is how long the order remains active.
@@ -279,24 +279,23 @@ type OrderRequest struct {
 	// SupportTradingSession restricts a US order to a trading session. It is
 	// optional; the API applies its own default when it is empty.
 	SupportTradingSession TradingSession `json:"support_trading_session,omitempty"`
-	// LimitPrice is the limit price, as a decimal string. Required for
-	// LIMIT, STOP_LOSS_LIMIT, and TOUCH_LMT orders.
-	LimitPrice string `json:"limit_price,omitempty"`
-	// StopPrice is the trigger price, as a decimal string. Required for
-	// STOP_LOSS, STOP_LOSS_LIMIT, TOUCH_MKT, and TOUCH_LMT orders.
-	StopPrice string `json:"stop_price,omitempty"`
-	// TotalCashAmount is the cash amount, as a decimal string. Required when
-	// EntrustType is AMOUNT.
-	TotalCashAmount string `json:"total_cash_amount,omitempty"`
+	// LimitPrice is the limit price. Required for LIMIT, STOP_LOSS_LIMIT,
+	// and TOUCH_LMT orders.
+	LimitPrice *money.Money `json:"limit_price,omitempty"`
+	// StopPrice is the trigger price. Required for STOP_LOSS, STOP_LOSS_LIMIT,
+	// TOUCH_MKT, and TOUCH_LMT orders.
+	StopPrice *money.Money `json:"stop_price,omitempty"`
+	// TotalCashAmount is the cash amount. Required when EntrustType is AMOUNT.
+	TotalCashAmount *money.Money `json:"total_cash_amount,omitempty"`
 	// TriggerPriceType is the market price a touch or stop order triggers on.
 	TriggerPriceType TriggerPriceType `json:"trigger_price_type,omitempty"`
 	// TrailingType is how TrailingStopStep is expressed.
 	TrailingType TrailingType `json:"trailing_type,omitempty"`
-	// TrailingStopStep is the trailing spread, as a decimal string.
-	TrailingStopStep string `json:"trailing_stop_step,omitempty"`
+	// TrailingStopStep is the trailing spread.
+	TrailingStopStep *money.Money `json:"trailing_stop_step,omitempty"`
 	// TrailingLimitPriceOffset is the offset between the triggered stop price
-	// and the submitted limit price, as a decimal string.
-	TrailingLimitPriceOffset string `json:"trailing_limit_price_offset,omitempty"`
+	// and the submitted limit price.
+	TrailingLimitPriceOffset *money.Money `json:"trailing_limit_price_offset,omitempty"`
 	// ExpireDate is the GTD expiry in yyyy-MM-dd form. Required when
 	// TimeInForce is GTD.
 	ExpireDate string `json:"expire_date,omitempty"`
@@ -338,10 +337,10 @@ type PlaceOrderResult struct {
 // differ based on execution.
 type PreviewResult struct {
 	// EstimatedCost is the estimated capital required for the order.
-	EstimatedCost string `json:"estimated_cost"`
+	EstimatedCost money.Money `json:"estimated_cost"`
 	// EstimatedTransactionFee is the estimated transaction fee, including
 	// exchange, clearing, and commission fees.
-	EstimatedTransactionFee string `json:"estimated_transaction_fee"`
+	EstimatedTransactionFee money.Money `json:"estimated_transaction_fee"`
 }
 
 // Validate reports whether r is well formed. It checks the required fields, the
@@ -420,34 +419,34 @@ func (r OrderRequest) validate(prefix string) error {
 
 	switch r.EntrustType {
 	case EntrustTypeQty:
-		if strings.TrimSpace(r.Quantity) == "" {
+		if r.Quantity == nil {
 			return fail("quantity is required when entrust_type is QTY")
 		}
-		if !isPositiveDecimal(r.Quantity) {
-			return fail("quantity %q must be a positive decimal number", r.Quantity)
+		if !r.Quantity.IsPositive() {
+			return fail("quantity must be a positive decimal number")
 		}
 	case EntrustTypeAmount:
-		if strings.TrimSpace(r.TotalCashAmount) == "" {
+		if r.TotalCashAmount == nil {
 			return fail("total_cash_amount is required when entrust_type is AMOUNT")
 		}
-		if !isPositiveDecimal(r.TotalCashAmount) {
-			return fail("total_cash_amount %q must be a positive decimal number", r.TotalCashAmount)
+		if !r.TotalCashAmount.IsPositive() {
+			return fail("total_cash_amount must be a positive decimal number")
 		}
 	default:
 		return fail("entrust_type %q must be QTY or AMOUNT", r.EntrustType)
 	}
 
-	if r.OrderType.needsLimitPrice() && strings.TrimSpace(r.LimitPrice) == "" {
+	if r.OrderType.needsLimitPrice() && r.LimitPrice == nil {
 		return fail("limit_price is required for %s orders", r.OrderType)
 	}
-	if r.OrderType.needsStopPrice() && strings.TrimSpace(r.StopPrice) == "" {
+	if r.OrderType.needsStopPrice() && r.StopPrice == nil {
 		return fail("stop_price is required for %s orders", r.OrderType)
 	}
 	if r.OrderType.isTrailing() {
 		if r.TrailingType == "" {
 			return fail("trailing_type is required for %s orders", r.OrderType)
 		}
-		if strings.TrimSpace(r.TrailingStopStep) == "" {
+		if r.TrailingStopStep == nil {
 			return fail("trailing_stop_step is required for %s orders", r.OrderType)
 		}
 	}
@@ -605,12 +604,12 @@ func (c *Client) enforceGuardrails(req PlaceOrderRequest) error {
 
 // enforceOrderGuardrails applies the configured caps to a single order.
 func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
-	if c.cfg.maxOrderQuantity != "" && strings.TrimSpace(o.Quantity) != "" {
-		if qty, ok := parseDecimal(o.Quantity); ok {
-			if max, ok := parseDecimal(c.cfg.maxOrderQuantity); ok && qty.Cmp(max) > 0 {
-				return errs.New(errs.CodeInvalidConfig,
-					fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity))
-			}
+	if c.cfg.maxOrderQuantity != "" && o.Quantity != nil {
+		qtyRat := o.Quantity.Rat()
+		maxRat, ok := money.ParseDecimal(c.cfg.maxOrderQuantity)
+		if ok && qtyRat.Cmp(maxRat) > 0 {
+			return errs.New(errs.CodeInvalidConfig,
+				fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity))
 		}
 	}
 	if c.cfg.maxOrderNotional == "" {
@@ -620,7 +619,7 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 	if !ok {
 		return nil
 	}
-	max, ok := parseDecimal(c.cfg.maxOrderNotional)
+	max, ok := money.ParseDecimal(c.cfg.maxOrderNotional)
 	if !ok {
 		return nil
 	}
@@ -633,7 +632,7 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 
 // orderNotional returns the notional value of o and whether it could be
 // computed. AMOUNT orders use total_cash_amount; other orders use quantity
-// times limit_price when both parse as decimals.
+// times limit_price.
 //
 // A multi-leg option order prices each leg separately in Legs, so the
 // top-level order carries no single quantity and price; no notional can be
@@ -643,33 +642,15 @@ func orderNotional(o *OrderRequest) (*big.Rat, bool) {
 		return nil, false
 	}
 	if o.EntrustType == EntrustTypeAmount {
-		return parseDecimal(o.TotalCashAmount)
+		if o.TotalCashAmount == nil {
+			return nil, false
+		}
+		return o.TotalCashAmount.Rat(), true
 	}
-	if strings.TrimSpace(o.Quantity) == "" || strings.TrimSpace(o.LimitPrice) == "" {
+	if o.Quantity == nil || o.LimitPrice == nil {
 		return nil, false
 	}
-	qty, ok := parseDecimal(o.Quantity)
-	if !ok {
-		return nil, false
-	}
-	price, ok := parseDecimal(o.LimitPrice)
-	if !ok {
-		return nil, false
-	}
-	return new(big.Rat).Mul(qty, price), true
-}
-
-// parseDecimal parses a trimmed decimal string exactly. It reports false when s
-// is not a number, including the empty string.
-func parseDecimal(s string) (*big.Rat, bool) {
-	r, ok := new(big.Rat).SetString(strings.TrimSpace(s))
-	return r, ok
-}
-
-// isPositiveDecimal reports whether s is a decimal number greater than zero.
-func isPositiveDecimal(s string) bool {
-	r, ok := parseDecimal(s)
-	return ok && r.Sign() > 0
+	return new(big.Rat).Mul(o.Quantity.Rat(), o.LimitPrice.Rat()), true
 }
 
 // validClientOrderID reports whether id contains only the characters the API

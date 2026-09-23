@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -37,10 +38,10 @@ func validOptionLeg() trade.OrderLeg {
 		Market:           trade.MarketUS,
 		Symbol:           "AAPL",
 		Side:             trade.OrderSideBuy,
-		StrikePrice:      "220.00",
+		StrikePrice:      mp("220.00"),
 		OptionExpireDate: "2026-12-18",
 		OptionType:       trade.OptionTypeCall,
-		Quantity:         "1",
+		Quantity:         mp("1"),
 	}
 }
 
@@ -55,10 +56,10 @@ func validOptionOrder() trade.OrderRequest {
 		Symbol:         "AAPL",
 		OrderType:      trade.OrderTypeLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "11.25",
+		LimitPrice:     mp("11.25"),
 		OptionStrategy: trade.OptionStrategySingle,
 		Legs:           []trade.OrderLeg{validOptionLeg()},
 	}
@@ -95,21 +96,21 @@ func TestOptionRequestValidate(t *testing.T) {
 		}, true},
 		{"valid stop loss sell DAY", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLoss
-			o.LimitPrice = ""
-			o.StopPrice = "3.00"
+			o.LimitPrice = nil
+			o.StopPrice = mp("3.00")
 			o.Side = trade.OrderSideSell
 			o.Legs[0].Side = trade.OrderSideSell
 		}, true},
 		{"valid stop loss limit sell DAY", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLossLimit
-			o.StopPrice = "4.00"
-			o.LimitPrice = "3.80"
+			o.StopPrice = mp("4.00")
+			o.LimitPrice = mp("3.80")
 			o.Side = trade.OrderSideSell
 			o.Legs[0].Side = trade.OrderSideSell
 		}, true},
 		{"market rejected", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeMarket
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, false},
 		{"unsupported order type rejected", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeEnhancedLimit
@@ -143,19 +144,19 @@ func TestOptionRequestValidate(t *testing.T) {
 		}, false},
 		{"two legs", func(o *trade.OrderRequest) {
 			second := validOptionLeg()
-			second.StrikePrice = "230.00"
+			second.StrikePrice = mp("230.00")
 			o.Legs = append(o.Legs, second)
 		}, false},
 		{"limit missing limit_price", func(o *trade.OrderRequest) {
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, false},
 		{"stop loss missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLoss
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, false},
 		{"stop loss limit missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLossLimit
-			o.LimitPrice = "3.80"
+			o.LimitPrice = mp("3.80")
 		}, false},
 		{"leg wrong instrument_type", func(o *trade.OrderRequest) {
 			o.Legs[0].InstrumentType = trade.InstrumentTypeEquity
@@ -170,10 +171,10 @@ func TestOptionRequestValidate(t *testing.T) {
 			o.Legs[0].Side = trade.OrderSideShort
 		}, false},
 		{"leg missing strike_price", func(o *trade.OrderRequest) {
-			o.Legs[0].StrikePrice = ""
+			o.Legs[0].StrikePrice = nil
 		}, false},
 		{"leg non-positive strike_price", func(o *trade.OrderRequest) {
-			o.Legs[0].StrikePrice = "0"
+			o.Legs[0].StrikePrice = mp("0")
 		}, false},
 		{"leg missing option_expire_date", func(o *trade.OrderRequest) {
 			o.Legs[0].OptionExpireDate = ""
@@ -194,10 +195,10 @@ func TestOptionRequestValidate(t *testing.T) {
 			o.Legs[0].OptionType = "STRADDLE"
 		}, false},
 		{"leg missing quantity", func(o *trade.OrderRequest) {
-			o.Legs[0].Quantity = ""
+			o.Legs[0].Quantity = nil
 		}, false},
 		{"leg zero quantity", func(o *trade.OrderRequest) {
-			o.Legs[0].Quantity = "0"
+			o.Legs[0].Quantity = mp("0")
 		}, false},
 		{"option_strategy on equity rejected", func(o *trade.OrderRequest) {
 			e := validOrder()
@@ -272,7 +273,7 @@ func TestOrderLegValidate(t *testing.T) {
 func TestOptionOrderSerializesLegs(t *testing.T) {
 	t.Parallel()
 
-	wantLeg := `"legs":[{"instrument_type":"OPTION","market":"US","symbol":"AAPL","side":"BUY","strike_price":"220.00","option_expire_date":"2026-12-18","option_type":"CALL","quantity":"1"}]`
+	wantLeg := `"legs":[{"instrument_type":"OPTION","market":"US","symbol":"AAPL","side":"BUY","strike_price":"220","option_expire_date":"2026-12-18","option_type":"CALL","quantity":"1"}]`
 
 	endpoints := []struct {
 		name string
@@ -334,7 +335,7 @@ func TestOptionOrderSerializesLegs(t *testing.T) {
 					t.Errorf("body = %+v, want ACC1 with one single-leg order", body)
 				}
 				leg := body.NewOrders[0].Legs[0]
-				if leg.Symbol != "AAPL" || leg.StrikePrice != "220.00" || leg.OptionExpireDate != "2026-12-18" ||
+				if leg.Symbol != "AAPL" || leg.StrikePrice.Cmp(money.Must(money.NewFromString("220"))) != 0 || leg.OptionExpireDate != "2026-12-18" ||
 					leg.OptionType != trade.OptionTypeCall || leg.Side != trade.OrderSideBuy || leg.Market != trade.MarketUS {
 					t.Errorf("leg = %+v", leg)
 				}
@@ -404,8 +405,8 @@ func TestSandboxPreviewOption(t *testing.T) {
 	req.AccountID = accountID
 	req.NewOrders[0].ClientOrderID = "sdk-preview-option-aapl-1"
 	req.NewOrders[0].Symbol = "AAPL"
-	req.NewOrders[0].LimitPrice = "1.00"
-	req.NewOrders[0].Legs[0].StrikePrice = "220.00"
+	req.NewOrders[0].LimitPrice = mp("1.00")
+	req.NewOrders[0].Legs[0].StrikePrice = mp("220.00")
 	req.NewOrders[0].Legs[0].OptionExpireDate = "2026-12-18"
 
 	res, err := trading.PreviewOrder(ctx, req)

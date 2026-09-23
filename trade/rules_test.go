@@ -101,7 +101,7 @@ func orderFor(market trade.Market, ot trade.OrderType) trade.OrderRequest {
 		Symbol:         symbolFor(market),
 		OrderType:      ot,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
 	}
@@ -113,19 +113,19 @@ func orderFor(market trade.Market, ot trade.OrderType) trade.OrderRequest {
 	}
 	switch ot {
 	case trade.OrderTypeLimit, trade.OrderTypeEnhancedLimit, trade.OrderTypeAtAuctionLimit:
-		o.LimitPrice = "10.00"
+		o.LimitPrice = mp("10.00")
 	case trade.OrderTypeStopLoss, trade.OrderTypeTouchMkt:
-		o.StopPrice = "9.00"
+		o.StopPrice = mp("9.00")
 	case trade.OrderTypeStopLossLimit, trade.OrderTypeTouchLmt:
-		o.StopPrice = "9.00"
-		o.LimitPrice = "10.00"
+		o.StopPrice = mp("9.00")
+		o.LimitPrice = mp("10.00")
 	case trade.OrderTypeTrailingStopLoss:
 		o.TrailingType = trade.TrailingTypeAmount
-		o.TrailingStopStep = "1.00"
+		o.TrailingStopStep = mp("1.00")
 	case trade.OrderTypeTrailingStopLossLimit:
 		o.TrailingType = trade.TrailingTypeAmount
-		o.TrailingStopStep = "1.00"
-		o.TrailingLimitPriceOffset = "1.00"
+		o.TrailingStopStep = mp("1.00")
+		o.TrailingLimitPriceOffset = mp("1.00")
 	}
 	return o
 }
@@ -353,10 +353,10 @@ func TestSandboxPreviewHKEnhancedLimit(t *testing.T) {
 			Symbol:         "00700",
 			OrderType:      trade.OrderTypeEnhancedLimit,
 			Side:           trade.OrderSideBuy,
-			Quantity:       "100",
+			Quantity:       mp("100"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			LimitPrice:     "1.00",
+			LimitPrice:     mp("1.00"),
 			NoPartyIDs: []trade.PartyID{{
 				PartyID:       partyID,
 				PartyIDSource: "D",
@@ -391,7 +391,7 @@ func TestAuctionPriceRules(t *testing.T) {
 		}, false},
 		{"HK AT_AUCTION with limit_price", func() trade.OrderRequest {
 			o := orderFor(trade.MarketHK, trade.OrderTypeAtAuction)
-			o.LimitPrice = "10.00"
+			o.LimitPrice = mp("10.00")
 			return o
 		}, true},
 		{"HK AT_AUCTION_LIMIT with limit_price", func() trade.OrderRequest {
@@ -399,7 +399,7 @@ func TestAuctionPriceRules(t *testing.T) {
 		}, false},
 		{"HK AT_AUCTION_LIMIT without limit_price", func() trade.OrderRequest {
 			o := orderFor(trade.MarketHK, trade.OrderTypeAtAuctionLimit)
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 			return o
 		}, true},
 	}

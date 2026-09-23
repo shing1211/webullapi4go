@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
@@ -63,11 +64,11 @@ func validOrder() trade.OrderRequest {
 		Symbol:                "AAPL",
 		OrderType:             trade.OrderTypeLimit,
 		Side:                  trade.OrderSideBuy,
-		Quantity:              "1",
+		Quantity:              mp("1"),
 		EntrustType:           trade.EntrustTypeQty,
 		TimeInForce:           trade.TimeInForceDay,
 		SupportTradingSession: trade.TradingSessionCore,
-		LimitPrice:            "180.00",
+		LimitPrice:            mp("180.00"),
 	}
 }
 
@@ -107,7 +108,7 @@ func TestPreviewOrder(t *testing.T) {
 		if o.ClientOrderID != "test-order-1" || o.Symbol != "AAPL" || o.Market != trade.MarketUS {
 			t.Errorf("order identity = %+v", o)
 		}
-		if o.OrderType != trade.OrderTypeLimit || o.LimitPrice != "180.00" || o.Quantity != "1" {
+		if o.OrderType != trade.OrderTypeLimit || o.LimitPrice.Cmp(money.Must(money.NewFromString("180.00"))) != 0 || o.Quantity.Cmp(money.Must(money.NewFromString("1"))) != 0 {
 			t.Errorf("order terms = %+v", o)
 		}
 		if o.ComboType != trade.ComboTypeNormal || o.EntrustType != trade.EntrustTypeQty || o.Side != trade.OrderSideBuy {
@@ -126,7 +127,7 @@ func TestPreviewOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PreviewOrder() error = %v", err)
 	}
-	if got.EstimatedCost != "180.00" || got.EstimatedTransactionFee != "1.00" {
+	if got.EstimatedCost.Cmp(money.Must(money.NewFromString("180.00"))) != 0 || got.EstimatedTransactionFee.Cmp(money.Must(money.NewFromString("1.00"))) != 0 {
 		t.Errorf("PreviewOrder() = %+v", got)
 	}
 }
@@ -173,7 +174,7 @@ func TestPlaceOrderSerializesComboAndAmountFields(t *testing.T) {
 		raw := string(readBody(t, r))
 		for _, want := range []string{
 			`"client_combo_order_id":"combo-1"`,
-			`"total_cash_amount":"100.40"`,
+			`"total_cash_amount":"100.4"`,
 			`"support_trading_session":"CORE"`,
 		} {
 			if !strings.Contains(raw, want) {
@@ -190,8 +191,8 @@ func TestPlaceOrderSerializesComboAndAmountFields(t *testing.T) {
 	order := validOrder()
 	order.ComboType = trade.ComboTypeMaster
 	order.EntrustType = trade.EntrustTypeAmount
-	order.TotalCashAmount = "100.40"
-	order.Quantity = ""
+	order.TotalCashAmount = mp("100.40")
+	order.Quantity = nil
 	req.NewOrders = []trade.OrderRequest{order}
 
 	c := newOrderTestClient(t, srv.URL)
@@ -224,47 +225,47 @@ func TestOrderRequestValidate(t *testing.T) {
 		{"invalid side", func(o *trade.OrderRequest) { o.Side = "HOLD" }},
 		{"invalid time_in_force", func(o *trade.OrderRequest) { o.TimeInForce = "FOK" }},
 		{"invalid support_trading_session", func(o *trade.OrderRequest) { o.SupportTradingSession = "WEEKEND" }},
-		{"missing quantity for QTY", func(o *trade.OrderRequest) { o.Quantity = "" }},
-		{"zero quantity", func(o *trade.OrderRequest) { o.Quantity = "0" }},
-		{"negative quantity", func(o *trade.OrderRequest) { o.Quantity = "-1" }},
+		{"missing quantity for QTY", func(o *trade.OrderRequest) { o.Quantity = nil }},
+		{"zero quantity", func(o *trade.OrderRequest) { o.Quantity = mp("0") }},
+		{"negative quantity", func(o *trade.OrderRequest) { o.Quantity = mp("-1") }},
 		{"invalid entrust_type", func(o *trade.OrderRequest) { o.EntrustType = "SHARES" }},
 		{"AMOUNT missing total_cash_amount", func(o *trade.OrderRequest) {
 			o.EntrustType = trade.EntrustTypeAmount
-			o.TotalCashAmount = ""
+			o.TotalCashAmount = nil
 		}},
 		{"AMOUNT non-positive total_cash_amount", func(o *trade.OrderRequest) {
 			o.EntrustType = trade.EntrustTypeAmount
-			o.TotalCashAmount = "0"
+			o.TotalCashAmount = mp("0")
 		}},
-		{"LIMIT missing limit_price", func(o *trade.OrderRequest) { o.LimitPrice = "" }},
+		{"LIMIT missing limit_price", func(o *trade.OrderRequest) { o.LimitPrice = nil }},
 		{"STOP_LOSS missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLoss
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}},
 		{"STOP_LOSS_LIMIT missing limit_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLossLimit
-			o.StopPrice = "170.00"
-			o.LimitPrice = ""
+			o.StopPrice = mp("170.00")
+			o.LimitPrice = nil
 		}},
 		{"STOP_LOSS_LIMIT missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLossLimit
-			o.LimitPrice = "170.00"
+			o.LimitPrice = mp("170.00")
 		}},
 		{"TOUCH_MKT missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeTouchMkt
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}},
 		{"TOUCH_LMT missing stop_price", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeTouchLmt
-			o.LimitPrice = "170.00"
+			o.LimitPrice = mp("170.00")
 		}},
 		{"trailing missing trailing_type", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeTrailingStopLoss
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}},
 		{"trailing missing trailing_stop_step", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeTrailingStopLoss
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 			o.TrailingType = trade.TrailingTypeAmount
 		}},
 		{"GTD missing expire_date", func(o *trade.OrderRequest) { o.TimeInForce = trade.TimeInForceGTD }},
@@ -368,37 +369,37 @@ func TestOrderGuardrails(t *testing.T) {
 		wantErr bool
 	}{
 		{"quantity exceeded", []trade.Option{trade.WithMaxOrderQuantity("1")},
-			func(o *trade.OrderRequest) { o.Quantity = "2" }, true},
+			func(o *trade.OrderRequest) { o.Quantity = mp("2") }, true},
 		{"quantity at cap", []trade.Option{trade.WithMaxOrderQuantity("2")},
-			func(o *trade.OrderRequest) { o.Quantity = "2" }, false},
+			func(o *trade.OrderRequest) { o.Quantity = mp("2") }, false},
 		{"quantity fractional exceeded", []trade.Option{trade.WithMaxOrderQuantity("1.5")},
-			func(o *trade.OrderRequest) { o.Quantity = "1.6" }, true},
+			func(o *trade.OrderRequest) { o.Quantity = mp("1.6") }, true},
 		{"notional from limit exceeded", []trade.Option{trade.WithMaxOrderNotional("100")},
-			func(o *trade.OrderRequest) { o.Quantity = "2"; o.LimitPrice = "60" }, true},
+			func(o *trade.OrderRequest) { o.Quantity = mp("2"); o.LimitPrice = mp("60") }, true},
 		{"notional from limit at cap", []trade.Option{trade.WithMaxOrderNotional("120")},
-			func(o *trade.OrderRequest) { o.Quantity = "2"; o.LimitPrice = "60" }, false},
+			func(o *trade.OrderRequest) { o.Quantity = mp("2"); o.LimitPrice = mp("60") }, false},
 		{"notional from amount exceeded", []trade.Option{trade.WithMaxOrderNotional("100")},
 			func(o *trade.OrderRequest) {
 				o.EntrustType = trade.EntrustTypeAmount
-				o.TotalCashAmount = "500"
-				o.Quantity = ""
+				o.TotalCashAmount = mp("500")
+				o.Quantity = nil
 			}, true},
 		{"market skips notional", []trade.Option{trade.WithMaxOrderNotional("1")},
 			func(o *trade.OrderRequest) {
 				o.OrderType = trade.OrderTypeMarket
-				o.LimitPrice = ""
-				o.Quantity = "1"
+				o.LimitPrice = nil
+				o.Quantity = mp("1")
 			}, false},
 		{"market still enforces quantity", []trade.Option{
 			trade.WithMaxOrderNotional("1"),
 			trade.WithMaxOrderQuantity("1"),
 		}, func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeMarket
-			o.LimitPrice = ""
-			o.Quantity = "2"
+			o.LimitPrice = nil
+			o.Quantity = mp("2")
 		}, true},
 		{"guardrails disabled", nil,
-			func(o *trade.OrderRequest) { o.Quantity = "1000000"; o.LimitPrice = "1000000" }, false},
+			func(o *trade.OrderRequest) { o.Quantity = mp("1000000"); o.LimitPrice = mp("1000000") }, false},
 	}
 
 	for _, tc := range cases {
@@ -447,7 +448,7 @@ func TestPlaceOrderEnforcesGuardrails(t *testing.T) {
 
 	c := newTradeClient(t, srv.URL, trade.WithMaxOrderQuantity("1"))
 	req := validPlaceRequest()
-	req.NewOrders[0].Quantity = "2"
+	req.NewOrders[0].Quantity = mp("2")
 
 	if _, err := c.PlaceOrder(context.Background(), req); !errs.Is(err, errs.CodeInvalidConfig) {
 		t.Fatalf("PlaceOrder() error = %v, want invalid_config", err)

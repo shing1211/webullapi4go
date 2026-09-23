@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -71,11 +72,11 @@ func checkOptionLeg(l OrderLeg, fail func(string, ...any) error) error {
 	default:
 		return fail("side %q must be BUY or SELL", l.Side)
 	}
-	if strings.TrimSpace(l.StrikePrice) == "" {
+	if l.StrikePrice == nil {
 		return fail("strike_price is required")
 	}
-	if !isPositiveDecimal(l.StrikePrice) {
-		return fail("strike_price %q must be a positive decimal number", l.StrikePrice)
+	if !l.StrikePrice.IsPositive() {
+		return fail("strike_price must be a positive decimal number")
 	}
 	if strings.TrimSpace(l.OptionExpireDate) == "" {
 		return fail("option_expire_date is required")
@@ -88,11 +89,11 @@ func checkOptionLeg(l OrderLeg, fail func(string, ...any) error) error {
 	default:
 		return fail("option_type %q must be CALL or PUT", l.OptionType)
 	}
-	if strings.TrimSpace(l.Quantity) == "" {
+	if l.Quantity == nil {
 		return fail("quantity is required")
 	}
-	if !isPositiveDecimal(l.Quantity) {
-		return fail("quantity %q must be a positive decimal number", l.Quantity)
+	if !l.Quantity.IsPositive() {
+		return fail("quantity must be a positive decimal number")
 	}
 	return nil
 }
@@ -212,15 +213,14 @@ type optionLegKey struct {
 // equality comparison, so values that differ only in decimal precision (for
 // example "220.0" and "220.00") compare equal. It normalizes through
 // [parseDecimal] and does not alter the stored or emitted strike string. If the
-// strike does not parse as a decimal, it falls back to the trimmed raw string;
-// legs are validated as positive decimals before this is reached, so that path
-// is defensive only.
-func canonicalStrike(s string) string {
-	r, ok := parseDecimal(s)
-	if !ok {
-		return strings.TrimSpace(s)
+// canonicalStrike returns a canonical string representation of the strike price
+// by rounding to the decimal's string form. Since validation already ensures the
+// value is a positive decimal, the parse failure path is defensive only.
+func canonicalStrike(s *money.Money) string {
+	if s == nil {
+		return ""
 	}
-	return r.RatString()
+	return s.Decimal().String()
 }
 
 // validateOptionLegSet checks that legs form a structurally well-formed

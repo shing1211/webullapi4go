@@ -41,19 +41,19 @@ func comboOrder(id string, ct trade.ComboType, ot trade.OrderType, side trade.Or
 		Symbol:                "AAPL",
 		OrderType:             ot,
 		Side:                  side,
-		Quantity:              "1",
+		Quantity:              mp("1"),
 		EntrustType:           trade.EntrustTypeQty,
 		TimeInForce:           trade.TimeInForceDay,
 		SupportTradingSession: trade.TradingSessionCore,
 	}
 	switch ot {
 	case trade.OrderTypeLimit:
-		o.LimitPrice = "180.00"
+		o.LimitPrice = mp("180.00")
 	case trade.OrderTypeStopLoss:
-		o.StopPrice = "170.00"
+		o.StopPrice = mp("170.00")
 	case trade.OrderTypeStopLossLimit:
-		o.StopPrice = "170.00"
-		o.LimitPrice = "169.00"
+		o.StopPrice = mp("170.00")
+		o.LimitPrice = mp("169.00")
 	}
 	return o
 }
@@ -110,20 +110,20 @@ func validOptionForCombo(ct trade.ComboType) trade.OrderRequest {
 		Symbol:         "AAPL",
 		OrderType:      trade.OrderTypeLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "11.00",
+		LimitPrice:     mp("11.00"),
 		OptionStrategy: trade.OptionStrategySingle,
 		Legs: []trade.OrderLeg{{
 			InstrumentType:   trade.InstrumentTypeOption,
 			Market:           trade.MarketUS,
 			Symbol:           "AAPL",
 			Side:             trade.OrderSideBuy,
-			StrikePrice:      "220.00",
+			StrikePrice:      mp("220.00"),
 			OptionExpireDate: "2026-12-18",
 			OptionType:       trade.OptionTypeCall,
-			Quantity:         "1",
+			Quantity:         mp("1"),
 		}},
 	}
 }
@@ -139,10 +139,10 @@ func validHKForCombo(ct trade.ComboType) trade.OrderRequest {
 		Symbol:         "00700",
 		OrderType:      trade.OrderTypeEnhancedLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "100",
+		Quantity:       mp("100"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "10.00",
+		LimitPrice:     mp("10.00"),
 		NoPartyIDs:     []trade.PartyID{{PartyID: "ABC123.2568", PartyIDSource: "D", PartyRole: "3"}},
 	}
 }
@@ -397,7 +397,7 @@ func TestComboCompositionValidation(t *testing.T) {
 			build: func() trade.PlaceOrderRequest {
 				m := comboOrder("m", trade.ComboTypeMaster, trade.OrderTypeTrailingStopLoss, trade.OrderSideBuy)
 				m.TrailingType = trade.TrailingTypeAmount
-				m.TrailingStopStep = "1.00"
+				m.TrailingStopStep = mp("1.00")
 				return comboRequest("combo-oto", m,
 					comboOrder("l", trade.ComboTypeOTO, trade.OrderTypeLimit, trade.OrderSideSell))
 			},
@@ -537,7 +537,7 @@ func TestPlaceOrderSerializesComboGroup(t *testing.T) {
 			`"combo_type":"STOP_PROFIT"`,
 			`"combo_type":"STOP_LOSS"`,
 			`"order_type":"STOP_LOSS"`,
-			`"stop_price":"170.00"`,
+			`"stop_price":"170"`,
 		} {
 			if !strings.Contains(raw, want) {
 				t.Errorf("body missing %s: %s", want, raw)

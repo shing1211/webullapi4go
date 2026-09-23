@@ -39,8 +39,14 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/trade"
 )
+
+func moneyPtr(s string) *money.Money {
+	m := money.Must(money.NewFromString(s))
+	return &m
+}
 
 func main() {
 	if os.Getenv("WEBULL_APP_KEY") == "" {
@@ -110,10 +116,10 @@ func buildVerticalCallSpread(accountID string) trade.PlaceOrderRequest {
 				Symbol:         "AAPL",
 				OrderType:      trade.OrderTypeLimit,
 				Side:           trade.OrderSideBuy,
-				Quantity:       "1",
+				Quantity:       moneyPtr("1"),
 				EntrustType:    trade.EntrustTypeQty,
 				TimeInForce:    trade.TimeInForceDay,
-				LimitPrice:     "1.50",
+				LimitPrice:     moneyPtr("1.50"),
 				OptionStrategy: trade.OptionStrategyVertical,
 				Legs: []trade.OrderLeg{
 					{
@@ -121,20 +127,20 @@ func buildVerticalCallSpread(accountID string) trade.PlaceOrderRequest {
 						Market:           trade.MarketUS,
 						Symbol:           "AAPL",
 						Side:             trade.OrderSideBuy,
-						StrikePrice:      "220.00",
+						StrikePrice:      moneyPtr("220.00"),
 						OptionExpireDate: expiration,
 						OptionType:       trade.OptionTypeCall,
-						Quantity:         "1",
+						Quantity:         moneyPtr("1"),
 					},
 					{
 						InstrumentType:   trade.InstrumentTypeOption,
 						Market:           trade.MarketUS,
 						Symbol:           "AAPL",
 						Side:             trade.OrderSideSell,
-						StrikePrice:      "230.00",
+						StrikePrice:      moneyPtr("230.00"),
 						OptionExpireDate: expiration,
 						OptionType:       trade.OptionTypeCall,
-						Quantity:         "1",
+						Quantity:         moneyPtr("1"),
 					},
 				},
 			},

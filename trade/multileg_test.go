@@ -32,7 +32,7 @@ func optionLeg(side trade.OrderSide, optType trade.OptionType, strike, expire st
 	l := validOptionLeg()
 	l.Side = side
 	l.OptionType = optType
-	l.StrikePrice = strike
+	l.StrikePrice = mp(strike)
 	l.OptionExpireDate = expire
 	return l
 }
@@ -49,10 +49,10 @@ func multiLegOrder(strategy trade.OptionStrategy, legs ...trade.OrderLeg) trade.
 		Symbol:         "AAPL",
 		OrderType:      trade.OrderTypeLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "1.50",
+		LimitPrice:     mp("1.50"),
 		OptionStrategy: strategy,
 		Legs:           legs,
 	}
@@ -122,12 +122,12 @@ func TestMultiLegOptionValidate(t *testing.T) {
 
 	marketOrder := multiLegOrder(trade.OptionStrategyVertical, verticalLegs()...)
 	marketOrder.OrderType = trade.OrderTypeMarket
-	marketOrder.LimitPrice = ""
+	marketOrder.LimitPrice = nil
 
 	stopLossOrder := multiLegOrder(trade.OptionStrategyVertical, verticalLegs()...)
 	stopLossOrder.OrderType = trade.OrderTypeStopLoss
-	stopLossOrder.LimitPrice = ""
-	stopLossOrder.StopPrice = "1.00"
+	stopLossOrder.LimitPrice = nil
+	stopLossOrder.StopPrice = mp("1.00")
 
 	duplicateNonAdjacent := []trade.OrderLeg{
 		optionLeg(trade.OrderSideBuy, trade.OptionTypeCall, "210.00", "2026-12-18"),
@@ -239,8 +239,8 @@ func TestMultiLegOptionSkipsNotionalGuardrail(t *testing.T) {
 	c := newTradeClient(t, srv.URL, trade.WithMaxOrderNotional("1"))
 
 	order := multiLegOrder(trade.OptionStrategyVertical, verticalLegs()...)
-	order.Quantity = "1000"
-	order.LimitPrice = "1000.00"
+	order.Quantity = mp("1000")
+	order.LimitPrice = mp("1000.00")
 
 	req := trade.PlaceOrderRequest{AccountID: "ACC1", NewOrders: []trade.OrderRequest{order}}
 	if _, err := c.PreviewOrder(context.Background(), req); err != nil {
@@ -312,8 +312,8 @@ func TestMultiLegOptionSkipsNotionalGuardrailFourLegs(t *testing.T) {
 	c := newTradeClient(t, srv.URL, trade.WithMaxOrderNotional("1"))
 
 	order := multiLegOrder(trade.OptionStrategyIronCondor, ironCondorLegs()...)
-	order.Quantity = "1000"
-	order.LimitPrice = "1000.00"
+	order.Quantity = mp("1000")
+	order.LimitPrice = mp("1000.00")
 
 	req := trade.PlaceOrderRequest{AccountID: "ACC1", NewOrders: []trade.OrderRequest{order}}
 	if _, err := c.PreviewOrder(context.Background(), req); err != nil {
@@ -336,8 +336,8 @@ func TestSingleLegOptionNotionalGuardrail(t *testing.T) {
 	c := newTradeClient(t, srv.URL, trade.WithMaxOrderNotional("100"))
 
 	order := validOptionOrder()
-	order.Quantity = "100"
-	order.LimitPrice = "10.00"
+	order.Quantity = mp("100")
+	order.LimitPrice = mp("10.00")
 
 	req := trade.PlaceOrderRequest{AccountID: "ACC1", NewOrders: []trade.OrderRequest{order}}
 	if _, err := c.PreviewOrder(context.Background(), req); !errs.Is(err, errs.CodeInvalidConfig) {

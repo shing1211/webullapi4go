@@ -24,9 +24,15 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/events"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
+
+func mp(s string) *money.Money {
+	m := money.Must(money.NewFromString(s))
+	return &m
+}
 
 // TestSandboxEvents dials Webull's sandbox event service over TLS, subscribes,
 // and waits for either a SubscribeSuccess acknowledgement or a clean AuthError.
@@ -197,11 +203,11 @@ func TestSandboxOrderEvent(t *testing.T) {
 			Symbol:                "AAPL",
 			OrderType:             trade.OrderTypeLimit,
 			Side:                  trade.OrderSideBuy,
-			Quantity:              "1",
+			Quantity:              mp("1"),
 			EntrustType:           trade.EntrustTypeQty,
 			TimeInForce:           trade.TimeInForceDay,
 			SupportTradingSession: trade.TradingSessionCore,
-			LimitPrice:            "1.00",
+			LimitPrice:            mp("1.00"),
 		}},
 	})
 	if err != nil {

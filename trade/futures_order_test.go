@@ -33,10 +33,10 @@ func validFuturesOrder() trade.OrderRequest {
 		Symbol:         "ESZ5",
 		OrderType:      trade.OrderTypeLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "4500.00",
+		LimitPrice:     mp("4500.00"),
 	}
 }
 
@@ -54,7 +54,7 @@ func TestFuturesRequestValidate(t *testing.T) {
 		{"valid US futures limit", func(o *trade.OrderRequest) {}, true},
 		{"valid US futures market", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeMarket
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, true},
 		{"valid US futures GTC", func(o *trade.OrderRequest) {
 			o.TimeInForce = trade.TimeInForceGTC
@@ -62,53 +62,53 @@ func TestFuturesRequestValidate(t *testing.T) {
 		{"valid HK futures limit", func(o *trade.OrderRequest) {
 			o.Market = trade.MarketHK
 			o.Symbol = "HSIQ6"
-			o.LimitPrice = "25000.00"
+			o.LimitPrice = mp("25000.00")
 		}, true},
 		{"valid US futures stop loss", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLoss
-			o.LimitPrice = ""
-			o.StopPrice = "4490.00"
+			o.LimitPrice = nil
+			o.StopPrice = mp("4490.00")
 		}, true},
 		{"valid US futures stop loss limit", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeStopLossLimit
-			o.StopPrice = "4490.00"
-			o.LimitPrice = "4480.00"
+			o.StopPrice = mp("4490.00")
+			o.LimitPrice = mp("4480.00")
 		}, true},
 		{"valid HK futures market", func(o *trade.OrderRequest) {
 			o.Market = trade.MarketHK
 			o.Symbol = "HSIQ6"
 			o.OrderType = trade.OrderTypeMarket
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, true},
 		{"amount entrust rejected", func(o *trade.OrderRequest) {
 			o.EntrustType = trade.EntrustTypeAmount
-			o.Quantity = ""
-			o.TotalCashAmount = "1000.00"
+			o.Quantity = nil
+			o.TotalCashAmount = mp("1000.00")
 		}, false},
 		{"amount entrust with quantity rejected", func(o *trade.OrderRequest) {
 			o.EntrustType = trade.EntrustTypeAmount
-			o.TotalCashAmount = "1000.00"
+			o.TotalCashAmount = mp("1000.00")
 		}, false},
 		{"fractional quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "1.5"
+			o.Quantity = mp("1.5")
 		}, false},
 		{"integral decimal quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "1.0"
+			o.Quantity = mp("1.0")
 		}, false},
-		{"signed quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "+1"
-		}, false},
+		{"signed quantity accepted", func(o *trade.OrderRequest) {
+			o.Quantity = mp("+1")
+		}, true},
 		{"negative quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "-1"
+			o.Quantity = mp("-1")
 		}, false},
 		{"zero quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "0"
+			o.Quantity = mp("0")
 		}, false},
 		{"missing quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = ""
+			o.Quantity = nil
 		}, false},
 		{"blank quantity rejected", func(o *trade.OrderRequest) {
-			o.Quantity = "   "
+			o.Quantity = nil
 		}, false},
 		{"invalid time_in_force rejected", func(o *trade.OrderRequest) {
 			o.TimeInForce = trade.TimeInForce("FOK")
@@ -125,7 +125,7 @@ func TestFuturesRequestValidate(t *testing.T) {
 		{"HK futures no_party_ids rejected", func(o *trade.OrderRequest) {
 			o.Market = trade.MarketHK
 			o.Symbol = "HSIQ6"
-			o.LimitPrice = "25000.00"
+			o.LimitPrice = mp("25000.00")
 			o.NoPartyIDs = []trade.PartyID{{PartyID: "ABC123.2568", PartyIDSource: "D", PartyRole: "3"}}
 		}, false},
 		{"support_trading_session rejected", func(o *trade.OrderRequest) {
@@ -137,7 +137,7 @@ func TestFuturesRequestValidate(t *testing.T) {
 		}, false},
 		{"unsupported US order type rejected", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeMarketOnOpen
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, false},
 		{"unsupported HK order type rejected", func(o *trade.OrderRequest) {
 			o.Market = trade.MarketHK
@@ -222,10 +222,10 @@ func TestFuturesRequestRejectionMessages(t *testing.T) {
 	}{
 		{"amount entrust", func(o *trade.OrderRequest) {
 			o.EntrustType = trade.EntrustTypeAmount
-			o.TotalCashAmount = "1000.00"
+			o.TotalCashAmount = mp("1000.00")
 		}, "must be QTY for futures orders"},
 		{"fractional quantity", func(o *trade.OrderRequest) {
-			o.Quantity = "1.5"
+			o.Quantity = mp("1.5")
 		}, "must be a positive integer for futures orders"},
 		{"option strategy", func(o *trade.OrderRequest) {
 			o.OptionStrategy = trade.OptionStrategySingle
@@ -245,7 +245,7 @@ func TestFuturesRequestRejectionMessages(t *testing.T) {
 		}, "time_in_force GTD is not supported for futures orders"},
 		{"unsupported US order type", func(o *trade.OrderRequest) {
 			o.OrderType = trade.OrderTypeMarketOnOpen
-			o.LimitPrice = ""
+			o.LimitPrice = nil
 		}, "is not supported for US futures orders"},
 		{"unsupported CN market", func(o *trade.OrderRequest) {
 			o.Market = trade.MarketCN

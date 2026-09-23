@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"strings"
 
 	"github.com/shopspring/decimal"
 )
@@ -55,6 +56,18 @@ func NewFromString(s string) (Money, error) {
 
 func NewFromInt64(i int64) Money {
 	return Money{d: decimal.NewFromInt(i)}
+}
+
+func ParseMoney(s string) (Money, bool) {
+	m, err := NewFromString(s)
+	return m, err == nil
+}
+
+func Must(m Money, err error) Money {
+	if err != nil {
+		panic(err)
+	}
+	return m
 }
 
 func Zero() Money {
@@ -146,6 +159,15 @@ func (m Money) Shift(shift int32) Money {
 
 func (m Money) BigInt() *big.Int {
 	return m.d.BigInt()
+}
+
+func (m Money) Rat() *big.Rat {
+	return m.d.Rat()
+}
+
+func ParseDecimal(s string) (*big.Rat, bool) {
+	r, ok := new(big.Rat).SetString(strings.TrimSpace(s))
+	return r, ok
 }
 
 func (m Money) MarshalJSON() ([]byte, error) {

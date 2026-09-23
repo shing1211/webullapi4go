@@ -34,10 +34,10 @@ func validEventOrder() trade.OrderRequest {
 		Symbol:         "AAPL-EVENT-20261218",
 		OrderType:      trade.OrderTypeLimit,
 		Side:           trade.OrderSideBuy,
-		Quantity:       "10",
+		Quantity:       mp("10"),
 		EntrustType:    trade.EntrustTypeQty,
 		TimeInForce:    trade.TimeInForceDay,
-		LimitPrice:     "0.55",
+		LimitPrice:     mp("0.55"),
 	}
 }
 
@@ -57,7 +57,7 @@ func TestEventOrderRejectsMarket(t *testing.T) {
 	t.Parallel()
 	o := validEventOrder()
 	o.OrderType = trade.OrderTypeMarket
-	o.LimitPrice = ""
+	o.LimitPrice = nil
 	err := o.Validate()
 	if err == nil {
 		t.Fatal("expected error for MARKET order type, got nil")
@@ -95,7 +95,7 @@ func TestEventOrderRejectsGTC(t *testing.T) {
 func TestEventOrderRejectsOver50k(t *testing.T) {
 	t.Parallel()
 	o := validEventOrder()
-	o.Quantity = "50001"
+	o.Quantity = mp("50001")
 	err := o.Validate()
 	if err == nil {
 		t.Fatal("expected error for quantity >50000, got nil")
@@ -115,8 +115,8 @@ func TestEventOrderRejectsAMOUNT(t *testing.T) {
 	t.Parallel()
 	o := validEventOrder()
 	o.EntrustType = trade.EntrustTypeAmount
-	o.Quantity = ""
-	o.TotalCashAmount = "55.00"
+	o.Quantity = nil
+	o.TotalCashAmount = mp("55.00")
 	err := o.Validate()
 	if err == nil {
 		t.Fatal("expected error for AMOUNT entrust type, got nil")
@@ -159,9 +159,9 @@ func TestEventOrderRejectsLegs(t *testing.T) {
 		Market:         trade.MarketUS,
 		Symbol:         "AAPL",
 		Side:           trade.OrderSideBuy,
-		StrikePrice:    "220.00",
+		StrikePrice:    mp("220.00"),
 		OptionType:     trade.OptionTypeCall,
-		Quantity:       "1",
+		Quantity:       mp("1"),
 	}}
 	err := o.Validate()
 	if err == nil {

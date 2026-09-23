@@ -44,12 +44,18 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/trade"
 )
 
 // orderLimitPrice is far below the AAPL market price, so the order is not
 // marketable and will not execute before it is cancelled.
 const orderLimitPrice = "1.00"
+
+func moneyPtr(s string) *money.Money {
+	m := money.Must(money.NewFromString(s))
+	return &m
+}
 
 func main() {
 	if os.Getenv("WEBULL_APP_KEY") == "" {
@@ -135,11 +141,11 @@ func buildOrder(accountID string) trade.PlaceOrderRequest {
 				Symbol:                "AAPL",
 				OrderType:             trade.OrderTypeLimit,
 				Side:                  trade.OrderSideBuy,
-				Quantity:              "1",
+				Quantity:              moneyPtr("1"),
 				EntrustType:           trade.EntrustTypeQty,
 				TimeInForce:           trade.TimeInForceDay,
 				SupportTradingSession: trade.TradingSessionCore,
-				LimitPrice:            orderLimitPrice,
+				LimitPrice:            moneyPtr(orderLimitPrice),
 			},
 		},
 	}

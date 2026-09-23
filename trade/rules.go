@@ -17,6 +17,8 @@ package trade
 import (
 	"math/big"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // marketEquityOrderTypes is the authoritative matrix of equity order types
@@ -164,7 +166,7 @@ func (r OrderRequest) validateMarketRules(fail func(string, ...any) error) error
 		}
 	}
 
-	if r.OrderType == OrderTypeAtAuction && strings.TrimSpace(r.LimitPrice) != "" {
+	if r.OrderType == OrderTypeAtAuction && r.LimitPrice != nil {
 		return fail("limit_price must not be set for AT_AUCTION orders")
 	}
 
@@ -221,8 +223,8 @@ func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) erro
 	if r.EntrustType != EntrustTypeQty {
 		return fail("entrust_type %q must be QTY for futures orders", r.EntrustType)
 	}
-	if !isPositiveInteger(r.Quantity) {
-		return fail("quantity %q must be a positive integer for futures orders", r.Quantity)
+	if !isPositiveIntegerMoney(r.Quantity) {
+		return fail("quantity must be a positive integer for futures orders")
 	}
 	return nil
 }
@@ -256,13 +258,15 @@ func (r OrderRequest) validateEventRules(fail func(string, ...any) error) error 
 	if r.EntrustType != EntrustTypeQty {
 		return fail("entrust_type %q must be QTY for event contract orders", r.EntrustType)
 	}
-	if !isPositiveInteger(r.Quantity) {
-		return fail("quantity %q must be a positive integer for event contract orders", r.Quantity)
+	if !isPositiveIntegerMoney(r.Quantity) {
+		return fail("quantity must be a positive integer for event contract orders")
 	}
-	if qty, ok := new(big.Int).SetString(strings.TrimSpace(r.Quantity), 10); ok {
-		max := new(big.Int).SetInt64(50000)
-		if qty.Cmp(max) > 0 {
-			return fail("quantity %s exceeds the maximum 50000 contracts for event contract orders", r.Quantity)
+	if r.Quantity != nil {
+		if bi := r.Quantity.BigInt(); bi != nil {
+			max := big.NewInt(50000)
+			if bi.Cmp(max) > 0 {
+				return fail("quantity exceeds the maximum 50000 contracts for event contract orders")
+			}
 		}
 	}
 	return nil
@@ -283,4 +287,12 @@ func isPositiveInteger(s string) bool {
 	}
 	n, ok := new(big.Int).SetString(s, 10)
 	return ok && n.Sign() > 0
+}
+
+func isPositiveIntegerMoney(m *money.Money) bool {
+	if m == nil {
+		return false
+	}
+	d := m.Decimal()
+	return d.IsPositive() && d.Exponent() >= 0
 }

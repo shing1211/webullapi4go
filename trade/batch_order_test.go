@@ -138,10 +138,10 @@ func TestBatchPlaceOrderNonEquity(t *testing.T) {
 		Market:           trade.MarketUS,
 		Symbol:           "AAPL",
 		Side:             trade.OrderSideBuy,
-		StrikePrice:      "180.00",
+		StrikePrice:      mp("180.00"),
 		OptionExpireDate: "2026-12-19",
 		OptionType:       trade.OptionTypeCall,
-		Quantity:         "1",
+		Quantity:         mp("1"),
 	}}
 	req := trade.PlaceOrderRequest{
 		AccountID: "ACC1",
