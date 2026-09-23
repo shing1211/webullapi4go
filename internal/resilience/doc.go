@@ -12,18 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resilience groups the SDK's resilience primitives:
+// Package resilience is deprecated: use the packages under
+// [github.com/shing1211/webullapi4go/pkg/resilience] instead.
 //
-//   - [github.com/shing1211/webullapi4go/internal/resilience/retry] provides
-//     context-aware retries with exponential backoff and jitter.
-//   - [github.com/shing1211/webullapi4go/internal/resilience/ratelimit]
-//     provides token-bucket rate limiters, including a keyed variant for
-//     per-endpoint budgets.
-//   - [github.com/shing1211/webullapi4go/internal/resilience/breaker] provides
-//     a circuit breaker.
-//   - [github.com/shing1211/webullapi4go/internal/resilience/clock] provides
-//     the shared time source used for deterministic tests.
-//
-// These packages are internal: the public client exposes them through
-// interfaces and option types so callers never import them directly.
+// This package is a compatibility shim. It re-exports from
+// pkg/resilience/breaker, pkg/resilience/ratelimit, pkg/resilience/retry,
+// and pkg/resilience/clock and will be removed in v3.
 package resilience
