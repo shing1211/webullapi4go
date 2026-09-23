@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-09-23
+
+### Fixed
+
+- `stream/` and `data/`: `go.uber.org/goleak` false positives from
+  `net/http.(*http2clientConnReadLoop).run` goroutines left after paho-mqtt
+  WebSocket disconnect. Added `goleak.IgnoreAnyFunction` filter to both packages'
+  `TestMain`. The goroutines are cleaned up asynchronously by the Go runtime and
+  are not a leak in SDK code.
+
 ## [Unreleased]
 
 ### Documentation

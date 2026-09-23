@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-23 (v2.0.2 release) · Current version: **v2.0.2**
+Last updated: 2026-09-23 (v2.0.3 release) · Current version: **v2.0.3**
 
 ## Summary
 
@@ -52,6 +52,7 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v2.0.0 | 2026-09-23 | Phase 2 production hardening: `pkg/errors`, `pkg/transport`, `pkg/resilience`, `pkg/domain/money`, `pkg/domain/order` public API; `webull/` facade package | Done |
 | v2.0.1 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `trade/` and `data/` packages; `money.Rat()` bug fix; all tests updated | Done |
 | v2.0.2 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `brokerfd/` package | Done |
+| v2.0.3 | 2026-09-23 | goleak: ignore paho HTTP/2 goroutines after MQTT WebSocket disconnect | Done |
 
 ## Feature Coverage
 
