@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Fundamental-data endpoints.
@@ -68,13 +70,13 @@ type AnalystTargetPrice struct {
 	// Category is the instrument's market.
 	Category StockCategory `json:"category"`
 	// Mean is the average target price, as a decimal string.
-	Mean string `json:"mean"`
+	Mean money.Money `json:"mean"`
 	// Low is the lowest target price, as a decimal string.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// High is the highest target price, as a decimal string.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Median is the median target price, as a decimal string.
-	Median string `json:"median"`
+	Median money.Money `json:"median"`
 	// Currency is the target-price currency, for example "USD".
 	Currency string `json:"currency"`
 	// EffectiveStartDate is when the figures became effective.
@@ -153,13 +155,13 @@ func (c *Client) GetAnalystRating(ctx context.Context, symbol string, category S
 
 // CapitalFlowEntry describes one trading day's capital flow breakdown.
 type CapitalFlowEntry struct {
-	Date      string `json:"date"`
-	LargeIn   string `json:"large_in"`
-	LargeOut  string `json:"large_out"`
-	MediumIn  string `json:"medium_in"`
-	MediumOut string `json:"medium_out"`
-	SmallIn   string `json:"small_in"`
-	SmallOut  string `json:"small_out"`
+	Date      string      `json:"date"`
+	LargeIn   money.Money `json:"large_in"`
+	LargeOut  money.Money `json:"large_out"`
+	MediumIn  money.Money `json:"medium_in"`
+	MediumOut money.Money `json:"medium_out"`
+	SmallIn   money.Money `json:"small_in"`
+	SmallOut  money.Money `json:"small_out"`
 }
 
 // GetCapitalFlow retrieves the capital flow breakdown for symbol over the most
@@ -247,15 +249,15 @@ func (c *Client) GetEarningsCalendar(ctx context.Context, symbol string, categor
 
 // DividendCalendarEntry is one dividend event.
 type DividendCalendarEntry struct {
-	Symbol      string `json:"symbol"`
-	Market      string `json:"market"`
-	Currency    string `json:"currency"`
-	Amount      string `json:"amount"`
-	DivType     string `json:"div_type"`
-	DeclareDate string `json:"declare_date"`
-	ExDivDate   string `json:"ex_div_date"`
-	RecordDate  string `json:"record_date"`
-	PayDate     string `json:"pay_date"`
+	Symbol      string      `json:"symbol"`
+	Market      string      `json:"market"`
+	Currency    string      `json:"currency"`
+	Amount      money.Money `json:"amount"`
+	DivType     string      `json:"div_type"`
+	DeclareDate string      `json:"declare_date"`
+	ExDivDate   string      `json:"ex_div_date"`
+	RecordDate  string      `json:"record_date"`
+	PayDate     string      `json:"pay_date"`
 }
 
 // GetDividendCalendar retrieves the dividend calendar for symbol.

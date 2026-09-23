@@ -18,6 +18,8 @@ import (
 	"context"
 	"net/url"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Event contract instrument discovery endpoints.
@@ -54,12 +56,12 @@ type EventContractEvent struct {
 
 // EventContractMarket represents a tradable event contract instrument.
 type EventContractMarket struct {
-	Symbol         string `json:"symbol"`
-	EventSymbol    string `json:"event_symbol"`
-	SeriesSymbol   string `json:"series_symbol"`
-	Status         string `json:"status"`
-	StrikePrice    string `json:"strike_price,omitempty"`
-	ExpirationDate string `json:"expiration_date,omitempty"`
+	Symbol         string      `json:"symbol"`
+	EventSymbol    string      `json:"event_symbol"`
+	SeriesSymbol   string      `json:"series_symbol"`
+	Status         string      `json:"status"`
+	StrikePrice    money.Money `json:"strike_price,omitempty"`
+	ExpirationDate string      `json:"expiration_date,omitempty"`
 }
 
 // EventContractSeriesQuery parameterizes [Client.GetEventContractSeries].

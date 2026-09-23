@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Option market-data endpoints.
@@ -97,7 +99,7 @@ type OptionTick struct {
 	// Time is the trade time as a Unix epoch millisecond timestamp string.
 	Time string `json:"time"`
 	// Price is the executed trade price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Volume is the executed trade volume, as a string.
 	Volume string `json:"volume"`
 	// Side is the aggressor side, for example "B" or "S".
@@ -131,28 +133,28 @@ type OptionSnapshot struct {
 	// Symbol is the option contract symbol.
 	Symbol string `json:"symbol"`
 	// Price is the last traded price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Open is the session open price, as a decimal string.
-	Open string `json:"open"`
+	Open money.Money `json:"open"`
 	// High is the session high price, as a decimal string.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Low is the session low price, as a decimal string.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// PreClose is the previous settlement or close price, as a decimal string.
-	PreClose string `json:"pre_close"`
-	// Volume is the accumulated session volume, as a string.
+	PreClose money.Money `json:"pre_close"`
+	// Volume is the accumulated session volume, as a String.
 	Volume string `json:"volume"`
 	// Change is the absolute change from PreClose, as a decimal string.
-	Change string `json:"change"`
+	Change money.Money `json:"change"`
 	// ChangeRatio is the change relative to PreClose, as a decimal string.
 	ChangeRatio string `json:"change_ratio"`
 	// LastTradeTime is the last trade time as a Unix epoch millisecond
 	// timestamp.
 	LastTradeTime int64 `json:"last_trade_time"`
 	// Close is the close price, as a decimal string.
-	Close string `json:"close"`
+	Close money.Money `json:"close"`
 	// StrikePrice is the option strike price, as a decimal string.
-	StrikePrice string `json:"strike_price"`
+	StrikePrice money.Money `json:"strike_price"`
 	// Gamma is the option gamma, as a decimal string.
 	Gamma string `json:"gamma"`
 	// Delta is the option delta, as a decimal string.
@@ -170,15 +172,15 @@ type OptionSnapshot struct {
 	// QuoteTime is the quote time as a Unix epoch millisecond timestamp.
 	QuoteTime int64 `json:"quote_time"`
 	// Bid is the best bid price, as a decimal string.
-	Bid string `json:"bid"`
+	Bid money.Money `json:"bid"`
 	// Ask is the best ask price, as a decimal string.
-	Ask string `json:"ask"`
+	Ask money.Money `json:"ask"`
 	// AskSize is the quantity available at the best ask, as a string.
 	AskSize string `json:"ask_size"`
 	// BidSize is the quantity available at the best bid, as a string.
 	BidSize string `json:"bid_size"`
 	// DealAmount is the accumulated traded value, as a decimal string.
-	DealAmount string `json:"deal_amount"`
+	DealAmount money.Money `json:"deal_amount"`
 }
 
 // OptionBarsQuery parameterizes [Client.GetOptionBars]. Symbols, Category, and
@@ -203,13 +205,13 @@ type OptionBar struct {
 	// Time is the bar time in ISO 8601 form.
 	Time string `json:"time"`
 	// Open is the open price, as a decimal string.
-	Open string `json:"open"`
+	Open money.Money `json:"open"`
 	// Close is the close price, as a decimal string.
-	Close string `json:"close"`
+	Close money.Money `json:"close"`
 	// High is the high price, as a decimal string.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Low is the low price, as a decimal string.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// Volume is the bar volume, as a string.
 	Volume string `json:"volume"`
 }

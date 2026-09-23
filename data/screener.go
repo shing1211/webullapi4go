@@ -17,6 +17,8 @@ package data
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Screener endpoints.
@@ -221,31 +223,31 @@ type ScreenerStock struct {
 	// CurrencyCode is the denomination currency (ISO 4217), for example "USD".
 	CurrencyCode string `json:"currency_code"`
 	// PreClose is the previous trading day's closing price.
-	PreClose string `json:"pre_close"`
+	PreClose money.Money `json:"pre_close"`
 	// Open is the opening price for the current trading day.
-	Open string `json:"open"`
+	Open money.Money `json:"open"`
 	// High is the intraday high for the current trading day.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Low is the intraday low for the current trading day.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// Close is the latest traded price for the current trading day.
-	Close string `json:"close"`
+	Close money.Money `json:"close"`
 	// Price is the most recent quoted price within the selected time interval.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Change is the absolute price change within the selected time interval.
-	Change string `json:"change"`
+	Change money.Money `json:"change"`
 	// ChangeRatio is the price change percentage within the selected time
 	// interval, as a decimal ratio.
 	ChangeRatio string `json:"change_ratio"`
 	// Volume is the cumulative traded volume for the current day.
 	Volume string `json:"volume"`
 	// Turnover is the cumulative turnover amount in the denomination currency.
-	Turnover string `json:"turnover"`
+	Turnover money.Money `json:"turnover"`
 	// TurnoverRate is the turnover rate as a decimal ratio.
 	TurnoverRate string `json:"turnover_rate"`
 	// MarketValue is the total market capitalization in the denomination
 	// currency.
-	MarketValue string `json:"market_value"`
+	MarketValue money.Money `json:"market_value"`
 	// Amplitude is (high-low)/pre_close as a decimal ratio.
 	Amplitude string `json:"amplitude"`
 	// RelativeVolume10D is the current-day volume divided by the ten-day

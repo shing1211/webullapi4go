@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetFuturesTick(t *testing.T) {
@@ -66,7 +67,7 @@ func TestGetFuturesTick(t *testing.T) {
 	if len(got.Result) != 2 {
 		t.Fatalf("got %d ticks, want 2", len(got.Result))
 	}
-	if got.Result[0].Price != "4807.00" || got.Result[0].Side != "S" {
+	if got.Result[0].Price.Cmp(money.Must(money.NewFromString("4807.00"))) != 0 || got.Result[0].Side != "S" {
 		t.Errorf("first tick = %+v", got.Result[0])
 	}
 	if got.Result[1].Side != "B" {
@@ -137,7 +138,7 @@ func TestGetFuturesSnapshot(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d snapshots, want 1", len(got))
 	}
-	if got[0].Symbol != "ESZ5" || got[0].Price != "4848" {
+	if got[0].Symbol != "ESZ5" || got[0].Price.Cmp(money.Must(money.NewFromString("4848"))) != 0 {
 		t.Errorf("identity/price = %+v", got[0])
 	}
 	if got[0].LastTradeTime != 1640688000000 {
@@ -221,7 +222,7 @@ func TestGetFuturesBars(t *testing.T) {
 		t.Fatalf("got %d bars, want 1", len(got.Result[0].Result))
 	}
 	bar := got.Result[0].Result[0]
-	if bar.Open != "4800.00" || bar.Close != "4820.00" || bar.Volume != "125000" {
+	if bar.Open.Cmp(money.Must(money.NewFromString("4800.00"))) != 0 || bar.Close.Cmp(money.Must(money.NewFromString("4820.00"))) != 0 || bar.Volume != "125000" {
 		t.Errorf("bar = %+v", bar)
 	}
 }
@@ -302,7 +303,7 @@ func TestGetFuturesDepth(t *testing.T) {
 	if len(got.Asks) != 1 || len(got.Bids) != 1 {
 		t.Fatalf("asks/bids lengths = %d/%d, want 1/1", len(got.Asks), len(got.Bids))
 	}
-	if got.Asks[0].Price != "4848.50" || got.Bids[0].Price != "4848.00" {
+	if got.Asks[0].Price.Cmp(money.Must(money.NewFromString("4848.50"))) != 0 || got.Bids[0].Price.Cmp(money.Must(money.NewFromString("4848.00"))) != 0 {
 		t.Errorf("ask/bid = %+v/%+v", got.Asks[0], got.Bids[0])
 	}
 	if got.QuoteTime != 1640688000000 {

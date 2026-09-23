@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Crypto market-data and instrument endpoints. Documented on the US site.
@@ -44,12 +46,12 @@ type CryptoBarsQuery struct {
 
 // CryptoBar is a single crypto price bar.
 type CryptoBar struct {
-	Time   string `json:"time"`
-	Open   string `json:"open"`
-	Close  string `json:"close"`
-	High   string `json:"high"`
-	Low    string `json:"low"`
-	Volume string `json:"volume"`
+	Time   string      `json:"time"`
+	Open   money.Money `json:"open"`
+	Close  money.Money `json:"close"`
+	High   money.Money `json:"high"`
+	Low    money.Money `json:"low"`
+	Volume string      `json:"volume"`
 }
 
 // CryptoSymbolBars is the historical bars of one crypto symbol.
@@ -93,21 +95,21 @@ type CryptoSnapshotQuery struct {
 
 // CryptoSnapshot is the real-time market snapshot of one crypto symbol.
 type CryptoSnapshot struct {
-	InstrumentID  string `json:"instrument_id"`
-	Symbol        string `json:"symbol"`
-	PreClose      string `json:"pre_close"`
-	LastTradeTime int64  `json:"last_trade_time"`
-	Price         string `json:"price"`
-	Open          string `json:"open"`
-	High          string `json:"high"`
-	Low           string `json:"low"`
-	Change        string `json:"change"`
-	ChangeRatio   string `json:"change_ratio"`
-	QuoteTime     string `json:"quote_time"`
-	Bid           string `json:"bid"`
-	BidSize       string `json:"bid_size"`
-	Ask           string `json:"ask"`
-	AskSize       string `json:"ask_size"`
+	InstrumentID  string      `json:"instrument_id"`
+	Symbol        string      `json:"symbol"`
+	PreClose      money.Money `json:"pre_close"`
+	LastTradeTime int64       `json:"last_trade_time"`
+	Price         money.Money `json:"price"`
+	Open          money.Money `json:"open"`
+	High          money.Money `json:"high"`
+	Low           money.Money `json:"low"`
+	Change        money.Money `json:"change"`
+	ChangeRatio   string      `json:"change_ratio"`
+	QuoteTime     string      `json:"quote_time"`
+	Bid           money.Money `json:"bid"`
+	BidSize       string      `json:"bid_size"`
+	Ask           money.Money `json:"ask"`
+	AskSize       string      `json:"ask_size"`
 }
 
 // GetCryptoSnapshot retrieves real-time snapshots for one or more crypto symbols.

@@ -18,6 +18,8 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathStockDepths is the stock order-book depth endpoint.
@@ -61,7 +63,7 @@ type QuoteBroker struct {
 // QuoteLevel is one side of the order book at a single price.
 type QuoteLevel struct {
 	// Price is the level price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Size is the aggregate quantity at the level, as a decimal string.
 	Size string `json:"size"`
 	// Order lists the contributing market-participant orders.

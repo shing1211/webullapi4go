@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetTick(t *testing.T) {
@@ -71,7 +72,7 @@ func TestGetTick(t *testing.T) {
 	if len(got.Result) != 2 {
 		t.Fatalf("got %d ticks, want 2", len(got.Result))
 	}
-	if got.Result[0].Time != "1761182953043" || got.Result[0].Price != "48.07" ||
+	if got.Result[0].Time != "1761182953043" || got.Result[0].Price.Cmp(money.Must(money.NewFromString("48.07"))) != 0 ||
 		got.Result[0].Volume != "1" || got.Result[0].Side != "S" {
 		t.Errorf("first tick = %+v", got.Result[0])
 	}

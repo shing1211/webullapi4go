@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetCryptoBars(t *testing.T) {
@@ -56,7 +57,7 @@ func TestGetCryptoBars(t *testing.T) {
 	if len(got) != 1 || got[0].Symbol != "BTCUSD" || len(got[0].Result) != 1 {
 		t.Fatalf("bars = %+v", got)
 	}
-	if got[0].Result[0].Close != "2" {
+	if got[0].Result[0].Close.Cmp(money.Must(money.NewFromString("2"))) != 0 {
 		t.Errorf("close = %q", got[0].Result[0].Close)
 	}
 }
@@ -85,7 +86,7 @@ func TestGetCryptoSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCryptoSnapshot() error = %v", err)
 	}
-	if len(got) != 1 || got[0].Price != "101" || got[0].Bid != "100.5" {
+	if len(got) != 1 || got[0].Price.Cmp(money.Must(money.NewFromString("101"))) != 0 || got[0].Bid.Cmp(money.Must(money.NewFromString("100.5"))) != 0 {
 		t.Fatalf("snapshot = %+v", got)
 	}
 }

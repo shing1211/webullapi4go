@@ -24,6 +24,7 @@ import (
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/data"
 	"github.com/shing1211/webullapi4go/display"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func newDSInstrumentTestServer(t *testing.T) (*httptest.Server, *display.Service) {
@@ -132,7 +133,7 @@ func TestGetDSAnalystTargetPrice(t *testing.T) {
 	if tp.Symbol != "AAPL" {
 		t.Errorf("Symbol = %q, want %q", tp.Symbol, "AAPL")
 	}
-	if tp.Mean != "200.00" {
+	if tp.Mean.Cmp(money.Must(money.NewFromString("200.00"))) != 0 {
 		t.Errorf("Mean = %q, want %q", tp.Mean, "200.00")
 	}
 	if tp.Currency != "USD" {

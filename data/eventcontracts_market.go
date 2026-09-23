@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Event contract market data endpoints.
@@ -43,11 +45,11 @@ type EventSnapshot struct {
 	// Symbol is the event-contract symbol.
 	Symbol string `json:"symbol"`
 	// LastPrice is the last traded price, as a decimal string.
-	LastPrice string `json:"last_price"`
+	LastPrice money.Money `json:"last_price"`
 	// YesBid is the best bid price for the yes side, as a decimal string.
-	YesBid string `json:"yes_bid"`
+	YesBid money.Money `json:"yes_bid"`
 	// YesAsk is the best ask price for the yes side, as a decimal string.
-	YesAsk string `json:"yes_ask"`
+	YesAsk money.Money `json:"yes_ask"`
 	// Volume is the traded volume, as a decimal string.
 	Volume string `json:"volume"`
 	// OpenInterest is the open interest, as a decimal string.
@@ -90,7 +92,7 @@ type EventDepthQuery struct {
 // DepthLevel is a single price level in the event-contract order book.
 type DepthLevel struct {
 	// Price is the level price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Size is the aggregate quantity at the level, as a decimal string.
 	Size string `json:"size"`
 }
@@ -150,13 +152,13 @@ type EventBar struct {
 	// Symbol is the event-contract symbol.
 	Symbol string `json:"symbol"`
 	// Open is the open price, as a decimal string.
-	Open string `json:"open"`
+	Open money.Money `json:"open"`
 	// High is the high price, as a decimal string.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Low is the low price, as a decimal string.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// Close is the close price, as a decimal string.
-	Close string `json:"close"`
+	Close money.Money `json:"close"`
 	// Volume is the volume, as a decimal string.
 	Volume string `json:"volume"`
 	// Timestamp is the bar time, as a string.
@@ -208,9 +210,9 @@ type EventTick struct {
 	// Symbol is the event-contract symbol.
 	Symbol string `json:"symbol"`
 	// YesPrice is the yes-side trade price, as a decimal string.
-	YesPrice string `json:"yes_price"`
+	YesPrice money.Money `json:"yes_price"`
 	// NoPrice is the no-side trade price, as a decimal string.
-	NoPrice string `json:"no_price"`
+	NoPrice money.Money `json:"no_price"`
 	// Side is the aggressor side.
 	Side string `json:"side"`
 	// Volume is the executed trade volume, as a decimal string.

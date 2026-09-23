@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Event-contract instrument and market-data endpoints (US only).
@@ -232,12 +234,12 @@ func (c *Client) GetEventLiveData(ctx context.Context, milestoneID, category str
 
 // EventMarketBar is a single event-contract market bar.
 type EventMarketBar struct {
-	EndPeriodTime string `json:"end_period_time"`
-	Volume        string `json:"volume"`
-	Open          string `json:"open"`
-	High          string `json:"high"`
-	Low           string `json:"low"`
-	Close         string `json:"close"`
+	EndPeriodTime string      `json:"end_period_time"`
+	Volume        string      `json:"volume"`
+	Open          money.Money `json:"open"`
+	High          money.Money `json:"high"`
+	Low           money.Money `json:"low"`
+	Close         money.Money `json:"close"`
 }
 
 // EventMarketBarsQuery parameterizes [Client.GetEventMarketBars].
@@ -347,20 +349,20 @@ func (c *Client) GetEventMarketDepth(ctx context.Context, symbol, category strin
 
 // EventMarketSnapshot is the market snapshot of an event-contract market.
 type EventMarketSnapshot struct {
-	Symbol        string `json:"symbol"`
-	InstrumentID  string `json:"instrument_id"`
-	EventSymbol   string `json:"event_symbol"`
-	YesSubTitle   string `json:"yes_sub_title"`
-	NoSubTitle    string `json:"no_sub_title"`
-	Status        string `json:"status"`
-	YesBid        string `json:"yes_bid"`
-	YesAsk        string `json:"yes_ask"`
-	NoBid         string `json:"no_bid"`
-	NoAsk         string `json:"no_ask"`
-	Price         string `json:"price"`
-	Volume        string `json:"volume"`
-	OpenInterest  string `json:"open_interest"`
-	LastTradeTime string `json:"last_trade_time"`
+	Symbol        string      `json:"symbol"`
+	InstrumentID  string      `json:"instrument_id"`
+	EventSymbol   string      `json:"event_symbol"`
+	YesSubTitle   string      `json:"yes_sub_title"`
+	NoSubTitle    string      `json:"no_sub_title"`
+	Status        string      `json:"status"`
+	YesBid        money.Money `json:"yes_bid"`
+	YesAsk        money.Money `json:"yes_ask"`
+	NoBid         money.Money `json:"no_bid"`
+	NoAsk         money.Money `json:"no_ask"`
+	Price         money.Money `json:"price"`
+	Volume        string      `json:"volume"`
+	OpenInterest  string      `json:"open_interest"`
+	LastTradeTime string      `json:"last_trade_time"`
 }
 
 // GetEventMarketSnapshot retrieves the snapshot of an event-contract market.

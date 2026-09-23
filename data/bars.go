@@ -17,6 +17,8 @@ package data
 import (
 	"context"
 	"net/http"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathStockBarsList is the historical-bars endpoint.
@@ -71,14 +73,14 @@ type Bar struct {
 	// Time is the bar time, as returned by the server. The batch endpoint
 	// documents an ISO-8601 string.
 	Time string `json:"time"`
-	// Open is the open price, as a decimal string.
-	Open string `json:"open"`
-	// Close is the close price, as a decimal string.
-	Close string `json:"close"`
-	// High is the high price, as a decimal string.
-	High string `json:"high"`
-	// Low is the low price, as a decimal string.
-	Low string `json:"low"`
+	// Open is the open price.
+	Open money.Money `json:"open"`
+	// Close is the close price.
+	Close money.Money `json:"close"`
+	// High is the high price.
+	High money.Money `json:"high"`
+	// Low is the low price.
+	Low money.Money `json:"low"`
 	// Volume is the volume, as a decimal string.
 	Volume string `json:"volume"`
 	// TradingSession is the session the bar belongs to, when supplied.

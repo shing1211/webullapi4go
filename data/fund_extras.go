@@ -17,6 +17,8 @@ package data
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // Additional fund-data endpoints (US only).
@@ -138,7 +140,7 @@ func (c *Client) GetFundFiles(ctx context.Context, symbol string, category Stock
 // are returned as decoded objects because their schema is not fixed.
 type FundAllocation struct {
 	Date        string         `json:"date"`
-	Aum         string         `json:"aum"`
+	Aum         money.Money    `json:"aum"`
 	Cash        map[string]any `json:"cash"`
 	Bond        map[string]any `json:"bond"`
 	Stock       map[string]any `json:"stock"`

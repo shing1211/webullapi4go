@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // batchBarsRequestBody mirrors the JSON body sent to the batch bars endpoint so
@@ -95,8 +96,8 @@ func TestGetBars(t *testing.T) {
 		t.Fatalf("got %d bars, want 1", len(got.Result))
 	}
 	bar := got.Result[0]
-	if bar.Open != "150.25" || bar.Close != "152.3" || bar.High != "153.15" ||
-		bar.Low != "149.8" || bar.Volume != "1250000" {
+	if bar.Open.Cmp(money.Must(money.NewFromString("150.25"))) != 0 || bar.Close.Cmp(money.Must(money.NewFromString("152.3"))) != 0 || bar.High.Cmp(money.Must(money.NewFromString("153.15"))) != 0 ||
+		bar.Low.Cmp(money.Must(money.NewFromString("149.8"))) != 0 || bar.Volume != "1250000" {
 		t.Errorf("bar = %+v", bar)
 	}
 }
@@ -200,7 +201,7 @@ func TestGetBatchBars(t *testing.T) {
 	if got.Result[0].Symbol != "AAPL" || got.Result[0].InstrumentID != "913256135" {
 		t.Errorf("first result identity = %+v", got.Result[0])
 	}
-	if len(got.Result[0].Result) != 1 || got.Result[0].Result[0].Close != "152.3" {
+	if len(got.Result[0].Result) != 1 || got.Result[0].Result[0].Close.Cmp(money.Must(money.NewFromString("152.3"))) != 0 {
 		t.Errorf("first result bars = %+v", got.Result[0].Result)
 	}
 	if got.Result[1].Symbol != "TSLA" || len(got.Result[1].Result) != 0 {

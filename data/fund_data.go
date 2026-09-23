@@ -18,6 +18,8 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathFundNav is the fund NAV history endpoint.
@@ -46,10 +48,10 @@ type FundNav struct {
 	Name           string            `json:"name"`
 	Currency       string            `json:"currency"`
 	Exchange       string            `json:"exchange"`
-	Nav            string            `json:"nav"`
+	Nav            money.Money       `json:"nav"`
 	NavDate        string            `json:"nav_date"`
-	PrevNav        string            `json:"prev_nav"`
-	NavChange      string            `json:"nav_change"`
+	PrevNav        money.Money       `json:"prev_nav"`
+	NavChange      money.Money       `json:"nav_change"`
 	NavChangeRatio string            `json:"nav_change_ratio"`
 	Extra          map[string]string `json:"-"`
 }
@@ -88,7 +90,7 @@ type FundInfo struct {
 	Name          string            `json:"name"`
 	Currency      string            `json:"currency"`
 	Exchange      string            `json:"exchange"`
-	Aum           string            `json:"aum"`
+	Aum           money.Money       `json:"aum"`
 	ExpenseRatio  string            `json:"expense_ratio"`
 	DividendYield string            `json:"dividend_yield"`
 	InceptionDate string            `json:"inception_date"`
@@ -124,7 +126,7 @@ type FundDividend struct {
 	Name       string            `json:"name"`
 	Currency   string            `json:"currency"`
 	Exchange   string            `json:"exchange"`
-	Amount     string            `json:"amount"`
+	Amount     money.Money       `json:"amount"`
 	ExDate     string            `json:"ex_date"`
 	PayDate    string            `json:"pay_date"`
 	RecordDate string            `json:"record_date"`

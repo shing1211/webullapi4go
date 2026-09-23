@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func eventServer(t *testing.T, wantPath, body string) *httptest.Server {
@@ -150,7 +151,7 @@ func TestGetEventMarketBars(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventMarketBars() error = %v", err)
 	}
-	if len(got) != 1 || got[0].Close != "1.5" {
+	if len(got) != 1 || got[0].Close.Cmp(money.Must(money.NewFromString("1.5"))) != 0 {
 		t.Fatalf("bars = %+v", got)
 	}
 }
@@ -199,7 +200,7 @@ func TestGetEventMarketSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventMarketSnapshot() error = %v", err)
 	}
-	if got.Price != "1.5" || got.YesBid != "1" {
+	if got.Price.Cmp(money.Must(money.NewFromString("1.5"))) != 0 || got.YesBid.Cmp(money.Must(money.NewFromString("1"))) != 0 {
 		t.Fatalf("snapshot = %+v", got)
 	}
 }

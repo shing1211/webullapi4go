@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetFundNav_pathAndQuery(t *testing.T) {
@@ -76,7 +77,7 @@ func TestGetFundNav_responseFields(t *testing.T) {
 	if len(navs) != 1 {
 		t.Fatalf("len(navs) = %d, want 1", len(navs))
 	}
-	if navs[0].Nav != "520.50" || navs[0].NavChange != "1.25" {
+	if navs[0].Nav.Cmp(money.Must(money.NewFromString("520.50"))) != 0 || navs[0].NavChange.Cmp(money.Must(money.NewFromString("1.25"))) != 0 {
 		t.Errorf("nav = %+v", navs[0])
 	}
 }
@@ -116,7 +117,7 @@ func TestGetFundInfo_responseFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetFundInfo() error = %v", err)
 	}
-	if info.Aum != "1000000" || info.ExpenseRatio != "0.0003" {
+	if info.Aum.Cmp(money.Must(money.NewFromString("1000000"))) != 0 || info.ExpenseRatio != "0.0003" {
 		t.Errorf("info = %+v", info)
 	}
 	if info.FundType != "ETF" {
@@ -169,7 +170,7 @@ func TestGetFundDividends_responseFields(t *testing.T) {
 	if len(divs) != 1 {
 		t.Fatalf("len(divs) = %d, want 1", len(divs))
 	}
-	if divs[0].Amount != "1.89" || divs[0].Frequency != "QUARTERLY" {
+	if divs[0].Amount.Cmp(money.Must(money.NewFromString("1.89"))) != 0 || divs[0].Frequency != "QUARTERLY" {
 		t.Errorf("div = %+v", divs[0])
 	}
 }

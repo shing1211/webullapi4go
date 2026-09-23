@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func fundTestServer(t *testing.T, wantPath, wantSymbol, body string) *httptest.Server {
@@ -125,7 +126,7 @@ func TestGetFundAllocation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetFundAllocation() error = %v", err)
 	}
-	if len(got) != 1 || got[0].Aum != "1000" || got[0].Stock["pct"] != "99" {
+	if len(got) != 1 || got[0].Aum.Cmp(money.Must(money.NewFromString("1000"))) != 0 || got[0].Stock["pct"] != "99" {
 		t.Fatalf("allocation = %+v", got)
 	}
 }

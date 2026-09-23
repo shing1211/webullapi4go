@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetEventSnapshot(t *testing.T) {
@@ -64,7 +65,7 @@ func TestGetEventSnapshot(t *testing.T) {
 	if s.Symbol != "AAPL_250919C00240000" {
 		t.Errorf("symbol = %q, want AAPL_250919C00240000", s.Symbol)
 	}
-	if s.LastPrice != "3.50" || s.YesBid != "3.45" || s.YesAsk != "3.55" {
+	if s.LastPrice.Cmp(money.Must(money.NewFromString("3.50"))) != 0 || s.YesBid.Cmp(money.Must(money.NewFromString("3.45"))) != 0 || s.YesAsk.Cmp(money.Must(money.NewFromString("3.55"))) != 0 {
 		t.Errorf("prices = last=%s bid=%s ask=%s", s.LastPrice, s.YesBid, s.YesAsk)
 	}
 	if s.Volume != "1200" || s.OpenInterest != "5000" {
@@ -122,10 +123,10 @@ func TestGetEventDepth(t *testing.T) {
 	if len(got.YesBids) != 2 || len(got.YesAsks) != 2 {
 		t.Fatalf("bids/asks lengths = %d/%d, want 2/2", len(got.YesBids), len(got.YesAsks))
 	}
-	if got.YesBids[0].Price != "3.45" || got.YesBids[0].Size != "100" {
+	if got.YesBids[0].Price.Cmp(money.Must(money.NewFromString("3.45"))) != 0 || got.YesBids[0].Size != "100" {
 		t.Errorf("first bid = %+v", got.YesBids[0])
 	}
-	if got.YesAsks[0].Price != "3.55" || got.YesAsks[0].Size != "150" {
+	if got.YesAsks[0].Price.Cmp(money.Must(money.NewFromString("3.55"))) != 0 || got.YesAsks[0].Size != "150" {
 		t.Errorf("first ask = %+v", got.YesAsks[0])
 	}
 }
@@ -184,7 +185,7 @@ func TestGetEventBars(t *testing.T) {
 	if bar.Symbol != "AAPL_250919C00240000" {
 		t.Errorf("symbol = %q", bar.Symbol)
 	}
-	if bar.Open != "3.40" || bar.High != "3.60" || bar.Low != "3.35" || bar.Close != "3.50" {
+	if bar.Open.Cmp(money.Must(money.NewFromString("3.40"))) != 0 || bar.High.Cmp(money.Must(money.NewFromString("3.60"))) != 0 || bar.Low.Cmp(money.Must(money.NewFromString("3.35"))) != 0 || bar.Close.Cmp(money.Must(money.NewFromString("3.50"))) != 0 {
 		t.Errorf("OHLC = %s/%s/%s/%s", bar.Open, bar.High, bar.Low, bar.Close)
 	}
 	if bar.Volume != "5000" || bar.Timestamp != "2025-09-19T10:00:00Z" {
@@ -243,7 +244,7 @@ func TestGetEventTick(t *testing.T) {
 	if tick.Symbol != "AAPL_250919C00240000" {
 		t.Errorf("symbol = %q", tick.Symbol)
 	}
-	if tick.YesPrice != "3.50" || tick.NoPrice != "0.50" {
+	if tick.YesPrice.Cmp(money.Must(money.NewFromString("3.50"))) != 0 || tick.NoPrice.Cmp(money.Must(money.NewFromString("0.50"))) != 0 {
 		t.Errorf("yes/no price = %s/%s", tick.YesPrice, tick.NoPrice)
 	}
 	if tick.Side != "B" || tick.Volume != "10" || tick.TradeID != "T123" {

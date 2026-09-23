@@ -24,6 +24,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/data"
 	"github.com/shing1211/webullapi4go/display"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 const dsSnapshotBody = `[{"instrument_id":"913256135","pre_close":"101",` +
@@ -166,13 +167,13 @@ func TestGetDisplaySnapshot(t *testing.T) {
 		t.Fatalf("got %d snapshots, want 1", len(got))
 	}
 	s := got[0]
-	if s.Symbol != "AAPL" || s.InstrumentID != "913256135" || s.Price != "100" {
+	if s.Symbol != "AAPL" || s.InstrumentID != "913256135" || s.Price.Cmp(money.Must(money.NewFromString("100"))) != 0 {
 		t.Errorf("identity/price = %+v", s)
 	}
 	if s.LastTradeTime != 1640688000000 {
 		t.Errorf("LastTradeTime = %d, want 1640688000000", s.LastTradeTime)
 	}
-	if s.EPS != "7.465" || s.BPS != "4.991" {
+	if s.EPS.Cmp(money.Must(money.NewFromString("7.465"))) != 0 || s.BPS.Cmp(money.Must(money.NewFromString("4.991"))) != 0 {
 		t.Errorf("fundamental fields = %+v", s)
 	}
 }
@@ -216,7 +217,7 @@ func TestGetDisplayBars(t *testing.T) {
 	if len(got.Result[0].Result) != 1 {
 		t.Fatalf("got %d bars, want 1", len(got.Result[0].Result))
 	}
-	if got.Result[0].Result[0].Open != "380.0" || got.Result[0].Result[0].Close != "385.0" {
+	if got.Result[0].Result[0].Open.Cmp(money.Must(money.NewFromString("380.0"))) != 0 || got.Result[0].Result[0].Close.Cmp(money.Must(money.NewFromString("385.0"))) != 0 {
 		t.Errorf("bar OHLCV = %+v", got.Result[0].Result[0])
 	}
 }
@@ -254,7 +255,7 @@ func TestGetDisplayBarsSingle(t *testing.T) {
 	if len(got.Result) != 1 {
 		t.Fatalf("got %d bars, want 1", len(got.Result))
 	}
-	if got.Result[0].Open != "380.0" {
+	if got.Result[0].Open.Cmp(money.Must(money.NewFromString("380.0"))) != 0 {
 		t.Errorf("bar open = %q, want 380.0", got.Result[0].Open)
 	}
 }
@@ -289,7 +290,7 @@ func TestGetDisplayTick(t *testing.T) {
 		t.Fatalf("got %d ticks, want 1", len(got.Result))
 	}
 	tk := got.Result[0]
-	if tk.Price != "385.0" || tk.Volume != "100" || tk.Side != "B" {
+	if tk.Price.Cmp(money.Must(money.NewFromString("385.0"))) != 0 || tk.Volume != "100" || tk.Side != "B" {
 		t.Errorf("tick = %+v, want price=385.0 volume=100 side=B", tk)
 	}
 }
@@ -323,10 +324,10 @@ func TestGetDisplayDepth(t *testing.T) {
 	if len(got.Asks) != 1 || len(got.Bids) != 1 {
 		t.Fatalf("ask/bid levels = %d/%d, want 1/1", len(got.Asks), len(got.Bids))
 	}
-	if got.Asks[0].Price != "386.0" || got.Asks[0].Size != "100" {
+	if got.Asks[0].Price.Cmp(money.Must(money.NewFromString("386.0"))) != 0 || got.Asks[0].Size != "100" {
 		t.Errorf("ask = %+v, want price=386.0 size=100", got.Asks[0])
 	}
-	if got.Bids[0].Price != "385.0" || got.Bids[0].Size != "200" {
+	if got.Bids[0].Price.Cmp(money.Must(money.NewFromString("385.0"))) != 0 || got.Bids[0].Size != "200" {
 		t.Errorf("bid = %+v, want price=385.0 size=200", got.Bids[0])
 	}
 }

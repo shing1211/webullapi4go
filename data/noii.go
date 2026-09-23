@@ -17,6 +17,8 @@ package data
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // NOII (Net Order Imbalance Indicator) endpoints.
@@ -63,13 +65,13 @@ type NOIIBar struct {
 	// epoch.
 	ImbalanceTime int64 `json:"imbalance_time"`
 	// ImbalanceRefPrice is the reference price, as a decimal string.
-	ImbalanceRefPrice string `json:"imbalance_ref_price"`
+	ImbalanceRefPrice money.Money `json:"imbalance_ref_price"`
 	// ImbalanceNearPrice is the indicative match price (the most likely
 	// execution price), as a decimal string.
-	ImbalanceNearPrice string `json:"imbalance_near_price"`
+	ImbalanceNearPrice money.Money `json:"imbalance_near_price"`
 	// ImbalanceFarPrice is the far price (the price at which orders could
 	// execute in extreme scenarios), as a decimal string.
-	ImbalanceFarPrice string `json:"imbalance_far_price"`
+	ImbalanceFarPrice money.Money `json:"imbalance_far_price"`
 	// ImbalanceActionType is the auction the bar belongs to.
 	ImbalanceActionType NOIIActionType `json:"imbalance_action_type"`
 }
@@ -89,13 +91,13 @@ type NOIISnapshot struct {
 	// ImbalanceSide is the direction of the imbalance.
 	ImbalanceSide string `json:"imbalance_side"`
 	// ImbalanceRefPrice is the reference price, as a decimal string.
-	ImbalanceRefPrice string `json:"imbalance_ref_price"`
+	ImbalanceRefPrice money.Money `json:"imbalance_ref_price"`
 	// ImbalanceNearPrice is the indicative match price (the most likely
 	// execution price), as a decimal string.
-	ImbalanceNearPrice string `json:"imbalance_near_price"`
+	ImbalanceNearPrice money.Money `json:"imbalance_near_price"`
 	// ImbalanceFarPrice is the far price (the price at which orders could
 	// execute in extreme scenarios), as a decimal string.
-	ImbalanceFarPrice string `json:"imbalance_far_price"`
+	ImbalanceFarPrice money.Money `json:"imbalance_far_price"`
 	// ImbalanceActionType is the auction the snapshot describes.
 	ImbalanceActionType NOIIActionType `json:"imbalance_action_type"`
 	// ImbalanceTime is the snapshot timestamp, in milliseconds since the Unix

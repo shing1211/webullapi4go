@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetOptionTick(t *testing.T) {
@@ -61,7 +62,7 @@ func TestGetOptionTick(t *testing.T) {
 	if got.Symbol != "AAPL260522C00300000" || got.InstrumentID != "470059643" {
 		t.Errorf("identity = %+v", got)
 	}
-	if len(got.Result) != 1 || got.Result[0].Price != "48.07" || got.Result[0].Side != "S" {
+	if len(got.Result) != 1 || got.Result[0].Price.Cmp(money.Must(money.NewFromString("48.07"))) != 0 || got.Result[0].Side != "S" {
 		t.Errorf("ticks = %+v", got.Result)
 	}
 }
@@ -104,10 +105,10 @@ func TestGetOptionSnapshot(t *testing.T) {
 		t.Fatalf("got %d snapshots, want 1", len(got))
 	}
 	snap := got[0]
-	if snap.Symbol != "AAPL260522C00300000" || snap.Price != "47.35" || snap.Bid != "47.345" {
+	if snap.Symbol != "AAPL260522C00300000" || snap.Price.Cmp(money.Must(money.NewFromString("47.35"))) != 0 || snap.Bid.Cmp(money.Must(money.NewFromString("47.345"))) != 0 {
 		t.Errorf("snapshot = %+v", snap)
 	}
-	if snap.StrikePrice != "300.0" || snap.ImpVol != "0.609" || snap.OpenInterest != "14331" {
+	if snap.StrikePrice.Cmp(money.Must(money.NewFromString("300.0"))) != 0 || snap.ImpVol != "0.609" || snap.OpenInterest != "14331" {
 		t.Errorf("greeks/interest = %+v", snap)
 	}
 	if snap.LastTradeTime != 1761131406558 || snap.QuoteTime != 1761131409276 {
@@ -156,7 +157,7 @@ func TestGetOptionBars(t *testing.T) {
 	if len(got) != 1 || got[0].Symbol != "AAPL260522C00300000" {
 		t.Fatalf("bars = %+v", got)
 	}
-	if len(got[0].Result) != 1 || got[0].Result[0].Close != "1.3362" {
+	if len(got[0].Result) != 1 || got[0].Result[0].Close.Cmp(money.Must(money.NewFromString("1.3362"))) != 0 {
 		t.Errorf("bar = %+v", got[0].Result)
 	}
 }

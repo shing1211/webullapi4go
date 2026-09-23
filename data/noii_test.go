@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetNOIIBars(t *testing.T) {
@@ -72,7 +73,7 @@ func TestGetNOIIBars(t *testing.T) {
 	if bar.ImbalanceTime != 1711262998500 {
 		t.Errorf("imbalance_time = %d, want 1711262998500", bar.ImbalanceTime)
 	}
-	if bar.ImbalanceNearPrice != "173.1" || bar.ImbalanceActionType != data.NOIIActionPreOpen {
+	if bar.ImbalanceNearPrice.Cmp(money.Must(money.NewFromString("173.1"))) != 0 || bar.ImbalanceActionType != data.NOIIActionPreOpen {
 		t.Errorf("decoded bar = %+v", bar)
 	}
 }

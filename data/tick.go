@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathStockTicks is the stock tick-by-tick endpoint.
@@ -48,7 +50,7 @@ type Tick struct {
 	// string.
 	Time string `json:"time"`
 	// Price is the executed trade price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Volume is the executed trade volume, as a decimal string.
 	Volume string `json:"volume"`
 	// Side is the aggressor side. Documented values include "B", "S", "G",

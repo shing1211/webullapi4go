@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetEventContractCategories(t *testing.T) {
@@ -185,7 +186,7 @@ func TestGetEventContractMarkets(t *testing.T) {
 	if got[0].Symbol != "AAPL_P450" || got[0].Status != "TRADEABLE" {
 		t.Errorf("market[0] = %+v", got[0])
 	}
-	if got[0].StrikePrice != "450.00" || got[0].ExpirationDate != "2026-12-31" {
+	if got[0].StrikePrice.Cmp(money.Must(money.NewFromString("450.00"))) != 0 || got[0].ExpirationDate != "2026-12-31" {
 		t.Errorf("strike/expiration = %q/%q", got[0].StrikePrice, got[0].ExpirationDate)
 	}
 }
