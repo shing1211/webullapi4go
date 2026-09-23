@@ -1,0 +1,25 @@
+# Dependency updates for webullapi4go.
+#
+# gomod keeps third-party dependencies current; github-actions keeps CI actions
+# current. Both run weekly and open pull requests automatically.
+
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"

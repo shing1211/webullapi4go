@@ -21,6 +21,9 @@ linters:
     # Extra, intentionally low-noise checks.
     - misspell
     - revive
+    # gosec: security static analysis. Exclusions below avoid flags from
+    # protocol-mandated crypto (internal/auth) and intentional math/rand jitter.
+    - gosec
   settings:
     revive:
       rules:
@@ -39,6 +42,14 @@ linters:
       - path: _test\.go
         linters:
           - errcheck
+      # gosec flags protocol-mandated crypto (HMAC-SHA1/MD5 body digest) in
+      # internal/auth and intentional math/rand jitter in internal/resilience/retry.
+      - path: internal/auth/
+        linters:
+          - gosec
+      - path: internal/resilience/retry/
+        linters:
+          - gosec
 
 formatters:
   enable:

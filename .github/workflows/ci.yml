@@ -22,8 +22,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Build, vet, and test across operating systems.
   build:
-    name: build, vet, test
+    name: build, vet, test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      # On Windows, the test binary can trigger a file-lock on a.out.exe;
+      # point Go at a writable temp directory (see AGENTS.md).
+      GOTMPDIR: ${{ github.workspace }}/.gotmp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prepare writable temp dir (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          New-Item -ItemType Directory -Path $env:GOTMPDIR -Force | Out-Null
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (race detector)
+        run: go test -race -count=1 ./...
+
+  # Lint: formatting and static analysis. Runs on ubuntu-latest (grep-based
+  # gofmt check); formatting is OS-independent.
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,9 +74,6 @@ jobs:
           go-version-file: go.mod
           check-latest: true
           cache: true
-
-      - name: Build
-        run: go build ./...
 
       - name: gofmt check
         # Generated protobuf code under gen/ is excluded (see .golangci.yml);
@@ -50,14 +86,14 @@ jobs:
             exit 1
           fi
 
-      - name: Vet
-        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.9
 
-      - name: Test (race detector)
-        run: go test -race -count=1 ./...
-
-  lint:
-    name: golangci-lint
+  # Coverage: measure and report per-package coverage for the baseline gate.
+  coverage:
+    name: coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -70,11 +106,34 @@ jobs:
           check-latest: true
           cache: true
 
-      # golangci-lint-action v8 (v7+ supports golangci-lint v2). The action's
-      # older v6 line is pinned to golangci-lint v1, which cannot parse the
-      # `go 1.26` directive. golangci-lint >= v2.9 is required for Go 1.26
-      # support, so we pin that minor line for reproducibility.
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
+      - name: Test with coverage
+        run: go test ./... -cover -coverprofile=coverage.out
+
+      - name: Report coverage
+        run: go tool cover -func=coverage.out
+
+      # Artifact is retained for the baseline; a coverage gate (85% on touched
+      # code) can be added once the baseline is established.
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          version: v2.9
+          name: coverage
+          path: coverage.out
+
+  # govulncheck: scan dependencies for known vulnerabilities.
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
