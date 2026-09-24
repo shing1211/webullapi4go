@@ -36,6 +36,7 @@ import (
 	"github.com/shing1211/webullapi4go/pkg/transport"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -365,6 +366,11 @@ func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.
 	span.SetAttributes(attribute.Int64("http.duration_ms", latency.Milliseconds()))
 	if err != nil {
 		span.SetAttributes(attribute.String("error", err.Error()))
+	}
+
+	if hist := c.cfg.otel.ClientLatencyHistogram(); hist != nil {
+		hist.Record(ctx, float64(latency.Milliseconds()),
+			metric.WithAttributes(attribute.String("http.route", reqPath)))
 	}
 
 	if log := c.cfg.otel.Logger; log != nil {

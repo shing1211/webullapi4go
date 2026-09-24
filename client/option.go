@@ -324,7 +324,11 @@ func WithResiliencePreset(preset ResiliencePreset) Option {
 		switch preset {
 		case ProductionPreset:
 			c.rateLimiter = NewRateLimiter(10, 20)
-			c.breaker = NewBreaker(5, 30*time.Second)
+			c.breaker = breaker.NewWithConfig(breaker.Config{
+				Threshold: 5,
+				Cooldown:  30 * time.Second,
+				Meter:     c.otel.Meter("webullapi4go/resilience"),
+			})
 			c.retry = retry.New(
 				retry.WithMaxAttempts(3),
 				retry.WithBaseDelay(200*time.Millisecond),

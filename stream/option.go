@@ -20,6 +20,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // Default streaming parameters. Most mirror the low-level MQTT defaults.
@@ -57,6 +58,7 @@ type config struct {
 	resubscribeTimeout     time.Duration
 	healthWatchdogInterval time.Duration
 	tlsConfig              *tls.Config
+	meter                  metric.Meter
 }
 
 // defaultConfig returns the streaming defaults.
@@ -215,4 +217,10 @@ func WithTLSConfig(tc *tls.Config) Option {
 // (the default) disables the watchdog.
 func WithHealthWatchdog(interval time.Duration) Option {
 	return func(cfg *config) { cfg.healthWatchdogInterval = interval }
+}
+
+// WithMeter sets the OpenTelemetry meter used to record stream metrics
+// (reconnects, channel drops). When nil (the default), no metrics are recorded.
+func WithMeter(m metric.Meter) Option {
+	return func(cfg *config) { cfg.meter = m }
 }

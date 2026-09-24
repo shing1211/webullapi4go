@@ -17,6 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.7] - 2026-09-24
+
+Phase 6.3 OTel metrics hooks.
+
+### Added
+
+- `pkg/observability/otel.go`: lazy OTel instrument accessors on `Config`:
+  `ClientLatencyHistogram()`, `BreakerTransitionsCounter()`,
+  `StreamReconnectsCounter()`, `StreamChannelDropsCounter()`.
+- `pkg/resilience/breaker/breaker.go`: `WithMeter(m metric.Meter)` option and
+  `transitionCounter` instrument. `transitionTo()` records `from`/`to` state
+  attributes on every breaker transition.
+- `client/request.go`: `request_latency` histogram recorded on every `attempt()`
+  call with `http.route` attribute.
+- `stream/client.go`: `streamMetrics` struct with `reconnectCounter`,
+  `quoteDropCounter`, `snapshotDropCounter`, `tickDropCounter` instruments.
+  `handleReconnecting()` increments `reconnectCounter`. `WithMeter(m metric.Meter)`
+  option in `stream/option.go`.
+- `stream/channels.go`: `channelConfig.otelCounter` wired from per-topic drop
+  counters; `recordDropToMeter()` bumps both the atomic local counter and the
+  OTel instrument with a `topic` attribute.
+
 ## [2.0.6] - 2026-09-24
 
 Phase 5 streaming engine hardening + Phase 6 observability.

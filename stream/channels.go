@@ -15,11 +15,15 @@
 package stream
 
 import (
+	"context"
 	"math/rand"
 	"sync"
 	"sync/atomic"
 
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const defaultChannelBuffer = 100
@@ -46,12 +50,22 @@ func (p DropPolicy) String() string {
 }
 
 type channelConfig struct {
-	policy  DropPolicy
-	bufSize int
-	dropCnt atomic.Int64
+	policy      DropPolicy
+	bufSize     int
+	dropCnt     atomic.Int64
+	otelCounter metric.Int64Counter
+	topic       string
 }
 
 func (c *channelConfig) recordDrop() { c.dropCnt.Add(1) }
+
+func (c *channelConfig) recordDropToMeter() {
+	c.dropCnt.Add(1)
+	if c.otelCounter != nil {
+		c.otelCounter.Add(context.Background(), 1,
+			metric.WithAttributes(attribute.String("topic", c.topic)))
+	}
+}
 
 func (c *channelConfig) DropCount() int64 { return c.dropCnt.Load() }
 
@@ -110,16 +124,16 @@ func (r *chanRegistry) dispatchQuote(msg *marketdatav1.Quote) {
 				select {
 				case entry.ch <- msg:
 				default:
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				}
 			case DropSample:
 				if rand.Intn(2) == 0 {
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				} else {
 					select {
 					case entry.ch <- msg:
 					default:
-						cfg.recordDrop()
+						cfg.recordDropToMeter()
 					}
 				}
 			default:
@@ -141,16 +155,16 @@ func (r *chanRegistry) dispatchSnapshot(msg *marketdatav1.Snapshot) {
 				select {
 				case entry.ch <- msg:
 				default:
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				}
 			case DropSample:
 				if rand.Intn(2) == 0 {
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				} else {
 					select {
 					case entry.ch <- msg:
 					default:
-						cfg.recordDrop()
+						cfg.recordDropToMeter()
 					}
 				}
 			default:
@@ -172,16 +186,16 @@ func (r *chanRegistry) dispatchTick(msg *marketdatav1.Tick) {
 				select {
 				case entry.ch <- msg:
 				default:
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				}
 			case DropSample:
 				if rand.Intn(2) == 0 {
-					cfg.recordDrop()
+					cfg.recordDropToMeter()
 				} else {
 					select {
 					case entry.ch <- msg:
 					default:
-						cfg.recordDrop()
+						cfg.recordDropToMeter()
 					}
 				}
 			default:

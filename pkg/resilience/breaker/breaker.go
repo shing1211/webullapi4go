@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 var ErrOpen = errors.New("circuit breaker is open")
@@ -59,6 +61,7 @@ type Config struct {
 	HalfOpenMax   int
 	OnStateChange func(from, to State)
 	Clock         clock.Clock
+	Meter         metric.Meter
 }
 
 type Option func(*Config)
@@ -75,6 +78,10 @@ func WithHalfOpenMax(n int) Option {
 	return func(c *Config) { c.HalfOpenMax = n }
 }
 
+func WithMeter(m metric.Meter) Option {
+	return func(c *Config) { c.Meter = m }
+}
+
 func WithOnStateChange(fn func(from, to State)) Option {
 	return func(c *Config) { c.OnStateChange = fn }
 }
@@ -84,16 +91,17 @@ func WithClock(clk clock.Clock) Option {
 }
 
 type Breaker struct {
-	mu               sync.Mutex
-	state            State
-	failures         int
-	threshold        int
-	cooldown         time.Duration
-	halfOpenMax      int
-	halfOpenInFlight int
-	openedAt         time.Time
-	onStateChange    func(from, to State)
-	clk              clock.Clock
+	mu                sync.Mutex
+	state             State
+	failures          int
+	threshold         int
+	cooldown          time.Duration
+	halfOpenMax       int
+	halfOpenInFlight  int
+	openedAt          time.Time
+	onStateChange     func(from, to State)
+	clk               clock.Clock
+	transitionCounter metric.Int64Counter
 }
 
 func New(opts ...Option) *Breaker {
@@ -124,7 +132,7 @@ func NewWithConfig(cfg Config) *Breaker {
 	if cfg.Clock == nil {
 		cfg.Clock = clock.System()
 	}
-	return &Breaker{
+	b := &Breaker{
 		state:         StateClosed,
 		threshold:     cfg.Threshold,
 		cooldown:      cfg.Cooldown,
@@ -132,6 +140,13 @@ func NewWithConfig(cfg Config) *Breaker {
 		onStateChange: cfg.OnStateChange,
 		clk:           cfg.Clock,
 	}
+	if cfg.Meter != nil {
+		b.transitionCounter, _ = cfg.Meter.Int64Counter(
+			"breaker.state_transitions",
+			metric.WithDescription("Circuit breaker state transitions"),
+		)
+	}
+	return b
 }
 
 func (b *Breaker) State() State {
@@ -242,5 +257,12 @@ func (b *Breaker) transitionTo(next State) {
 	}
 	if b.onStateChange != nil {
 		b.onStateChange(prev, next)
+	}
+	if b.transitionCounter != nil {
+		b.transitionCounter.Add(context.Background(), 1,
+			metric.WithAttributes(
+				attribute.String("from", prev.String()),
+				attribute.String("to", next.String()),
+			))
 	}
 }

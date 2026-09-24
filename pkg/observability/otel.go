@@ -22,6 +22,7 @@ package observability
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -57,6 +58,13 @@ type Config struct {
 	MeterProvider  MeterProvider
 	Logger         *slog.Logger
 	Propagator     TextMapPropagator
+
+	// instruments are created lazily on first use.
+	mu                        sync.RWMutex
+	clientLatencyHistogram    metric.Float64Histogram
+	breakerTransitionsCounter metric.Int64Counter
+	streamReconnectsCounter   metric.Int64Counter
+	streamChannelDropsCounter metric.Int64Counter
 }
 
 // DefaultConfig returns a config with no-op tracer and meter providers and a
@@ -85,6 +93,91 @@ func (c Config) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 		return otel.Meter(name, opts...)
 	}
 	return c.MeterProvider.Meter(name, opts...)
+}
+
+// ClientLatencyHistogram returns a histogram for request round-trip latency.
+func (c *Config) ClientLatencyHistogram() metric.Float64Histogram {
+	c.mu.RLock()
+	h := c.clientLatencyHistogram
+	c.mu.RUnlock()
+	if h != nil {
+		return h
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.clientLatencyHistogram != nil {
+		return c.clientLatencyHistogram
+	}
+	h, _ = c.Meter("webullapi4go/client").Float64Histogram(
+		"request_latency",
+		metric.WithDescription("HTTP request round-trip latency"),
+		metric.WithUnit("ms"),
+	)
+	c.clientLatencyHistogram = h
+	return h
+}
+
+// BreakerTransitionsCounter returns a counter for circuit-breaker state transitions.
+func (c *Config) BreakerTransitionsCounter() metric.Int64Counter {
+	c.mu.RLock()
+	h := c.breakerTransitionsCounter
+	c.mu.RUnlock()
+	if h != nil {
+		return h
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.breakerTransitionsCounter != nil {
+		return c.breakerTransitionsCounter
+	}
+	h, _ = c.Meter("webullapi4go/resilience").Int64Counter(
+		"breaker.state_transitions",
+		metric.WithDescription("Circuit breaker state transitions"),
+	)
+	c.breakerTransitionsCounter = h
+	return h
+}
+
+// StreamReconnectsCounter returns a counter for stream reconnection events.
+func (c *Config) StreamReconnectsCounter() metric.Int64Counter {
+	c.mu.RLock()
+	h := c.streamReconnectsCounter
+	c.mu.RUnlock()
+	if h != nil {
+		return h
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.streamReconnectsCounter != nil {
+		return c.streamReconnectsCounter
+	}
+	h, _ = c.Meter("webullapi4go/stream").Int64Counter(
+		"reconnects",
+		metric.WithDescription("Stream reconnection events"),
+	)
+	c.streamReconnectsCounter = h
+	return h
+}
+
+// StreamChannelDropsCounter returns a counter for channel message drops.
+func (c *Config) StreamChannelDropsCounter() metric.Int64Counter {
+	c.mu.RLock()
+	h := c.streamChannelDropsCounter
+	c.mu.RUnlock()
+	if h != nil {
+		return h
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.streamChannelDropsCounter != nil {
+		return c.streamChannelDropsCounter
+	}
+	h, _ = c.Meter("webullapi4go/stream").Int64Counter(
+		"channel_drops",
+		metric.WithDescription("Channel message drops by topic"),
+	)
+	c.streamChannelDropsCounter = h
+	return h
 }
 
 // SpanAttributes returns the standard set of span attributes used by the SDK.

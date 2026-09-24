@@ -27,11 +27,22 @@ import (
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
+
+	"go.opentelemetry.io/otel/metric"
 )
 
 // password is sent as the MQTT password. Webull documents that any value is
 // accepted; the App Key is carried as the user name.
 const password = "webullapi4go"
+
+// streamMetrics holds the OTel instruments for stream telemetry.
+// All fields are nil when no Meter is configured.
+type streamMetrics struct {
+	reconnectCounter    metric.Int64Counter
+	quoteDropCounter    metric.Int64Counter
+	snapshotDropCounter metric.Int64Counter
+	tickDropCounter     metric.Int64Counter
+}
 
 // Client is a Webull market-data streaming client. It owns an MQTT connection
 // and routes decoded pushes to the handlers registered with the On* methods.
@@ -71,6 +82,8 @@ type Client struct {
 
 	// chanReg is the per-subscription channel registry.
 	chanReg *chanRegistry
+	// metrics holds OTel instruments. nil when no Meter is configured.
+	metrics *streamMetrics
 
 	mu             sync.RWMutex
 	onQuote        []func(*marketdatav1.Quote)
@@ -135,6 +148,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 	c.connCtx, c.connCancel = context.WithCancel(context.Background())
 	c.state.Store(int32(StateDisconnected))
 	c.chanReg = newChanRegistry()
+	c.metrics = newStreamMetrics(cfg.meter)
 	mc.SetMessageHandler(c.handleMessage)
 	mc.SetConnectHandler(c.handleConnect)
 	mc.SetConnectionLostHandler(c.handleConnectionLost)
@@ -395,8 +409,12 @@ func (c *Client) SubscribeQuoteChan(cfg ChannelConfig) (<-chan *marketdatav1.Quo
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Quote, bufSize)
 	entry := &chanQuote{ch: ch, stop: func() { close(ch) }}
+	otelCounter := metric.Int64Counter(nil)
+	if c.metrics != nil {
+		otelCounter = c.metrics.quoteDropCounter
+	}
 	c.chanReg.mu.Lock()
-	c.chanReg.quote[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.quote[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "quote"}
 	c.chanReg.mu.Unlock()
 	return ch, func() {
 		c.chanReg.mu.Lock()
@@ -413,8 +431,12 @@ func (c *Client) SubscribeSnapshotChan(cfg ChannelConfig) (<-chan *marketdatav1.
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Snapshot, bufSize)
 	entry := &chanSnapshot{ch: ch, stop: func() { close(ch) }}
+	otelCounter := metric.Int64Counter(nil)
+	if c.metrics != nil {
+		otelCounter = c.metrics.snapshotDropCounter
+	}
 	c.chanReg.mu.Lock()
-	c.chanReg.snapshot[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.snapshot[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "snapshot"}
 	c.chanReg.mu.Unlock()
 	return ch, func() {
 		c.chanReg.mu.Lock()
@@ -431,8 +453,12 @@ func (c *Client) SubscribeTickChan(cfg ChannelConfig) (<-chan *marketdatav1.Tick
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Tick, bufSize)
 	entry := &chanTick{ch: ch, stop: func() { close(ch) }}
+	otelCounter := metric.Int64Counter(nil)
+	if c.metrics != nil {
+		otelCounter = c.metrics.tickDropCounter
+	}
 	c.chanReg.mu.Lock()
-	c.chanReg.tick[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.tick[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "tick"}
 	c.chanReg.mu.Unlock()
 	return ch, func() {
 		c.chanReg.mu.Lock()
@@ -572,6 +598,9 @@ func (c *Client) handleConnectionLost(err error) {
 func (c *Client) handleReconnecting() {
 	c.reconnecting.Store(true)
 	c.setState(StateReconnecting)
+	if c.metrics != nil && c.metrics.reconnectCounter != nil {
+		c.metrics.reconnectCounter.Add(context.Background(), 1)
+	}
 	c.mu.RLock()
 	handlers := make([]func(), len(c.onReconnecting))
 	copy(handlers, c.onReconnecting)
@@ -680,4 +709,23 @@ func newSessionID() string {
 		hex.EncodeToString(b[6:8]) + "-" +
 		hex.EncodeToString(b[8:10]) + "-" +
 		hex.EncodeToString(b[10:16])
+}
+
+// newStreamMetrics creates OTel instruments for stream telemetry if a meter is
+// supplied; otherwise it returns nil.
+func newStreamMetrics(m metric.Meter) *streamMetrics {
+	if m == nil {
+		return nil
+	}
+	return &streamMetrics{
+		reconnectCounter:    newCounter(m, "reconnects", "Stream reconnection events"),
+		quoteDropCounter:    newCounter(m, "channel_drops", "Channel message drops"),
+		snapshotDropCounter: newCounter(m, "channel_drops", "Channel message drops"),
+		tickDropCounter:     newCounter(m, "channel_drops", "Channel message drops"),
+	}
+}
+
+func newCounter(m metric.Meter, name, desc string) metric.Int64Counter {
+	c, _ := m.Int64Counter(name, metric.WithDescription(desc))
+	return c
 }
