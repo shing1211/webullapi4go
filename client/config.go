@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
 
@@ -121,6 +122,9 @@ type Config struct {
 	interceptors []Interceptor
 	// hooks exposes lifecycle callbacks for observability integration.
 	hooks Hooks
+	// otel holds OpenTelemetry tracing and metrics handles and the logger.
+	// The default is observability.DefaultConfig() (all no-op).
+	otel observability.Config
 }
 
 // DefaultConfig returns a [Config] pre-filled with production Hong Kong
@@ -134,6 +138,7 @@ func DefaultConfig() Config {
 		UserAgent:   DefaultUserAgent,
 		APIVersion:  DefaultAPIVersion,
 		retry:       defaultRetrier(),
+		otel:        observability.DefaultConfig(),
 	}
 }
 

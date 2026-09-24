@@ -44,18 +44,19 @@ type Option func(*config)
 
 // config is the resolved streaming configuration.
 type config struct {
-	sessionID           string
-	mqttURL             string
-	websocket           bool
-	keepAlive           time.Duration
-	connectTimeout      time.Duration
-	writeTimeout        time.Duration
-	messageChannelDepth uint
-	cleanSession        bool
-	autoReconnect       bool
-	autoResubscribe     bool
-	resubscribeTimeout  time.Duration
-	tlsConfig           *tls.Config
+	sessionID              string
+	mqttURL                string
+	websocket              bool
+	keepAlive              time.Duration
+	connectTimeout         time.Duration
+	writeTimeout           time.Duration
+	messageChannelDepth    uint
+	cleanSession           bool
+	autoReconnect          bool
+	autoResubscribe        bool
+	resubscribeTimeout     time.Duration
+	healthWatchdogInterval time.Duration
+	tlsConfig              *tls.Config
 }
 
 // defaultConfig returns the streaming defaults.
@@ -205,4 +206,13 @@ func WithResubscribeTimeout(d time.Duration) Option {
 // configuration.
 func WithTLSConfig(tc *tls.Config) Option {
 	return func(cfg *config) { cfg.tlsConfig = tc }
+}
+
+// WithHealthWatchdog sets the interval at which the client checks message
+// throughput. If no data message (quote, snapshot, or tick) arrives within this
+// window, the connection transitions to [StateDegraded]; it recovers to
+// [StateConnected] automatically when a message arrives. A zero interval
+// (the default) disables the watchdog.
+func WithHealthWatchdog(interval time.Duration) Option {
+	return func(cfg *config) { cfg.healthWatchdogInterval = interval }
 }

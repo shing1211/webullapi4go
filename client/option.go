@@ -16,9 +16,11 @@ package client
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/resilience/breaker"
 	"github.com/shing1211/webullapi4go/pkg/resilience/ratelimit"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
@@ -331,5 +333,41 @@ func WithResiliencePreset(preset ResiliencePreset) Option {
 				retry.WithIsRetryable(retry.DefaultIsRetryable),
 			)
 		}
+	}
+}
+
+// WithLogger sets the structured logger used by [Client.Do] for per-request
+// log output. When nil (the default), no structured logging is produced.
+// A no-op logger is used when a real logger is not supplied.
+func WithLogger(log *slog.Logger) Option {
+	return func(c *Config) {
+		c.otel.Logger = log
+	}
+}
+
+// WithTracerProvider sets the OpenTelemetry [TracerProvider] used to create
+// spans for [Client.Do] and [Client.DoBroker] requests. When nil (the default),
+// the global no-op tracer is used.
+func WithTracerProvider(tp observability.TracerProvider) Option {
+	return func(c *Config) {
+		c.otel.TracerProvider = tp
+	}
+}
+
+// WithMeterProvider sets the OpenTelemetry [MeterProvider] used to create
+// meters for SDK-level metrics. When nil (the default), the global no-op
+// meter is used.
+func WithMeterProvider(mp observability.MeterProvider) Option {
+	return func(c *Config) {
+		c.otel.MeterProvider = mp
+	}
+}
+
+// WithPropagator sets the OpenTelemetry propagator used to extract and inject
+// trace context on requests. When nil (the default), no trace context
+// propagation is performed.
+func WithPropagator(p observability.TextMapPropagator) Option {
+	return func(c *Config) {
+		c.otel.Propagator = p
 	}
 }

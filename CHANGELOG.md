@@ -17,6 +17,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-09-24
+
+Phase 5 streaming engine hardening + Phase 6 observability.
+
+### Added
+
+- `stream/state.go`: new `State` type with six values (`Disconnected`,
+  `Connecting`, `Connected`, `Reconnecting`, `Degraded`, `Closed`). `Client.State()`
+  returns the current state; `Client.OnStateChange(func(prev, next State))` fires
+  on every transition.
+- `stream/option.go`: `WithHealthWatchdog(interval)` — enables a background
+  watchdog that transitions the connection to `StateDegraded` when no data
+  message (quote/snapshot/tick) arrives within the configured interval, and
+  recovers to `StateConnected` when a message arrives.
+- `stream/client.go`: `Client.OnReconnecting(func())` handler invoked when the
+  client begins attempting to reconnect after a connection loss.
+- `stream/channels.go`: new channel-mux API with configurable backpressure.
+  `Client.SubscribeQuoteChan`, `Client.SubscribeSnapshotChan`,
+  `Client.SubscribeTickChan` each return a `<-chan T` with a per-subscription
+  cancel function. `ChannelConfig.Policy` supports `DropBlock` (default,
+  blocks sender), `DropOldest` (drops oldest unread), and `DropSample`
+  (probabilistic). Drop counters track discards per channel.
+- `client/request.go`: each `Client.Do` and `Client.DoBroker` call now establishes
+  an OpenTelemetry span (`SpanKindClient`) scoped to the configured
+  `TracerProvider`. Span attributes include `http.method`, `http.route`,
+  `webull.attempt`, and `http.duration_ms`. Correlation ID (`X-Correlation-ID`
+  header) is generated per-request using `crypto/rand` and threaded through the
+  context.
+- `client/request.go`: `WithCorrelationID(ctx, id)` and
+  `CorrelationIDFromContext(ctx)` helpers for explicit correlation ID management.
+- `client/option.go`: `WithLogger(*slog.Logger)` — configures per-request
+  structured log output (request start and completion with method, path,
+  correlation ID, latency, and error).
+- `client/option.go`: `WithTracerProvider`, `WithMeterProvider`, and
+  `WithPropagator` options supply real OpenTelemetry providers, replacing the
+  no-op defaults.
+- `pkg/observability/otel.go`: new package providing API-only OTel integration.
+  `Config.Tracer()`, `Config.Meter()`, `Config.InjectTraceContext`, and
+  `Config.ExtractTraceContext` use the configured providers; all types default
+  to the global no-op implementations.
+- `pkg/observability/otel.go`: `SpanAttributes(method, path, attempt)` and
+  `SpanName(method, path)` helpers for consistent span naming and attribute
+  sets.
+
 ## [2.0.4] - 2026-09-24
 
 Phase 3 + Phase 4 production hardening: clock-drift correction, idempotency

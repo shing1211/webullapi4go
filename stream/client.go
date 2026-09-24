@@ -21,6 +21,7 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/shing1211/webullapi4go/client"
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
@@ -59,14 +60,28 @@ type Client struct {
 	resubCtx    context.Context
 	resubCancel context.CancelFunc
 
-	mu           sync.RWMutex
-	onQuote      []func(*marketdatav1.Quote)
-	onSnapshot   []func(*marketdatav1.Snapshot)
-	onTick       []func(*marketdatav1.Tick)
-	onNotice     []func([]byte)
-	onError      []func(error)
-	onConnect    []func()
-	onDisconnect []func(error)
+	// connCtx bounds the health watchdog; cancelled by Close.
+	connCtx    context.Context
+	connCancel context.CancelFunc
+	// state is the current connection lifecycle state.
+	state atomic.Int32
+	// lastMessageAt records the arrival time of the most recent data message
+	// (quote/snapshot/tick). It is used by the health watchdog.
+	lastMessageAt atomic.Int64
+
+	// chanReg is the per-subscription channel registry.
+	chanReg *chanRegistry
+
+	mu             sync.RWMutex
+	onQuote        []func(*marketdatav1.Quote)
+	onSnapshot     []func(*marketdatav1.Snapshot)
+	onTick         []func(*marketdatav1.Tick)
+	onNotice       []func([]byte)
+	onError        []func(error)
+	onConnect      []func()
+	onDisconnect   []func(error)
+	onReconnecting []func()
+	onStateChange  []func(State, State)
 }
 
 // New returns a streaming client bound to cl. When no session id is supplied
@@ -117,6 +132,9 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 
 	c := &Client{core: cl, cfg: cfg, mqtt: mc}
 	c.resubCtx, c.resubCancel = context.WithCancel(context.Background())
+	c.connCtx, c.connCancel = context.WithCancel(context.Background())
+	c.state.Store(int32(StateDisconnected))
+	c.chanReg = newChanRegistry()
 	mc.SetMessageHandler(c.handleMessage)
 	mc.SetConnectHandler(c.handleConnect)
 	mc.SetConnectionLostHandler(c.handleConnectionLost)
@@ -161,6 +179,10 @@ func (c *Client) Connect(ctx context.Context) error {
 	if c.mqtt == nil {
 		return errs.New(errs.CodeInvalidConfig, "stream: client is not initialized")
 	}
+	c.setState(StateConnecting)
+	if c.cfg.healthWatchdogInterval > 0 {
+		go c.healthWatchdog()
+	}
 	if err := c.mqtt.Connect(ctx); err != nil {
 		return streamConnectError(err)
 	}
@@ -188,8 +210,15 @@ func streamConnectError(err error) error {
 // underlying [client.Client].
 func (c *Client) Close() error {
 	c.closeOnce.Do(func() {
+		c.setState(StateClosed)
+		if c.connCancel != nil {
+			c.connCancel()
+		}
 		if c.resubCancel != nil {
 			c.resubCancel()
+		}
+		if c.chanReg != nil {
+			c.chanReg.stopAll()
 		}
 		if c.mqtt != nil {
 			_ = c.mqtt.Close()
@@ -289,11 +318,127 @@ func (c *Client) OnDisconnect(fn func(error)) {
 	c.mu.Unlock()
 }
 
+// OnReconnecting registers a handler invoked when the client begins attempting
+// to reconnect after a connection loss.
+func (c *Client) OnReconnecting(fn func()) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onReconnecting = append(c.onReconnecting, fn)
+	c.mu.Unlock()
+}
+
+// OnStateChange registers a handler invoked whenever the connection state
+// changes, receiving the previous and next state.
+func (c *Client) OnStateChange(fn func(State, State)) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onStateChange = append(c.onStateChange, fn)
+	c.mu.Unlock()
+}
+
+// State returns the current connection state.
+func (c *Client) State() State {
+	return State(c.state.Load())
+}
+
+// setState transitions to next, firing OnStateChange handlers outside the lock.
+func (c *Client) setState(next State) {
+	prev := State(c.state.Swap(int32(next)))
+	if prev != next {
+		c.mu.RLock()
+		handlers := make([]func(State, State), len(c.onStateChange))
+		copy(handlers, c.onStateChange)
+		c.mu.RUnlock()
+		for _, h := range handlers {
+			h(prev, next)
+		}
+	}
+}
+
 // handleMessage is the low-level callback. It reports dispatch failures to the
-// error handlers.
+// error handlers and records the arrival time for health tracking.
 func (c *Client) handleMessage(m mqtt.Message) {
+	c.lastMessageAt.Store(time.Now().UnixMilli())
 	if err := c.dispatch(m.Topic, m.Payload); err != nil {
 		c.emitError(err)
+	}
+}
+
+// ChannelConfig configures a channel-based subscription. The default is a
+// blocking policy with a buffer of 100 messages.
+type ChannelConfig struct {
+	// Policy controls what happens when the buffer is full. The default is
+	// [DropBlock]. Use [DropOldest] to discard the oldest unread message or
+	// [DropSample] to probabilistically discard before the buffer is full.
+	Policy DropPolicy
+	// BufferSize sets the channel buffer depth. Values ≤ 0 use the default of 100.
+	BufferSize int
+}
+
+func (c ChannelConfig) resolve() (policy DropPolicy, bufSize int) {
+	policy = c.Policy
+	bufSize = c.BufferSize
+	if bufSize <= 0 {
+		bufSize = defaultChannelBuffer
+	}
+	return
+}
+
+// SubscribeQuoteChan returns a channel that receives decoded quote pushes.
+// The channel is closed when the subscription is cancelled. The returned
+// cancel function must be called to release the subscription.
+func (c *Client) SubscribeQuoteChan(cfg ChannelConfig) (<-chan *marketdatav1.Quote, func()) {
+	policy, bufSize := cfg.resolve()
+	ch := make(chan *marketdatav1.Quote, bufSize)
+	entry := &chanQuote{ch: ch, stop: func() { close(ch) }}
+	c.chanReg.mu.Lock()
+	c.chanReg.quote[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.mu.Unlock()
+	return ch, func() {
+		c.chanReg.mu.Lock()
+		delete(c.chanReg.quote, entry)
+		c.chanReg.mu.Unlock()
+		close(ch)
+	}
+}
+
+// SubscribeSnapshotChan returns a channel that receives decoded snapshot pushes.
+// The channel is closed when the subscription is cancelled. The returned
+// cancel function must be called to release the subscription.
+func (c *Client) SubscribeSnapshotChan(cfg ChannelConfig) (<-chan *marketdatav1.Snapshot, func()) {
+	policy, bufSize := cfg.resolve()
+	ch := make(chan *marketdatav1.Snapshot, bufSize)
+	entry := &chanSnapshot{ch: ch, stop: func() { close(ch) }}
+	c.chanReg.mu.Lock()
+	c.chanReg.snapshot[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.mu.Unlock()
+	return ch, func() {
+		c.chanReg.mu.Lock()
+		delete(c.chanReg.snapshot, entry)
+		c.chanReg.mu.Unlock()
+		close(ch)
+	}
+}
+
+// SubscribeTickChan returns a channel that receives decoded tick pushes.
+// The channel is closed when the subscription is cancelled. The returned
+// cancel function must be called to release the subscription.
+func (c *Client) SubscribeTickChan(cfg ChannelConfig) (<-chan *marketdatav1.Tick, func()) {
+	policy, bufSize := cfg.resolve()
+	ch := make(chan *marketdatav1.Tick, bufSize)
+	entry := &chanTick{ch: ch, stop: func() { close(ch) }}
+	c.chanReg.mu.Lock()
+	c.chanReg.tick[entry] = &channelConfig{policy: policy, bufSize: bufSize}
+	c.chanReg.mu.Unlock()
+	return ch, func() {
+		c.chanReg.mu.Lock()
+		delete(c.chanReg.tick, entry)
+		c.chanReg.mu.Unlock()
+		close(ch)
 	}
 }
 
@@ -332,7 +477,8 @@ func (c *Client) dispatch(topic string, payload []byte) error {
 	return nil
 }
 
-// emitQuote invokes every registered quote handler outside the lock.
+// emitQuote invokes every registered quote handler and channel subscriber
+// outside the lock.
 func (c *Client) emitQuote(msg *marketdatav1.Quote) {
 	c.mu.RLock()
 	handlers := make([]func(*marketdatav1.Quote), len(c.onQuote))
@@ -341,9 +487,13 @@ func (c *Client) emitQuote(msg *marketdatav1.Quote) {
 	for _, h := range handlers {
 		h(msg)
 	}
+	if c.chanReg != nil {
+		c.chanReg.dispatchQuote(msg)
+	}
 }
 
-// emitSnapshot invokes every registered snapshot handler outside the lock.
+// emitSnapshot invokes every registered snapshot handler and channel subscriber
+// outside the lock.
 func (c *Client) emitSnapshot(msg *marketdatav1.Snapshot) {
 	c.mu.RLock()
 	handlers := make([]func(*marketdatav1.Snapshot), len(c.onSnapshot))
@@ -352,9 +502,13 @@ func (c *Client) emitSnapshot(msg *marketdatav1.Snapshot) {
 	for _, h := range handlers {
 		h(msg)
 	}
+	if c.chanReg != nil {
+		c.chanReg.dispatchSnapshot(msg)
+	}
 }
 
-// emitTick invokes every registered tick handler outside the lock.
+// emitTick invokes every registered tick handler and channel subscriber
+// outside the lock.
 func (c *Client) emitTick(msg *marketdatav1.Tick) {
 	c.mu.RLock()
 	handlers := make([]func(*marketdatav1.Tick), len(c.onTick))
@@ -362,6 +516,9 @@ func (c *Client) emitTick(msg *marketdatav1.Tick) {
 	c.mu.RUnlock()
 	for _, h := range handlers {
 		h(msg)
+	}
+	if c.chanReg != nil {
+		c.chanReg.dispatchTick(msg)
 	}
 }
 
@@ -396,6 +553,8 @@ func (c *Client) emitError(err error) {
 // restored session.
 func (c *Client) handleConnect() {
 	c.reconnecting.Store(false)
+	c.setState(StateConnected)
+	c.lastMessageAt.Store(time.Now().UnixMilli())
 	if c.everConnected.Swap(true) {
 		c.resubscribe()
 	}
@@ -405,12 +564,21 @@ func (c *Client) handleConnect() {
 // handleConnectionLost is the MQTT connection-lost callback.
 func (c *Client) handleConnectionLost(err error) {
 	c.reconnecting.Store(false)
+	c.setState(StateDisconnected)
 	c.emitDisconnect(err)
 }
 
 // handleReconnecting is the MQTT reconnect-start callback.
 func (c *Client) handleReconnecting() {
 	c.reconnecting.Store(true)
+	c.setState(StateReconnecting)
+	c.mu.RLock()
+	handlers := make([]func(), len(c.onReconnecting))
+	copy(handlers, c.onReconnecting)
+	c.mu.RUnlock()
+	for _, h := range handlers {
+		h()
+	}
 }
 
 // resubscribe re-issues every active subscription through the core client. It
@@ -445,6 +613,32 @@ func (c *Client) resubscribeContext() (context.Context, context.CancelFunc) {
 		base = context.Background()
 	}
 	return context.WithTimeout(base, c.cfg.resubscribeTimeout)
+}
+
+// healthWatchdog monitors message-age and transitions to Degraded when no data
+// arrives within the configured interval. It recovers to Connected when a
+// message arrives. The watchdog is started by [Client.Connect] and cancelled by
+// [Client.Close].
+func (c *Client) healthWatchdog() {
+	ticker := time.NewTicker(c.cfg.healthWatchdogInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-c.connCtx.Done():
+			return
+		case <-ticker.C:
+			last := c.lastMessageAt.Load()
+			if last == 0 {
+				continue
+			}
+			age := time.Since(time.UnixMilli(last))
+			if age > c.cfg.healthWatchdogInterval && c.State() == StateConnected {
+				c.setState(StateDegraded)
+			} else if last > 0 && c.State() == StateDegraded {
+				c.setState(StateConnected)
+			}
+		}
+	}
 }
 
 // emitConnect invokes every registered connect handler outside the lock.

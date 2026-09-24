@@ -16,9 +16,12 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,16 +31,54 @@ import (
 
 	"github.com/shing1211/webullapi4go/internal/auth"
 	"github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 	"github.com/shing1211/webullapi4go/pkg/transport"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Headers that the SDK sets on every request but that do not participate in the
 // canonical signature.
 const (
-	headerSignature = "x-signature"
-	headerVersion   = "x-version"
+	headerSignature     = "x-signature"
+	headerVersion       = "x-version"
+	headerCorrelationID = "x-correlation-id"
 )
+
+// contextKey is a value of unique type used as a context key.
+type contextKey struct{}
+
+// CorrelationIDKey is the context key for the per-request correlation
+// identifier. It is used by [WithCorrelationID] and [CorrelationIDFromContext].
+var CorrelationIDKey = contextKey{}
+
+// WithCorrelationID stores a correlation identifier in the context. The SDK
+// generates one automatically if not already present; callers may set it before
+// [Client.Do] to propagate an externally-generated ID.
+func WithCorrelationID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, CorrelationIDKey, id)
+}
+
+// CorrelationIDFromContext returns the correlation identifier stored in ctx, or
+// an empty string if none is set.
+func CorrelationIDFromContext(ctx context.Context) string {
+	if v := ctx.Value(CorrelationIDKey); v != nil {
+		return v.(string)
+	}
+	return ""
+}
+
+// newCorrelationID generates a fresh 16-character hex correlation identifier
+// using crypto/rand.
+func newCorrelationID() string {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "0000000000000000"
+	}
+	return hex.EncodeToString(b[:])
+}
 
 // ErrCircuitOpen is wrapped into the error returned by [Client.Do] when a
 // configured circuit breaker rejects a call.
@@ -123,6 +164,19 @@ func (c *Client) DoBroker(ctx context.Context, method, path string, body, out an
 }
 
 func (c *Client) attemptBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
+	correlationID := CorrelationIDFromContext(ctx)
+	if correlationID == "" {
+		correlationID = newCorrelationID()
+		ctx = WithCorrelationID(ctx, correlationID)
+	}
+
+	tracer := c.cfg.otel.Tracer("webullapi4go/client")
+	ctx, span := tracer.Start(ctx, observability.SpanName(method, reqPath),
+		trace.WithAttributes(observability.SpanAttributes(method, reqPath, 0)...),
+		trace.WithSpanKind(trace.SpanKindClient),
+	)
+	defer span.End()
+
 	if c.cfg.rateLimiter != nil {
 		if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil {
@@ -138,6 +192,9 @@ func (c *Client) attemptBroker(ctx context.Context, method, reqPath string, quer
 	err := c.executeBroker(ctx, method, reqPath, query, bodyBytes, out)
 	if c.cfg.breaker != nil {
 		c.recordBreaker(err)
+	}
+	if err != nil {
+		span.SetAttributes(attribute.String("error", err.Error()))
 	}
 	return err
 }
@@ -202,6 +259,11 @@ func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, req
 		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
 	}
 	req.Header.Set(headerSignature, signature)
+
+	if cid := CorrelationIDFromContext(ctx); cid != "" {
+		req.Header.Set(headerCorrelationID, cid)
+	}
+
 	return req, nil
 }
 
@@ -214,8 +276,35 @@ func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, req
 // may inspect, decorate, or short-circuit the request. After the response,
 // the circuit-breaker outcome is recorded so that retries participate in
 // breaker accounting.
+//
+// attempt establishes an OpenTelemetry span for the request and records the
+// round-trip latency and correlation ID to the configured logger.
 func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
 	start := time.Now()
+
+	// Extract or generate a correlation ID for this request.
+	correlationID := CorrelationIDFromContext(ctx)
+	if correlationID == "" {
+		correlationID = newCorrelationID()
+		ctx = WithCorrelationID(ctx, correlationID)
+	}
+
+	// Create an OTel span for this attempt.
+	tracer := c.cfg.otel.Tracer("webullapi4go/client")
+	ctx, span := tracer.Start(ctx, observability.SpanName(method, reqPath),
+		trace.WithAttributes(observability.SpanAttributes(method, reqPath, 0)...),
+		trace.WithSpanKind(trace.SpanKindClient),
+	)
+	defer span.End()
+
+	// Log request start if a logger is configured.
+	if log := c.cfg.otel.Logger; log != nil {
+		log.LogAttrs(ctx, slog.LevelInfo, "webull request start",
+			slog.String("method", method),
+			slog.String("path", reqPath),
+			slog.String("correlation_id", correlationID),
+		)
+	}
 
 	// The core function that performs rate-limiting, circuit-breaking, and the
 	// HTTP call (sign + send).
@@ -270,6 +359,30 @@ func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.
 	} else {
 		if h := c.cfg.hooks; h.OnError != nil {
 			h.OnError(err, latency)
+		}
+	}
+
+	span.SetAttributes(attribute.Int64("http.duration_ms", latency.Milliseconds()))
+	if err != nil {
+		span.SetAttributes(attribute.String("error", err.Error()))
+	}
+
+	if log := c.cfg.otel.Logger; log != nil {
+		if err != nil {
+			log.LogAttrs(ctx, slog.LevelError, "webull request done",
+				slog.String("method", method),
+				slog.String("path", reqPath),
+				slog.String("correlation_id", correlationID),
+				slog.Duration("latency", latency),
+				slog.String("error", err.Error()),
+			)
+		} else {
+			log.LogAttrs(ctx, slog.LevelInfo, "webull request done",
+				slog.String("method", method),
+				slog.String("path", reqPath),
+				slog.String("correlation_id", correlationID),
+				slog.Duration("latency", latency),
+			)
 		}
 	}
 
@@ -374,6 +487,11 @@ func (c *Client) buildSignedRequest(ctx context.Context, method, reqPath string,
 		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
 	}
 	req.Header.Set(headerSignature, signature)
+
+	if cid := CorrelationIDFromContext(ctx); cid != "" {
+		req.Header.Set(headerCorrelationID, cid)
+	}
+
 	return req, nil
 }
 

@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-24 (v2.0.4+v2.0.5 release) · Current version: **v2.0.5**
+Last updated: 2026-09-24 (v2.0.6 release) · Current version: **v2.0.6**
 
 ## Summary
 
