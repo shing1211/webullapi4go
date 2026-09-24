@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-24 (v2.0.9 release) · Current version: **v2.0.9**
+Last updated: 2026-09-24 (v2.1.0 release) · Current version: **v2.1.0**
 
 ## Summary
 
@@ -57,6 +57,7 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v2.0.7 | 2026-09-24 | Phase 6.3 OTel metrics hooks: `request_latency` histogram, `breaker.state_transitions`, `stream.reconnects`, `stream.channel_drops` instruments | Done |
 | v2.0.8 | 2026-09-24 | Phase 8 context hygiene: `mqtt.Connect()` goroutine leak fixed with `sync.WaitGroup`; `resubscribeContext()` panic on nil `resubCtx`; OTel `context.Background()` usage documented | Done |
 | v2.0.9 | 2026-09-24 | Phase 9 structured errors: new codes/sentinels in `pkg/errors`; `ErrCircuitOpen`, `ErrConnectionRefused`, `ErrConnectionLimit` upgraded to typed errors; error chain preservation in `trade/orders.go` | Done |
+| v2.1.0 | 2026-09-24 | Phase 13 vet warnings: all `go vet RWMutex-by-value` warnings eliminated; `*Config` pointer receivers in otel; `client.Config.otel` stored as pointer | Done |
 
 ## Feature Coverage
 
