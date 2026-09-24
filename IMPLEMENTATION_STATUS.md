@@ -54,6 +54,8 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v2.0.2 | 2026-09-23 | Numeric string fields converted to `*money.Money`/`money.Money` across `brokerfd/` package | Done |
 | v2.0.3 | 2026-09-23 | goleak: ignore paho HTTP/2 goroutines after MQTT WebSocket disconnect | Done |
 | v2.0.4 | 2026-09-24 | Phase 3 hardening: clock-drift correction, idempotency helpers, `WithHTTPTransport`, full-jitter retry, `WithResiliencePreset(production)` | Done |
+| v2.0.5 | 2026-09-24 | Phase 4 interceptor pipeline: OMS integration, `EquityOrderBuilder`, typed order builders for single-leg and combo orders | Done |
+| v2.0.6 | 2026-09-24 | Phase 5 streaming engine (state machine, `chanRegistry`, drop policies) + Phase 6 slog structured logging + Phase 6.2 OTel tracing + Phase 7 docs/release | Done |
 | v2.0.7 | 2026-09-24 | Phase 6.3 OTel metrics hooks: `request_latency` histogram, `breaker.state_transitions`, `stream.reconnects`, `stream.channel_drops` instruments | Done |
 | v2.0.8 | 2026-09-24 | Phase 8 context hygiene: `mqtt.Connect()` goroutine leak fixed with `sync.WaitGroup`; `resubscribeContext()` panic on nil `resubCtx`; OTel `context.Background()` usage documented | Done |
 | v2.0.9 | 2026-09-24 | Phase 9 structured errors: new codes/sentinels in `pkg/errors`; `ErrCircuitOpen`, `ErrConnectionRefused`, `ErrConnectionLimit` upgraded to typed errors; error chain preservation in `trade/orders.go` | Done |
