@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-24 (v2.0.8 release) · Current version: **v2.0.8**
+Last updated: 2026-09-24 (v2.0.9 release) · Current version: **v2.0.9**
 
 ## Summary
 
@@ -56,6 +56,7 @@ implemented and the SDK paths follow the official OpenAPI definition.
 | v2.0.4 | 2026-09-24 | Phase 3 hardening: clock-drift correction, idempotency helpers, `WithHTTPTransport`, full-jitter retry, `WithResiliencePreset(production)` | Done |
 | v2.0.7 | 2026-09-24 | Phase 6.3 OTel metrics hooks: `request_latency` histogram, `breaker.state_transitions`, `stream.reconnects`, `stream.channel_drops` instruments | Done |
 | v2.0.8 | 2026-09-24 | Phase 8 context hygiene: `mqtt.Connect()` goroutine leak fixed with `sync.WaitGroup`; `resubscribeContext()` panic on nil `resubCtx`; OTel `context.Background()` usage documented | Done |
+| v2.0.9 | 2026-09-24 | Phase 9 structured errors: new codes/sentinels in `pkg/errors`; `ErrCircuitOpen`, `ErrConnectionRefused`, `ErrConnectionLimit` upgraded to typed errors; error chain preservation in `trade/orders.go` | Done |
 
 ## Feature Coverage
 
@@ -185,15 +186,15 @@ in the HK sandbox; optional verification is available via `examples/path-probe`
 | order | `examples/order/` | ✅ | Preview/place/cancel AAPL limit buy |
 | events | `examples/events/` | ✅ | gRPC order event subscription |
 | data-fundamentals | `examples/data-fundamentals/` | ✅ | All 13 fundamental endpoints for AAPL |
-| probe | `examples/probe/` | ❌ | Sandbox endpoint testing tool (has own README) |
 | watchlist-cmd | `examples/watchlist-cmd/` | ✅ | Watchlist CRUD example (create, add, update, remove, delete) |
-| broker-probe | `examples/broker-probe/` | ❌ | Broker HK read-only endpoint probe program |
-| futures-probe | `examples/futures-probe/` | ❌ | HK futures product discovery and market data probe |
-| options-multi-leg | `examples/options-multi-leg/` | ❌ | Multi-leg options strategy probe (11 combo types) |
-| options | `examples/options/` | ❌ | Multi-leg options strategy preview |
-| brokerfd | `examples/brokerfd/` | ❌ | Broker FD US API endpoints |
-| brokerfd-events | `examples/brokerfd-events/` | ❌ | Broker FD US gRPC events |
-| path-probe | `examples/path-probe/` | ❌ | SDK path verification tool |
+| probe | `examples/probe/` | ✅ | Sandbox endpoint testing tool (has own README) |
+| broker-probe | `examples/broker-probe/` | ✅ | Broker HK read-only endpoint probe program |
+| futures-probe | `examples/futures-probe/` | ✅ | HK futures product discovery and market data probe |
+| options-multi-leg | `examples/options-multi-leg/` | ✅ | Multi-leg options strategy probe (11 combo types) |
+| options | `examples/options/` | ✅ | Multi-leg options strategy preview |
+| brokerfd | `examples/brokerfd/` | ✅ | Broker FD US API endpoints |
+| brokerfd-events | `examples/brokerfd-events/` | ✅ | Broker FD US gRPC events |
+| path-probe | `examples/path-probe/` | ✅ | SDK path verification tool |
 
 ## Known Issues
 
