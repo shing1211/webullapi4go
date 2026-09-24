@@ -152,7 +152,7 @@ jobs:
           awk -v total="$TOTAL" 'BEGIN { if (total + 0 < 60.0) { printf "coverage %.1f%% is below the 60.0%% baseline\n", total; exit 1 } }'
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.out
