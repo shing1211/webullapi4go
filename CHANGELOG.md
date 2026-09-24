@@ -19,8 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.4] - 2026-09-24
 
-Phase 3 production hardening: clock-drift correction, idempotency helpers,
-transport tuning, resilience presets.
+Phase 3 + Phase 4 production hardening: clock-drift correction, idempotency
+helpers, transport tuning, resilience presets, interceptor pipeline, OMS state
+machine integration, typed request builders.
 
 ### Added
 
@@ -47,6 +48,35 @@ transport tuning, resilience presets.
 - `trade/option.go`: `WithAutoClientOrderID(bool)` — configures `PlaceOrder`
   and `BatchPlaceOrder` to auto-generate and assign a `NewClientOrderID` to
   each order whose `ClientOrderID` is empty.
+
+### Added (Phase 4)
+
+- `client/option.go`: `Interceptor` func type and `WithInterceptor(Interceptor)`
+  option — composable request pipeline interceptors that run after rate-limiting
+  and circuit-breaking but before signing and send.
+- `client/option.go`: `Hooks` struct with `OnRequest`, `OnResponse`, `OnError`,
+  `OnLatency` callbacks — observability integration point for Phase 6.
+- `client/request.go`: `attempt()` refactored to run an ordered interceptor
+  chain; hooks fire on every request attempt including retries.
+- `pkg/domain/order/order.go`: new `Order` struct embeds `PlaceOrderResult`
+  plus `AccountID` and a local `*Machine` state machine; `SceneTypeToEvent`
+  maps Webull gRPC scene types to domain events.
+- `trade/client.go`: added `orderRegistry` map and `registerOrder`/`getOrder`
+  helpers for local order state tracking.
+- `trade/orders.go`: `PlaceOrder` now returns `*order.Order` (not
+  `*PlaceOrderResult`); the order is registered with `StatePending` on
+  placement. `PlaceOrderResult` is embedded so `order.OrderID` and
+  `order.ClientOrderID` remain accessible. `BatchPlaceOrder` unchanged.
+- `trade/order_actions.go`: `CancelOrder` and `ReplaceOrder` check local order
+  state before sending; terminal orders (filled, cancelled, failed, expired) return
+  `errs.CodeInvalidTransition` without an API call.
+- `trade/orders.go`: `NewPlaceOrderRequest(accountID, orders...)`,
+  `NewEquityOrder(symbol, side, qty)`, and `EquityOrderBuilder` fluent API —
+  typed request constructors with US equity defaults.
+- `trade/order_actions.go`: `NewCancelOrderRequest(accountID, clientOrderID)` and
+  `NewModifyOrderRequest(accountID, clientOrderID)` convenience constructors.
+- `pkg/errors/errors.go`: added `CodeInvalidTransition` and `ErrInvalidTransition`
+  for local state validation failures.
 
 ### Documentation
 

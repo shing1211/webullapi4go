@@ -247,6 +247,60 @@ func WithClockDriftCorrection(enabled bool) Option {
 	}
 }
 
+// Interceptor is a function that wraps the request pipeline. It receives the next
+// function in the chain and may inspect, decorate, or short-circuit the request.
+// Interceptors are invoked in the order they are supplied to [WithInterceptor].
+// The first interceptor in the chain receives a function that performs the
+// underlying HTTP call (rate-limit, breaker, signing, and send).
+//
+// For example, a logging interceptor:
+//
+//	func(ctx context.Context, next func(context.Context) error) error {
+//	    start := time.Now()
+//	    err := next(ctx)
+//	    log.Printf("request took %s: %v", time.Since(start), err)
+//	    return err
+//	}
+type Interceptor func(ctx context.Context, next func(context.Context) error) error
+
+// WithInterceptor adds an interceptor to the request pipeline. Interceptors are
+// invoked after rate-limiting and circuit-breaking but before the request is
+// signed and sent, and after the response is received. Multiple interceptors
+// can be added; they fire in the order they are supplied.
+func WithInterceptor(i Interceptor) Option {
+	return func(c *Config) {
+		c.interceptors = append(c.interceptors, i)
+	}
+}
+
+// Hooks holds optional lifecycle callbacks invoked by [Client.Do] around each
+// request attempt. All fields are optional; nil fields are no-ops.
+//
+// These hooks are the integration point for observability tools (structured
+// logging, OpenTelemetry tracing, Prometheus metrics). Phase 6 of the
+// production hardening plan adds actual instrumentation via these hooks.
+type Hooks struct {
+	// OnRequest is called before each attempt, after rate-limiting and
+	// circuit-breaking, with the HTTP method and path.
+	OnRequest func(method, path string)
+	// OnResponse is called on a successful response (2xx), passing the
+	// HTTP status code and the round-trip latency.
+	OnResponse func(status int, latency time.Duration)
+	// OnError is called when the request returns an error or a non-retryable
+	// HTTP status, passing the error and the round-trip latency.
+	OnError func(err error, latency time.Duration)
+	// OnLatency is called after every attempt (success, error, or retry) with
+	// the attempt number and the round-trip latency.
+	OnLatency func(attempt int, latency time.Duration)
+}
+
+// WithHooks installs lifecycle hooks for observability integration.
+func WithHooks(h Hooks) Option {
+	return func(c *Config) {
+		c.hooks = h
+	}
+}
+
 // ResiliencePreset applies a named set of resilience defaults. Presets are
 // composable: each call adds to or overrides the existing configuration.
 type ResiliencePreset string

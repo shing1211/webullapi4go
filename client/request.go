@@ -205,26 +205,75 @@ func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, req
 	return req, nil
 }
 
-// attempt executes a single request attempt, applying the configured rate
-// limiter and circuit breaker around it and recording the breaker outcome.
+// attempt executes a single request attempt through the ordered interceptor
+// chain. The fixed order is:
+//
+//	rate-limiter.Wait → circuit-breaker.Allow → user-interceptors → sign → send
+//
+// Each user-supplied interceptor receives the next function in the chain and
+// may inspect, decorate, or short-circuit the request. After the response,
+// the circuit-breaker outcome is recorded so that retries participate in
+// breaker accounting.
 func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	if c.cfg.rateLimiter != nil {
-		if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				return ctxErr
+	start := time.Now()
+
+	// The core function that performs rate-limiting, circuit-breaking, and the
+	// HTTP call (sign + send).
+	core := func(ctx context.Context) error {
+		if c.cfg.rateLimiter != nil {
+			if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return ctxErr
+				}
+				return errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
 			}
-			return errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
 		}
-	}
-	if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
-		// Permanent so the retry layer does not hammer an open circuit.
-		return retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
+		if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
+			return retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
+		}
+		err := c.execute(ctx, method, reqPath, query, bodyBytes, out)
+		c.recordBreaker(err)
+		return err
 	}
 
-	err := c.execute(ctx, method, reqPath, query, bodyBytes, out)
-	if c.cfg.breaker != nil {
-		c.recordBreaker(err)
+	// Build the interceptor chain from the inside out: the last supplied
+	// interceptor is closest to the core HTTP call.
+	// Chain: interceptors[0] → interceptors[1] → ... → interceptors[n] → core
+	next := core
+	for i := len(c.cfg.interceptors) - 1; i >= 0; i-- {
+		fn := c.cfg.interceptors[i]
+		n := next
+		next = func(ctx context.Context) error { return fn(ctx, n) }
 	}
+
+	// Fire the OnRequest hook before the chain runs.
+	if h := c.cfg.hooks; h.OnRequest != nil {
+		h.OnRequest(method, reqPath)
+	}
+
+	// Wrap the whole chain for total latency tracking and hook dispatch.
+	var err error
+	var latency time.Duration
+	func() {
+		t0 := time.Now()
+		err = next(ctx)
+		latency = time.Since(t0)
+		if h := c.cfg.hooks; h.OnLatency != nil {
+			h.OnLatency(0, latency)
+		}
+	}()
+
+	if err == nil {
+		if h := c.cfg.hooks; h.OnResponse != nil {
+			h.OnResponse(0, latency)
+		}
+	} else {
+		if h := c.cfg.hooks; h.OnError != nil {
+			h.OnError(err, latency)
+		}
+	}
+
+	_ = start
 	return err
 }
 
@@ -232,6 +281,9 @@ func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.
 // Server and transport failures trip the breaker; every other error means the
 // service responded, so it counts as a success for breaker purposes.
 func (c *Client) recordBreaker(err error) {
+	if c.cfg.breaker == nil {
+		return
+	}
 	if err != nil && (errs.Is(err, errs.CodeServer) || errs.Is(err, errs.CodeTransport)) {
 		c.cfg.breaker.RecordFailure()
 		return

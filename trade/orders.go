@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/domain/order"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -537,7 +538,7 @@ func (c *Client) autoFillClientOrderIDs(orders []OrderRequest) error {
 	return nil
 }
 
-func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*PlaceOrderResult, error) {
+func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*order.Order, error) {
 	if c.cfg.autoClientOrderID {
 		if err := c.autoFillClientOrderIDs(req.NewOrders); err != nil {
 			return nil, err
@@ -549,11 +550,17 @@ func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*PlaceO
 	if err := c.enforceGuardrails(req); err != nil {
 		return nil, err
 	}
-	var out PlaceOrderResult
+	var out order.PlaceOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersPlace, nil, req, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	o := &order.Order{
+		PlaceOrderResult: out,
+		AccountID:        req.AccountID,
+		Machine:          order.New(order.StatePending),
+	}
+	c.registerOrder(o)
+	return o, nil
 }
 
 // BatchPlaceOrderResult carries the result for one order within a batch.
@@ -862,4 +869,131 @@ func (t TrailingType) valid() bool {
 	default:
 		return false
 	}
+}
+
+// NewPlaceOrderRequest is a convenience constructor for a [PlaceOrderRequest]
+// with one or more orders. The accountID field is required; each order must
+// still have a non-empty ClientOrderID (or use [WithAutoClientOrderID]).
+func NewPlaceOrderRequest(accountID string, orders ...OrderRequest) PlaceOrderRequest {
+	return PlaceOrderRequest{
+		AccountID: accountID,
+		NewOrders: orders,
+	}
+}
+
+// NewEquityOrder returns a new US equity limit order with sensible defaults:
+// ComboType NORMAL, InstrumentType EQUITY, Market US, EntrustType QTY,
+// TimeInForce DAY, SupportTradingSession CORE. The caller must supply a
+// ClientOrderID (or enable [WithAutoClientOrderID]), a symbol, a side, and
+// a quantity; a limit price should be set on the returned struct before
+// submission.
+func NewEquityOrder(symbol string, side OrderSide, qty *money.Money) OrderRequest {
+	return OrderRequest{
+		ComboType:             ComboTypeNormal,
+		InstrumentType:        InstrumentTypeEquity,
+		Market:                MarketUS,
+		Symbol:                symbol,
+		Side:                  side,
+		Quantity:              qty,
+		EntrustType:           EntrustTypeQty,
+		TimeInForce:           TimeInForceDay,
+		SupportTradingSession: TradingSessionCore,
+	}
+}
+
+// EquityOrderBuilder is a fluent builder for a US equity [OrderRequest].
+// See [NewEquityOrderBuilder].
+type EquityOrderBuilder struct {
+	symbol       string
+	side         OrderSide
+	quantity     *money.Money
+	orderType    OrderType
+	limitPrice   *money.Money
+	stopPrice    *money.Money
+	triggerPrice *money.Money
+	timeInForce  TimeInForce
+}
+
+// NewEquityOrderBuilder starts a fluent builder for a US equity order.
+// symbol is the ticker, side is Buy or Sell, and quantity is the number of shares.
+func NewEquityOrderBuilder(symbol string, side OrderSide, quantity *money.Money) *EquityOrderBuilder {
+	return &EquityOrderBuilder{
+		symbol:      symbol,
+		side:        side,
+		quantity:    quantity,
+		orderType:   OrderTypeLimit,
+		timeInForce: TimeInForceDay,
+	}
+}
+
+// LimitPrice sets the limit price for a LIMIT order.
+func (b *EquityOrderBuilder) LimitPrice(v *money.Money) *EquityOrderBuilder {
+	b.limitPrice = v
+	return b
+}
+
+// StopPrice sets the stop price for a STOP order.
+func (b *EquityOrderBuilder) StopPrice(v *money.Money) *EquityOrderBuilder {
+	b.stopPrice = v
+	return b
+}
+
+// TimeInForce sets the time-in-force. Defaults to DAY.
+func (b *EquityOrderBuilder) TimeInForce(v TimeInForce) *EquityOrderBuilder {
+	b.timeInForce = v
+	return b
+}
+
+// Market sets the order type to MARKET (no price required).
+func (b *EquityOrderBuilder) Market() *EquityOrderBuilder {
+	b.orderType = OrderTypeMarket
+	return b
+}
+
+// Build validates the builder state and returns a populated [OrderRequest].
+// It panics if the order is malformed.
+func (b *EquityOrderBuilder) Build() OrderRequest {
+	if b.symbol == "" {
+		panic("trade: EquityOrderBuilder: symbol is required")
+	}
+	if !b.side.valid() {
+		panic("trade: EquityOrderBuilder: side must be BUY or SELL")
+	}
+	if b.quantity == nil || b.quantity.IsZero() || b.quantity.IsNegative() {
+		panic("trade: EquityOrderBuilder: quantity must be a positive decimal")
+	}
+	if !b.orderType.valid() {
+		panic("trade: EquityOrderBuilder: invalid order type")
+	}
+
+	switch b.orderType {
+	case OrderTypeLimit:
+		if b.limitPrice == nil || b.limitPrice.IsZero() || b.limitPrice.IsNegative() {
+			panic("trade: EquityOrderBuilder: LIMIT order requires a positive limit price")
+		}
+	case OrderTypeMarket:
+		if b.limitPrice != nil && !b.limitPrice.IsZero() {
+			panic("trade: EquityOrderBuilder: MARKET order must not have a limit price")
+		}
+	}
+
+	req := OrderRequest{
+		ComboType:             ComboTypeNormal,
+		InstrumentType:        InstrumentTypeEquity,
+		Market:                MarketUS,
+		Symbol:                b.symbol,
+		Side:                  b.side,
+		Quantity:              b.quantity,
+		OrderType:             b.orderType,
+		EntrustType:           EntrustTypeQty,
+		TimeInForce:           b.timeInForce,
+		SupportTradingSession: TradingSessionCore,
+	}
+	if b.limitPrice != nil && !b.limitPrice.IsZero() {
+		req.LimitPrice = b.limitPrice
+	}
+	if b.stopPrice != nil && !b.stopPrice.IsZero() {
+		req.StopPrice = b.stopPrice
+	}
+	return req
 }

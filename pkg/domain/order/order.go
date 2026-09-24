@@ -17,7 +17,10 @@
 // order through its lifecycle.
 package order
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 type State string
 
@@ -192,5 +195,65 @@ func FromWebullStatus(s string) State {
 		return StateExpired
 	default:
 		return StateUnknown
+	}
+}
+
+// Order is a tracked Webull order with a local state machine. It is returned by
+// [Client.PlaceOrder] and updated by applying events from the Webull order event
+// stream. The embedded [PlaceOrderResult] provides field-level compatibility with
+// the wire response.
+type Order struct {
+	PlaceOrderResult
+	// AccountID is the securities account the order belongs to.
+	AccountID string `json:"account_id"`
+	// Machine is the local state machine tracking the order's lifecycle.
+	Machine *Machine
+}
+
+// PlaceOrderResult mirrors the fields returned by the Webull place-order endpoint.
+type PlaceOrderResult struct {
+	// ClientOrderID echoes the caller-supplied order identifier.
+	ClientOrderID string `json:"client_order_id"`
+	// OrderID is the system-generated order identifier.
+	OrderID string `json:"order_id"`
+}
+
+// ApplySceneType applies a state transition for the given Webull scene type string
+// (for example "CANCEL_SUCCESS", "FILLED", "FINAL_FILLED"). It returns the new
+// state and an error if the scene type is unknown or the transition is invalid.
+func (o *Order) ApplySceneType(sceneType string) (State, error) {
+	return o.Machine.ApplyEvent(SceneTypeToEvent(sceneType))
+}
+
+// SceneTypeToEvent maps a Webull gRPC scene type string to an order [Event].
+// Scene types are documented in the Webull OpenAPI event payload schema.
+func SceneTypeToEvent(sceneType string) Event {
+	switch sceneType {
+	case "PLACE":
+		return EventPlace
+	case "ACKNOWLEDGED":
+		return EventAcknowledge
+	case "CONFIRM_SUCCESS":
+		return EventConfirm
+	case "CANCEL_SUCCESS":
+		return EventCancel
+	case "CANCEL_FAIL":
+		return EventCancel
+	case "MODIFY_SUCCESS":
+		return EventReplace
+	case "MODIFY_FAIL":
+		return EventReplace
+	case "FILLED", "FINAL_FILLED":
+		return EventFill
+	case "PARTIAL_FILLED":
+		return EventPartialFill
+	case "REJECTED", "REJECT_FAIL":
+		return EventReject
+	case "EXPIRED":
+		return EventExpire
+	case "CANCEL_REQUESTED":
+		return EventCancelRequest
+	default:
+		return Event(strings.ToUpper(sceneType))
 	}
 }

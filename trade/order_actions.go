@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/domain/order"
 	"github.com/shing1211/webullapi4go/pkg/errors"
 )
 
@@ -184,6 +185,11 @@ func (r CancelOrderRequest) Validate() error {
 // identifier, and returns the resulting identifiers. The request is validated
 // before any network call, so a malformed request never reaches the API.
 //
+// ReplaceOrder checks the local order state before sending: if the order is in a
+// terminal state (filled, cancelled, failed, or expired) the API call is skipped
+// and an error with [errs.CodeInvalidTransition] is returned. Replacing a
+// confirmed order is permitted (it re-submits the order).
+//
 // Only the fields set on each [ModifyOrderRequest] are changed. ReplaceOrder
 // can mutate live orders; callers should confirm the order identifiers first.
 //
@@ -191,6 +197,17 @@ func (r CancelOrderRequest) Validate() error {
 func (c *Client) ReplaceOrder(ctx context.Context, req ReplaceOrderRequest) (*ReplaceOrderResult, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
+	}
+	if c.orderRegistry != nil {
+		for _, m := range req.ModifyOrders {
+			c.ordMu.RLock()
+			o, ok := c.getOrder(m.ClientOrderID)
+			c.ordMu.RUnlock()
+			if ok && order.IsTerminal(o.Machine.State()) {
+				return nil, errs.Wrap(errs.CodeInvalidTransition,
+					fmt.Sprintf("order %s is %s: cannot replace", m.ClientOrderID, o.Machine.State()), nil)
+			}
+		}
 	}
 	var out ReplaceOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersReplace, nil, req, &out); err != nil {
@@ -203,6 +220,12 @@ func (c *Client) ReplaceOrder(ctx context.Context, req ReplaceOrderRequest) (*Re
 // returns the resulting identifiers. The request is validated before any
 // network call, so a malformed request never reaches the API.
 //
+// CancelOrder checks the local order state before sending: if the order is in a
+// terminal state (filled, cancelled, failed, or expired) the API call is skipped
+// and an error with [errs.CodeInvalidTransition] is returned. This saves a
+// round-trip to a circuit-breaker-protected endpoint for orders that cannot be
+// cancelled.
+//
 // CancelOrder can mutate live orders. The v3 endpoint identifies an order by
 // [CancelOrderRequest.ClientOrderID]; the [CancelOrderResult.OrderID] is only
 // echoed in the response.
@@ -212,9 +235,38 @@ func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*Canc
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	if c.orderRegistry != nil {
+		c.ordMu.RLock()
+		o, ok := c.getOrder(req.ClientOrderID)
+		c.ordMu.RUnlock()
+		if ok && order.IsTerminal(o.Machine.State()) {
+			return nil, errs.Wrap(errs.CodeInvalidTransition,
+				fmt.Sprintf("order %s is %s: cannot cancel", req.ClientOrderID, o.Machine.State()), nil)
+		}
+	}
 	var out CancelOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersCancel, nil, req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
+}
+
+// NewCancelOrderRequest is a convenience constructor for a [CancelOrderRequest].
+func NewCancelOrderRequest(accountID, clientOrderID string) CancelOrderRequest {
+	return CancelOrderRequest{
+		AccountID:     accountID,
+		ClientOrderID: clientOrderID,
+	}
+}
+
+// NewModifyOrderRequest is a convenience constructor for a [ReplaceOrderRequest]
+// targeting a single order. Set modifier fields on the returned request's
+// [ModifyOrderRequest] before passing it to [Client.ReplaceOrder].
+func NewModifyOrderRequest(accountID, clientOrderID string) ReplaceOrderRequest {
+	return ReplaceOrderRequest{
+		AccountID: accountID,
+		ModifyOrders: []ModifyOrderRequest{
+			{ClientOrderID: clientOrderID},
+		},
+	}
 }

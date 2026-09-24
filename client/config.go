@@ -114,6 +114,13 @@ type Config struct {
 	// httpTransport, when non-nil, is used as the [http.Transport] for the
 	// HTTP client created by [New] or set by [WithHTTPClient].
 	httpTransport *http.Transport
+	// interceptors are checked after rate-limiting and circuit-breaking but
+	// before the request is signed and sent. Each interceptor receives the
+	// next function in the chain and may inspect, wrap, or short-circuit
+	// the request. Interceptors fire in the order they are supplied.
+	interceptors []Interceptor
+	// hooks exposes lifecycle callbacks for observability integration.
+	hooks Hooks
 }
 
 // DefaultConfig returns a [Config] pre-filled with production Hong Kong

@@ -57,6 +57,10 @@ const (
 	CodeRateLimited Code = "RATE_LIMITED"
 	// CodeServer indicates an HTTP 5xx response: the Webull service failed.
 	CodeServer Code = "SERVER_ERROR"
+	// CodeInvalidTransition indicates a request that is invalid given the
+	// current state of the target resource (for example cancelling an already-filled
+	// order).
+	CodeInvalidTransition Code = "invalid_transition"
 )
 
 // Error is the SDK's typed error. It is safe to return by value as *Error and
@@ -146,6 +150,8 @@ var (
 	ErrRateLimited = New(CodeRateLimited, "rate limited")
 	// ErrServer matches [CodeServer].
 	ErrServer = New(CodeServer, "server error")
+	// ErrInvalidTransition matches [CodeInvalidTransition].
+	ErrInvalidTransition = New(CodeInvalidTransition, "invalid state transition")
 )
 
 // FromHTTPStatus maps a non-2xx HTTP response status to a typed [Error]. When

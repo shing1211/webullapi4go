@@ -38,8 +38,10 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/order"
 )
 
 // Client exposes the Webull Trading HTTP API. It is a thin, typed layer on top
@@ -50,8 +52,10 @@ import (
 // A Client is safe for concurrent use and does not own the underlying
 // [client.Client]; callers close that client themselves.
 type Client struct {
-	core *client.Client
-	cfg  config
+	core          *client.Client
+	cfg           config
+	ordMu         sync.RWMutex
+	orderRegistry map[string]*order.Order
 }
 
 // New returns a trading client bound to c, configured by opts. Options are
@@ -91,3 +95,20 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, out any
 // Close releases resources held by the client. The underlying [client.Client]
 // is owned by the caller and is not closed here.
 func (c *Client) Close() error { return nil }
+
+// getOrder returns the tracked order for clientOrderID, or nil if not found.
+// The caller must hold c.ordMu.
+func (c *Client) getOrder(clientOrderID string) (*order.Order, bool) {
+	o, ok := c.orderRegistry[clientOrderID]
+	return o, ok
+}
+
+// registerOrder adds o to the local order registry keyed by its ClientOrderID.
+func (c *Client) registerOrder(o *order.Order) {
+	c.ordMu.Lock()
+	defer c.ordMu.Unlock()
+	if c.orderRegistry == nil {
+		c.orderRegistry = make(map[string]*order.Order)
+	}
+	c.orderRegistry[o.ClientOrderID] = o
+}

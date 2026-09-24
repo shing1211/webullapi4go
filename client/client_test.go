@@ -492,3 +492,106 @@ func TestWithResiliencePreset(t *testing.T) {
 		t.Fatalf("Do() error = %v", err)
 	}
 }
+
+func TestInterceptorChain(t *testing.T) {
+	t.Parallel()
+
+	var callOrder []string
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		callOrder = append(callOrder, "server")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithInterceptor(func(ctx context.Context, next func(context.Context) error) error {
+			callOrder = append(callOrder, "interceptor-a")
+			return next(ctx)
+		}),
+		client.WithInterceptor(func(ctx context.Context, next func(context.Context) error) error {
+			callOrder = append(callOrder, "interceptor-b")
+			return next(ctx)
+		}),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	err = cl.Do(context.Background(), http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if len(callOrder) != 3 {
+		t.Fatalf("callOrder = %v, want [interceptor-a, interceptor-b, server]", callOrder)
+	}
+	if callOrder[0] != "interceptor-a" || callOrder[1] != "interceptor-b" || callOrder[2] != "server" {
+		t.Errorf("callOrder = %v, want [interceptor-a, interceptor-b, server]", callOrder)
+	}
+}
+
+func TestHooks(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	var hookOrder []string
+	hooks := client.Hooks{
+		OnRequest: func(method, path string) {
+			hookOrder = append(hookOrder, "OnRequest:"+path)
+		},
+		OnLatency: func(attempt int, d time.Duration) {
+			hookOrder = append(hookOrder, "OnLatency")
+		},
+		OnResponse: func(status int, latency time.Duration) {
+			hookOrder = append(hookOrder, "OnResponse")
+		},
+	}
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithHooks(hooks),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	err = cl.Do(context.Background(), http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if len(hookOrder) == 0 {
+		t.Fatal("no hooks were called")
+	}
+	if hookOrder[0] != "OnRequest:/test" {
+		t.Errorf("first hook = %q, want OnRequest:/test", hookOrder[0])
+	}
+}
