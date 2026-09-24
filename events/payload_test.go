@@ -16,12 +16,13 @@ package events_test
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/shing1211/webullapi4go/events"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // orderEventJSON is a representative order status-change payload, modelled on a
@@ -39,8 +40,11 @@ const optionEventJSON = `{"secAccountId":66600004338,"requestId":"EVENT-REQ-2","
 // orderResponse builds a data response carrying payload with the given event
 // kind.
 func dataResponse(kind uint32, contentType, payload string) *eventsevents.SubscribeResponse {
+	if kind > math.MaxInt32 {
+		panic("event kind exceeds protobuf int32 range")
+	}
 	return &eventsevents.SubscribeResponse{
-		EventType:   eventsevents.EventType(kind),
+		EventType:   eventsevents.EventType(int32(kind)),
 		ContentType: contentType,
 		Payload:     payload,
 	}

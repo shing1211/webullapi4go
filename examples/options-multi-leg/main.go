@@ -33,8 +33,14 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/trade"
 )
+
+func moneyPtr(s string) *money.Money {
+	m := money.Must(money.NewFromString(s))
+	return &m
+}
 
 func main() {
 	if os.Getenv("WEBULL_OPTIONS_TEST") != "1" {
@@ -80,8 +86,8 @@ func main() {
 			name:     "VERTICAL",
 			strategy: trade.OptionStrategyVertical,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.50",
@@ -90,8 +96,8 @@ func main() {
 			name:     "STRADDLE",
 			strategy: trade.OptionStrategyStraddle,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "3.00",
@@ -100,8 +106,8 @@ func main() {
 			name:     "STRANGLE",
 			strategy: trade.OptionStrategyStrangle,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "2.50",
@@ -110,10 +116,10 @@ func main() {
 			name:     "IRON_CONDOR",
 			strategy: trade.OptionStrategyIronCondor,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: "200.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypePut, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "240.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("200.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("240.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.00",
@@ -122,10 +128,10 @@ func main() {
 			name:     "IRON_BUTTERFLY",
 			strategy: trade.OptionStrategyIronButterfly,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: "200.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypePut, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "240.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("200.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("240.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.50",
@@ -134,9 +140,9 @@ func main() {
 			name:     "BUTTERFLY",
 			strategy: trade.OptionStrategyButterfly,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "2"},
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("2")},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "2.00",
@@ -145,8 +151,8 @@ func main() {
 			name:     "COLLAR",
 			strategy: trade.OptionStrategyCollar,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypePut, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.00",
@@ -155,8 +161,8 @@ func main() {
 			name:     "CALENDAR",
 			strategy: trade.OptionStrategyCalendar,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "220.00", OptionExpireDate: "2027-01-15", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("220.00"), OptionExpireDate: "2027-01-15", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.50",
@@ -165,8 +171,8 @@ func main() {
 			name:     "DIAGONAL",
 			strategy: trade.OptionStrategyDiagonal,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2027-01-15", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2027-01-15", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "1.00",
@@ -175,8 +181,8 @@ func main() {
 			name:     "RATIO",
 			strategy: trade.OptionStrategyRatio,
 			legs: []trade.OrderLeg{
-				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: "210.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "2"},
-				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: "230.00", OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: "1"},
+				{Symbol: "AAPL", Side: trade.OrderSideBuy, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("210.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("2")},
+				{Symbol: "AAPL", Side: trade.OrderSideSell, OptionType: trade.OptionTypeCall, StrikePrice: moneyPtr("230.00"), OptionExpireDate: "2026-12-18", InstrumentType: trade.InstrumentTypeOption, Market: trade.MarketUS, Quantity: moneyPtr("1")},
 			},
 			quantity:   "1",
 			limitPrice: "2.00",
@@ -197,10 +203,10 @@ func main() {
 					Symbol:         "AAPL",
 					OrderType:      trade.OrderTypeLimit,
 					Side:           trade.OrderSideBuy,
-					Quantity:       tc.quantity,
+					Quantity:       moneyPtr(tc.quantity),
 					EntrustType:    trade.EntrustTypeQty,
 					TimeInForce:    trade.TimeInForceDay,
-					LimitPrice:     tc.limitPrice,
+					LimitPrice:     moneyPtr(tc.limitPrice),
 					OptionStrategy: tc.strategy,
 					Legs:           tc.legs,
 				},
@@ -236,9 +242,9 @@ func aaplCallLeg(strike, expiry string) trade.OrderLeg {
 		Market:           trade.MarketUS,
 		Symbol:           "AAPL",
 		Side:             trade.OrderSideBuy,
-		StrikePrice:      strike,
+		StrikePrice:      moneyPtr(strike),
 		OptionExpireDate: expiry,
 		OptionType:       trade.OptionTypeCall,
-		Quantity:         "1",
+		Quantity:         moneyPtr("1"),
 	}
 }

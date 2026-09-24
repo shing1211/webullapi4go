@@ -19,7 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/transport"
 )
 
@@ -29,7 +30,7 @@ import (
 // from it.
 //
 // A Client is safe for concurrent use. All network access flows through
-// [Client.Do].
+// [Client.Do], [Client.DoBroker], or [Client.DoStream].
 type Client struct {
 	cfg       *Config
 	transport *transport.Client
@@ -74,7 +75,7 @@ func New(opts ...Option) (*Client, error) {
 		return nil, err
 	}
 	if cfg.HTTPClient == nil {
-		cfg.HTTPClient = &http.Client{Timeout: cfg.Timeout}
+		cfg.HTTPClient = &http.Client{Timeout: cfg.Timeout, Transport: defaultHTTPTransport()}
 	}
 	if cfg.httpTransport != nil {
 		cfg.HTTPClient.Transport = cfg.httpTransport
@@ -90,8 +91,32 @@ func New(opts ...Option) (*Client, error) {
 	return c, nil
 }
 
+func defaultHTTPTransport() http.RoundTripper {
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return http.DefaultTransport
+	}
+	tuned := transport.Clone()
+	tuned.MaxIdleConns = 100
+	tuned.MaxIdleConnsPerHost = 10
+	tuned.IdleConnTimeout = 90 * time.Second
+	tuned.TLSHandshakeTimeout = 10 * time.Second
+	tuned.ExpectContinueTimeout = time.Second
+	return tuned
+}
+
 // Config returns a copy of the client configuration.
 func (c *Client) Config() Config { return *c.cfg }
+
+// ObservabilityConfig returns the telemetry configuration shared by this client
+// and service clients created from it. The returned value must be treated as
+// read-only after the client is constructed.
+func (c *Client) ObservabilityConfig() *observability.Config {
+	if c == nil {
+		return nil
+	}
+	return c.cfg.otel
+}
 
 // Region returns the configured region.
 func (c *Client) Region() Region { return c.cfg.Region }

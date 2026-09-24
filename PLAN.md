@@ -1,175 +1,127 @@
-# Enhancement / Production Hardening Plan
+# Production Hardening Plan and Decision Record
 
-Status: **Approved · Phase 1 complete · Phases 2–7 pending** · Target release: **`v2.0.0`** (breaking Go-API changes)
+Last updated: 2026-09-25
 
-> Approving this plan explicitly authorizes edits to `.github/workflows/ci.yml` and `.golangci.yml` that AGENTS.md otherwise restricts.
+Status: **Latest release `v2.1.0`; current hardening is implemented and offline-tested under Unreleased, not released or newly live-verified.**
 
-## Compatibility strategy
+## Architecture baseline
 
-v2.0.0 introduces breaking Go-API changes (package relocation, `decimal.Decimal` on DTOs, new facade import path). v1.x is preserved on a branch for non-migrating consumers; deprecated shims at the old import paths delegate to the new locations for one release cycle and are removed in v3. JSON wire format is unchanged — `decimal.Decimal` marshal/unmarshal round-trips as strings.
+The current architecture preserves the original public service packages. Moving every service under `pkg/` was considered and is closed.
 
-## Structure
+| Layer | Canonical packages | Responsibility |
+|---|---|---|
+| Core | `client/` | Configuration, signing, tokens, HTTP transport, resilience, and request pipeline |
+| Services | `data/`, `stream/`, `trade/`, `events/`, `connect/`, `display/`, `brokerfd/`, `brokerfd/events/` | Market data, streaming, trading, events, OAuth, and client surfaces |
+| Broker HK | `broker/` | Separate Go module for Broker API HK |
+| Shared foundations | `pkg/errors/`, `pkg/observability/`, `pkg/resilience/`, `pkg/transport/`, `pkg/types/`, `pkg/domain/money/`, `pkg/domain/order/` | Reusable public primitives and domain types; not relocated services |
+| Convenience | `webull/` | Thin type and constructor aliases for the core client; it is not an aggregate service facade |
+| Implementation details | `internal/` | Authentication, compatibility aliases, legacy tests, and other non-public code |
 
-```
-Resolved Decisions        ← what + why
-Phases 1–7              ← the work (sequenced by execution order)
-Execution Order         ← checkpoint plan
-Risks & Mitigations
-Out of Scope
-Verification Gates
-Reference
-```
+Public DTOs that model decimal financial values use `money.Money` (required/response fields) or `*money.Money` (optional/request fields). Raw `decimal.Decimal` is not a public DTO migration target. JSON remains a decimal string on the wire.
 
-## Resolved Decisions
+## Verification vocabulary
 
-### Scope & strategy
-
-| Decision | Resolution |
+| State | Meaning |
 |---|---|
-| Scope | All items in scope — SDK hardening, OMS, decimal, `/pkg` relayout, observability, DevOps |
-| Compatibility | v2.0.0 breaking changes; v1.x preserved; deprecated shims for one cycle |
-| goreleaser | **Skip** — a library ships no binaries; revisit only if CLI tools are added |
+| Implemented | Public code exists in the current tree |
+| Offline-tested | Credential-free unit or local-server tests pass |
+| Live-verified | Exercised successfully against an available Webull sandbox or production surface |
+| Blocked | Cannot be live-verified with the currently available credentials, host, or entitlement |
+| Released | Present in a tagged release; Unreleased work is not included |
 
-### Technical decisions
+An implemented endpoint is not automatically live-verified. Offline tests do not prove that an upstream host, entitlement, symbol set, or response schema is available.
+
+## Current resolved decisions
 
 | # | Decision | Resolution |
 |---|---|---|
-| T1 | Tracing/metrics | **Direct `go.opentelemetry.io/otel` API-only dep**, no-op default, `WithTracerProvider`/`WithMeterProvider`; `otelhttp` for REST instrumentation |
-| T2 | Resilience defaults | **Keep opt-in + add `WithResiliencePreset()`**; defaults unchanged from v1.1.0 (non-breaking) |
-| T3 | Package layout | **Relocate to `/pkg/...`** (`pkg/domain`, `pkg/services`, `pkg/transport`, `pkg/errors`); old root packages become deprecated shims |
-| T4 | Decimal | **`decimal.Decimal` on DTOs** (strict wrapper; JSON round-trips as strings) |
-| T5 | OMS | **SDK-side domain model** (`OrderState` + `ApplyEvent(Event) (State, error)`) |
-| T6 | HMAC signing | **REST = HMAC-SHA1 (MD5 body digest); gRPC = HMAC-SHA256** — documented, not changed |
-| T7 | Go version matrix | `[1.26.x, stable]` — go.mod is `1.26`, so `1.22+` is impossible |
+| T1 | Tracing and metrics | Direct `go.opentelemetry.io/otel` API integration with no-op defaults, `WithTracerProvider`, `WithMeterProvider`, `WithPropagator`, and `WithLogger`; no `otelhttp` dependency |
+| T2 | Resilience defaults | Keep the released v1 behavior; rate limiting, circuit breaking, and full-jitter presets remain opt-in |
+| T3 | Package layout | Preserve root service packages; use `pkg/` only for shared foundations |
+| T4 | Numeric DTOs | Use `money.Money` and `*money.Money`; do not migrate public DTOs to raw `decimal.Decimal` |
+| T5 | OMS | Keep the SDK-side, concurrency-safe order state machine and add status reconciliation from events and snapshots |
+| T6 | HMAC signing | REST remains HMAC-SHA1 with an MD5 body digest; event gRPC remains HMAC-SHA256; no protocol change |
+| T7 | Go version | `go.mod` requires Go 1.26; CI validates supported 1.26 toolchains |
+| T8 | Streaming allocations | Do not use `sync.Pool` in the streaming path; ownership and channel lifecycle remain explicit |
+| T9 | Live verification | Record credential and entitlement blockers instead of treating implementation as proof of live behavior |
 
-## Phases
+## Superseded and closed decisions
 
-### Phase 1 — DevOps & testing infrastructure
-
-Pure config; unblocks later gates.
-
-| # | Item | Notes |
+| Earlier decision | Status | Current resolution |
 |---|---|---|
-| 1.1 | Makefile targets | `build`, `test`, `test-race`, `cover`, `lint`, `fuzz`, `vuln`, `docs` (today only proto codegen) |
-| 1.2 | `gosec` | Enable in `.golangci.yml`; exclude known false positives (e.g. `math/rand` in jitter) |
-| 1.3 | `govulncheck` | Makefile target + CI job |
-| 1.4 | Coverage gate | **Measure baseline first** (`go test ./... -cover`), then a job + realistic gate (85% on touched/new code first; raise repo-wide only if baseline supports it) |
-| 1.5 | CI matrix | `ubuntu-latest` / `macos-latest` / `windows-latest` × Go `[1.26.x, stable]`; Windows needs a `GOTMPDIR` workaround for the known `a.out.exe` file-lock issue; `gofmt` and `go vet` jobs retained |
-| 1.6 | Dependabot | `gomod` + `github-actions`, weekly |
-| 1.7 | Hardening tests | `goleak` in test mains; `FuzzDecodeQuote/Snapshot/Tick` + notice-JSON fuzz; mock MQTT broker; burst/reconnect/drop simulations; table-driven tests throughout |
+| Relocate `client`, `data`, `trade`, `stream`, `events`, and the other services under a full `pkg/` hierarchy | **Superseded; closed** | Root service packages remain canonical; only shared foundations live under `pkg/` |
+| Turn root service packages into deprecated forwarding shims | **Superseded; closed** | Root packages contain the implementations and are not deprecated. Limited deprecated aliases under `internal/` remain only for old internal imports |
+| Migrate all DTO decimals to raw `decimal.Decimal` | **Superseded; closed** | Public financial values use `money.Money`; JSON decimal strings are preserved |
+| Add `sync.Pool` unconditionally, or as an assumed streaming optimization | **Closed without implementation** | The stream path has no `sync.Pool`; a future pool requires a separate benchmark-backed proposal |
+| Build a full aggregate `webull` service facade | **Superseded; closed** | `webull/` remains a thin alias/convenience package; service clients remain in their root packages |
+| Wrap REST with `otelhttp` | **Superseded; closed** | The SDK emits direct OpenTelemetry client spans and metrics through the OTel API |
 
-### Phase 2 — Architecture & domain foundation (blocking)
+## Workstream status
 
-Largest phase; everything else depends on the new layout. Perform relocation in one pass with shims.
-
-| # | Item | Location | Notes |
+| Workstream | Released baseline | Unreleased follow-up | Verification |
 |---|---|---|---|
-| 2.1 | New canonical layout | `pkg/domain`, `pkg/services`, `pkg/transport`, `pkg/errors` | `pkg/domain` holds models, enums, decimal helpers, public errors; `pkg/services` holds MarketData, Trading, Account, Streaming; `pkg/transport` holds REST/MQTT/gRPC factories and the `Doer` interface |
-| 2.2 | Deprecated shims | `client/`, `data/`, `trade/`, `stream/`, `events/`, `broker/`, `brokerfd/`, `display/`, `connect/` | Re-export/delegate to `pkg/` locations with `// Deprecated:`; removed in v3 |
-| 2.3 | Facade package | new `webull/` | `New()` + `Client`, `MarketData`, `Trading`, `Account`, `Streaming` interfaces and concrete implementations; compile-time `var _ MarketData = (*svc.MarketData)(nil)` asserts |
-| 2.4 | Decimal on DTOs | ~250 numeric `string` fields across `data/`, `trade/`, `pkg/domain` | Strict `decimal.Decimal` wrapper (errors on non-numeric); JSON round-trips as strings; Go-side break requires a v2 migration guide |
-| 2.5 | Computed helpers | `pkg/domain/money` | `Position.UnrealizedPnL()`, `AssetsBalance.MarginUtilization()`, `OrderRequest.Notional()` |
-| 2.6 | Interfaces & `Doer` | `pkg/transport` and per-service packages | `RESTClient`, `MQTTClient`, `GRPCClient` enable pure unit mocks |
-| 2.7 | OMS state machine | `pkg/domain/order` | `OrderState` enum with validated transitions; `ApplyEvent(Event) (State, error)`; events: Placed, Acknowledged, Fill, PartialFill, CancelRequest, Cancel, Reject, Expire; `OnStateChanged` hook |
+| DevOps and tests | Build/test/lint targets, security checks, multi-OS CI, dependabot, leak and fuzz tests | Current changes | Offline suite passes 2026-09-25 |
+| Shared foundations | Public errors, transport, resilience, observability, `money.Money`, and order domain packages | Additional money and order-state regression coverage | Offline-tested |
+| REST pipeline | Interceptors, hooks, resilience, clock correction, tracing, metrics, and logging | `Do`, `DoBroker`, and `DoStream` share one attempt pipeline; one-based attempt telemetry; stable correlation IDs; W3C propagation; response status and clock-offset parity | Offline-tested; not newly live-verified |
+| Trading OMS | Placement tracking and terminal preflight | Account-scoped tracking, status reconciliation, stable auto-generated client IDs, and success-only action transitions | Offline-tested; not newly live-verified |
+| MQTT streaming | State machine, reconnect/resubscribe, callbacks, and bounded channel policies | Terminal close, idempotent channel cancellation, blocked-dispatch cancellation, serialized resubscription, data-only health recovery, and MQTT dispatch tracing | Offline-tested; not newly live-verified |
+| Event telemetry | Typed event streams and reconnect | Per-attempt gRPC spans, attempt/duration metrics, structured logs, correlation metadata, and trace propagation for Trading and Broker FD events | Offline-tested with local gRPC servers; not newly live-verified |
+| Documentation | Guides, generated API pages, and reconciliation | Architecture/status reconciliation, OMS, streaming health/channels, typed errors, money, and OTel setup | `mkdocs build --strict` is the release gate |
 
-### Phase 3 — Security & resilience
+## Unreleased scope
 
-| # | Item | Notes |
-|---|---|---|
-| 3.1 | Clock-drift correction | Offset learned from response `Date` header → `x-timestamp`; bounded; `WithClockDriftCorrection(false)` opt-out |
-| 3.2 | Idempotency helpers | `NewClientOrderID()` (UUIDv4), `ClientOrderIDFrom()` (deterministic hash), `WithAutoClientOrderID(true)`; reuse/persistence policy stays app-side |
-| 3.3 | Transport tuning | Custom `http.Transport` defaults (pool/keep-alive/timeouts); `WithHTTPTransport` override wins |
-| 3.4 | Retry full jitter | `rand(0, min(cap, base·2ⁿ))` behind `WithResiliencePreset()`; default stays ±20% (non-breaking) |
-| 3.5 | Resilience preset | `WithResiliencePreset(production)` composes rate-limit + breaker + full-jitter defaults |
-| 3.6 | HMAC correctness | REST = HMAC-SHA1, gRPC = HMAC-SHA256 — document in `docs/authentication.md`; do **not** change REST to SHA256 |
+Current work is intentionally recorded as Unreleased until a tag is created.
 
-### Phase 4 — REST client & trading hardening
+1. Request-pipeline parity and observability hardening.
+2. OMS status reconciliation and account-scoped order tracking.
+3. MQTT/channel shutdown, reconnect serialization, and health correctness.
+4. Trading and Broker FD event telemetry.
+5. Updated account-monitor/order/stream examples and documentation.
 
-| # | Item | Notes |
-|---|---|---|
-| 4.1 | Interceptor pipeline | Composably ordered: rate-limit → breaker → sign → send → record; logging/metrics/tracing hooks plug in |
-| 4.2 | OMS integration | `PlaceOrder` returns an `Order` with initial state; cancel/amend validate state transitions; websocket events feed `ApplyEvent` |
-| 4.3 | Validation helpers | Enum/state checks before send; typed request builders |
+No item in this section is represented as released merely because it exists in the working tree.
 
-### Phase 5 — Streaming engine (MQTT)
+## Live-verification boundaries
 
-| # | Item | Notes |
-|---|---|---|
-| 5.1 | Connection state machine + health | Disconnected → Connecting → Connected → Reconnecting → Degraded → Closed; message-age watchdog; `OnHealth`; re-snapshot via `Grab:true`. Note: Webull MQTT protobuf carries **no sequence numbers**, so true seq-gap detection is impossible; health watchdog + re-snapshot is the substitute |
-| 5.2 | Channel mux + backpressure | Per-subscription bounded `<-chan`; configurable drop policy (`block` default / drop-oldest / sample); drop counters |
-| 5.3 | `sync.Pool` hot path | Include, gated by benchmarks — only land if allocation pressure is proven |
-| 5.4 | Resubscribe & state preservation | Formalize existing behavior; expose lifecycle events |
-
-### Phase 6 — Observability
-
-| # | Item | Notes |
-|---|---|---|
-| 6.1 | `slog` | `WithLogger(*slog.Logger)`, no-op default; per-request correlation ID in logs and error context |
-| 6.2 | OpenTelemetry | `go.opentelemetry.io/otel` (API-only, no-op default) + `otelhttp` for REST client instrumentation; spans for MQTT dispatch and gRPC; `WithTracerProvider`/`WithMeterProvider` options |
-| 6.3 | Metrics hooks | Latency histogram, drop/reconnect counters, breaker state transitions |
-| 6.4 | Correlation propagation | Request ID threaded through REST/MQTT/gRPC → logs + span context |
-
-### Phase 7 — Docs, examples & release
-
-| # | Item | Notes |
-|---|---|---|
-| 7.1 | Documentation | README (architecture, thread-safety, error handling); error-handling guide (public errors); OTel integration guide; decimal migration guide; v1→v2 migration guide |
-| 7.2 | Examples | Channel streaming with `context` timeout; limit order with idempotency key; async margin/balance monitor |
-| 7.3 | Changelog & status | `CHANGELOG.md` `[Unreleased]`; update `docs/implementation-status.md` |
-| 7.4 | Optional ADR | ADR-0003 to document layout/decimal/observability decisions (ADRs 0001/0002 are immutable) |
-| 7.5 | Release | Tag `v2.0.0`; preserve v1.x on a branch for non-migrating consumers |
-
-## Execution order & checkpoints
-
-Each checkpoint is a focused `git commit -s` (Conventional Commits + Signed-off-by).
-
-1. **P1** DevOps & testing infrastructure → commit
-2. **P2** Architecture & domain foundation (blocking) → tests → commit
-3. **P3** Security & resilience → commit
-4. **P4** REST client & trading → commit
-5. **P5** Streaming engine (+ `sync.Pool` only if benchmarks justify) → race + fuzz → commit
-6. **P6** Observability → commit
-7. **P7** Docs/examples + `mkdocs build --strict` → commit
-8. Full verification gates → push `origin` + `gitee` → **tag `v2.0.0`**
-
-## Risks & mitigations
-
-| Risk | Mitigation |
+| Surface | Current state |
 |---|---|
-| Relocation is large/mechanical (209 endpoints) | Deprecated shims preserve compatibility; use `gofmt -r` + full test coverage; do in one pass |
-| Decimal type changes break Go consumers | v2 migration guide; JSON wire format unchanged; strict wrapper errors on bad input |
-| OTel dependency adds module weight | API-only dep is lean; no-op default means no telemetry unless opted in |
-| Full-jitter behind a preset (defaults unchanged) | Non-breaking by design |
-| `gosec` false positives | Configure exclusions per-finding; review each flagged item |
-| Coverage gate unrealistic on the full repo | Measure baseline first; gate on touched/new code initially |
-| CI matrix Windows + race detector | `GOTMPDIR` workaround step |
-| Deprecated shims go stale | Maintain one release cycle, remove in v3 |
-| `gofmt -l .` fails after relocation | Run `gofmt -w .` as part of the relocation step; verify before commit |
+| Core auth, selected HK market data, accounts, read-only assets, MQTT streaming, and Trading events | Previously exercised against available HK sandbox paths; not all endpoints or current hardening changes are live-verified |
+| Footprint | Implemented and offline-tested; live request blocked by entitlement (`403`) |
+| Options contracts and multi-leg orders | Implemented and offline-tested; HK sandbox may return `417`, and US live behavior is unavailable |
+| US-only crypto, fund, screener, Broker FD, and related data | Implemented and offline-tested where covered; live verification blocked without US sandbox credentials |
+| Broker API HK | Implemented and offline-tested in its own module; HK sandbox returns `401 ROUTE_NOT_PERMITTED` because scope is missing |
+| Display Solution | Implemented and offline-tested; HK host returns `403` before endpoint-specific behavior can be verified |
+| SSE news | Implemented; HK upstream currently returns `504` |
+
+The generated [SDK ↔ API reconciliation](docs/reconciliation.md) remains authoritative for endpoint counts and path states. Its 2026-09-22 snapshot reports 209 implemented endpoints and 0 documented-only gaps, while also reporting summary-only and unresolved paths; do not summarize that report as zero discrepancies.
+
+## Verification gates
+
+```sh
+go build ./...
+go vet ./...
+gofmt -l .                 # must print nothing
+go test ./...
+go test -race -count=1 ./...
+golangci-lint run ./...
+mkdocs build --strict
+```
+
+The nested `broker/` module is tested separately with `go test ./...` from that directory.
 
 ## Out of scope
 
-- Broker FD US / Display Solution / broker HK surfaces are **environment-blocked** (404/403/401 in the HK sandbox), not SDK issues.
-- `docs/runs/**` is excluded from the published site and must never be edited.
-- ADRs 0001 and 0002 are immutable; supersede with new ADRs.
-- Stray root `.exe` binaries (`brokerfd.exe`, `brokerfd-events.exe`, `options.exe`) are gitignored; optional cleanup.
-
-## Verification gates (every checkpoint)
-
-- `go build ./...`
-- `go vet ./...`
-- `gofmt -l .` must print nothing
-- `go test -race -count=1 ./...`
-- `golangci-lint run` (including gosec once enabled)
-- Coverage gate (once P1.4 lands)
-- Fuzz smoke runs
-- `mkdocs build --strict` (after any doc changes)
-
-Final step: push to `origin` and `gitee`, then tag `v2.0.0`.
+- Reintroducing a full `pkg/` service relocation.
+- Deprecating the root service packages.
+- Raw `decimal.Decimal` DTO migration.
+- Unconditional or speculative `sync.Pool` use.
+- Editing generated files under `docs/webull-api/`.
+- Editing internal run artifacts under `docs/runs/`.
+- Claiming blocked or newly hardened surfaces are live-verified without the required access.
 
 ## Reference
 
 - Repository guide: `AGENTS.md`
-- Build/test/lint: `Makefile`, `.golangci.yml`, `.github/workflows/ci.yml`
-- Live sandbox tests: `.github/workflows/nightly-live.yml`
-- Docs site: `mkdocs.yml`, `docs/`
-- Official Webull docs: `https://developer.webull.hk/apis/docs` (HK)
+- Build/test/lint: `Makefile`
+- Current status: `IMPLEMENTATION_STATUS.md`
+- Changelog: `CHANGELOG.md`
+- Generated endpoint reconciliation: `docs/reconciliation.md`

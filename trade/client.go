@@ -38,6 +38,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/shing1211/webullapi4go/client"
@@ -55,7 +56,7 @@ type Client struct {
 	core          *client.Client
 	cfg           config
 	ordMu         sync.RWMutex
-	orderRegistry map[string]*order.Order
+	orderRegistry map[orderRegistryKey]*order.Order
 }
 
 // New returns a trading client bound to c, configured by opts. Options are
@@ -96,19 +97,52 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, out any
 // is owned by the caller and is not closed here.
 func (c *Client) Close() error { return nil }
 
-// getOrder returns the tracked order for clientOrderID, or nil if not found.
-// The caller must hold c.ordMu.
-func (c *Client) getOrder(clientOrderID string) (*order.Order, bool) {
-	o, ok := c.orderRegistry[clientOrderID]
+// getOrder returns the tracked order for accountID and clientOrderID, or a nil
+// pointer and false when no such order has been registered. The lookup does not
+// hold the registry lock while the caller uses the returned order.
+func (c *Client) getOrder(accountID, clientOrderID string) (*order.Order, bool) {
+	if c == nil {
+		return nil, false
+	}
+	c.ordMu.RLock()
+	o, ok := c.orderRegistry[orderRegistryKey{accountID: accountID, clientOrderID: clientOrderID}]
+	c.ordMu.RUnlock()
 	return o, ok
 }
 
-// registerOrder adds o to the local order registry keyed by its ClientOrderID.
-func (c *Client) registerOrder(o *order.Order) {
+// registerOrder adds o to the local order registry keyed by account and client
+// order identifiers. Re-registering the same logical order returns the existing
+// tracked object so a retry does not discard state learned by earlier events.
+func (c *Client) registerOrder(o *order.Order) *order.Order {
+	if o == nil {
+		return nil
+	}
+	return c.registerOrderWithKey(o, o.AccountID, o.ClientOrderID)
+}
+
+func (c *Client) registerOrderWithKey(o *order.Order, accountID, clientOrderID string) *order.Order {
+	if o == nil || strings.TrimSpace(accountID) == "" || clientOrderID == "" ||
+		len(clientOrderID) > maxClientOrderIDLength || !ValidClientOrderID(clientOrderID) {
+		return o
+	}
+	if o.AccountID == "" {
+		o.AccountID = accountID
+	}
+	if o.ClientOrderID == "" {
+		o.ClientOrderID = clientOrderID
+	}
+	if o.Machine == nil {
+		o.Machine = order.New(order.StatePending)
+	}
+	key := orderRegistryKey{accountID: accountID, clientOrderID: clientOrderID}
 	c.ordMu.Lock()
 	defer c.ordMu.Unlock()
 	if c.orderRegistry == nil {
-		c.orderRegistry = make(map[string]*order.Order)
+		c.orderRegistry = make(map[orderRegistryKey]*order.Order)
 	}
-	c.orderRegistry[o.ClientOrderID] = o
+	if existing, ok := c.orderRegistry[key]; ok && existing != nil {
+		return existing
+	}
+	c.orderRegistry[key] = o
+	return o
 }

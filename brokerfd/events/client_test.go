@@ -28,7 +28,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 type capture struct {
@@ -67,10 +67,16 @@ func (s *fakeServer) captured() capture {
 
 func newCore(t *testing.T) *client.Client {
 	t.Helper()
-	cl, err := client.New(
+	return newCoreWithOptions(t)
+}
+
+func newCoreWithOptions(t *testing.T, opts ...client.Option) *client.Client {
+	t.Helper()
+	base := []client.Option{
 		client.WithAppKey("test-app-key"),
 		client.WithAppSecret("test-app-secret"),
-	)
+	}
+	cl, err := client.New(append(base, opts...)...)
 	if err != nil {
 		t.Fatalf("client.New() error = %v", err)
 	}
@@ -79,6 +85,11 @@ func newCore(t *testing.T) *client.Client {
 }
 
 func newClient(t *testing.T, impl eventsevents.EventServiceServer, opts ...Option) *Client {
+	t.Helper()
+	return newClientWithCore(t, newCore(t), impl, opts...)
+}
+
+func newClientWithCore(t *testing.T, core *client.Client, impl eventsevents.EventServiceServer, opts ...Option) *Client {
 	t.Helper()
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
@@ -94,7 +105,7 @@ func newClient(t *testing.T, impl eventsevents.EventServiceServer, opts ...Optio
 			return lis.DialContext(ctx)
 		})),
 	}
-	cl, err := New(newCore(t), append(base, opts...)...)
+	cl, err := New(core, append(base, opts...)...)
 	if err != nil {
 		t.Fatalf("events.New() error = %v", err)
 	}
@@ -182,6 +193,9 @@ func TestRunDispatchesSignedEvents(t *testing.T) {
 	}
 	if len(cap.metadata.Get("host")) != 0 {
 		t.Errorf("host metadata must not be sent, got %v", cap.metadata.Get("host"))
+	}
+	if values := cap.metadata.Get("x-correlation-id"); len(values) != 1 || values[0] == "" {
+		t.Errorf("x-correlation-id = %v, want one non-empty value", values)
 	}
 
 	if cap.request == nil {

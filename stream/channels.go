@@ -57,8 +57,6 @@ type channelConfig struct {
 	topic       string
 }
 
-func (c *channelConfig) recordDrop() { c.dropCnt.Add(1) }
-
 func (c *channelConfig) recordDropToMeter() {
 	c.dropCnt.Add(1)
 	// OTel metric recording is intentionally fire-and-forget: the metric SDK
@@ -71,26 +69,184 @@ func (c *channelConfig) recordDropToMeter() {
 
 func (c *channelConfig) DropCount() int64 { return c.dropCnt.Load() }
 
+type channelLifecycle struct {
+	initOnce sync.Once
+	stopOnce sync.Once
+	stopCh   chan struct{}
+	sendMu   sync.Mutex
+}
+
+func (l *channelLifecycle) done() chan struct{} {
+	l.initOnce.Do(func() {
+		l.stopCh = make(chan struct{})
+	})
+	return l.stopCh
+}
+
+func (l *channelLifecycle) stop(closeFn func()) {
+	l.stopOnce.Do(func() {
+		close(l.done())
+		l.sendMu.Lock()
+		defer l.sendMu.Unlock()
+		if closeFn != nil {
+			closeFn()
+		}
+	})
+}
+
+func sendChannelMessage[T any](l *channelLifecycle, ch chan T, cfg *channelConfig, msg T, policy DropPolicy) {
+	l.sendMu.Lock()
+	defer l.sendMu.Unlock()
+
+	stopCh := l.done()
+	if channelStopped(stopCh) {
+		return
+	}
+
+	select {
+	case ch <- msg:
+		return
+	default:
+	}
+
+	switch policy {
+	case DropOldest:
+		select {
+		case <-ch:
+			recordChannelDrop(cfg)
+		default:
+		}
+		if channelStopped(stopCh) {
+			return
+		}
+		select {
+		case ch <- msg:
+		default:
+			recordChannelDrop(cfg)
+		}
+	case DropSample:
+		if rand.Intn(2) == 0 {
+			recordChannelDrop(cfg)
+			return
+		}
+		select {
+		case ch <- msg:
+		default:
+			recordChannelDrop(cfg)
+		}
+	default:
+		select {
+		case ch <- msg:
+		case <-stopCh:
+		}
+	}
+}
+
+func channelStopped(done <-chan struct{}) bool {
+	select {
+	case <-done:
+		return true
+	default:
+		return false
+	}
+}
+
+func recordChannelDrop(cfg *channelConfig) {
+	if cfg != nil {
+		cfg.recordDropToMeter()
+	}
+}
+
 type chanRegistry struct {
 	mu       sync.RWMutex
+	closed   bool
 	quote    map[*chanQuote]*channelConfig
 	snapshot map[*chanSnapshot]*channelConfig
 	tick     map[*chanTick]*channelConfig
 }
 
 type chanQuote struct {
-	ch   chan<- *marketdatav1.Quote
-	stop func()
+	ch        chan *marketdatav1.Quote
+	stop      func()
+	lifecycle channelLifecycle
+}
+
+func newChanQuote(ch chan *marketdatav1.Quote) *chanQuote {
+	return &chanQuote{ch: ch, stop: func() { close(ch) }}
+}
+
+func (e *chanQuote) shutdown() {
+	e.lifecycle.stop(func() {
+		if e.stop != nil {
+			e.stop()
+			return
+		}
+		close(e.ch)
+	})
+}
+
+func (e *chanQuote) send(msg *marketdatav1.Quote, cfg *channelConfig) {
+	policy := DropBlock
+	if cfg != nil {
+		policy = cfg.policy
+	}
+	sendChannelMessage(&e.lifecycle, e.ch, cfg, msg, policy)
 }
 
 type chanSnapshot struct {
-	ch   chan<- *marketdatav1.Snapshot
-	stop func()
+	ch        chan *marketdatav1.Snapshot
+	stop      func()
+	lifecycle channelLifecycle
+}
+
+func newChanSnapshot(ch chan *marketdatav1.Snapshot) *chanSnapshot {
+	return &chanSnapshot{ch: ch, stop: func() { close(ch) }}
+}
+
+func (e *chanSnapshot) shutdown() {
+	e.lifecycle.stop(func() {
+		if e.stop != nil {
+			e.stop()
+			return
+		}
+		close(e.ch)
+	})
+}
+
+func (e *chanSnapshot) send(msg *marketdatav1.Snapshot, cfg *channelConfig) {
+	policy := DropBlock
+	if cfg != nil {
+		policy = cfg.policy
+	}
+	sendChannelMessage(&e.lifecycle, e.ch, cfg, msg, policy)
 }
 
 type chanTick struct {
-	ch   chan<- *marketdatav1.Tick
-	stop func()
+	ch        chan *marketdatav1.Tick
+	stop      func()
+	lifecycle channelLifecycle
+}
+
+func newChanTick(ch chan *marketdatav1.Tick) *chanTick {
+	return &chanTick{ch: ch, stop: func() { close(ch) }}
+}
+
+func (e *chanTick) shutdown() {
+	e.lifecycle.stop(func() {
+		if e.stop != nil {
+			e.stop()
+			return
+		}
+		close(e.ch)
+	})
+}
+
+func (e *chanTick) send(msg *marketdatav1.Tick, cfg *channelConfig) {
+	policy := DropBlock
+	if cfg != nil {
+		policy = cfg.policy
+	}
+	sendChannelMessage(&e.lifecycle, e.ch, cfg, msg, policy)
 }
 
 func newChanRegistry() *chanRegistry {
@@ -101,109 +257,144 @@ func newChanRegistry() *chanRegistry {
 	}
 }
 
-func (r *chanRegistry) stopAll() {
+func (r *chanRegistry) addQuote(entry *chanQuote, cfg *channelConfig) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.closed {
+		return false
+	}
+	if r.quote == nil {
+		r.quote = make(map[*chanQuote]*channelConfig)
+	}
+	r.quote[entry] = cfg
+	return true
+}
+
+func (r *chanRegistry) addSnapshot(entry *chanSnapshot, cfg *channelConfig) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return false
+	}
+	if r.snapshot == nil {
+		r.snapshot = make(map[*chanSnapshot]*channelConfig)
+	}
+	r.snapshot[entry] = cfg
+	return true
+}
+
+func (r *chanRegistry) addTick(entry *chanTick, cfg *channelConfig) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return false
+	}
+	if r.tick == nil {
+		r.tick = make(map[*chanTick]*channelConfig)
+	}
+	r.tick[entry] = cfg
+	return true
+}
+
+func (r *chanRegistry) removeQuote(entry *chanQuote) {
+	r.mu.Lock()
+	delete(r.quote, entry)
+	r.mu.Unlock()
+	entry.shutdown()
+}
+
+func (r *chanRegistry) removeSnapshot(entry *chanSnapshot) {
+	r.mu.Lock()
+	delete(r.snapshot, entry)
+	r.mu.Unlock()
+	entry.shutdown()
+}
+
+func (r *chanRegistry) removeTick(entry *chanTick) {
+	r.mu.Lock()
+	delete(r.tick, entry)
+	r.mu.Unlock()
+	entry.shutdown()
+}
+
+func (r *chanRegistry) stopAll() {
+	r.mu.Lock()
+	r.closed = true
+	quote := make([]*chanQuote, 0, len(r.quote))
 	for entry := range r.quote {
-		entry.stop()
+		quote = append(quote, entry)
 	}
+	snapshot := make([]*chanSnapshot, 0, len(r.snapshot))
 	for entry := range r.snapshot {
-		entry.stop()
+		snapshot = append(snapshot, entry)
 	}
+	tick := make([]*chanTick, 0, len(r.tick))
 	for entry := range r.tick {
-		entry.stop()
+		tick = append(tick, entry)
+	}
+	r.quote = make(map[*chanQuote]*channelConfig)
+	r.snapshot = make(map[*chanSnapshot]*channelConfig)
+	r.tick = make(map[*chanTick]*channelConfig)
+	r.mu.Unlock()
+
+	for _, entry := range quote {
+		entry.shutdown()
+	}
+	for _, entry := range snapshot {
+		entry.shutdown()
+	}
+	for _, entry := range tick {
+		entry.shutdown()
 	}
 }
 
 func (r *chanRegistry) dispatchQuote(msg *marketdatav1.Quote) {
+	type dispatchEntry struct {
+		entry *chanQuote
+		cfg   *channelConfig
+	}
+
 	r.mu.RLock()
+	entries := make([]dispatchEntry, 0, len(r.quote))
 	for entry, cfg := range r.quote {
-		select {
-		case entry.ch <- msg:
-		default:
-			switch cfg.policy {
-			case DropOldest:
-				select {
-				case entry.ch <- msg:
-				default:
-					cfg.recordDropToMeter()
-				}
-			case DropSample:
-				if rand.Intn(2) == 0 {
-					cfg.recordDropToMeter()
-				} else {
-					select {
-					case entry.ch <- msg:
-					default:
-						cfg.recordDropToMeter()
-					}
-				}
-			default:
-				entry.ch <- msg
-			}
-		}
+		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	for _, item := range entries {
+		item.entry.send(msg, item.cfg)
+	}
 }
 
 func (r *chanRegistry) dispatchSnapshot(msg *marketdatav1.Snapshot) {
+	type dispatchEntry struct {
+		entry *chanSnapshot
+		cfg   *channelConfig
+	}
+
 	r.mu.RLock()
+	entries := make([]dispatchEntry, 0, len(r.snapshot))
 	for entry, cfg := range r.snapshot {
-		select {
-		case entry.ch <- msg:
-		default:
-			switch cfg.policy {
-			case DropOldest:
-				select {
-				case entry.ch <- msg:
-				default:
-					cfg.recordDropToMeter()
-				}
-			case DropSample:
-				if rand.Intn(2) == 0 {
-					cfg.recordDropToMeter()
-				} else {
-					select {
-					case entry.ch <- msg:
-					default:
-						cfg.recordDropToMeter()
-					}
-				}
-			default:
-				entry.ch <- msg
-			}
-		}
+		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	for _, item := range entries {
+		item.entry.send(msg, item.cfg)
+	}
 }
 
 func (r *chanRegistry) dispatchTick(msg *marketdatav1.Tick) {
+	type dispatchEntry struct {
+		entry *chanTick
+		cfg   *channelConfig
+	}
+
 	r.mu.RLock()
+	entries := make([]dispatchEntry, 0, len(r.tick))
 	for entry, cfg := range r.tick {
-		select {
-		case entry.ch <- msg:
-		default:
-			switch cfg.policy {
-			case DropOldest:
-				select {
-				case entry.ch <- msg:
-				default:
-					cfg.recordDropToMeter()
-				}
-			case DropSample:
-				if rand.Intn(2) == 0 {
-					cfg.recordDropToMeter()
-				} else {
-					select {
-					case entry.ch <- msg:
-					default:
-						cfg.recordDropToMeter()
-					}
-				}
-			default:
-				entry.ch <- msg
-			}
-		}
+		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	for _, item := range entries {
+		item.entry.send(msg, item.cfg)
+	}
 }

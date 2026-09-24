@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
@@ -71,9 +71,9 @@ type Config struct {
 	// overrides registered with [WithAPIVersionFor] take precedence over both.
 	APIVersion string
 
-	// autoToken, when true, makes [Client.Do] obtain an access token
-	// automatically before the first token-consuming request. It is enabled
-	// with [WithAutoToken].
+	// autoToken, when true, makes [Client.Do], [Client.DoBroker], and
+	// [Client.DoStream] obtain an access token automatically before the first
+	// token-consuming request. It is enabled with [WithAutoToken].
 	autoToken bool
 	// versionOverrides apply a per-path x-version override; the longest
 	// matching prefix wins. [Config.APIVersion] is the fallback.

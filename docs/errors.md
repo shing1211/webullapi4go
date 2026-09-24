@@ -1,135 +1,244 @@
 # Errors
 
-Every SDK function returns a normal Go `error`. Errors produced by the SDK are
-typed, carry a stable machine-readable code, and wrap their underlying cause, so
-they work with the standard library's `errors.Is` and `errors.As` traversal.
+Every SDK function returns a normal Go `error`. SDK errors are typed, carry a
+stable `errs.Code`, and preserve wrapped causes for `errors.Is` and
+`errors.As`.
 
 !!! note "Prerequisites"
-    - Familiarity with Go's `errors` package (`errors.Is`, `errors.As`)
+    - Familiarity with Go's `errors` package
     - An SDK client returning errors — see [Getting Started](getting-started.md)
 
-## Error shape
+## Typed error shape
 
-A Webull error formats as:
+`pkg/errors.Error` is public:
 
+```go
+type Error struct {
+    Code    errs.Code
+    Message string
+    Status  int
+    Err     error
+}
 ```
+
+`Status` is the HTTP status when the error came from an HTTP response and zero
+otherwise. `Unwrap` preserves the underlying network, context, gRPC, or
+operation error.
+
+```go
+import (
+    "context"
+    "errors"
+    "fmt"
+
+    errs "github.com/shing1211/webullapi4go/pkg/errors"
+)
+
+func classify(err error) error {
+    if err == nil {
+        return nil
+    }
+
+    var sdkErr *errs.Error
+    if errors.As(err, &sdkErr) {
+        fmt.Printf("code=%s status=%d message=%s\n",
+            sdkErr.Code, sdkErr.Status, sdkErr.Message)
+    }
+
+    switch {
+    case errors.Is(err, context.Canceled):
+        return err
+    case errs.Is(err, errs.CodeRateLimited):
+        return err
+    case errors.Is(err, errs.ErrForbidden):
+        return err
+    default:
+        return err
+    }
+}
+```
+
+Import the standard `errors` package and the SDK package with an alias such as
+`errs`. Do not compare `err.Error()` text.
+
+## Error format
+
+A typed error formats as one of:
+
+```text
 webull: <code>: <message>
 webull: <code>: <message>: <cause>
 ```
 
-For example:
+Examples:
 
-```
+```text
 webull: FORBIDDEN: http 403: Insufficient permission
-webull: transport: GET /market-data/stocks/snapshots/list: dial tcp: ...: connectex: connection refused
+webull: transport: GET /market-data/stocks/snapshots/list: dial tcp: connection refused
 ```
 
-The `<code>` token is stable and intended for classification. HTTP-derived
-errors classify as follows:
+The code is the stable classification. The message is for diagnostics and may
+change.
+
+## Codes
+
+### HTTP-derived codes
 
 | Code | Source |
-|------|--------|
+|---|---|
 | `UNAUTHORIZED` | HTTP 401 |
-| `FORBIDDEN` | HTTP 403 (missing permission or data entitlement) |
-| `INVALID_TOKEN` | HTTP 417 (missing, expired, or invalid access token) |
+| `FORBIDDEN` | HTTP 403 |
+| `INVALID_TOKEN` | HTTP 417 |
 | `RATE_LIMITED` | HTTP 429 |
 | `SERVER_ERROR` | HTTP 5xx |
-| `api` | Any other non-2xx response, or a response that failed to decode |
+| `api` | Any other non-2xx response or response decode failure |
 
-Errors that do not come from an HTTP response use:
+### SDK codes
 
 | Code | Meaning |
-|------|---------|
+|---|---|
 | `invalid_config` | Invalid client or request configuration |
-| `auth` | Signing, token, or authentication failure |
-| `transport` | Network or transport failure |
-| `unsupported` | Scaffolded API surface that is not implemented yet |
+| `auth` | Signing, token, subscription, or authentication failure |
+| `transport` | Network, HTTP transport, or reconnectable stream failure |
+| `unsupported` | The requested operation or protocol feature is unsupported |
+| `validation` | An input value failed validation outside client construction |
+| `not_initialized` | A required client or tracked resource was not initialized |
+| `invalid_transition` | An operation is illegal for the current order state |
+| `order_guardrail` | A risk guardrail rejected an order; normally wrapped by an outer `invalid_config` error for compatibility |
 
-HTTP error messages include the API's own message when the response body carries
-one (`message`, `msg`, `error_msg`, `errorMessage`, or `error_description`),
-otherwise the HTTP status text.
+HTTP messages use the API's `message`, `msg`, `error_msg`, `errorMessage`, or
+`error_description` field when present. A short raw body is retained when no
+recognized field exists.
 
-## Matching errors
+## Sentinels and matching
 
-Two sentinels are exported for programmatic matching:
-
-- `client.ErrAccessTokenRequired` — returned by `Client.Do` in production when
-  automatic token handling is enabled but no usable token is cached.
-- `client.ErrCircuitOpen` — wrapped into the error returned by `Client.Do` when a
-  configured circuit breaker rejects a call.
+Export a sentinel when callers need semantic matching; do not parse a code from
+text.
 
 ```go
 if errors.Is(err, client.ErrAccessTokenRequired) {
-	// Production: run cl.EnsureToken(ctx) once to complete 2FA, then retry.
+    // Complete the production token/2FA flow explicitly.
 }
 if errors.Is(err, client.ErrCircuitOpen) {
-	// A circuit breaker is open; back off before retrying.
+    // Back off until the breaker permits another attempt.
+}
+if errs.Is(err, errs.CodeRateLimited) {
+    // Stable code-based classification.
+}
+if errors.Is(err, errs.ErrOrderGuardrail) {
+    // A quantity or notional guardrail stopped the order.
 }
 ```
 
-Because every SDK error implements `Unwrap`, `errors.Is` also traverses to the
-underlying cause. Context cancellation surfaces as an error that matches
-`context.Canceled` or `context.DeadlineExceeded`, and transport failures keep
-their `net` error chain.
+Public sentinels in `pkg/errors` include:
+
+- `ErrUnsupported`
+- `ErrUnauthorized`, `ErrForbidden`, `ErrInvalidToken`, `ErrRateLimited`,
+  `ErrServer`
+- `ErrValidation`, `ErrNotInitialized`, `ErrInvalidTransition`
+- `ErrOrderGuardrail`
+- `ErrSubscriptionExpired`, `ErrConnectionLimitExceeded`
+
+`errors.Is` on two `*errs.Error` values matches when their `Code` values are
+equal, so both of these work:
 
 ```go
-if errors.Is(err, context.Canceled) {
-	// The caller cancelled the request.
+errors.Is(err, errs.ErrRateLimited)
+errs.Is(err, errs.CodeRateLimited)
+```
+
+The underlying cause remains in the chain. Context cancellation and deadlines
+match `context.Canceled` and `context.DeadlineExceeded`; network failures keep
+their `net` error chain.
+
+## Order errors
+
+OMS methods add a resource-specific layer while retaining the public typed
+error model:
+
+```go
+import (
+    "errors"
+
+    "github.com/shing1211/webullapi4go/pkg/domain/order"
+    errs "github.com/shing1211/webullapi4go/pkg/errors"
+    "github.com/shing1211/webullapi4go/trade"
+)
+
+state, err := trading.ApplyOrderEvent(accountID, clientOrderID, order.EventAcknowledge)
+switch {
+case err == nil:
+    // state was updated
+case errs.Is(err, errs.CodeNotInitialized):
+    // The order is not tracked by this client instance.
+case errs.Is(err, errs.CodeInvalidTransition):
+    // The event is not legal for the current state.
+case errors.Is(err, order.ErrInvalidTransition):
+    // The underlying domain transition error is also preserved.
 }
 ```
 
-The concrete typed error is an implementation detail and is not exported.
-Classification beyond the two sentinels above is by the stable code token in the
-message, as shown in the tables.
+A guardrail error intentionally keeps the historical outer
+`errs.CodeInvalidConfig` classification and also wraps
+`errs.ErrOrderGuardrail`. Existing checks for either classification continue
+to work.
 
 ## Handling guidance
 
-- Treat `UNAUTHORIZED` and `INVALID_TOKEN` as authentication failures: obtain a
-  fresh token with `Client.EnsureToken` and retry once.
-- Treat `FORBIDDEN` as a configuration or entitlement problem; retrying will not
-  help. See [Troubleshooting](troubleshooting.md).
-- Treat `RATE_LIMITED` as transient. The SDK retries transient errors for
-  idempotent requests by default; otherwise back off and retry.
-- Treat `SERVER_ERROR` and `transport` as transient. Configure `WithRetry`,
-  `WithRateLimiter`, or `WithBreaker` if the defaults are not enough.
-- Treat `invalid_config` as a programming error and fail fast.
+| Category | Transient? | Recommended handling |
+|---|---|---|
+| `UNAUTHORIZED`, `INVALID_TOKEN` | Authentication failure | Create or refresh a token, then retry once where safe |
+| `FORBIDDEN` | No | Check account scope and data entitlement |
+| `RATE_LIMITED` | Yes | Back off; the SDK retries eligible idempotent requests |
+| `SERVER_ERROR`, `transport` | Usually | Retry idempotent operations with backoff; inspect connectivity and breaker state |
+| `invalid_config`, `validation` | No | Fix the request or client configuration |
+| `unsupported` | No | Select another operation or SDK version |
+| `not_initialized` | No | Construct/run/register the required resource first |
+| `invalid_transition` | No | Reconcile the current resource state before retrying |
+| `order_guardrail` | No | Reduce size/notional or change the application guardrail explicitly |
 
-### Transient vs permanent errors
+Only GET and HEAD are retried by default. Enabling non-idempotent retries can
+duplicate an order placement unless the caller has a safe idempotency policy.
+A stable `client_order_id` is still required by the application.
 
-| Error code | Transient? | Retry? |
-|------------|-----------|--------|
-| `UNAUTHORIZED` | No | Fix credentials, then retry once |
-| `FORBIDDEN` | No | Never — check entitlements and permissions |
-| `INVALID_TOKEN` | No | Call `EnsureToken`, then retry once |
-| `RATE_LIMITED` | Yes | Back off exponentially; SDK retries idempotent requests |
-| `SERVER_ERROR` | Yes | Retry with backoff; configure `WithRetry` |
-| `transport` | Yes | Retry with backoff; check network connectivity |
-| `invalid_config` | No | Never — fix the code |
-
-### Rate limit pattern
+### Context-aware rate-limit loop
 
 ```go
-// The SDK retries automatically for idempotent requests. For non-idempotent
-// requests (PlaceOrder, etc.), implement exponential backoff:
-backoff := time.Second
-for i := 0; i < maxRetries; i++ {
-    _, err := trading.PlaceOrder(ctx, req)
-    if err == nil {
-        break
+func getBalanceWithBackoff(
+    ctx context.Context,
+    trading *trade.Client,
+    accountID string,
+) (*trade.AssetsBalance, error) {
+    backoff := 200 * time.Millisecond
+    for attempt := 1; attempt <= 3; attempt++ {
+        balance, err := trading.GetBalance(ctx, accountID)
+        if err == nil {
+            return balance, nil
+        }
+        if !errs.Is(err, errs.CodeRateLimited) {
+            return nil, err
+        }
+        if attempt == 3 {
+            return nil, err
+        }
+
+        timer := time.NewTimer(backoff)
+        select {
+        case <-ctx.Done():
+            timer.Stop()
+            return nil, ctx.Err()
+        case <-timer.C:
+        }
+        backoff *= 2
     }
-    if !strings.Contains(err.Error(), "RATE_LIMITED") {
-        return err
-    }
-    time.Sleep(backoff)
-    backoff *= 2
+    return nil, errs.New(errs.CodeRateLimited, "balance retries exhausted")
 }
 ```
 
-See [Authentication](authentication.md) for the token lifecycle and
-[Troubleshooting](troubleshooting.md) for sandbox-specific error causes.
-
 ## Related
 
-- [Troubleshooting](troubleshooting.md) — common symptoms and fixes.
-- [Authentication](authentication.md) — token lifecycle and refresh.
-- [Patterns](patterns.md) — error handling patterns and conventions.
+- [Observability](observability.md) — errors in logs, spans, and metrics
+- [Trading](trading.md) — OMS reconciliation and guardrails
+- [Streaming](streaming.md) — asynchronous and reconnect errors
+- [Authentication](authentication.md) — token lifecycle
+- [Troubleshooting](troubleshooting.md) — sandbox-specific failures

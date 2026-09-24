@@ -5,17 +5,90 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.3] - 2026-09-23
+## [Unreleased]
+
+### Added
+
+- `client.Client.ObservabilityConfig` exposes the shared, read-only telemetry
+  configuration inherited by service clients.
+- `events` and `brokerfd/events` now emit one client-kind OpenTelemetry span
+  per gRPC stream attempt, `event_stream_attempts` and
+  `event_stream_attempt_duration` metrics, structured start/done logs, and
+  correlation/trace metadata. Credentials are not included in telemetry.
+- `trade.Client` exposes account-scoped OMS inspection and reconciliation:
+  `GetTrackedOrder`, `TrackedOrder`, `TrackedOrderState`, `TrackedOrders`,
+  `ApplyOrderEvent`, `ReconcileOrderStatus`, and `ReconcileOrderState`.
+- `pkg/domain/order.Machine` and `order.Order` now support concurrency-safe
+  status reconciliation, stale non-terminal no-ops, terminal-state protection,
+  and distinct failed cancel/modify/reject scene events.
+- `examples/account-monitor`: a read-only, single-worker balance monitor with
+  bounded requests, signal-aware cancellation, and a consecutive-failure stop.
+
+### Changed
+
+- `client.Do`, `client.DoBroker`, and `client.DoStream` now share one
+  per-attempt request pipeline for rate limiting, circuit breaking, hooks,
+  interceptors, signing, correlation, logging, tracing, and metrics. Hook
+  attempt numbers are one-based and increase across retries.
+- `client.Do` and `client.DoBroker` reuse one correlation ID across retries;
+  `DoBroker` and `DoStream` also learn the bounded clock offset from successful
+  response `Date` headers when clock correction is enabled.
+- REST requests inject the configured W3C trace propagator. `json.RawMessage`
+  request bodies remain byte-for-byte stable across retries.
+- The default HTTP client now clones and tunes Go's default transport for idle
+  connections, TLS handshakes, and expect-continue timing; explicit
+  `WithHTTPTransport` still wins.
+- `trade.WithAutoClientOrderID(true)` derives stable IDs for the same logical
+  place/batch request, does not mutate the caller's request slice, and keeps
+  repeated requests idempotent. Successful batch results are tracked locally.
+- The trade order registry is keyed by `(account_id, client_order_id)`.
+  Successful replace/cancel actions advance matching local state; failed
+  actions leave it unchanged.
+- Order guardrail failures retain the historical outer `invalid_config` code
+  and also wrap `pkg/errors.ErrOrderGuardrail`.
+- `stream.Close` is terminal, channel cancel functions are idempotent, blocked
+  channel sends unblock on cancellation/close, and reconnect replay is
+  serialized with subscription mutations.
 
 ### Fixed
 
-- `stream/` and `data/`: `go.uber.org/goleak` false positives from
-  `net/http.(*http2clientConnReadLoop).run` goroutines left after paho-mqtt
-  WebSocket disconnect. Added `goleak.IgnoreAnyFunction` filter to both packages'
-  `TestMain`. The goroutines are cleaned up asynchronously by the Go runtime and
-  are not a leak in SDK code.
+- MQTT `Connect` no longer starts a `Token.Wait` waiter goroutine, checks an
+  already-cancelled context before connecting, and rejects use after `Close`.
+  MQTT close is idempotent and suppresses late callbacks/messages.
+- `DropOldest` now removes the oldest unread value. Cancelling or closing while
+  dispatch is blocked no longer deadlocks the stream.
+- Stream health only treats quote/snapshot/tick messages as fresh data; notices
+  and echo heartbeats neither prevent nor falsely recover `StateDegraded`.
+  Repeated stale checks no longer restore `StateConnected` without new data.
+- OMS scene mapping no longer treats failed cancel, modify, or reject operations
+  as successful transitions. Status reconciliation never regresses a terminal
+  order and ignores stale non-terminal snapshots.
+- Correlation context lookup is type-safe, response status/latency hooks receive
+  real attempt values, and stream interceptors cannot accidentally return a
+  nil successful response.
 
-## [Unreleased]
+### Tests
+
+- Added offline regression coverage for the shared request pipeline, raw-body
+  retries, clock correction, account-scoped OMS tracking, status reconciliation,
+  concurrent order machines, stable auto IDs, guardrail sentinels, MQTT/channel
+  shutdown, stream health, resubscription serialization, `money.Money` wire
+  forms, and Trading/Broker FD event telemetry.
+- `go test ./...` passes in the root module and nested `broker/` module on
+  2026-09-25. The new hardening was not newly live-verified.
+
+### Documentation
+
+- Reconciled the architecture and status docs with the preserved root service
+  packages and public `money.Money`; marked the full `pkg` relocation,
+  root-service shim plan, raw `decimal.Decimal` DTO migration, and `sync.Pool`
+  decisions as superseded or closed.
+- Added OMS reconciliation, streaming state/health/channel behavior, typed
+  error examples, OpenTelemetry setup, event telemetry, and explicit
+  implemented/offline-tested/live-verified/blocked distinctions.
+- Corrected generated reconciliation summaries so they no longer claim zero
+  path discrepancies while the generated report contains summary-only and
+  unresolved paths.
 
 ## [2.1.0] - 2026-09-24
 
@@ -95,13 +168,12 @@ Phase 6.3 OTel metrics hooks.
   attributes on every breaker transition.
 - `client/request.go`: `request_latency` histogram recorded on every `attempt()`
   call with `http.route` attribute.
-- `stream/client.go`: `streamMetrics` struct with `reconnectCounter`,
-  `quoteDropCounter`, `snapshotDropCounter`, `tickDropCounter` instruments.
-  `handleReconnecting()` increments `reconnectCounter`. `WithMeter(m metric.Meter)`
-  option in `stream/option.go`.
-- `stream/channels.go`: `channelConfig.otelCounter` wired from per-topic drop
-  counters; `recordDropToMeter()` bumps both the atomic local counter and the
-  OTel instrument with a `topic` attribute.
+- `stream/client.go`: `streamMetrics` with reconnect and per-topic drop
+  instruments in scope `webullapi4go/stream`. `handleReconnecting()` increments
+  the `reconnects` counter. `WithMeter(m metric.Meter)` is available in
+  `stream/option.go`.
+- `stream/channels.go`: per-topic drop counters feed the `channel_drops`
+  instrument with a `topic` attribute.
 
 ## [2.0.6] - 2026-09-24
 
@@ -273,10 +345,9 @@ Phase 2 production hardening: public API restructuring and type-safe numeric fie
   `ParseDecimal`, `Zero`.
 - `pkg/domain/order`: OMS state machine (`StateMachine`, `ApplyEvent`,
   `FromWebullStatus`) for order lifecycle tracking.
-- `webull/`: type-alias facade package re-exporting `client.Client`,
-  `client.New`, `client.Option`, `client.Region`, `client.Endpoints`,
-  `client.Environment`, `trade.Client`, `trade.New`, and all trade option
-  constructors. Recommended import path for new users.
+- `webull/`: thin type-alias convenience package re-exporting selected
+  `client` and `trade` constructors and types. The root service packages remain
+  canonical; this is not an aggregate service facade.
 
 ### Changed (breaking)
 
@@ -300,8 +371,18 @@ Phase 2 production hardening: public API restructuring and type-safe numeric fie
 - `internal/errs/errs.go`: use `pkg/errors` instead.
 - `internal/transport/http.go`: use `pkg/transport` instead.
 - `internal/resilience/resilience.go`: use `pkg/resilience` instead.
-- Direct use of `client.Client`: consider `webull.New()` or `webull.Client`
-  type alias instead.
+- Direct use of `client.Client` remains canonical; `webull.New` and
+  `webull.Client` are optional aliases for callers that prefer one import.
+
+## [2.0.3] - 2026-09-23
+
+### Fixed
+
+- `stream/` and `data/`: `go.uber.org/goleak` false positives from
+  `net/http.(*http2clientConnReadLoop).run` goroutines left after paho-mqtt
+  WebSocket disconnect. Added `goleak.IgnoreAnyFunction` filters to both
+  packages' `TestMain`. The goroutines are cleaned up asynchronously by the Go
+  runtime and are not an SDK leak.
 
 ## [2.0.2] - 2026-09-23
 
@@ -355,7 +436,8 @@ Full SDK parity with the official Webull OpenAPI.
   parameters; Broker FD account-update, order-replace and order-cancel are now
   `POST`.
 - Removed all 41 provisional TODO markers. The SDK now covers every documented
-  endpoint (0 gaps, 0 path discrepancies in `docs/reconciliation.md`).
+  endpoint (0 documented-only gaps in `docs/reconciliation.md`). Path
+  reconciliation remains tracked separately by the generated report.
 
 ## [1.0.3] - 2026-09-22
 
@@ -890,7 +972,19 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.0
+[2.0.9]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.9
+[2.0.8]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.8
+[2.0.7]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.7
+[2.0.6]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.6
+[2.0.5]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.5
+[2.0.4]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.4
+[2.0.3]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.3
+[2.0.2]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.2
+[2.0.1]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.1
+[2.0.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.0
+[1.1.1]: https://github.com/shing1211/webullapi4go/releases/tag/v1.1.1
 [1.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v1.1.0
 [1.0.3]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.3
 [1.0.2]: https://github.com/shing1211/webullapi4go/releases/tag/v1.0.2

@@ -59,6 +59,7 @@ nav:
       - Broker FD US: broker-fd-us.md
       - Sandbox: sandbox.md
       - Errors: errors.md
+      - Observability: observability.md
       - Patterns: patterns.md
       - Glossary: glossary.md
       - Troubleshooting: troubleshooting.md

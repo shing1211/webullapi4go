@@ -272,23 +272,6 @@ func (r OrderRequest) validateEventRules(fail func(string, ...any) error) error 
 	return nil
 }
 
-// isPositiveInteger reports whether s is a base-10 integer string greater than
-// zero. It rejects signs, decimal points, and any non-digit character, so a
-// fractional futures quantity such as "1.5" fails.
-func isPositiveInteger(s string) bool {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		if s[i] < '0' || s[i] > '9' {
-			return false
-		}
-	}
-	n, ok := new(big.Int).SetString(s, 10)
-	return ok && n.Sign() > 0
-}
-
 func isPositiveIntegerMoney(m *money.Money) bool {
 	if m == nil {
 		return false

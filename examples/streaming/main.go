@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // Command streaming connects to the Webull streaming broker over MQTT-over-
-// WebSocket, subscribes to AAPL quote/snapshot/tick pushes, and prints messages
-// until interrupted with Ctrl+C.
+// WebSocket, subscribes to AAPL quote/snapshot/tick pushes, and consumes bounded
+// channels until interrupted with Ctrl+C or the two-minute run limit expires.
 //
 // MQTT-over-WebSocket is used because plain MQTT on port 1883 is blocked on some
 // networks. Credentials are read from the environment:
@@ -30,76 +30,137 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/shing1211/webullapi4go/client"
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
 	"github.com/shing1211/webullapi4go/stream"
 )
 
+const (
+	setupTimeout     = 5 * time.Minute
+	requestTimeout   = 20 * time.Second
+	streamRunTimeout = 2 * time.Minute
+	channelBuffer    = 32
+)
+
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	if os.Getenv("WEBULL_APP_KEY") == "" {
 		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
-		return
+		return nil
 	}
 
-	cl, err := client.New(client.WithEnv())
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() { _ = cl.Close() }()
-
-	// Subscribe and unsubscribe are HTTP calls, so a token must be available
-	// before streaming starts.
-	if _, err := cl.EnsureToken(context.Background()); err != nil {
-		log.Fatal(err)
-	}
-
-	// WithWebSocket switches from the plain TCP broker to wss://...:8883/mqtt.
-	s, err := stream.New(cl, stream.WithWebSocket(true))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ctrl+C or SIGTERM cancels the context and ends the stream cleanly.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	s.OnConnect(func() { log.Println("connected") })
-	s.OnDisconnect(func(err error) { log.Printf("disconnected: %v", err) })
-	s.OnError(func(err error) { log.Printf("stream error: %v", err) })
+	cl, err := client.New(client.WithEnv())
+	if err != nil {
+		return fmt.Errorf("create client: %w", err)
+	}
+	defer func() { _ = cl.Close() }()
 
-	s.OnQuote(func(q *marketdatav1.Quote) {
-		log.Printf("quote %s asks=%d bids=%d",
-			q.GetBasic().GetSymbol(), len(q.GetAsks()), len(q.GetBids()))
-	})
-	s.OnSnapshot(func(snap *marketdatav1.Snapshot) {
-		log.Printf("snapshot %s price=%s", snap.GetBasic().GetSymbol(), snap.GetPrice())
-	})
-	s.OnTick(func(t *marketdatav1.Tick) {
-		log.Printf("tick %s price=%s volume=%s side=%s",
-			t.GetBasic().GetSymbol(), t.GetPrice(), t.GetVolume(), t.GetSide())
-	})
+	tokenCtx, cancelToken := context.WithTimeout(ctx, setupTimeout)
+	_, err = cl.EnsureToken(tokenCtx)
+	cancelToken()
+	if err != nil {
+		return fmt.Errorf("ensure access token: %w", err)
+	}
 
-	if err := s.Connect(ctx); err != nil {
-		log.Fatal(err)
+	s, err := stream.New(cl, stream.WithWebSocket(true))
+	if err != nil {
+		return fmt.Errorf("create stream client: %w", err)
 	}
 	defer func() { _ = s.Close() }()
 
-	if err := s.Subscribe(ctx, stream.SubscribeRequest{
+	channelConfig := stream.ChannelConfig{
+		Policy:     stream.DropOldest,
+		BufferSize: channelBuffer,
+	}
+	quotes, cancelQuotes := s.SubscribeQuoteChan(channelConfig)
+	defer cancelQuotes()
+	snapshots, cancelSnapshots := s.SubscribeSnapshotChan(channelConfig)
+	defer cancelSnapshots()
+	ticks, cancelTicks := s.SubscribeTickChan(channelConfig)
+	defer cancelTicks()
+
+	s.OnConnect(func() { log.Println("connected") })
+	s.OnDisconnect(func(err error) { log.Printf("disconnected: %v", err) })
+	s.OnReconnecting(func() { log.Println("reconnecting") })
+	s.OnError(func(err error) { log.Printf("stream error: %v", err) })
+
+	connectCtx, cancelConnect := context.WithTimeout(ctx, requestTimeout)
+	err = s.Connect(connectCtx)
+	cancelConnect()
+	if err != nil {
+		return fmt.Errorf("connect stream: %w", err)
+	}
+
+	subscribeCtx, cancelSubscribe := context.WithTimeout(ctx, requestTimeout)
+	err = s.Subscribe(subscribeCtx, stream.SubscribeRequest{
 		Symbols:  []string{"AAPL"},
 		Category: stream.CategoryUSStock,
 		SubTypes: []stream.SubType{stream.SubTypeQuote, stream.SubTypeSnapshot, stream.SubTypeTick},
 		Grab:     true,
-	}); err != nil {
-		log.Fatal(err)
+	})
+	cancelSubscribe()
+	if err != nil {
+		return fmt.Errorf("subscribe stream: %w", err)
 	}
 
-	log.Println("streaming AAPL; press Ctrl+C to stop")
-	<-ctx.Done()
-	log.Println("shutting down")
+	runCtx, cancelRun := context.WithTimeout(ctx, streamRunTimeout)
+	defer cancelRun()
+	log.Printf("streaming AAPL for at most %s; press Ctrl+C to stop", streamRunTimeout)
+	consume(runCtx, quotes, snapshots, ticks)
+	return nil
+}
+
+func consume(
+	ctx context.Context,
+	quotes <-chan *marketdatav1.Quote,
+	snapshots <-chan *marketdatav1.Snapshot,
+	ticks <-chan *marketdatav1.Tick,
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				log.Println("stream run limit reached")
+			} else {
+				log.Println("shutting down")
+			}
+			return
+		case quote, ok := <-quotes:
+			if !ok {
+				log.Println("quote channel closed")
+				return
+			}
+			log.Printf("quote %s asks=%d bids=%d",
+				quote.GetBasic().GetSymbol(), len(quote.GetAsks()), len(quote.GetBids()))
+		case snapshot, ok := <-snapshots:
+			if !ok {
+				log.Println("snapshot channel closed")
+				return
+			}
+			log.Printf("snapshot %s price=%s", snapshot.GetBasic().GetSymbol(), snapshot.GetPrice())
+		case tick, ok := <-ticks:
+			if !ok {
+				log.Println("tick channel closed")
+				return
+			}
+			log.Printf("tick %s price=%s volume=%s side=%s",
+				tick.GetBasic().GetSymbol(), tick.GetPrice(), tick.GetVolume(), tick.GetSide())
+		}
+	}
 }

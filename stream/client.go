@@ -19,16 +19,21 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/observability"
 	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // password is sent as the MQTT password. Webull documents that any value is
@@ -74,8 +79,9 @@ type Client struct {
 	// connCtx bounds the health watchdog; cancelled by Close.
 	connCtx    context.Context
 	connCancel context.CancelFunc
+	healthOnce sync.Once
 	// state is the current connection lifecycle state.
-	state atomic.Int32
+	state atomic.Value
 	// lastMessageAt records the arrival time of the most recent data message
 	// (quote/snapshot/tick). It is used by the health watchdog.
 	lastMessageAt atomic.Int64
@@ -84,6 +90,10 @@ type Client struct {
 	chanReg *chanRegistry
 	// metrics holds OTel instruments. nil when no Meter is configured.
 	metrics *streamMetrics
+	// obs holds the telemetry configuration inherited from the core client.
+	obs *observability.Config
+	// tracer creates dispatch spans when tracing is enabled.
+	tracer trace.Tracer
 
 	mu             sync.RWMutex
 	onQuote        []func(*marketdatav1.Quote)
@@ -143,10 +153,17 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "stream: invalid mqtt configuration", err)
 	}
 
-	c := &Client{core: cl, cfg: cfg, mqtt: mc}
+	obs := cl.ObservabilityConfig()
+	if cfg.meter == nil && obs != nil {
+		cfg.meter = obs.Meter("webullapi4go/stream")
+	}
+	c := &Client{core: cl, cfg: cfg, mqtt: mc, obs: obs}
+	if obs != nil {
+		c.tracer = obs.Tracer("webullapi4go/stream")
+	}
 	c.resubCtx, c.resubCancel = context.WithCancel(context.Background())
 	c.connCtx, c.connCancel = context.WithCancel(context.Background())
-	c.state.Store(int32(StateDisconnected))
+	c.state.Store(StateDisconnected)
 	c.chanReg = newChanRegistry()
 	c.metrics = newStreamMetrics(cfg.meter)
 	mc.SetMessageHandler(c.handleMessage)
@@ -193,12 +210,21 @@ func (c *Client) Connect(ctx context.Context) error {
 	if c.mqtt == nil {
 		return errs.New(errs.CodeInvalidConfig, "stream: client is not initialized")
 	}
-	c.setState(StateConnecting)
-	if c.cfg.healthWatchdogInterval > 0 {
-		go c.healthWatchdog()
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
 	}
+	if c.IsConnected() {
+		return nil
+	}
+	c.setState(StateConnecting)
 	if err := c.mqtt.Connect(ctx); err != nil {
+		if c.State() != StateClosed {
+			c.setState(StateDisconnected)
+		}
 		return streamConnectError(err)
+	}
+	if c.cfg.healthWatchdogInterval > 0 {
+		c.healthOnce.Do(func() { go c.healthWatchdog() })
 	}
 	return nil
 }
@@ -224,6 +250,7 @@ func streamConnectError(err error) error {
 // underlying [client.Client].
 func (c *Client) Close() error {
 	c.closeOnce.Do(func() {
+		c.reconnecting.Store(false)
 		c.setState(StateClosed)
 		if c.connCancel != nil {
 			c.connCancel()
@@ -244,7 +271,7 @@ func (c *Client) Close() error {
 // IsConnected reports whether the MQTT connection is currently live. It is
 // false while a reconnect is in progress.
 func (c *Client) IsConnected() bool {
-	return c.mqtt != nil && c.mqtt.IsConnected()
+	return c.mqtt != nil && c.mqtt.IsConnected() && !c.Reconnecting()
 }
 
 // Reconnecting reports whether the client is currently attempting to
@@ -356,12 +383,26 @@ func (c *Client) OnStateChange(fn func(State, State)) {
 
 // State returns the current connection state.
 func (c *Client) State() State {
-	return State(c.state.Load())
+	if c.state.Load() == nil {
+		c.state.Store(StateDisconnected)
+	}
+	value, _ := c.state.Load().(State)
+	return value
 }
 
 // setState transitions to next, firing OnStateChange handlers outside the lock.
 func (c *Client) setState(next State) {
-	prev := State(c.state.Swap(int32(next)))
+	c.State()
+	var prev State
+	for {
+		prev, _ = c.state.Load().(State)
+		if prev == StateClosed && next != StateClosed {
+			return
+		}
+		if c.state.CompareAndSwap(prev, next) {
+			break
+		}
+	}
 	if prev != next {
 		c.mu.RLock()
 		handlers := make([]func(State, State), len(c.onStateChange))
@@ -376,9 +417,66 @@ func (c *Client) setState(next State) {
 // handleMessage is the low-level callback. It reports dispatch failures to the
 // error handlers and records the arrival time for health tracking.
 func (c *Client) handleMessage(m mqtt.Message) {
-	c.lastMessageAt.Store(time.Now().UnixMilli())
+	if c.State() == StateClosed {
+		return
+	}
+	var span trace.Span
+	if c.tracer != nil {
+		_, span = c.tracer.Start(context.Background(), "mqtt.dispatch",
+			trace.WithSpanKind(trace.SpanKindConsumer),
+			trace.WithAttributes(
+				attribute.String("messaging.system", "mqtt"),
+				attribute.String("messaging.destination", streamTopicKind(m.Topic)),
+				attribute.Int("messaging.message.body.size", len(m.Payload)),
+			),
+		)
+		defer span.End()
+	}
+	if isDataTopic(m.Topic) {
+		c.markDataMessage()
+	}
 	if err := c.dispatch(m.Topic, m.Payload); err != nil {
+		if span != nil {
+			span.RecordError(err)
+			span.SetStatus(otelcodes.Error, "stream message dispatch failed")
+		}
 		c.emitError(err)
+	}
+}
+
+func isDataTopic(topic string) bool {
+	switch normalizeTopic(topic) {
+	case TopicQuote, TopicSnapshot, TopicTick:
+		return true
+	default:
+		return false
+	}
+}
+
+func streamTopicKind(topic string) string {
+	switch normalizeTopic(topic) {
+	case TopicQuote:
+		return "quote"
+	case TopicSnapshot:
+		return "snapshot"
+	case TopicTick:
+		return "tick"
+	case TopicNotice:
+		return "notice"
+	case TopicEcho:
+		return "echo"
+	default:
+		return "unknown"
+	}
+}
+
+func (c *Client) markDataMessage() {
+	if c.State() == StateClosed {
+		return
+	}
+	c.lastMessageAt.Store(time.Now().UnixMilli())
+	if c.State() == StateDegraded {
+		c.setState(StateConnected)
 	}
 }
 
@@ -408,20 +506,16 @@ func (c ChannelConfig) resolve() (policy DropPolicy, bufSize int) {
 func (c *Client) SubscribeQuoteChan(cfg ChannelConfig) (<-chan *marketdatav1.Quote, func()) {
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Quote, bufSize)
-	entry := &chanQuote{ch: ch, stop: func() { close(ch) }}
+	entry := newChanQuote(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
 		otelCounter = c.metrics.quoteDropCounter
 	}
-	c.chanReg.mu.Lock()
-	c.chanReg.quote[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "quote"}
-	c.chanReg.mu.Unlock()
-	return ch, func() {
-		c.chanReg.mu.Lock()
-		delete(c.chanReg.quote, entry)
-		c.chanReg.mu.Unlock()
-		close(ch)
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "quote"}
+	if !c.chanReg.addQuote(entry, config) {
+		entry.shutdown()
 	}
+	return ch, func() { c.chanReg.removeQuote(entry) }
 }
 
 // SubscribeSnapshotChan returns a channel that receives decoded snapshot pushes.
@@ -430,20 +524,16 @@ func (c *Client) SubscribeQuoteChan(cfg ChannelConfig) (<-chan *marketdatav1.Quo
 func (c *Client) SubscribeSnapshotChan(cfg ChannelConfig) (<-chan *marketdatav1.Snapshot, func()) {
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Snapshot, bufSize)
-	entry := &chanSnapshot{ch: ch, stop: func() { close(ch) }}
+	entry := newChanSnapshot(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
 		otelCounter = c.metrics.snapshotDropCounter
 	}
-	c.chanReg.mu.Lock()
-	c.chanReg.snapshot[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "snapshot"}
-	c.chanReg.mu.Unlock()
-	return ch, func() {
-		c.chanReg.mu.Lock()
-		delete(c.chanReg.snapshot, entry)
-		c.chanReg.mu.Unlock()
-		close(ch)
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "snapshot"}
+	if !c.chanReg.addSnapshot(entry, config) {
+		entry.shutdown()
 	}
+	return ch, func() { c.chanReg.removeSnapshot(entry) }
 }
 
 // SubscribeTickChan returns a channel that receives decoded tick pushes.
@@ -452,20 +542,16 @@ func (c *Client) SubscribeSnapshotChan(cfg ChannelConfig) (<-chan *marketdatav1.
 func (c *Client) SubscribeTickChan(cfg ChannelConfig) (<-chan *marketdatav1.Tick, func()) {
 	policy, bufSize := cfg.resolve()
 	ch := make(chan *marketdatav1.Tick, bufSize)
-	entry := &chanTick{ch: ch, stop: func() { close(ch) }}
+	entry := newChanTick(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
 		otelCounter = c.metrics.tickDropCounter
 	}
-	c.chanReg.mu.Lock()
-	c.chanReg.tick[entry] = &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "tick"}
-	c.chanReg.mu.Unlock()
-	return ch, func() {
-		c.chanReg.mu.Lock()
-		delete(c.chanReg.tick, entry)
-		c.chanReg.mu.Unlock()
-		close(ch)
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "tick"}
+	if !c.chanReg.addTick(entry, config) {
+		entry.shutdown()
 	}
+	return ch, func() { c.chanReg.removeTick(entry) }
 }
 
 // dispatch routes a raw message by topic and invokes the matching typed
@@ -561,7 +647,7 @@ func (c *Client) emitNotice(payload []byte) {
 
 // emitError invokes every registered error handler outside the lock.
 func (c *Client) emitError(err error) {
-	if err == nil {
+	if err == nil || c.State() == StateClosed {
 		return
 	}
 	c.mu.RLock()
@@ -573,29 +659,60 @@ func (c *Client) emitError(err error) {
 	}
 }
 
+func (c *Client) logStreamEvent(level slog.Level, message string) {
+	if c.obs == nil || c.obs.Logger == nil {
+		return
+	}
+	c.obs.Logger.LogAttrs(context.Background(), level, message,
+		slog.String("transport", "mqtt"),
+		slog.String("state", c.State().String()),
+	)
+}
+
 // handleConnect is the MQTT connect callback. It runs on the initial
 // connection and on every successful reconnect. On a reconnect it re-issues the
 // active subscriptions before notifying connect handlers, so handlers observe a
 // restored session.
 func (c *Client) handleConnect() {
+	if c.State() == StateClosed {
+		return
+	}
 	c.reconnecting.Store(false)
-	c.setState(StateConnected)
 	c.lastMessageAt.Store(time.Now().UnixMilli())
+	c.setState(StateConnected)
+	c.logStreamEvent(slog.LevelInfo, "webull stream connected")
 	if c.everConnected.Swap(true) {
 		c.resubscribe()
+	}
+	if c.State() == StateClosed {
+		return
 	}
 	c.emitConnect()
 }
 
 // handleConnectionLost is the MQTT connection-lost callback.
 func (c *Client) handleConnectionLost(err error) {
-	c.reconnecting.Store(false)
-	c.setState(StateDisconnected)
+	if c.State() == StateClosed {
+		return
+	}
+	if !c.cfg.autoReconnect {
+		c.reconnecting.Store(false)
+	}
+	if !c.cfg.autoReconnect || !c.Reconnecting() {
+		c.setState(StateDisconnected)
+	}
+	if c.State() == StateClosed {
+		return
+	}
+	c.logStreamEvent(slog.LevelWarn, "webull stream disconnected")
 	c.emitDisconnect(err)
 }
 
 // handleReconnecting is the MQTT reconnect-start callback.
 func (c *Client) handleReconnecting() {
+	if c.State() == StateClosed {
+		return
+	}
 	c.reconnecting.Store(true)
 	c.setState(StateReconnecting)
 	// OTel metric recording is intentionally fire-and-forget: the metric SDK
@@ -603,6 +720,10 @@ func (c *Client) handleReconnecting() {
 	if c.metrics != nil && c.metrics.reconnectCounter != nil {
 		c.metrics.reconnectCounter.Add(context.Background(), 1)
 	}
+	if c.State() == StateClosed {
+		return
+	}
+	c.logStreamEvent(slog.LevelInfo, "webull stream reconnecting")
 	c.mu.RLock()
 	handlers := make([]func(), len(c.onReconnecting))
 	copy(handlers, c.onReconnecting)
@@ -618,21 +739,36 @@ func (c *Client) handleReconnecting() {
 // Failures are reported to the error handlers without aborting the remaining
 // subscriptions.
 func (c *Client) resubscribe() {
-	if c.core == nil || !c.cfg.autoResubscribe || c.subs.empty() {
+	if c.core == nil || !c.cfg.autoResubscribe {
 		return
 	}
-	reqs := c.subs.requests()
-	if len(reqs) == 0 {
-		return
-	}
+	var resubErrs []error
 	c.resubMu.Lock()
-	defer c.resubMu.Unlock()
-	ctx, cancel := c.resubscribeContext()
-	defer cancel()
-	for _, req := range reqs {
-		if err := c.Subscribe(ctx, req); err != nil {
-			c.emitError(err)
+	func() {
+		defer c.resubMu.Unlock()
+		if c.State() == StateClosed {
+			return
 		}
+		if c.subs.empty() {
+			return
+		}
+		reqs := c.subs.requests()
+		if len(reqs) == 0 {
+			return
+		}
+		ctx, cancel := c.resubscribeContext()
+		defer cancel()
+		for _, req := range reqs {
+			if err := c.subscribe(ctx, req); err != nil {
+				resubErrs = append(resubErrs, err)
+			}
+		}
+	}()
+	if c.State() == StateClosed {
+		return
+	}
+	for _, err := range resubErrs {
+		c.emitError(err)
 	}
 }
 
@@ -650,6 +786,9 @@ func (c *Client) resubscribeContext() (context.Context, context.CancelFunc) {
 // message arrives. The watchdog is started by [Client.Connect] and cancelled by
 // [Client.Close].
 func (c *Client) healthWatchdog() {
+	if c.connCtx == nil || c.cfg.healthWatchdogInterval <= 0 {
+		return
+	}
 	ticker := time.NewTicker(c.cfg.healthWatchdogInterval)
 	defer ticker.Stop()
 	for {
@@ -657,17 +796,28 @@ func (c *Client) healthWatchdog() {
 		case <-c.connCtx.Done():
 			return
 		case <-ticker.C:
-			last := c.lastMessageAt.Load()
-			if last == 0 {
-				continue
-			}
-			age := time.Since(time.UnixMilli(last))
-			if age > c.cfg.healthWatchdogInterval && c.State() == StateConnected {
-				c.setState(StateDegraded)
-			} else if last > 0 && c.State() == StateDegraded {
-				c.setState(StateConnected)
-			}
+			c.checkHealth(time.Now())
 		}
+	}
+}
+
+func (c *Client) checkHealth(now time.Time) {
+	interval := c.cfg.healthWatchdogInterval
+	if interval <= 0 {
+		return
+	}
+	last := c.lastMessageAt.Load()
+	if last == 0 {
+		return
+	}
+	age := now.Sub(time.UnixMilli(last))
+	state := c.State()
+	if state == StateConnected && age > interval {
+		c.setState(StateDegraded)
+		return
+	}
+	if state == StateDegraded && age <= interval {
+		c.setState(StateConnected)
 	}
 }
 

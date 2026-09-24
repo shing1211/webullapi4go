@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Streaming subscription endpoints, relative to the core client's HTTP base
@@ -275,6 +275,18 @@ func (c *Client) Subscribe(ctx context.Context, req SubscribeRequest) error {
 	if c.core == nil {
 		return errs.New(errs.CodeInvalidConfig, "stream: client is not initialized")
 	}
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
+	}
+	c.resubMu.Lock()
+	defer c.resubMu.Unlock()
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
+	}
+	return c.subscribe(ctx, req)
+}
+
+func (c *Client) subscribe(ctx context.Context, req SubscribeRequest) error {
 	body, err := req.toBody(c.cfg.sessionID)
 	if err != nil {
 		return err
@@ -296,6 +308,14 @@ func (c *Client) Subscribe(ctx context.Context, req SubscribeRequest) error {
 func (c *Client) Unsubscribe(ctx context.Context, req UnsubscribeRequest) error {
 	if c.core == nil {
 		return errs.New(errs.CodeInvalidConfig, "stream: client is not initialized")
+	}
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
+	}
+	c.resubMu.Lock()
+	defer c.resubMu.Unlock()
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
 	}
 	body, err := req.toBody(c.cfg.sessionID)
 	if err != nil {

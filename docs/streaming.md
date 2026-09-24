@@ -1,153 +1,257 @@
 # Streaming
 
-The `stream` package delivers real-time Market Data over MQTT. Subscribe and
-unsubscribe are HTTP calls made through the core client; the MQTT connection
-only carries pushes. Requires a valid token (see [Authentication](authentication.md)).
+The `stream` package delivers Market Data over MQTT. Subscribe and unsubscribe
+are HTTP calls made through the core client; the MQTT connection carries pushes.
+A valid access token is required. See [Authentication](authentication.md).
+
 !!! note "Prerequisites"
     - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
     - Go 1.26+
-    - An authenticated client — see [Authentication](authentication.md)
+    - An authenticated core client
 
 !!! tip "Error handling"
-    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+    Stream callbacks and connection methods return or receive typed errors.
+    See [Errors](errors.md).
 
-Build a streaming client from a configured
-`*client.Client`:
+## Construct and connect
 
 ```go
 cl, err := client.New(client.WithEnv())
 if err != nil {
-	return err
+    return err
 }
 defer func() { _ = cl.Close() }()
 
 if _, err := cl.EnsureToken(ctx); err != nil {
-	return err
+    return err
 }
 
-s, err := stream.New(cl, stream.WithWebSocket(true))
+s, err := stream.New(cl,
+    stream.WithWebSocket(true),
+    stream.WithAutoReconnect(true),
+    stream.WithHealthWatchdog(30*time.Second),
+)
 if err != nil {
-	return err
+    return err
 }
 defer func() { _ = s.Close() }()
+
+if err := s.Connect(ctx); err != nil {
+    return err
+}
 ```
 
-The broker address comes from the client's resolved endpoints. `WithWebSocket(true)`
-selects the MQTT-over-WebSocket endpoint (`wss://...:8883/mqtt`); otherwise the
-plain TCP endpoint (`...:1883`) is used. `WithMQTTURL` overrides both.
+The broker address comes from the core client's resolved endpoints.
+`WithWebSocket(true)` selects MQTT over WebSocket; otherwise plain TCP is used.
+`WithMQTTURL` overrides both. In constrained networks, prefer the configured
+WebSocket endpoint because plain MQTT port `1883` may be blocked.
 
-## Connect and subscribe
+## Subscribe and unsubscribe
 
 ```go
-if err := s.Connect(ctx); err != nil {
-	return err
-}
 if err := s.Subscribe(ctx, stream.SubscribeRequest{
-	Symbols:  []string{"AAPL"},
-	Category: stream.CategoryUSStock,
-	SubTypes: []stream.SubType{stream.SubTypeQuote, stream.SubTypeSnapshot, stream.SubTypeTick},
-	Grab:     true,
+    Symbols:  []string{"AAPL"},
+    Category: stream.CategoryUSStock,
+    SubTypes: []stream.SubType{
+        stream.SubTypeQuote,
+        stream.SubTypeSnapshot,
+        stream.SubTypeTick,
+    },
+    Grab: true,
 }); err != nil {
-	return err
+    return err
 }
 ```
 
 `SubscribeRequest` fields:
 
 | Field | Purpose |
-|-------|---------|
-| `SessionID` | Overrides the client session id for this call; rarely needed |
+|---|---|
+| `SessionID` | Overrides the client session ID for this call; rarely needed |
 | `Symbols` | Symbols to subscribe to; at most 100 per request |
-| `Category` | Security type: `CategoryUSStock`, `CategoryUSETF`, `CategoryHKStock`, `CategoryCNStock` (validated with `Category.Valid()`) |
-| `SubTypes` | Data types: `SubTypeQuote`, `SubTypeSnapshot`, `SubTypeTick` (validated with `SubType.Valid()`) |
-| `Grab` | Request an immediate snapshot push on subscription |
-| `Depth` | Level-2 order-book depth as a string (optional; defaults to `"10"`, US stocks up to `"50"`) |
-| `OvernightRequired` | Include the overnight session for US stocks |
+| `Category` | Security category such as `CategoryUSStock`, `CategoryUSETF`, `CategoryHKStock`, or `CategoryCNStock` |
+| `SubTypes` | `SubTypeQuote`, `SubTypeSnapshot`, and/or `SubTypeTick` |
+| `Grab` | Request an immediate snapshot push |
+| `Depth` | Level-2 depth string; optional |
+| `OvernightRequired` | Include the US overnight session |
 
-`Unsubscribe` mirrors it and accepts `UnsubscribeAll: true` to cancel every
-subscription for the session.
+`Unsubscribe` mirrors the request and accepts `UnsubscribeAll: true` to clear
+the active subscription set for the session.
 
-## Handlers
+Subscription mutations and reconnect replay are serialized. A reconnect cannot
+interleave with a concurrent `Subscribe` or `Unsubscribe` request.
 
-Register handlers before or after `Connect`; each may be called more than once.
+## Typed handlers
+
+Handlers may be registered before or after `Connect`; each registration is
+retained and registration is concurrency-safe.
 
 | Handler | Payload | Fires on |
-|---------|---------|----------|
-| `OnQuote` | `*marketdatav1.Quote` | Order-book pushes |
-| `OnSnapshot` | `*marketdatav1.Snapshot` | Market snapshots |
-| `OnTick` | `*marketdatav1.Tick` | Tick-by-tick trades |
-| `OnNotice` | `[]byte` (JSON) | Server notifications |
-| `OnError` | `error` | Async errors (decode failures, unknown topics, resubscribe failures) |
-| `OnConnect` | none | Initial connect and every reconnect |
-| `OnDisconnect` | `error` | A live connection was lost |
+|---|---|---|
+| `OnQuote` | `*marketdatav1.Quote` | Quote pushes |
+| `OnSnapshot` | `*marketdatav1.Snapshot` | Snapshot pushes |
+| `OnTick` | `*marketdatav1.Tick` | Tick pushes |
+| `OnNotice` | `[]byte` | Server notice JSON |
+| `OnError` | `error` | Decode, topic, connection, or resubscribe errors |
+| `OnConnect` | none | Initial connection and successful reconnects |
+| `OnDisconnect` | `error` | Loss of an established connection |
+| `OnReconnecting` | none | Start of a reconnect attempt |
+| `OnStateChange` | `(previous, next State)` | Every actual lifecycle state change |
+
+Callbacks run on the stream receive/dispatch path. Keep them short. A callback
+that blocks delays MQTT dispatch and health processing.
+
+## Connection state and health
+
+`Client.State()` returns one of six states:
+
+| State | Meaning |
+|---|---|
+| `StateDisconnected` | No live connection, or disconnected without an active reconnect |
+| `StateConnecting` | A connection attempt is in progress |
+| `StateConnected` | MQTT is live and the data-age health signal is fresh |
+| `StateReconnecting` | A lost connection is being re-established |
+| `StateDegraded` | MQTT is live, but no data message arrived within the watchdog interval |
+| `StateClosed` | `Close` was called; this state is terminal |
 
 ```go
-s.OnSnapshot(func(snap *marketdatav1.Snapshot) {
-	log.Printf("%s %s", snap.GetBasic().GetSymbol(), snap.GetPrice())
+s.OnStateChange(func(previous, next stream.State) {
+    log.Printf("stream state %s -> %s", previous, next)
 })
 ```
 
-The `marketdatav1` package is
-`github.com/shing1211/webullapi4go/gen/webull/marketdata/v1`.
+`WithHealthWatchdog(interval)` starts one watchdog after the first successful
+`Connect`. Only quote, snapshot, and tick messages refresh the data timestamp.
+Notices, echo heartbeats, and other non-data messages do not.
+
+When the age of the last data message exceeds the interval, a connected stream
+becomes `StateDegraded`. The next fresh quote/snapshot/tick restores
+`StateConnected`. If no fresh data arrives, a later watchdog check does **not**
+silently restore it. `StateDegraded` is a health signal, not an automatic
+disconnect, and `IsConnected` may still be true.
+
+Webull MQTT payloads do not include sequence numbers. The SDK cannot prove
+message-sequence continuity, so this watchdog measures data age only. Use
+`Grab: true` when subscribing or re-snapshotting after a gap when the endpoint
+supports it.
+
+`StateClosed` cannot transition back to a live state. `Connect`, `Subscribe`,
+and `Unsubscribe` return an `invalid_config` error after close; late MQTT
+callbacks and messages are ignored.
+
+## Reconnection and resubscribe
+
+With `WithAutoReconnect(true)`, a connection loss starts the background
+reconnect loop. After a successful reconnect, the client:
+
+1. marks the connection live;
+2. snapshots the active subscription registry;
+3. re-issues each active HTTP subscription exactly once, bounded by
+   `WithResubscribeTimeout`;
+4. invokes `OnConnect` handlers after replay finishes.
+
+Re-subscription is idempotent and failures are delivered to `OnError`; one
+failed request does not prevent the remaining requests from being attempted.
+`Reconnecting` reports an in-progress reconnect and `IsConnected` reports false
+while reconnecting.
+
+Webull limits an App Key to five concurrent MQTT connections. Code 105 is
+mapped to a transport error explaining the limit. After a disconnect, server
+state may be retained for about a minute, so avoid immediate session-ID reuse.
+Reusing a session ID can disconnect the previous connection.
+
+## Channel delivery
+
+Channel subscriptions provide a bounded alternative to callbacks:
+
+```go
+quotes, cancel := s.SubscribeQuoteChan(stream.ChannelConfig{
+    Policy:     stream.DropOldest,
+    BufferSize: 256,
+})
+defer cancel()
+
+for quote := range quotes {
+    if quote == nil {
+        continue
+    }
+    log.Printf("%s", quote.GetBasic().GetSymbol())
+}
+```
+
+The three constructors are:
+
+- `SubscribeQuoteChan`
+- `SubscribeSnapshotChan`
+- `SubscribeTickChan`
+
+Each returns a receive-only channel and an idempotent cancel function. The
+channel closes when its cancel function runs or when `Client.Close` shuts down
+the stream. Calling cancel after close is safe. `BufferSize <= 0` uses 100.
+
+| Policy | Full-buffer behavior | Consequence |
+|---|---|---|
+| `DropBlock` | Wait for buffer space or cancellation | Backpressure; can pause the MQTT pump |
+| `DropOldest` | Remove the oldest unread value, then enqueue the new value | Preserves the newest value; older values are discarded |
+| `DropSample` | Randomly discard an arriving value when full | Reduces load with probabilistic loss |
+
+The default is `DropBlock`. Choose a drop policy only when the consumer can
+tolerate data loss. A blocked dispatch is unblocked by channel cancellation or
+`Client.Close`, so a full channel does not permanently wedge shutdown.
+
+Dropped messages are counted internally and, when a meter is configured,
+recorded as OTel `channel_drops` with a `topic` attribute. There is no public
+per-channel drop-count accessor; export the metric for operational visibility.
 
 ## Options
 
 | Option | Purpose |
-|--------|---------|
-| `WithSessionID`, `WithClientID` | Set the MQTT client id / session id (a unique id is generated by default) |
-| `WithMQTTURL` | Override the broker address (`tcp://`, `wss://`, or bare `host:port`) |
-| `WithWebSocket(bool)` | Select the WebSocket endpoint |
-| `WithAutoReconnect(bool)` | Enable the background reconnect loop |
-| `WithAutoResubscribe(bool)` | Re-issue active subscriptions after a reconnect (default true) |
-| `WithResubscribeTimeout(d)` | Bound the whole re-subscription sequence |
-| `WithKeepAlive(d)` | MQTT keep-alive interval |
-| `WithConnectTimeout(d)` | Bound a single connection attempt |
-| `WithWriteTimeout(d)` | Bound writing a control packet |
-| `WithMessageChannelDepth(n)` | Inbound message buffer size |
-| `WithCleanSession(bool)` | Request a clean MQTT session (default true) |
-| `WithTLSConfig(*tls.Config)` | Override the TLS configuration |
-
-`SessionID()` returns the MQTT client id used by the client. It is stable for
-the lifetime of the `Client`.
-
-## Reconnection and limits
-
-Webull does not restore subscriptions after a connection is lost. With
-`WithAutoReconnect`, the client detects the drop, reconnects, and re-issues the
-HTTP subscribe calls for every active subscription before `OnConnect` fires, so
-handlers observe a restored session. Re-subscription is idempotent. `Reconnecting`
-reports an in-progress reconnect attempt and `IsConnected` reports the live
-state.
-
-Webull applies the following rules:
-
-- An App Key supports at most **5 concurrent MQTT connections**. Exceeding the
-  limit fails with Webull error code 105; `Connect` returns an error explaining
-  the limit. After a disconnect the server retains state for about one minute, so
-  wait roughly a minute before reconnecting.
-- A new connection that reuses an existing session id disconnects the previous
-  one. `New` generates a unique session id by default; only set `WithSessionID`
-  when exclusivity is guaranteed.
-- The server pushes at most three messages per second per connection.
+|---|---|
+| `WithSessionID`, `WithClientID` | Set the MQTT client/session ID; a unique ID is generated by default |
+| `WithMQTTURL` | Override the broker address |
+| `WithWebSocket` | Select MQTT over WebSocket |
+| `WithAutoReconnect` | Enable the reconnect loop |
+| `WithAutoResubscribe` | Replay active HTTP subscriptions after reconnect; enabled by default |
+| `WithResubscribeTimeout` | Bound the complete replay sequence |
+| `WithKeepAlive` | MQTT keep-alive interval |
+| `WithConnectTimeout` | Bound one connection attempt |
+| `WithWriteTimeout` | Bound a control-packet write |
+| `WithMessageChannelDepth` | Low-level MQTT inbound buffer depth |
+| `WithCleanSession` | Request a clean MQTT session; default true |
+| `WithTLSConfig` | Override TLS configuration |
+| `WithHealthWatchdog` | Enable the data-age health watchdog; zero disables it |
+| `WithMeter` | Override the stream OTel meter; otherwise the core client's meter is inherited |
 
 ## Topics
 
-| Topic constant | Value | Encoding |
-|----------------|-------|----------|
-| `TopicQuote` | `quote` | protobuf (`Quote`) |
-| `TopicSnapshot` | `snapshot` | protobuf (`Snapshot`) |
-| `TopicTick` | `tick` | protobuf (`Tick`) |
-| `TopicNotice` | `notice` | JSON |
-| `TopicEcho` | `echo` | heartbeat, ignored |
+| Constant | Value | Encoding |
+|---|---|---|
+| `TopicQuote` | `quote` | Protobuf `Quote` |
+| `TopicSnapshot` | `snapshot` | Protobuf `Snapshot` |
+| `TopicTick` | `tick` | Protobuf `Tick` |
+| `TopicNotice` | `notice` | JSON bytes |
+| `TopicEcho` | `echo` | Heartbeat; ignored |
+
+## Observability
+
+When the core client has an OTel tracer, each MQTT message dispatch can create
+a consumer span named `mqtt.dispatch` with messaging system, destination, and
+payload-size attributes. Reconnects and channel drops are optional metrics. The
+core logger can record connect, disconnect, and reconnect transitions.
+
+See [Observability](observability.md) for setup and metric names.
 
 ## Full example
 
-The runnable example in
+The runnable
 [`examples/streaming`](https://github.com/shing1211/webullapi4go/tree/main/examples/streaming)
-connects over WebSocket, subscribes to `AAPL` quote/snapshot/tick pushes, prints
-messages, and handles Ctrl+C.
+program connects over WebSocket, subscribes to AAPL quote/snapshot/tick pushes,
+prints messages, and handles Ctrl+C. Live behavior is environment-dependent;
+the current health/channel hardening is offline-tested, not newly live-verified.
 
 ## Related
 
-- [Market Data](market-data.md) — HTTP queries.
-- [Troubleshooting](troubleshooting.md) — connection and entitlement issues.
+- [Observability](observability.md) — MQTT spans and metrics
+- [Market Data](market-data.md) — HTTP queries
+- [Errors](errors.md) — typed stream errors
+- [Troubleshooting](troubleshooting.md) — connection and entitlement issues

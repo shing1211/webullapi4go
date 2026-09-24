@@ -1,37 +1,33 @@
 # webullapi4go
 
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
-It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
-region. The v0.1 release covers authentication, a core signed REST client, the
-Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2
-release adds the Trading HTTP API: v0.2.1 introduced account listing, balances,
-and positions, v0.2.2 adds the stock-order lifecycle (preview, place, replace,
-cancel) and order queries, v0.2.3 adds market-specific order rules for US, HK,
-and CN, including Hong Kong BCAN party IDs, v0.2.4 adds single-leg options
-orders, and v0.2.5 adds US combo orders. The v0.3 release adds real-time Trading
-events over gRPC. The v0.4 release adds Market Data fundamentals: capital flows,
-industry comparisons, earnings and dividend calendars, SEC filings, and financial
-statements.
+It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
+release is `v2.1.0`; current request, OMS, streaming, and telemetry hardening is
+still **Unreleased** and must not be inferred from the latest tag.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v2.0.4)
+## Feature matrix
 
-| Area | Status | Details |
-|------|--------|---------|
-| Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, fundamentals, futures static and market data, snapshot, tick, quotes/depth, bars, footprint, NOII, screener, watchlists, options, news, event contracts, crypto data, Display Solution |
-| Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Supported | Accounts, balances, and positions; stock order preview, place, replace, cancel, and order queries; US/HK/CN order-type rules, Hong Kong BCAN; single-leg and multi-leg options orders; futures order validation; event contract orders; batch place orders |
-| Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC |
-| Broker API HK | Supported | Virtual accounts, instruments, assets, orders, cash activities, funding FX, instant funding, journals, master data, event contracts (`broker/` module) |
-| Broker FD API US | Supported | Agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, master data (`brokerfd/` module) |
-| Broker FD events (gRPC) | Supported | Broker FD event stream over gRPC using `grpc.event.EventService` (`brokerfd/events/` module) |
-| Display Solution | Supported | Company profile, analyst data, news, streaming, screeners, quotes (entitlement-gated: the HK sandbox host returns `403`) |
-| Connect API (OAuth) | Supported | Authorization-code URL builder and token exchange (authorization code / refresh) |
+Status distinguishes implementation and live availability. “Implemented” does
+not mean every endpoint is live-verified; see the
+[implementation status](IMPLEMENTATION_STATUS.md) for verification boundaries.
+
+| Area | Implementation | Verification | Details |
+|---|---|---|---|
+| Authentication | Implemented | Offline-tested; core token flow live-verified in HK | HMAC-SHA1 REST signing, token create/check/ensure, automatic token injection |
+| Market Data HTTP | Implemented | Offline-tested; selected HK calls live-verified | Instruments, fundamentals, futures, snapshot, tick, quotes/depth, bars, watchlists, options, news, event contracts, crypto/funds, and Display routes |
+| Market Data MQTT | Implemented | Offline-tested; basic HK stream path previously live-verified | QUOTE, SNAPSHOT, and TICK over MQTT or MQTT-over-WebSocket, reconnect/resubscribe, health state, and bounded channels |
+| Trading HTTP + OMS | Implemented | Offline-tested; selected HK account/preview paths live-verified | Accounts, assets, stock/single-leg/multi-leg/futures/event order validation, order queries, guardrails, and local order-state reconciliation |
+| Trading events | Implemented | Offline-tested; basic stream path previously exercised | Order, position, and option streams over server-streaming gRPC, reconnect, correlation, spans, and metrics |
+| Broker API HK | Implemented and offline-tested | Live blocked | Scope-protected virtual accounts, instruments, assets, orders, funding, journals, and events; separate `broker/` module |
+| Broker FD API US | Implemented and offline-tested | Live blocked without US credentials | Agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, and master data |
+| Broker FD events | Implemented and offline-tested | Live blocked without US credentials | Broker FD event stream over gRPC using `grpc.event.EventService` |
+| Display Solution | Implemented and offline-tested | Live blocked by host/entitlement | Company profile, analyst data, news, streaming, screeners, and quotes; HK host returns `403` |
+| Connect OAuth | Implemented and offline-tested | US live access unavailable | Authorization-code URL builder and token exchange/refresh |
 
 ## Install
 
@@ -236,31 +232,38 @@ order. Common options:
 | `WithRegion(client.HK)` | Select the deployment region |
 | `WithEnvironment(client.Sandbox)`, `WithSandbox()` | Select the environment |
 | `WithBaseURL`, `WithEndpoints` | Override resolved service endpoints |
-| `WithHTTPClient`, `WithTimeout`, `WithUserAgent` | Tune the HTTP transport |
-| `WithRetry(RetryConfig)`, `WithoutRetry()` | Configure transient-failure retries |
+| `WithHTTPClient`, `WithHTTPTransport`, `WithTimeout`, `WithUserAgent` | Tune HTTP transport and connection pooling |
+| `WithRetry(RetryConfig)`, `WithoutRetry()`, `WithResiliencePreset` | Configure transient-failure handling |
 | `WithRateLimiter`, `NewRateLimiter(rate, burst)` | Throttle requests per path |
 | `WithBreaker`, `NewBreaker(threshold, cooldown)` | Add a circuit breaker |
+| `WithClockDriftCorrection` | Learn a bounded signing-clock offset from response `Date` headers |
+| `WithInterceptor`, `WithHooks` | Add request-pipeline behavior and lifecycle callbacks |
 | `WithAPIVersion("v2"\|"v3")`, `WithAPIVersionFor(prefix, version)` | Select the `x-version` header |
-| `WithAutoToken(true)` | Obtain a token automatically (sandbox) before the first request |
+| `WithAutoToken(true)` | Obtain a sandbox token automatically before the first token-consuming request |
+| `WithLogger`, `WithTracerProvider`, `WithMeterProvider`, `WithPropagator` | Configure structured logs and OpenTelemetry |
 | `WithEnv()` | Fill configuration from the environment |
 
 Streaming is configured with `stream.WithSessionID`, `WithMQTTURL`,
 `WithWebSocket`, `WithAutoReconnect`, `WithAutoResubscribe`,
 `WithResubscribeTimeout`, `WithKeepAlive`, `WithConnectTimeout`,
-`WithWriteTimeout`, `WithMessageChannelDepth`, `WithCleanSession`, and
-`WithTLSConfig`.
+`WithWriteTimeout`, `WithMessageChannelDepth`, `WithCleanSession`,
+`WithTLSConfig`, `WithHealthWatchdog`, and `WithMeter`.
 
-Trading is configured with `trade.WithMaxOrderNotional` and
-`trade.WithMaxOrderQuantity`, advisory order guardrails that the order methods
-enforce before an order is built. The notional cap does not cover multi-leg
-option orders, which have no single top-level notional; the quantity cap still
-applies to them.
+Trading is configured with `trade.WithMaxOrderNotional`,
+`trade.WithMaxOrderQuantity`, and `trade.WithAutoClientOrderID`. The first two
+are advisory configuration guardrails enforced before placement. The notional
+cap does not cover multi-leg option orders, which have no single top-level
+notional; the quantity cap still applies. Auto client-order IDs are stable for
+the same logical place request and do not mutate the caller's request.
 
 Trading events are configured with `events.WithSubscribeTypes`,
 `events.WithAccounts`, `events.WithGRPCEndpoint`, `events.WithGRPCPort`,
 `events.WithTLS`, `events.WithDialTimeout`, `events.WithGRPCDialOption`,
 `events.WithAutoReconnect`, `events.WithReconnectBaseDelay`,
 `events.WithReconnectMaxDelay`, and `events.WithMaxReconnectAttempts`.
+
+See [Observability](docs/observability.md) for OTel setup, metric names, event
+spans, and correlation propagation.
 
 ## Sandbox testing
 
@@ -303,39 +306,43 @@ MQTT on port 1883).
 
 | Package | Purpose |
 |---------|---------|
-| `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
-| `data` | Market Data HTTP endpoints (typed requests and responses) |
-| `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
-| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg and multi-leg options, futures validation, US combo orders, and order queries) |
-| `events` | Trading events over gRPC: order, position, and option streams with typed payloads and reconnect |
+| `client` | Canonical core SDK: configuration, signing, tokens, HTTP transport, request pipeline, and resilience |
+| `data` | Canonical Market Data HTTP client and DTOs |
+| `stream` | Canonical Market Data MQTT client with reconnect, health, and channel policies |
+| `trade` | Canonical Trading HTTP client and OMS tracking integration |
+| `events` | Canonical Trading Events gRPC client |
 | `connect` | OAuth 2.0 authorization-code flow for third-party apps (US only) |
 | `display` | Display Solution client-to-server authentication and token management |
 | `broker` | Broker API HK (own Go module; root module uses `replace`) |
 | `brokerfd` | Broker FD US HTTP endpoints (accounts, orders, funding, instruments, etc.) |
 | `brokerfd/events` | Broker FD US events over gRPC |
-| `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
-| `gen/webull/trade/events/v1` | Generated protobuf types for the gRPC event service |
-| `gen/webull/brokerfd/v1` | Generated protobuf types for Broker FD events |
-| `pkg/types` | Shared public domain types (markets, instrument types) |
-| `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
+| `webull` | Optional thin aliases for the core client; service clients remain in their root packages |
+| `pkg/errors` | Public typed errors, codes, and sentinels |
+| `pkg/observability` | OpenTelemetry handles, span helpers, and shared instruments |
+| `pkg/resilience` | Public retry, rate-limit, circuit-breaker, and clock primitives |
+| `pkg/transport` | Public HTTP transport and MQTT transport |
+| `pkg/domain/money` | `money.Money`, the public DTO decimal type |
+| `pkg/domain/order` | Public order state machine and reconciliation model |
+| `pkg/types` | Shared public market/instrument types |
+| `gen/webull/...` | Committed generated protobuf types; do not hand-edit |
+| `internal/*` | Non-public authentication and compatibility implementation details |
 
-## Roadmap
+## Roadmap and release status
 
 | Version | Scope | Status |
-|---------|-------|--------|
-| v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | Done |
-| v0.3 | Trading events over gRPC | Done |
-| v0.4 | Market Data fundamentals: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements | Done |
-| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Done |
-| v0.6 | Broker API (HK + FD US), multi-leg options, futures validation, option chain discovery | Done |
-| v0.7.0 | Event contracts, Broker API HK, Broker FD US, Broker FD gRPC events | Done |
-| v0.8.0 | — | — |
-| v0.9.0 | GoDoc coverage on brokerfd/ and brokerfd/events/, HK options stubs, HK futures market data, new examples (brokerfd, brokerfd-events, options), graceful credential handling | Done |
-| v0.9.1 | Watchlist boolean-response fix; `DoBroker` transport; `watchlist-cmd` and `broker-probe` examples | Done |
-| v0.9.2 | Broker HK path correction (`/openapi/v1/broker/...` → `/broker/...`); `401 ROUTE_NOT_PERMITTED` instead of `404 Route Not Found` | Done |
-| v1.0 | Stable public API, full documentation, semver guarantees | Done |
-| v1.1 | Full Webull OpenAPI parity: every documented endpoint implemented with official paths (209 endpoints, 0 gaps); `connect/` OAuth, crypto, fund extras, event-contract Display | Done |
+|---|---|---|
+| v0.x–v1.0 | Core API, Trading, Events, full endpoint coverage, examples, and API stabilization | Released |
+| v1.1.1 | Production test/security tooling, multi-OS CI, leak checks, and fuzzing | Released |
+| v2.0.0–v2.0.2 | Public error/resilience/transport foundations, OMS domain, `money.Money`, and thin `webull` aliases; root services retained | Released |
+| v2.0.3–v2.0.4 | Context hygiene, structured resilience, clock correction, idempotency, and transport tuning | Released |
+| v2.0.5–v2.0.7 | Request interceptors/hooks, initial OMS, stream state/channels, slog, OTel tracing, and metrics | Released |
+| v2.0.8–v2.0.9 | Context and typed-error hardening | Released |
+| v2.1.0 | `go vet` mutex-copy fixes | Latest release |
+| Unreleased | Request-pipeline parity, OMS reconciliation, stream/channel hardening, gRPC event telemetry, and documentation reconciliation | Implemented and offline-tested; not live-verified or released |
+
+The next version number is intentionally unassigned until the release gate is
+complete. See [CHANGELOG.md](CHANGELOG.md) and
+[PLAN.md](PLAN.md) for the decision record.
 
 ## Links
 
@@ -347,6 +354,8 @@ MQTT on port 1883).
 - `events` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/events
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](docs/adr/index.md)
+- Implementation status: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+- Observability: [docs/observability.md](docs/observability.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 

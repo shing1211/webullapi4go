@@ -18,9 +18,10 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
-	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 	"go.opentelemetry.io/otel/metric"
+
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 )
 
 // Default streaming parameters. Most mirror the low-level MQTT defaults.

@@ -26,7 +26,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/domain/order"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Stock and option order endpoint paths.
@@ -518,49 +518,27 @@ func (c *Client) PreviewOrder(ctx context.Context, req PlaceOrderRequest) (*Prev
 // [WithMaxOrderQuantity] to bound what can be sent.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/common-order-place.md
-// autoFillClientOrderIDs generates and assigns a [NewClientOrderID] to each
-// order in orders whose ClientOrderID is empty. It returns the first error
-// encountered, if any.
-func (c *Client) autoFillClientOrderIDs(orders []OrderRequest) error {
-	if !c.cfg.autoClientOrderID {
-		return nil
-	}
-	for i := range orders {
-		if orders[i].ClientOrderID != "" {
-			continue
-		}
-		id, err := NewClientOrderID()
-		if err != nil {
-			return fmt.Errorf("auto-generating client_order_id for order[%d]: %w", i, err)
-		}
-		orders[i].ClientOrderID = id
-	}
-	return nil
-}
-
 func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*order.Order, error) {
-	if c.cfg.autoClientOrderID {
-		if err := c.autoFillClientOrderIDs(req.NewOrders); err != nil {
-			return nil, err
-		}
-	}
-	if err := req.Validate(); err != nil {
+	prepared, err := c.preparePlaceRequest(req)
+	if err != nil {
 		return nil, err
 	}
-	if err := c.enforceGuardrails(req); err != nil {
+	if err := prepared.Validate(); err != nil {
+		return nil, err
+	}
+	if err := c.enforceGuardrails(prepared); err != nil {
 		return nil, err
 	}
 	var out order.PlaceOrderResult
-	if err := c.do(ctx, http.MethodPost, pathOrdersPlace, nil, req, &out); err != nil {
+	if err := c.do(ctx, http.MethodPost, pathOrdersPlace, nil, prepared, &out); err != nil {
 		return nil, err
 	}
 	o := &order.Order{
 		PlaceOrderResult: out,
-		AccountID:        req.AccountID,
+		AccountID:        prepared.AccountID,
 		Machine:          order.New(order.StatePending),
 	}
-	c.registerOrder(o)
-	return o, nil
+	return c.registerOrderWithKey(o, prepared.AccountID, prepared.NewOrders[0].ClientOrderID), nil
 }
 
 // BatchPlaceOrderResult carries the result for one order within a batch.
@@ -586,23 +564,22 @@ type BatchPlaceOrderResponse struct {
 //
 // Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
 func (c *Client) BatchPlaceOrder(ctx context.Context, req PlaceOrderRequest) (*BatchPlaceOrderResponse, error) {
-	if c.cfg.autoClientOrderID {
-		if err := c.autoFillClientOrderIDs(req.NewOrders); err != nil {
-			return nil, err
-		}
-	}
-	if err := req.Validate(); err != nil {
+	prepared, err := c.preparePlaceRequest(req)
+	if err != nil {
 		return nil, err
 	}
-	if err := c.enforceGuardrails(req); err != nil {
+	if err := prepared.Validate(); err != nil {
 		return nil, err
 	}
-	if len(req.NewOrders) > maxBatchOrders {
+	if err := c.enforceGuardrails(prepared); err != nil {
+		return nil, err
+	}
+	if len(prepared.NewOrders) > maxBatchOrders {
 		return nil, errs.New(errs.CodeInvalidConfig,
-			fmt.Sprintf("batch place supports at most %d orders, got %d", maxBatchOrders, len(req.NewOrders)))
+			fmt.Sprintf("batch place supports at most %d orders, got %d", maxBatchOrders, len(prepared.NewOrders)))
 	}
-	for i := range req.NewOrders {
-		o := &req.NewOrders[i]
+	for i := range prepared.NewOrders {
+		o := &prepared.NewOrders[i]
 		if o.InstrumentType != InstrumentTypeEquity {
 			return nil, errs.New(errs.CodeInvalidConfig,
 				fmt.Sprintf("new_orders[%d]: instrument_type %q is not supported in batch mode; only EQUITY is allowed", i, o.InstrumentType))
@@ -613,15 +590,17 @@ func (c *Client) BatchPlaceOrder(ctx context.Context, req PlaceOrderRequest) (*B
 		}
 	}
 	var out BatchPlaceOrderResponse
-	if err := c.do(ctx, http.MethodPost, pathOrdersBatchPlace, nil, req, &out); err != nil {
+	if err := c.do(ctx, http.MethodPost, pathOrdersBatchPlace, nil, prepared, &out); err != nil {
 		return nil, err
 	}
+	c.registerBatchResults(prepared, out.Results)
 	return &out, nil
 }
 
 // enforceGuardrails applies the configured order caps to every order in req. It
 // runs before the network call and returns a typed [errs.Error] with
-// [errs.CodeInvalidConfig] when an order exceeds a cap.
+// [errs.CodeInvalidConfig] when an order exceeds a cap. The outer code remains
+// invalid_config for compatibility; the error also wraps [errs.ErrOrderGuardrail].
 //
 // The quantity cap compares each order's quantity. The notional cap compares
 // total_cash_amount for AMOUNT orders, and quantity times limit_price for orders
@@ -647,8 +626,9 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 		qtyRat := o.Quantity.Rat()
 		maxRat, ok := money.ParseDecimal(c.cfg.maxOrderQuantity)
 		if ok && qtyRat.Cmp(maxRat) > 0 {
-			return errs.New(errs.CodeInvalidConfig,
-				fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity))
+			return errs.Wrap(errs.CodeInvalidConfig,
+				fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity),
+				errs.ErrOrderGuardrail)
 		}
 	}
 	if c.cfg.maxOrderNotional == "" {
@@ -663,8 +643,9 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 		return nil
 	}
 	if notional.Cmp(max) > 0 {
-		return errs.New(errs.CodeInvalidConfig,
-			fmt.Sprintf("order notional %s exceeds the configured maximum %s", notional.FloatString(2), c.cfg.maxOrderNotional))
+		return errs.Wrap(errs.CodeInvalidConfig,
+			fmt.Sprintf("order notional %s exceeds the configured maximum %s", notional.FloatString(2), c.cfg.maxOrderNotional),
+			errs.ErrOrderGuardrail)
 	}
 	return nil
 }
@@ -904,14 +885,13 @@ func NewEquityOrder(symbol string, side OrderSide, qty *money.Money) OrderReques
 // EquityOrderBuilder is a fluent builder for a US equity [OrderRequest].
 // See [NewEquityOrderBuilder].
 type EquityOrderBuilder struct {
-	symbol       string
-	side         OrderSide
-	quantity     *money.Money
-	orderType    OrderType
-	limitPrice   *money.Money
-	stopPrice    *money.Money
-	triggerPrice *money.Money
-	timeInForce  TimeInForce
+	symbol      string
+	side        OrderSide
+	quantity    *money.Money
+	orderType   OrderType
+	limitPrice  *money.Money
+	stopPrice   *money.Money
+	timeInForce TimeInForce
 }
 
 // NewEquityOrderBuilder starts a fluent builder for a US equity order.

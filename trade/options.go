@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // optionOrderTypes are the only order types the API accepts for single-leg

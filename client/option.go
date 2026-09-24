@@ -240,9 +240,9 @@ func NewBreaker(threshold int, cooldown time.Duration) CircuitBreaker {
 // WithClockDriftCorrection enables clock-drift correction. When enabled, the
 // client learns the offset between the local clock and the Webull server's clock
 // by observing the Date response header on each successful request, and applies
-// that offset to subsequent x-timestamp values used in request signing. The offset
-// is clamped to the range [-5 minutes, +5 minutes] to prevent extreme offsets from
-// being injected. Disable with false to opt out.
+// that offset to subsequent x-timestamp values used in request signing. The
+// offset is clamped to the range [-5 minutes, +5 minutes] to prevent extreme
+// offsets from being injected. Disable with false to opt out.
 func WithClockDriftCorrection(enabled bool) Option {
 	return func(c *Config) {
 		c.clockDriftCorrection = enabled
@@ -251,9 +251,10 @@ func WithClockDriftCorrection(enabled bool) Option {
 
 // Interceptor is a function that wraps the request pipeline. It receives the next
 // function in the chain and may inspect, decorate, or short-circuit the request.
-// Interceptors are invoked in the order they are supplied to [WithInterceptor].
-// The first interceptor in the chain receives a function that performs the
-// underlying HTTP call (rate-limit, breaker, signing, and send).
+// Interceptors are invoked in the order they are supplied to [WithInterceptor]
+// for [Client.Do], [Client.DoBroker], and [Client.DoStream]. The first
+// interceptor in the chain receives a function that performs the underlying
+// HTTP call (signing and sending).
 //
 // For example, a logging interceptor:
 //
@@ -268,31 +269,33 @@ type Interceptor func(ctx context.Context, next func(context.Context) error) err
 // WithInterceptor adds an interceptor to the request pipeline. Interceptors are
 // invoked after rate-limiting and circuit-breaking but before the request is
 // signed and sent, and after the response is received. Multiple interceptors
-// can be added; they fire in the order they are supplied.
+// can be added; they fire in the order they are supplied for [Client.Do],
+// [Client.DoBroker], and [Client.DoStream].
 func WithInterceptor(i Interceptor) Option {
 	return func(c *Config) {
 		c.interceptors = append(c.interceptors, i)
 	}
 }
 
-// Hooks holds optional lifecycle callbacks invoked by [Client.Do] around each
-// request attempt. All fields are optional; nil fields are no-ops.
+// Hooks holds optional lifecycle callbacks invoked by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] around each request attempt. All
+// fields are optional; nil fields are no-ops.
 //
 // These hooks are the integration point for observability tools (structured
-// logging, OpenTelemetry tracing, Prometheus metrics). Phase 6 of the
-// production hardening plan adds actual instrumentation via these hooks.
+// logging, OpenTelemetry tracing, Prometheus metrics). Attempt numbers start
+// at one for each logical request and increase for retries.
 type Hooks struct {
-	// OnRequest is called before each attempt, after rate-limiting and
-	// circuit-breaking, with the HTTP method and path.
+	// OnRequest is called after rate-limiting and circuit-breaking, before
+	// user interceptors, with the HTTP method and path.
 	OnRequest func(method, path string)
 	// OnResponse is called on a successful response (2xx), passing the
-	// HTTP status code and the round-trip latency.
+	// actual HTTP status code and the round-trip latency.
 	OnResponse func(status int, latency time.Duration)
-	// OnError is called when the request returns an error or a non-retryable
-	// HTTP status, passing the error and the round-trip latency.
+	// OnError is called when the request returns an error or a non-2xx HTTP
+	// status, passing the error and the round-trip latency.
 	OnError func(err error, latency time.Duration)
 	// OnLatency is called after every attempt (success, error, or retry) with
-	// the attempt number and the round-trip latency.
+	// the one-based attempt number and the round-trip latency.
 	OnLatency func(attempt int, latency time.Duration)
 }
 
@@ -340,9 +343,9 @@ func WithResiliencePreset(preset ResiliencePreset) Option {
 	}
 }
 
-// WithLogger sets the structured logger used by [Client.Do] for per-request
-// log output. When nil (the default), no structured logging is produced.
-// A no-op logger is used when a real logger is not supplied.
+// WithLogger sets the structured logger used by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] for per-request log output. When nil
+// (the default), no structured logging is produced.
 func WithLogger(log *slog.Logger) Option {
 	return func(c *Config) {
 		c.otel.Logger = log
@@ -350,8 +353,8 @@ func WithLogger(log *slog.Logger) Option {
 }
 
 // WithTracerProvider sets the OpenTelemetry [TracerProvider] used to create
-// spans for [Client.Do] and [Client.DoBroker] requests. When nil (the default),
-// the global no-op tracer is used.
+// spans for [Client.Do], [Client.DoBroker], and [Client.DoStream] requests. When
+// nil (the default), the global no-op tracer is used.
 func WithTracerProvider(tp observability.TracerProvider) Option {
 	return func(c *Config) {
 		c.otel.TracerProvider = tp

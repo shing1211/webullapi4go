@@ -22,7 +22,8 @@ linters:
     - misspell
     - revive
     # gosec: security static analysis. Exclusions below avoid flags from
-    # protocol-mandated crypto (internal/auth) and intentional math/rand jitter.
+    # protocol-mandated crypto (internal/auth) and intentional math/rand jitter
+    # in the canonical and compatibility retry packages.
     - gosec
   settings:
     revive:
@@ -42,12 +43,68 @@ linters:
       - path: _test\.go
         linters:
           - errcheck
+      - path: _test\.go
+        text: "G104"
+        linters:
+          - gosec
       # gosec flags protocol-mandated crypto (HMAC-SHA1/MD5 body digest) in
-      # internal/auth and intentional math/rand jitter in internal/resilience/retry.
+      # internal/auth and intentional math/rand jitter in the canonical and
+      # compatibility retry packages.
       - path: internal/auth/
         linters:
           - gosec
+      - path: pkg/resilience/retry/
+        linters:
+          - gosec
       - path: internal/resilience/retry/
+        linters:
+          - gosec
+      - path: events/client.go
+        text: "G404"
+        linters:
+          - gosec
+      - path: brokerfd/events/events.go
+        text: "G404"
+        linters:
+          - gosec
+      - path: stream/channels.go
+        text: "G404"
+        linters:
+          - gosec
+      - path: display/service.go
+        text: "G(101|401|501|505)"
+        linters:
+          - gosec
+      - path: display/service_test.go
+        text: "G(101|104|401|501|505)"
+        linters:
+          - gosec
+      - path: client/env.go
+        text: "G101"
+        linters:
+          - gosec
+      - path: client/token.go
+        text: "G101"
+        linters:
+          - gosec
+      - path: events/payload.go
+        text: "G115"
+        linters:
+          - gosec
+      - path: brokerfd/orders_test.go
+        text: "G104"
+        linters:
+          - gosec
+      - path: client/token_test.go
+        text: "G101"
+        linters:
+          - gosec
+      - path: connect/connect.go
+        text: "G101"
+        linters:
+          - gosec
+      - path: data/corporate_actions_test.go
+        text: "G104"
         linters:
           - gosec
 

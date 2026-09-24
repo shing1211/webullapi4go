@@ -24,10 +24,13 @@
 //	WEBULL_APP_SECRET=...
 //	WEBULL_ENVIRONMENT=sandbox
 //	WEBULL_ACCOUNT_ID=...
+//	WEBULL_ORDER_IDEMPOTENCY_KEY=...
 //	WEBULL_ORDER_PLACE=1
 //
 // The account is taken from WEBULL_ACCOUNT_ID; when it is unset, the first
-// account returned by the API is used. Without WEBULL_ORDER_PLACE=1 the
+// account returned by the API is used. Mutating placement also requires a
+// caller-generated WEBULL_ORDER_IDEMPOTENCY_KEY that is persisted before the
+// first request and reused for every retry. Without WEBULL_ORDER_PLACE=1 the
 // program previews the order and prints a note, then exits.
 //
 // Run it with:
@@ -41,6 +44,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
@@ -48,67 +54,97 @@ import (
 	"github.com/shing1211/webullapi4go/trade"
 )
 
-// orderLimitPrice is far below the AAPL market price, so the order is not
-// marketable and will not execute before it is cancelled.
-const orderLimitPrice = "1.00"
-
-func moneyPtr(s string) *money.Money {
-	m := money.Must(money.NewFromString(s))
-	return &m
-}
+const (
+	orderLimitPrice          = "1.00"
+	orderIDEnvironment       = "WEBULL_ORDER_IDEMPOTENCY_KEY"
+	maxClientOrderIDLength   = 32
+	orderTokenTimeout        = 5 * time.Minute
+	orderRequestTimeout      = 20 * time.Second
+	orderCancellationTimeout = 30 * time.Second
+	previewOrderIDSeed       = "preview:AAPL:BUY:1:1.00"
+)
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	if os.Getenv("WEBULL_APP_KEY") == "" {
 		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
-		return
+		return nil
 	}
+
+	placing := os.Getenv("WEBULL_ORDER_PLACE") == "1"
+	clientOrderID, err := resolveClientOrderID(placing)
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	cl, err := client.New(client.WithEnv())
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("create client: %w", err)
 	}
 	defer func() { _ = cl.Close() }()
 
-	ctx := context.Background()
-
-	// Trading endpoints require an access token, sent as the x-access-token
-	// header. EnsureToken creates or reuses one; in the sandbox the token is
-	// activated without 2FA.
-	if _, err := cl.EnsureToken(ctx); err != nil {
-		log.Fatal(err)
+	tokenCtx, cancelToken := context.WithTimeout(ctx, orderTokenTimeout)
+	_, err = cl.EnsureToken(tokenCtx)
+	cancelToken()
+	if err != nil {
+		return fmt.Errorf("ensure access token: %w", err)
 	}
 
-	// The guardrails bound what this example can send, even if the order is
-	// later edited: at most 10 shares and a notional of at most 2500.00.
 	trading := trade.New(cl,
 		trade.WithMaxOrderQuantity("10"),
 		trade.WithMaxOrderNotional("2500.00"),
 	)
 	defer func() { _ = trading.Close() }()
 
-	accountID, err := resolveAccountID(ctx, trading)
+	accountCtx, cancelAccount := context.WithTimeout(ctx, orderRequestTimeout)
+	accountID, err := resolveAccountID(accountCtx, trading)
+	cancelAccount()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("resolve account: %w", err)
 	}
 
-	req := buildOrder(accountID)
-
-	// Preview validates the request and estimates its cost without placing it.
-	preview, err := trading.PreviewOrder(ctx, req)
+	req := buildOrder(accountID, clientOrderID)
+	previewCtx, cancelPreview := context.WithTimeout(ctx, orderRequestTimeout)
+	preview, err := trading.PreviewOrder(previewCtx, req)
+	cancelPreview()
 	if err != nil {
-		log.Fatalf("PreviewOrder: %v", err)
+		return fmt.Errorf("preview order: %w", err)
 	}
+
 	order := req.NewOrders[0]
-	log.Printf("preview ok symbol=%s side=%s type=%s qty=%s limit=%s estimated_cost=%s estimated_fee=%s",
-		order.Symbol, order.Side, order.OrderType, order.Quantity, order.LimitPrice,
-		preview.EstimatedCost, preview.EstimatedTransactionFee)
+	log.Printf("preview ok client_order_id=%s symbol=%s side=%s type=%s qty=%s limit=%s estimated_cost=%s estimated_fee=%s",
+		order.ClientOrderID, order.Symbol, order.Side, order.OrderType,
+		order.Quantity.String(), order.LimitPrice.String(),
+		preview.EstimatedCost.String(), preview.EstimatedTransactionFee.String())
 
-	if os.Getenv("WEBULL_ORDER_PLACE") != "1" {
-		log.Println("preview only: set WEBULL_ORDER_PLACE=1 to place this non-marketable limit order and cancel it immediately")
-		return
+	if !placing {
+		log.Println("preview only: set WEBULL_ORDER_PLACE=1 and WEBULL_ORDER_IDEMPOTENCY_KEY to place and immediately cancel this limit order")
+		return nil
 	}
 
-	placeAndCancel(ctx, trading, req)
+	return placeAndCancel(ctx, trading, req)
+}
+
+func resolveClientOrderID(placing bool) (string, error) {
+	key := strings.TrimSpace(os.Getenv(orderIDEnvironment))
+	if key == "" {
+		if placing {
+			return "", fmt.Errorf("%s is required for placement; persist a new key before the first request and reuse it for retries", orderIDEnvironment)
+		}
+		return trade.ClientOrderIDFrom([]byte(previewOrderIDSeed)), nil
+	}
+	if len(key) > maxClientOrderIDLength || !trade.ValidClientOrderID(key) {
+		return "", fmt.Errorf("%s must be at most %d characters using only letters, digits, '-' and '_'", orderIDEnvironment, maxClientOrderIDLength)
+	}
+	return key, nil
 }
 
 // resolveAccountID returns WEBULL_ACCOUNT_ID when set, otherwise the first
@@ -127,49 +163,34 @@ func resolveAccountID(ctx context.Context, trading *trade.Client) (string, error
 	return accounts[0].AccountID, nil
 }
 
-// buildOrder returns a small, non-marketable AAPL limit buy with a unique
-// client order identifier. Stock orders are NORMAL, EQUITY, and sized by QTY.
-func buildOrder(accountID string) trade.PlaceOrderRequest {
-	return trade.PlaceOrderRequest{
-		AccountID: accountID,
-		NewOrders: []trade.OrderRequest{
-			{
-				ClientOrderID:         fmt.Sprintf("sdk-order-%d", time.Now().UnixNano()),
-				ComboType:             trade.ComboTypeNormal,
-				InstrumentType:        trade.InstrumentTypeEquity,
-				Market:                trade.MarketUS,
-				Symbol:                "AAPL",
-				OrderType:             trade.OrderTypeLimit,
-				Side:                  trade.OrderSideBuy,
-				Quantity:              moneyPtr("1"),
-				EntrustType:           trade.EntrustTypeQty,
-				TimeInForce:           trade.TimeInForceDay,
-				SupportTradingSession: trade.TradingSessionCore,
-				LimitPrice:            moneyPtr(orderLimitPrice),
-			},
-		},
-	}
+func buildOrder(accountID, clientOrderID string) trade.PlaceOrderRequest {
+	quantity := money.MustNew("1")
+	limitPrice := money.MustNew(orderLimitPrice)
+	order := trade.NewEquityOrderBuilder("AAPL", trade.OrderSideBuy, &quantity).
+		LimitPrice(&limitPrice).
+		Build()
+	order.ClientOrderID = clientOrderID
+	return trade.NewPlaceOrderRequest(accountID, order)
 }
 
-// placeAndCancel submits the order and cancels it with a fresh timeout so the
-// cleanup still runs if the caller's context is already done.
-func placeAndCancel(ctx context.Context, trading *trade.Client, req trade.PlaceOrderRequest) {
+func placeAndCancel(ctx context.Context, trading *trade.Client, req trade.PlaceOrderRequest) error {
+	clientOrderID := req.NewOrders[0].ClientOrderID
 	log.Println("WARNING: WEBULL_ORDER_PLACE=1 is set; placing a real order mutates the account")
 
-	res, err := trading.PlaceOrder(ctx, req)
+	placeCtx, cancelPlace := context.WithTimeout(ctx, orderRequestTimeout)
+	res, err := trading.PlaceOrder(placeCtx, req)
+	cancelPlace()
 	if err != nil {
-		log.Fatalf("PlaceOrder: %v", err)
+		return fmt.Errorf("place order with client_order_id %q (retry with the same key if the outcome is unknown): %w", clientOrderID, err)
 	}
 	log.Printf("placed client_order_id=%s order_id=%s", res.ClientOrderID, res.OrderID)
 
-	cctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cres, err := trading.CancelOrder(cctx, trade.CancelOrderRequest{
-		AccountID:     req.AccountID,
-		ClientOrderID: res.ClientOrderID,
-	})
+	cancelCtx, cancelCancel := context.WithTimeout(context.Background(), orderCancellationTimeout)
+	cancelResult, err := trading.CancelOrder(cancelCtx, trade.NewCancelOrderRequest(req.AccountID, clientOrderID))
+	cancelCancel()
 	if err != nil {
-		log.Fatalf("CancelOrder(%s): %v", res.ClientOrderID, err)
+		return fmt.Errorf("cancel client_order_id %q; the order may still be working: %w", clientOrderID, err)
 	}
-	log.Printf("cancelled client_order_id=%s order_id=%s", cres.ClientOrderID, cres.OrderID)
+	log.Printf("cancelled client_order_id=%s order_id=%s", cancelResult.ClientOrderID, cancelResult.OrderID)
+	return nil
 }

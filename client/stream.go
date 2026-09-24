@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // DoStream sends a signed request and returns the raw, open response for
@@ -32,9 +32,9 @@ import (
 // serialized as compact JSON without HTML escaping (a []byte or
 // [encoding/json.RawMessage] is sent verbatim, nil sends no body), the
 // x-version header follows the same built-in per-path defaults and overrides,
-// a cached access token is attached, and the host that is signed is the host
-// that is sent. The configured rate limiter waits before the request and the
-// circuit breaker gates it, exactly as for a buffered call.
+// a cached access token is attached, the host that is signed is the host that
+// is sent, and the configured rate limiter, circuit breaker, interceptors,
+// hooks, logger, spans, and metrics apply.
 //
 // Unlike [Client.Do], DoStream never retries. A streaming response is a
 // long-lived connection that is consumed incrementally and is not safe to
@@ -50,6 +50,7 @@ func (c *Client) DoStream(ctx context.Context, method, path string, body any) (*
 		return nil, err
 	}
 	query = normalizeQuery(query)
+	ctx, _ = ensureCorrelationID(ctx)
 
 	if err := c.ensureAutoToken(ctx, reqPath); err != nil {
 		return nil, err
@@ -60,45 +61,61 @@ func (c *Client) DoStream(ctx context.Context, method, path string, body any) (*
 		return nil, err
 	}
 
-	if c.cfg.rateLimiter != nil {
-		if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				return nil, ctxErr
-			}
-			return nil, errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
+	result, err := c.attemptStreamWithNumber(ctx, method, reqPath, query, bodyBytes, 1)
+	if err != nil {
+		if result.response != nil && result.response.Body != nil {
+			_ = result.response.Body.Close()
 		}
+		return nil, err
 	}
-	if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
-		return nil, errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen)
+	if result.response == nil {
+		return nil, errs.New(errs.CodeTransport, "stream interceptor returned no response")
 	}
-
-	resp, err := c.sendStream(ctx, method, reqPath, query, bodyBytes)
-	if c.cfg.breaker != nil {
-		c.recordBreaker(err)
-	}
-	return resp, err
+	return result.response, nil
 }
 
-// sendStream performs a single streaming request attempt. It builds and signs
-// the request with the shared pipeline and returns the open response, or a
-// typed error. The caller owns a successful response body.
-func (c *Client) sendStream(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte) (*http.Response, error) {
+func (c *Client) attemptStreamWithNumber(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, attempt int) (attemptResult, error) {
+	return c.runAttempt(ctx, method, reqPath, attempt, true, func(operationCtx context.Context) (attemptResult, error) {
+		return c.executeStream(operationCtx, method, reqPath, query, bodyBytes)
+	})
+}
+
+func (c *Client) executeStream(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte) (attemptResult, error) {
+	var result attemptResult
 	req, err := c.buildSignedRequest(ctx, method, reqPath, query, bodyBytes)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
 	resp, err := c.transport.Do(req)
+	if resp != nil {
+		result.status = resp.StatusCode
+		result.response = resp
+	}
 	if err != nil {
-		return nil, errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		result.response = nil
+		return result, errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
+	}
+	if resp == nil {
+		return result, errs.New(errs.CodeTransport, method+" "+reqPath+" returned nil response")
+	}
+
+	if resp.Body == nil {
+		result.response = nil
+		return result, errs.New(errs.CodeTransport, method+" "+reqPath+" returned nil response body")
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		data, readErr := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
+		result.response = nil
 		if readErr != nil {
-			return nil, errs.Wrap(errs.CodeTransport, "reading response body", readErr)
+			return result, errs.Wrap(errs.CodeTransport, "reading response body", readErr)
 		}
-		return nil, errs.FromHTTPStatus(resp.StatusCode, data)
+		return result, errs.FromHTTPStatus(resp.StatusCode, data)
 	}
-	return resp, nil
+	c.maybeUpdateClockOffset(resp.Header)
+	return result, nil
 }

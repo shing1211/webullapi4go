@@ -28,9 +28,9 @@ type config struct {
 	// maxOrderQuantity, when non-empty, is the advisory cap on a single
 	// order's quantity, as a decimal string.
 	maxOrderQuantity string
-	// autoClientOrderID, when true, causes [Client.PlaceOrder],
-	// [Client.ModifyOrder], and [Client.CancelOrder] to generate and assign a
-	// fresh [NewClientOrderID] to any order whose ClientOrderID is empty.
+	// autoClientOrderID, when true, causes [Client.PlaceOrder] and
+	// [Client.BatchPlaceOrder] to derive a stable client order identifier for
+	// any order whose ClientOrderID is empty.
 	autoClientOrderID bool
 }
 
@@ -84,10 +84,11 @@ func normalizeGuardrail(name, v string) string {
 	return v
 }
 
-// WithAutoClientOrderID controls whether order methods automatically generate
-// and assign a [NewClientOrderID] to any order whose ClientOrderID is empty.
-// The default is false (disabled). When enabled, each call that needs an ID
-// generates a fresh one, so retried calls produce distinct order identifiers.
+// WithAutoClientOrderID controls whether [Client.PlaceOrder] and
+// [Client.BatchPlaceOrder] derive and assign a client order identifier to any
+// order whose ClientOrderID is empty. The default is false (disabled). Derived
+// identifiers are stable for the same logical request across retries, and the
+// caller's request slice is not modified.
 func WithAutoClientOrderID(v bool) Option {
 	return func(c *config) { c.autoClientOrderID = v }
 }

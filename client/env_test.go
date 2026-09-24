@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // envVarNames are the variables WithEnv reads. Tests clear all of them so the

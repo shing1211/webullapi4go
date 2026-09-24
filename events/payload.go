@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // contentTypeJSON is the MIME type the server uses for event payloads that are
@@ -224,7 +224,12 @@ func (c *Client) OnOption(fn func(*OptionEvent)) {
 // and, when the payload is JSON, to the matching typed handler. A decoding
 // failure is reported to [Client.OnError] and never ends the stream.
 func (c *Client) routeDataEvent(resp *eventsevents.SubscribeResponse) {
-	kind := uint32(resp.GetEventType())
+	eventType := resp.GetEventType()
+	if eventType < 0 {
+		c.emitError(errs.New(errs.CodeAPI, "events: invalid negative event type"))
+		return
+	}
+	kind := uint32(eventType)
 	contentType := resp.GetContentType()
 	payload := []byte(resp.GetPayload())
 

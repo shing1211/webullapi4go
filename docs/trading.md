@@ -28,6 +28,20 @@ paths, so validate any order with `PreviewOrder` before placing it. See
 !!! tip "Error handling"
     All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
 
+The examples below assume this trusted-constant helper is available:
+
+```go
+import "github.com/shing1211/webullapi4go/pkg/domain/money"
+
+func moneyPtr(value string) *money.Money {
+    parsed := money.MustNew(value)
+    return &parsed
+}
+```
+
+For untrusted input, use `money.NewFromString` and handle its error instead of
+panicking.
+
 ## Authentication
 
 Trading requests require an access token, sent as the `x-access-token` header.
@@ -94,10 +108,12 @@ for _, pos := range positions {
 ```
 
 `AssetsBalance` includes a per-currency breakdown in
-`AccountCurrencyAssets`. `Position` carries the held quantity, cost price
+`AssetsCurrencyAssets`. `Position` carries the held quantity, cost price
 (`CostPrice`), last price, unrealized P/L, and, for multi-leg option positions,
-the `Legs` slice. Numeric fields such as quantities and prices are strings,
-preserving the precision of the wire values.
+the `Legs` slice. Financial values are `money.Money` in responses and
+`*money.Money` in optional request fields. They still marshal as decimal JSON
+strings, preserving wire precision without using `float64` or raw
+`decimal.Decimal`.
 
 ## Cash activities
 
@@ -141,7 +157,7 @@ A stock order moves through five operations:
 | Method | Endpoint | Returns |
 |--------|----------|---------|
 | `PreviewOrder(ctx, req)` | `POST /trading/orders/preview` | `*PreviewResult` |
-| `PlaceOrder(ctx, req)` | `POST /trading/orders/place` | `*PlaceOrderResult` |
+| `PlaceOrder(ctx, req)` | `POST /trading/orders/place` | `*order.Order` with an embedded place result and local state machine |
 | `ReplaceOrder(ctx, req)` | `POST /trading/orders/replace` | `*ReplaceOrderResult` |
 | `CancelOrder(ctx, req)` | `POST /trading/orders/cancel` | `*CancelOrderResult` |
 | `GetOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
@@ -173,11 +189,11 @@ req := trade.PlaceOrderRequest{
 			Symbol:                "AAPL",
 			OrderType:             trade.OrderTypeLimit,
 			Side:                  trade.OrderSideBuy,
-			Quantity:              "1",
+			Quantity:              moneyPtr("1"),
 			EntrustType:           trade.EntrustTypeQty,
 			TimeInForce:           trade.TimeInForceDay,
 			SupportTradingSession: trade.TradingSessionCore,
-			LimitPrice:            "1.00", // far below market, so it will not fill
+			LimitPrice:            moneyPtr("1.00"), // far below market, so it will not fill
 		},
 	},
 }
@@ -213,7 +229,7 @@ _, err := trading.ReplaceOrder(ctx, trade.ReplaceOrderRequest{
 	ModifyOrders: []trade.ModifyOrderRequest{
 		{
 			ClientOrderID: "demo-aapl-buy-1",
-			LimitPrice:    "1.50",
+			LimitPrice:    moneyPtr("1.50"),
 		},
 	},
 })
@@ -223,6 +239,119 @@ Only the fields set on each `ModifyOrderRequest` are changed. `ClientOrderID` is
 required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
 `StopPrice`, `TriggerPriceType`, `TrailingType`, `TrailingStopStep`,
 `TrailingLimitPriceOffset`, and `ExpireDate` are optional.
+
+## OMS tracking and reconciliation
+
+`PlaceOrder` returns `*order.Order` and registers it under both `AccountID`
+and `ClientOrderID`. `BatchPlaceOrder` registers every successful result. The
+pair is the lookup key, so the same client order ID in two accounts does not
+collide. The snippets use `errs` as the alias for
+`github.com/shing1211/webullapi4go/pkg/errors`.
+
+```go
+tracked, ok := trading.GetTrackedOrder(accountID, placed.ClientOrderID)
+if !ok {
+    return errs.New(errs.CodeNotInitialized, "order is not tracked")
+}
+log.Printf("local state=%s server order=%s",
+    tracked.State(), tracked.OrderID)
+```
+
+A registration is process-local. Restarting the application or constructing a
+new `trade.Client` creates a new empty registry; query the server after such a
+boundary.
+
+### Event-driven transitions
+
+`events.OrderEvent` can update the same tracked order. Map the Webull scene to
+a domain event, then apply it through the trading client:
+
+```go
+import (
+    "github.com/shing1211/webullapi4go/events"
+    "github.com/shing1211/webullapi4go/pkg/domain/order"
+)
+
+ev.OnOrder(func(e *events.OrderEvent) {
+    _, err := trading.ApplyOrderEvent(
+        e.AccountID,
+        e.ClientOrderID,
+        order.SceneTypeToEvent(e.SceneType),
+    )
+    if err != nil {
+        // Classify with errs.Is / errors.Is; do not parse the error string.
+        log.Printf("order event reconciliation failed: %v", err)
+    }
+})
+```
+
+The mapping treats request/failure scenes separately:
+`CANCEL_REQUESTED`, `CANCEL_FAILED`, `REJECT_FAILED`, and `MODIFY_FAILED` do
+not move the order to a successful terminal or replacement state. A
+`FINAL_FILLED` event moves it to `FILLED`.
+
+### Snapshot reconciliation
+
+Event delivery can be delayed, duplicated, or missed. Reconcile an authoritative
+HTTP status snapshot as well:
+
+```go
+state, err := trading.ReconcileOrderStatus(
+    accountID,
+    placed.ClientOrderID,
+    trade.OrderStatusFilled,
+)
+if err != nil {
+    return err
+}
+log.Printf("reconciled state=%s", state)
+```
+
+`ReconcileOrderStatus` accepts a status string, `trade.OrderStatus`, or
+`order.State`. `ReconcileOrderState` accepts an already normalized state. The
+reconciler:
+
+- advances through the smallest valid event path;
+- treats a stale non-terminal snapshot as a no-op;
+- never regresses `FILLED`, `CANCELLED`, `FAILED`, or `EXPIRED`;
+- records an authoritative terminal snapshot when no normal event path exists;
+- returns `errs.CodeValidation` for an unknown status;
+- returns `errs.CodeNotInitialized` for an order not tracked by this client.
+
+A successful `ReplaceOrder` or `CancelOrder` advances a matching tracked order.
+A failed API call leaves local state unchanged. Before sending either action, a
+known terminal order returns `errs.CodeInvalidTransition` without a network
+call. This local check is an optimization, not a replacement for server state;
+an untracked order can still be sent, so reconcile uncertain outcomes from the
+server.
+
+The domain machine is independently usable:
+
+```go
+machine := order.New(order.StatePending)
+machine.SetOnStateChanged(func(from, to order.State) {
+    log.Printf("order state %s -> %s", from, to)
+})
+state, err := machine.ApplyEvent(order.EventAcknowledge)
+```
+
+`Machine` is safe for concurrent use. Its callback runs after the state change
+is committed and without the machine lock; concurrent transitions may invoke
+the callback concurrently.
+
+### Stable automatic client order IDs
+
+`trade.WithAutoClientOrderID(true)` fills missing IDs for `PlaceOrder` and
+`BatchPlaceOrder` from a stable hash of the logical request and order index. It
+does not mutate the caller's request slice, and retrying the same logical
+request produces the same ID.
+
+```go
+trading := trade.New(cl, trade.WithAutoClientOrderID(true))
+```
+
+Keep the original request and application persistence policy if idempotency
+must survive a process restart.
 
 ## Batch orders
 
@@ -258,7 +387,8 @@ for a given market and instrument) is also enforced locally; see
 `TriggerPriceType` selects the market price a touch or stop order triggers on:
 `PRICE` (last trade), `PRICE_BID` (best bid), or `PRICE_ASK` (best ask).
 `TrailingType` is `AMOUNT` for a fixed price spread or `PERCENTAGE` for a
-percentage where `"0.01"` is 1%.
+percentage where a trailing step of `0.01` is 1%. The step itself is a
+`*money.Money`.
 
 ## Market rules
 
@@ -371,10 +501,10 @@ Each `OrderLeg` in `legs` carries:
 | `market` | `US` |
 | `symbol` | The option contract symbol; non-blank |
 | `side` | `BUY` or `SELL` |
-| `strike_price` | The strike, a positive decimal string |
+| `strike_price` | A positive `*money.Money`, serialized as a decimal string |
 | `option_expire_date` | Expiration date in `YYYY-MM-DD` form |
 | `option_type` | `CALL` or `PUT` |
-| `quantity` | The leg quantity, a positive decimal string |
+| `quantity` | A positive `*money.Money`, serialized as a decimal string |
 
 The example below previews a non-marketable single-leg AAPL call; placing it
 follows the same pattern as a stock order and mutates the account.
@@ -388,20 +518,20 @@ option := trade.OrderRequest{
 	Symbol:         "AAPL",
 	OrderType:      trade.OrderTypeLimit,
 	Side:           trade.OrderSideBuy,
-	Quantity:       "1",
+	Quantity:       moneyPtr("1"),
 	EntrustType:    trade.EntrustTypeQty,
 	TimeInForce:    trade.TimeInForceDay,
-	LimitPrice:     "0.05", // far below market, so it will not fill
+	LimitPrice:     moneyPtr("0.05"), // far below market, so it will not fill
 	OptionStrategy: trade.OptionStrategySingle,
 	Legs: []trade.OrderLeg{{
 		InstrumentType:   trade.InstrumentTypeOption,
 		Market:           trade.MarketUS,
 		Symbol:           "AAPL",
 		Side:             trade.OrderSideBuy,
-		StrikePrice:      "100.00",
+		StrikePrice:      moneyPtr("100.00"),
 		OptionExpireDate: "2026-01-16",
 		OptionType:       trade.OptionTypeCall,
-		Quantity:         "1",
+		Quantity:         moneyPtr("1"),
 	}},
 }
 
@@ -461,10 +591,10 @@ spread := trade.OrderRequest{
 	Symbol:         "AAPL",
 	OrderType:      trade.OrderTypeLimit,
 	Side:           trade.OrderSideBuy,
-	Quantity:       "1",
+	Quantity:       moneyPtr("1"),
 	EntrustType:    trade.EntrustTypeQty,
 	TimeInForce:    trade.TimeInForceDay,
-	LimitPrice:     "0.05", // far below market, so it will not fill
+	LimitPrice:     moneyPtr("0.05"), // far below market, so it will not fill
 	OptionStrategy: trade.OptionStrategyVertical,
 	Legs: []trade.OrderLeg{
 		{
@@ -472,20 +602,20 @@ spread := trade.OrderRequest{
 			Market:           trade.MarketUS,
 			Symbol:           "AAPL",
 			Side:             trade.OrderSideBuy,
-			StrikePrice:      "100.00",
+			StrikePrice:      moneyPtr("100.00"),
 			OptionExpireDate: "2026-01-16",
 			OptionType:       trade.OptionTypeCall,
-			Quantity:         "1",
+			Quantity:         moneyPtr("1"),
 		},
 		{
 			InstrumentType:   trade.InstrumentTypeOption,
 			Market:           trade.MarketUS,
 			Symbol:           "AAPL",
 			Side:             trade.OrderSideSell,
-			StrikePrice:      "110.00",
+			StrikePrice:      moneyPtr("110.00"),
 			OptionExpireDate: "2026-01-16",
 			OptionType:       trade.OptionTypeCall,
-			Quantity:         "1",
+			Quantity:         moneyPtr("1"),
 		},
 	},
 }
@@ -538,10 +668,10 @@ futures := trade.OrderRequest{
 	Symbol:         "ESZ5",
 	OrderType:      trade.OrderTypeLimit,
 	Side:           trade.OrderSideBuy,
-	Quantity:       "1",
+	Quantity:       moneyPtr("1"),
 	EntrustType:    trade.EntrustTypeQty,
 	TimeInForce:    trade.TimeInForceDay,
-	LimitPrice:     "1.00", // far below market, so it will not fill
+	LimitPrice:     moneyPtr("1.00"), // far below market, so it will not fill
 }
 ```
 
@@ -652,10 +782,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeLimit,
 			Side:           trade.OrderSideBuy,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			LimitPrice:     "1.00", // far below market, so it will not fill
+			LimitPrice:     moneyPtr("1.00"), // far below market, so it will not fill
 		},
 		{
 			ClientOrderID:  "demo-aapl-tpsl-profit",
@@ -665,10 +795,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeLimit,
 			Side:           trade.OrderSideSell,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			LimitPrice:     "999.00",
+			LimitPrice:     moneyPtr("999.00"),
 		},
 		{
 			ClientOrderID:  "demo-aapl-tpsl-loss",
@@ -678,10 +808,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeStopLoss,
 			Side:           trade.OrderSideSell,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			StopPrice:      "1.00",
+			StopPrice:      moneyPtr("1.00"),
 		},
 	},
 }
@@ -725,7 +855,7 @@ Every order method validates its request and returns a typed error with code
   per account. Generate a fresh identifier for each new order.
 - **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a
   positive decimal; when it is `AMOUNT`, `total_cash_amount` is required and
-  must be a positive decimal. Sizes are strings so precision is preserved;
+  must be a positive decimal. Sizes use `*money.Money` and preserve precision;
   `AMOUNT` supports US fractional share trading.
 - **Prices and expiry** — the conditional fields in the order-type table above
   are required; `expire_date` is required when `time_in_force` is `GTD`.
@@ -770,9 +900,11 @@ is not bounded by them, so re-check modified sizes yourself.
 
 The query methods return `OrderGroup` values: a client order together with its
 child orders. A `NORMAL` order has a single entry in `OrderGroup.Orders`; combo
-orders carry their legs there. Each `Order` reports its `Status` (`PENDING`,
-`SUBMITTED`, `CANCELLED`, `FILLED`, `FAILED`, or `PARTIAL_FILLED`), quantities
-and prices as decimal strings, and timestamps in ISO8601 UTC form.
+orders carry their legs there. Each HTTP query `trade.Order` reports its `Status`
+(`PENDING`, `SUBMITTED`, `CANCELLED`, `FILLED`, `FAILED`, or
+`PARTIAL_FILLED`), financial values as `money.Money`, and timestamps in ISO8601
+UTC form. It is distinct from the local tracked `*order.Order` returned by
+`PlaceOrder`.
 
 The list endpoints are cursor paginated. The plain getters return the first page;
 the `Page` variants return one page with its `PaginationKey`; the `All` variants

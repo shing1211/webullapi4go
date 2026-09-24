@@ -28,7 +28,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 const (
@@ -448,15 +448,6 @@ func TestWithHTTPTransport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Do() error = %v", err)
 	}
-}
-
-type trackingLimiter struct {
-	calls int
-}
-
-func (l *trackingLimiter) Wait(ctx context.Context, key string) error {
-	l.calls++
-	return nil
 }
 
 func TestWithResiliencePreset(t *testing.T) {

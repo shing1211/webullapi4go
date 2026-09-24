@@ -37,7 +37,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Client is a gRPC-based Broker FD event subscription client. It maintains a
@@ -45,10 +45,11 @@ import (
 // transport errors, and dispatches connection lifecycle events and data
 // payloads to registered handlers.
 type Client struct {
-	core *client.Client
-	cfg  config
-	conn *grpc.ClientConn
-	svc  eventsevents.EventServiceClient
+	core    *client.Client
+	cfg     config
+	conn    *grpc.ClientConn
+	svc     eventsevents.EventServiceClient
+	metrics *eventMetrics
 
 	closeOnce sync.Once
 
@@ -89,7 +90,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 
 	dialOpts := make([]grpc.DialOption, 0, len(cfg.dialOptions)+1)
 	if cfg.tls {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})))
 	} else {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
@@ -100,10 +101,11 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "brokerfd/events: invalid gRPC target", err)
 	}
 	return &Client{
-		core: cl,
-		cfg:  cfg,
-		conn: conn,
-		svc:  eventsevents.NewEventServiceClient(conn),
+		core:    cl,
+		cfg:     cfg,
+		conn:    conn,
+		svc:     eventsevents.NewEventServiceClient(conn),
+		metrics: newEventMetrics(cl.ObservabilityConfig()),
 	}, nil
 }
 
@@ -176,6 +178,7 @@ func (c *Client) Run(ctx context.Context) error {
 	if c == nil || c.conn == nil {
 		return errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is not initialized")
 	}
+	ctx, _ = ensureCorrelationID(ctx)
 	ctx, cancel := context.WithCancel(ctx)
 	c.setRunCancel(cancel)
 	defer func() {
@@ -184,13 +187,17 @@ func (c *Client) Run(ctx context.Context) error {
 	}()
 
 	if !c.cfg.autoReconnect {
-		return c.fail(ctx, c.runOnce(ctx))
+		return c.fail(ctx, c.runOnce(ctx, 1))
 	}
 	return c.runReconnecting(ctx)
 }
 
-func (c *Client) runOnce(ctx context.Context) error {
-	if err := c.waitForReady(ctx); err != nil {
+func (c *Client) runOnce(ctx context.Context, attempt int) (err error) {
+	ctx, telemetry := c.startEventAttempt(ctx, attempt)
+	defer func() {
+		telemetry.finish(err)
+	}()
+	if err = c.waitForReady(ctx); err != nil {
 		return err
 	}
 	stream, err := c.open(ctx)
@@ -198,12 +205,12 @@ func (c *Client) runOnce(ctx context.Context) error {
 		return err
 	}
 	for {
-		resp, err := stream.Recv()
-		if err != nil {
-			return c.recvError(ctx, err)
+		resp, recvErr := stream.Recv()
+		if recvErr != nil {
+			return c.recvError(ctx, recvErr)
 		}
-		if err := c.dispatch(resp); err != nil {
-			return err
+		if dispatchErr := c.dispatch(resp); dispatchErr != nil {
+			return dispatchErr
 		}
 	}
 }
@@ -211,7 +218,7 @@ func (c *Client) runOnce(ctx context.Context) error {
 func (c *Client) runReconnecting(ctx context.Context) error {
 	attempt := 0
 	for {
-		err := c.runOnce(ctx)
+		err := c.runOnce(ctx, attempt+1)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -347,6 +354,7 @@ func (c *Client) open(ctx context.Context) (*streamClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	md = c.addEventMetadata(ctx, md)
 	stream, err := c.svc.Subscribe(metadata.NewOutgoingContext(ctx, md), req, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, rpcError("brokerfd/events: subscribe", err)

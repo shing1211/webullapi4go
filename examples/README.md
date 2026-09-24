@@ -20,8 +20,10 @@ which reads:
 | `WEBULL_APP_SECRET` | Webull OpenAPI app secret (required) |
 | `WEBULL_REGION` | Region, for example `hk` or `us` (optional, defaults to `hk`) |
 | `WEBULL_ENVIRONMENT` | `sandbox` / `uat` or `prod` / `production` (optional, defaults to production) |
-| `WEBULL_ACCOUNT_ID` | Trading account to inspect in the `account` example (optional) |
+| `WEBULL_ACCOUNT_ID` | Trading account to inspect in `account` or monitor in `account-monitor` (optional) |
 | `WEBULL_TRADE_ACCOUNT_ID` | Trading account to subscribe to in the `events` example (optional) |
+| `WEBULL_MONITOR_INTERVAL` | `account-monitor` poll interval, such as `10s` (optional, defaults to `30s`) |
+| `WEBULL_ORDER_IDEMPOTENCY_KEY` | Persisted `client_order_id` required for a mutating `order` run (optional, preview-only by default) |
 | `WEBULL_ORDER_PLACE` | Example only: set to `1` in `order` to opt in to placing a real order (optional, off by default) |
 
 Credentials are never hard-coded and must never be committed. Webull publishes
@@ -77,8 +79,9 @@ endpoint has been retired.
 ## streaming
 
 Connects to the streaming broker over MQTT-over-WebSocket, subscribes to
-`AAPL` `QUOTE`, `SNAPSHOT`, and `TICK` pushes, prints each message, and shuts
-down on Ctrl+C (or `SIGTERM`).
+`AAPL` `QUOTE`, `SNAPSHOT`, and `TICK` pushes, and consumes each typed channel.
+Channels have bounded buffers with a drop-oldest policy, and the run stops after
+two minutes or on Ctrl+C (or `SIGTERM`).
 
 ```sh
 go run ./examples/streaming
@@ -111,32 +114,62 @@ The account is taken from `WEBULL_ACCOUNT_ID`; when it is unset, the first
 account returned by the API is used. Trading requests require an access token,
 which the example obtains with `EnsureToken`.
 
+## account-monitor
+
+Periodically prints one account's balance, buying power, and initial margin. A
+single worker performs bounded, read-only `GetBalance` requests on a ticker;
+ticks that arrive during a request are skipped so calls never overlap. Each
+request has a 15-second timeout, and the monitor stops after three consecutive
+failures or when Ctrl+C (or `SIGTERM`) cancels it.
+
+```sh
+go run ./examples/account-monitor
+
+# Optional: poll every 10 seconds instead of the 30-second default.
+WEBULL_MONITOR_INTERVAL=10s go run ./examples/account-monitor
+```
+
+`WEBULL_ACCOUNT_ID` selects the account; when unset, the first account returned
+by the API is monitored.
+
 ## order
 
-Previews a small AAPL limit buy and, only when `WEBULL_ORDER_PLACE=1` is set,
-places it far below the market and immediately cancels it. Previewing is
-read-only; placing an order mutates the account, so the example is preview-only
-by default and never sends a market order.
+Previews a small AAPL limit buy and, only when `WEBULL_ORDER_PLACE=1` and a
+persisted `WEBULL_ORDER_IDEMPOTENCY_KEY` are set, places it far below the market
+and immediately cancels it. Previewing is read-only; placing mutates the
+account, so the example is preview-only by default and never sends a market
+order.
 
 ```sh
 # Preview only (mutates nothing)
 go run ./examples/order
 
-# Place and immediately cancel a non-marketable limit order (mutating)
-WEBULL_ORDER_PLACE=1 go run ./examples/order
+# Choose and persist a new key before the first mutating request.
+# Reuse this exact key for retries of the same logical order.
+WEBULL_ORDER_IDEMPOTENCY_KEY=phase7-aapl-001 \
+WEBULL_ORDER_PLACE=1 \
+go run ./examples/order
 ```
 
 ```powershell
 # Windows PowerShell
+$env:WEBULL_ORDER_IDEMPOTENCY_KEY = "phase7-aapl-001"
 $env:WEBULL_ORDER_PLACE = "1"
 go run ./examples/order
 ```
 
 Use it against a sandbox account only. The account is taken from
 `WEBULL_ACCOUNT_ID`; when it is unset, the first account returned by the API is
-used. The example configures the `WithMaxOrderQuantity("10")` and
+used. Mutating placement refuses to start unless
+`WEBULL_ORDER_IDEMPOTENCY_KEY` is a valid, caller-persisted key of at most 32
+characters using letters, digits, `-`, or `_`; reuse it after an unknown result
+and choose a new one for each intentionally new order. Preview-only runs use
+`trade.ClientOrderIDFrom` for a deterministic identifier.
+
+The example configures the `WithMaxOrderQuantity("10")` and
 `WithMaxOrderNotional("2500.00")` guardrails, which `PreviewOrder` and
-`PlaceOrder` enforce before any network call.
+`PlaceOrder` enforce before any network call. After placement it uses an
+independent 30-second cancellation timeout so Ctrl+C cannot skip cleanup.
 
 ## events
 

@@ -29,13 +29,14 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/pkg/observability"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 	"github.com/shing1211/webullapi4go/pkg/transport"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -64,8 +65,8 @@ func WithCorrelationID(ctx context.Context, id string) context.Context {
 // CorrelationIDFromContext returns the correlation identifier stored in ctx, or
 // an empty string if none is set.
 func CorrelationIDFromContext(ctx context.Context) string {
-	if v := ctx.Value(CorrelationIDKey); v != nil {
-		return v.(string)
+	if v, ok := ctx.Value(CorrelationIDKey).(string); ok {
+		return v
 	}
 	return ""
 }
@@ -80,8 +81,17 @@ func newCorrelationID() string {
 	return hex.EncodeToString(b[:])
 }
 
-// ErrCircuitOpen is wrapped into the error returned by [Client.Do] when a
-// configured circuit breaker rejects a call.
+func ensureCorrelationID(ctx context.Context) (context.Context, string) {
+	if id := CorrelationIDFromContext(ctx); id != "" {
+		return ctx, id
+	}
+	id := newCorrelationID()
+	return WithCorrelationID(ctx, id), id
+}
+
+// ErrCircuitOpen is wrapped into the error returned by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] when a configured circuit breaker
+// rejects a call.
 var ErrCircuitOpen = errs.New(errs.CodeTransport, "circuit breaker is open")
 
 // Do performs a signed request against the Webull OpenAPI and decodes the JSON
@@ -109,10 +119,8 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 		return err
 	}
 	query = normalizeQuery(query)
+	ctx, _ = ensureCorrelationID(ctx)
 
-	// Obtain an access token before the first token-consuming request when
-	// [WithAutoToken] is enabled. Token-lifecycle endpoints are exempt, so this
-	// is a no-op for the EnsureToken flow itself.
 	if err := c.ensureAutoToken(ctx, reqPath); err != nil {
 		return err
 	}
@@ -122,13 +130,14 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 		return err
 	}
 
-	attempt := func(ctx context.Context) error {
+	retryable := c.cfg.retry != nil && (c.cfg.retryNonIdempotent || isIdempotent(method))
+	if !retryable {
 		return c.attempt(ctx, method, reqPath, query, bodyBytes, out)
 	}
-	if c.cfg.retry != nil && (c.cfg.retryNonIdempotent || isIdempotent(method)) {
-		return c.cfg.retry.Do(ctx, attempt)
-	}
-	return attempt(ctx)
+	return c.runWithRetry(ctx, func(attemptCtx context.Context, attempt int) error {
+		_, err := c.attemptWithNumber(attemptCtx, method, reqPath, query, bodyBytes, out, attempt, c.transport)
+		return err
+	})
 }
 
 // DoBroker performs a signed request against the Broker API and decodes the JSON
@@ -144,6 +153,7 @@ func (c *Client) DoBroker(ctx context.Context, method, path string, body, out an
 		return err
 	}
 	query = normalizeQuery(query)
+	ctx, _ = ensureCorrelationID(ctx)
 
 	if err := c.ensureAutoToken(ctx, reqPath); err != nil {
 		return err
@@ -154,81 +164,246 @@ func (c *Client) DoBroker(ctx context.Context, method, path string, body, out an
 		return err
 	}
 
-	attempt := func(ctx context.Context) error {
+	retryable := c.cfg.retry != nil && (c.cfg.retryNonIdempotent || isIdempotent(method))
+	if !retryable {
 		return c.attemptBroker(ctx, method, reqPath, query, bodyBytes, out)
 	}
-	if c.cfg.retry != nil && (c.cfg.retryNonIdempotent || isIdempotent(method)) {
-		return c.cfg.retry.Do(ctx, attempt)
-	}
-	return attempt(ctx)
+	return c.runWithRetry(ctx, func(attemptCtx context.Context, attempt int) error {
+		_, err := c.attemptBrokerWithNumber(attemptCtx, method, reqPath, query, bodyBytes, out, attempt)
+		return err
+	})
 }
 
-func (c *Client) attemptBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	correlationID := CorrelationIDFromContext(ctx)
-	if correlationID == "" {
-		correlationID = newCorrelationID()
-		ctx = WithCorrelationID(ctx, correlationID)
+func (c *Client) runWithRetry(ctx context.Context, fn func(context.Context, int) error) error {
+	attempt := 0
+	return c.cfg.retry.Do(ctx, func(attemptCtx context.Context) error {
+		attempt++
+		return fn(attemptCtx, attempt)
+	})
+}
+
+type attemptResult struct {
+	status   int
+	response *http.Response
+}
+
+// runAttempt executes one common request attempt. Rate limiting and circuit
+// breaking run before user interceptors, and every HTTP response is recorded by
+// the same hook, span, logger, and metric path.
+func (c *Client) runAttempt(ctx context.Context, method, reqPath string, attempt int, requireResponse bool, operation func(context.Context) (attemptResult, error)) (attemptResult, error) {
+	ctx, correlationID := ensureCorrelationID(ctx)
+	if attempt < 1 {
+		attempt = 1
 	}
+	start := time.Now()
 
 	tracer := c.cfg.otel.Tracer("webullapi4go/client")
 	ctx, span := tracer.Start(ctx, observability.SpanName(method, reqPath),
-		trace.WithAttributes(observability.SpanAttributes(method, reqPath, 0)...),
+		trace.WithAttributes(observability.SpanAttributes(method, reqPath, attempt)...),
+		trace.WithAttributes(attribute.String("webull.correlation_id", correlationID)),
 		trace.WithSpanKind(trace.SpanKindClient),
 	)
 	defer span.End()
 
-	if c.cfg.rateLimiter != nil {
-		if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				return ctxErr
-			}
-			return errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
-		}
-	}
-	if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
-		return retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
+	if log := c.cfg.otel.Logger; log != nil {
+		log.LogAttrs(ctx, slog.LevelInfo, "webull request start",
+			slog.String("method", method),
+			slog.String("path", reqPath),
+			slog.Int("attempt", attempt),
+			slog.String("correlation_id", correlationID),
+		)
 	}
 
-	err := c.executeBroker(ctx, method, reqPath, query, bodyBytes, out)
-	if c.cfg.breaker != nil {
-		c.recordBreaker(err)
+	var result attemptResult
+	var err error
+	if c.cfg.rateLimiter != nil {
+		err = c.cfg.rateLimiter.Wait(ctx, reqPath)
+		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				err = ctxErr
+			} else {
+				err = errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
+			}
+		}
+	}
+	if err == nil && c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
+		err = retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
+	}
+	if err == nil {
+		if h := c.cfg.hooks; h.OnRequest != nil {
+			h.OnRequest(method, reqPath)
+		}
+
+		next := func(operationCtx context.Context) error {
+			operationCtx = WithCorrelationID(operationCtx, correlationID)
+			if !trace.SpanFromContext(operationCtx).SpanContext().IsValid() {
+				operationCtx = trace.ContextWithSpan(operationCtx, span)
+			}
+			var operationErr error
+			result, operationErr = operation(operationCtx)
+			c.recordBreaker(operationErr)
+			return operationErr
+		}
+		for i := len(c.cfg.interceptors) - 1; i >= 0; i-- {
+			interceptor := c.cfg.interceptors[i]
+			nextFn := next
+			next = func(operationCtx context.Context) error {
+				return interceptor(operationCtx, nextFn)
+			}
+		}
+		err = next(ctx)
+		if err == nil && requireResponse && result.response == nil {
+			err = errs.New(errs.CodeTransport, "stream interceptor returned no response")
+		}
+	}
+
+	latency := time.Since(start)
+	if h := c.cfg.hooks; h.OnLatency != nil {
+		h.OnLatency(attempt, latency)
+	}
+	if err == nil {
+		if h := c.cfg.hooks; h.OnResponse != nil {
+			h.OnResponse(result.status, latency)
+		}
+	} else if h := c.cfg.hooks; h.OnError != nil {
+		h.OnError(err, latency)
+	}
+
+	span.SetAttributes(attribute.Int64("http.duration_ms", latency.Milliseconds()))
+	if result.status != 0 {
+		span.SetAttributes(attribute.Int("http.status_code", result.status))
 	}
 	if err != nil {
 		span.SetAttributes(attribute.String("error", err.Error()))
 	}
+
+	if hist := c.cfg.otel.ClientLatencyHistogram(); hist != nil {
+		hist.Record(ctx, float64(latency.Milliseconds()), metric.WithAttributes(attribute.String("http.route", reqPath)))
+	}
+
+	if log := c.cfg.otel.Logger; log != nil {
+		attrs := []slog.Attr{
+			slog.String("method", method),
+			slog.String("path", reqPath),
+			slog.Int("attempt", attempt),
+			slog.Int("status", result.status),
+			slog.String("correlation_id", correlationID),
+			slog.Duration("latency", latency),
+		}
+		if err != nil {
+			attrs = append(attrs, slog.String("error", err.Error()))
+			log.LogAttrs(ctx, slog.LevelError, "webull request done", attrs...)
+		} else {
+			log.LogAttrs(ctx, slog.LevelInfo, "webull request done", attrs...)
+		}
+	}
+
+	return result, err
+}
+
+func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
+	_, err := c.attemptWithNumber(ctx, method, reqPath, query, bodyBytes, out, 1, c.transport)
 	return err
 }
 
-func (c *Client) executeBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	req, err := c.buildSignedRequestForTransport(ctx, method, reqPath, query, bodyBytes, c.brokerTr)
+func (c *Client) attemptWithNumber(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any, attempt int, tr *transport.Client) (attemptResult, error) {
+	return c.runAttempt(ctx, method, reqPath, attempt, false, func(operationCtx context.Context) (attemptResult, error) {
+		return c.executeBuffered(operationCtx, method, reqPath, query, bodyBytes, tr, out)
+	})
+}
+
+func (c *Client) attemptBroker(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
+	_, err := c.attemptBrokerWithNumber(ctx, method, reqPath, query, bodyBytes, out, 1)
+	return err
+}
+
+func (c *Client) attemptBrokerWithNumber(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any, attempt int) (attemptResult, error) {
+	return c.attemptWithNumber(ctx, method, reqPath, query, bodyBytes, out, attempt, c.brokerTr)
+}
+
+func (c *Client) executeBuffered(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, tr *transport.Client, out any) (attemptResult, error) {
+	var result attemptResult
+	req, err := c.buildSignedRequestForTransport(ctx, method, reqPath, query, bodyBytes, tr)
 	if err != nil {
-		return err
+		return result, err
 	}
 
-	resp, err := c.brokerTr.Do(req)
+	resp, err := tr.Do(req)
+	if resp != nil {
+		result.status = resp.StatusCode
+	}
 	if err != nil {
-		return errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		return result, errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
+	}
+	if resp == nil {
+		return result, errs.New(errs.CodeTransport, method+" "+reqPath+" returned nil response")
+	}
+
+	if resp.Body == nil {
+		return result, errs.New(errs.CodeTransport, method+" "+reqPath+" returned nil response body")
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return errs.Wrap(errs.CodeTransport, "reading response body", err)
+		return result, errs.Wrap(errs.CodeTransport, "reading response body", err)
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return errs.FromHTTPStatus(resp.StatusCode, data)
+		return result, errs.FromHTTPStatus(resp.StatusCode, data)
 	}
 	c.maybeUpdateClockOffset(resp.Header)
 	if out == nil || len(data) == 0 {
-		return nil
+		return result, nil
 	}
 	if err := json.Unmarshal(data, out); err != nil {
-		return errs.Wrap(errs.CodeAPI, "decoding response body", err)
+		return result, errs.Wrap(errs.CodeAPI, "decoding response body", err)
 	}
-	return nil
+	return result, nil
+}
+
+// recordBreaker reports the outcome of an attempt to the circuit breaker.
+// Server and transport failures trip the breaker; every other error means the
+// service responded, so it counts as a success for breaker purposes.
+func (c *Client) recordBreaker(err error) {
+	if c.cfg.breaker == nil {
+		return
+	}
+	if err != nil && (errs.Is(err, errs.CodeServer) || errs.Is(err, errs.CodeTransport)) {
+		c.cfg.breaker.RecordFailure()
+		return
+	}
+	c.cfg.breaker.RecordSuccess()
+}
+
+// isIdempotent reports whether method may be retried by default. Only the safe,
+// idempotent methods are retried; callers can opt in to others with
+// [RetryConfig.RetryNonIdempotent].
+func isIdempotent(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead:
+		return true
+	default:
+		return false
+	}
+}
+
+// buildSignedRequest constructs the outgoing request for one API call and
+// attaches its signing headers. It is shared by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] so that a streamed request is built
+// and signed exactly like a buffered one: the x-version header follows the same
+// per-path defaults, the host that is signed is the host that is sent, and the
+// exact bytes that are signed are the bytes that are transmitted.
+func (c *Client) buildSignedRequest(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte) (*http.Request, error) {
+	return c.buildSignedRequestForTransport(ctx, method, reqPath, query, bodyBytes, c.transport)
 }
 
 func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, tr *transport.Client) (*http.Request, error) {
+	if tr == nil {
+		return nil, errs.New(errs.CodeInvalidConfig, "HTTP transport is not configured")
+	}
 	req, err := tr.NewRequest(ctx, method, reqPath, query, bodyBytes)
 	if err != nil {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "building request", err)
@@ -259,239 +434,7 @@ func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, req
 		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
 	}
 	req.Header.Set(headerSignature, signature)
-
-	if cid := CorrelationIDFromContext(ctx); cid != "" {
-		req.Header.Set(headerCorrelationID, cid)
-	}
-
-	return req, nil
-}
-
-// attempt executes a single request attempt through the ordered interceptor
-// chain. The fixed order is:
-//
-//	rate-limiter.Wait → circuit-breaker.Allow → user-interceptors → sign → send
-//
-// Each user-supplied interceptor receives the next function in the chain and
-// may inspect, decorate, or short-circuit the request. After the response,
-// the circuit-breaker outcome is recorded so that retries participate in
-// breaker accounting.
-//
-// attempt establishes an OpenTelemetry span for the request and records the
-// round-trip latency and correlation ID to the configured logger.
-func (c *Client) attempt(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	start := time.Now()
-
-	// Extract or generate a correlation ID for this request.
-	correlationID := CorrelationIDFromContext(ctx)
-	if correlationID == "" {
-		correlationID = newCorrelationID()
-		ctx = WithCorrelationID(ctx, correlationID)
-	}
-
-	// Create an OTel span for this attempt.
-	tracer := c.cfg.otel.Tracer("webullapi4go/client")
-	ctx, span := tracer.Start(ctx, observability.SpanName(method, reqPath),
-		trace.WithAttributes(observability.SpanAttributes(method, reqPath, 0)...),
-		trace.WithSpanKind(trace.SpanKindClient),
-	)
-	defer span.End()
-
-	// Log request start if a logger is configured.
-	if log := c.cfg.otel.Logger; log != nil {
-		log.LogAttrs(ctx, slog.LevelInfo, "webull request start",
-			slog.String("method", method),
-			slog.String("path", reqPath),
-			slog.String("correlation_id", correlationID),
-		)
-	}
-
-	// The core function that performs rate-limiting, circuit-breaking, and the
-	// HTTP call (sign + send).
-	core := func(ctx context.Context) error {
-		if c.cfg.rateLimiter != nil {
-			if err := c.cfg.rateLimiter.Wait(ctx, reqPath); err != nil {
-				if ctxErr := ctx.Err(); ctxErr != nil {
-					return ctxErr
-				}
-				return errs.Wrap(errs.CodeRateLimited, "rate limiter", err)
-			}
-		}
-		if c.cfg.breaker != nil && !c.cfg.breaker.Allow() {
-			return retry.Permanent(errs.Wrap(errs.CodeTransport, "circuit breaker open", ErrCircuitOpen))
-		}
-		err := c.execute(ctx, method, reqPath, query, bodyBytes, out)
-		c.recordBreaker(err)
-		return err
-	}
-
-	// Build the interceptor chain from the inside out: the last supplied
-	// interceptor is closest to the core HTTP call.
-	// Chain: interceptors[0] → interceptors[1] → ... → interceptors[n] → core
-	next := core
-	for i := len(c.cfg.interceptors) - 1; i >= 0; i-- {
-		fn := c.cfg.interceptors[i]
-		n := next
-		next = func(ctx context.Context) error { return fn(ctx, n) }
-	}
-
-	// Fire the OnRequest hook before the chain runs.
-	if h := c.cfg.hooks; h.OnRequest != nil {
-		h.OnRequest(method, reqPath)
-	}
-
-	// Wrap the whole chain for total latency tracking and hook dispatch.
-	var err error
-	var latency time.Duration
-	func() {
-		t0 := time.Now()
-		err = next(ctx)
-		latency = time.Since(t0)
-		if h := c.cfg.hooks; h.OnLatency != nil {
-			h.OnLatency(0, latency)
-		}
-	}()
-
-	if err == nil {
-		if h := c.cfg.hooks; h.OnResponse != nil {
-			h.OnResponse(0, latency)
-		}
-	} else {
-		if h := c.cfg.hooks; h.OnError != nil {
-			h.OnError(err, latency)
-		}
-	}
-
-	span.SetAttributes(attribute.Int64("http.duration_ms", latency.Milliseconds()))
-	if err != nil {
-		span.SetAttributes(attribute.String("error", err.Error()))
-	}
-
-	if hist := c.cfg.otel.ClientLatencyHistogram(); hist != nil {
-		hist.Record(ctx, float64(latency.Milliseconds()),
-			metric.WithAttributes(attribute.String("http.route", reqPath)))
-	}
-
-	if log := c.cfg.otel.Logger; log != nil {
-		if err != nil {
-			log.LogAttrs(ctx, slog.LevelError, "webull request done",
-				slog.String("method", method),
-				slog.String("path", reqPath),
-				slog.String("correlation_id", correlationID),
-				slog.Duration("latency", latency),
-				slog.String("error", err.Error()),
-			)
-		} else {
-			log.LogAttrs(ctx, slog.LevelInfo, "webull request done",
-				slog.String("method", method),
-				slog.String("path", reqPath),
-				slog.String("correlation_id", correlationID),
-				slog.Duration("latency", latency),
-			)
-		}
-	}
-
-	_ = start
-	return err
-}
-
-// recordBreaker reports the outcome of an attempt to the circuit breaker.
-// Server and transport failures trip the breaker; every other error means the
-// service responded, so it counts as a success for breaker purposes.
-func (c *Client) recordBreaker(err error) {
-	if c.cfg.breaker == nil {
-		return
-	}
-	if err != nil && (errs.Is(err, errs.CodeServer) || errs.Is(err, errs.CodeTransport)) {
-		c.cfg.breaker.RecordFailure()
-		return
-	}
-	c.cfg.breaker.RecordSuccess()
-}
-
-// isIdempotent reports whether method may be retried by default. Only the safe,
-// idempotent methods are retried; callers can opt in to others with
-// [RetryConfig.RetryNonIdempotent].
-func isIdempotent(method string) bool {
-	switch method {
-	case http.MethodGet, http.MethodHead:
-		return true
-	default:
-		return false
-	}
-}
-
-// execute builds, signs, sends, and decodes a single request. It is the part of
-// the request path that is replayed on retry.
-func (c *Client) execute(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte, out any) error {
-	req, err := c.buildSignedRequest(ctx, method, reqPath, query, bodyBytes)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.transport.Do(req)
-	if err != nil {
-		return errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return errs.Wrap(errs.CodeTransport, "reading response body", err)
-	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return errs.FromHTTPStatus(resp.StatusCode, data)
-	}
-	c.maybeUpdateClockOffset(resp.Header)
-	if out == nil || len(data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(data, out); err != nil {
-		return errs.Wrap(errs.CodeAPI, "decoding response body", err)
-	}
-	return nil
-}
-
-// buildSignedRequest constructs the outgoing request for one API call and
-// attaches its signing headers. It is shared by [Client.Do] and
-// [Client.DoStream] so that a streamed request is built and signed exactly like
-// a buffered one: the x-version header follows the same per-path defaults, the
-// host that is signed is the host that is sent, and the exact bytes that are
-// signed are the bytes that are transmitted.
-func (c *Client) buildSignedRequest(ctx context.Context, method, reqPath string, query url.Values, bodyBytes []byte) (*http.Request, error) {
-	req, err := c.transport.NewRequest(ctx, method, reqPath, query, bodyBytes)
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeInvalidConfig, "building request", err)
-	}
-
-	// The host that is signed must be the host that is actually sent. Setting
-	// req.Host makes the value explicit even when a custom (non-default) port
-	// is in play.
-	host := signingHost(req.URL)
-	req.Host = host
-
-	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, c.signingTime())
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
-	}
-	applySigningHeaders(req.Header, signingHeaders)
-	req.Header.Set(headerVersion, c.apiVersionFor(reqPath))
-	if len(bodyBytes) > 0 {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	signature, err := auth.Sign(auth.SignParams{
-		Method:    method,
-		Path:      reqPath,
-		Query:     query,
-		Headers:   signingHeaders,
-		Body:      bodyBytes,
-		AppSecret: c.cfg.AppSecret,
-	})
-	if err != nil {
-		return nil, errs.Wrap(errs.CodeAuth, "signing request", err)
-	}
-	req.Header.Set(headerSignature, signature)
+	c.cfg.otel.InjectTraceContext(ctx, propagation.HeaderCarrier(req.Header))
 
 	if cid := CorrelationIDFromContext(ctx); cid != "" {
 		req.Header.Set(headerCorrelationID, cid)
@@ -533,7 +476,10 @@ func marshalRequestBody(body any) ([]byte, error) {
 	if body == nil {
 		return nil, nil
 	}
-	if raw, ok := body.([]byte); ok {
+	switch raw := body.(type) {
+	case []byte:
+		return raw, nil
+	case json.RawMessage:
 		return raw, nil
 	}
 	data, err := auth.MarshalBody(body)
@@ -587,8 +533,8 @@ func (c *Client) signingTime() time.Time {
 }
 
 // maybeUpdateClockOffset parses the Date header from a successful response and
-// updates the learned clock offset, clamped to the range [-5 minutes, +5 minutes].
-// It is a no-op when clock-drift correction is disabled.
+// updates the learned clock offset, clamped to the range [-5 minutes, +5
+// minutes]. It is a no-op when clock-drift correction is disabled.
 func (c *Client) maybeUpdateClockOffset(respHeaders http.Header) {
 	if !c.cfg.clockDriftCorrection {
 		return
@@ -601,7 +547,7 @@ func (c *Client) maybeUpdateClockOffset(respHeaders http.Header) {
 	if err != nil {
 		return
 	}
-	offset := serverTime.Sub(time.Now())
+	offset := time.Until(serverTime)
 	clamped := offset
 	const maxOffset = 5 * time.Minute
 	if offset > maxOffset {
@@ -617,5 +563,5 @@ func (c *Client) maybeUpdateClockOffset(respHeaders http.Header) {
 // parseDateHeader parses an RFC 7231 Date header value (e.g.
 // "Tue, 23 Sep 2025 12:34:56 GMT") into a time.Time in UTC.
 func parseDateHeader(s string) (time.Time, error) {
-	return time.Parse(http.TimeFormat, s)
+	return http.ParseTime(s)
 }

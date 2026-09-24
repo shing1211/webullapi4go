@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // API interface versions accepted by the Webull OpenAPI x-version header.
@@ -82,8 +82,9 @@ func WithAPIVersionFor(pathPrefix, v string) Option {
 }
 
 // WithAutoToken enables or disables automatic access-token handling for the
-// client. It is off by default, so [Client.Do] never obtains a token on its own
-// and only attaches one cached by [Client.EnsureToken] or [Client.SetToken].
+// client. It is off by default, so [Client.Do], [Client.DoBroker], and
+// [Client.DoStream] never obtain a token on their own and only attach one cached
+// by [Client.EnsureToken] or [Client.SetToken].
 //
 // When enabled and no usable token is cached, the first request that is not a
 // token-lifecycle endpoint behaves as follows:

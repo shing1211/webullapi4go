@@ -38,6 +38,12 @@ if _, err := cl.EnsureToken(ctx); err != nil {
 Options are applied in order. `WithSandbox()` is equivalent to
 `WithEnvironment(client.Sandbox)`.
 
+`client`, `data`, `trade`, `stream`, and `events` remain the canonical service
+packages. `pkg/` contains shared foundations such as `errors`, `observability`,
+`resilience`, `transport`, `domain/money`, and `domain/order`; it is not a
+relocated service hierarchy. The optional `webull` package only aliases the
+core client and does not replace the root service constructors.
+
 ## Option pattern
 
 All packages use the functional options pattern:
@@ -83,46 +89,79 @@ all, err := trading.GetAllOpenOrders(ctx, accountID)
 
 `GetAllXxx` is bounded by `MaxOrderQueryPages` (100) to prevent infinite loops.
 
-## Numeric strings
+## Decimal money
 
-Prices, quantities, and other numeric fields are **strings** on the wire and
-remain strings in Go types. This preserves decimal precision that `float64`
-would lose:
-
-```go
-log.Printf("price=%s qty=%s", order.LimitPrice, order.Quantity)
-```
-
-When constructing requests, pass numeric values as strings:
+Prices, quantities, balances, and other financial values are decimal strings on
+the wire. Public DTOs preserve that precision with `money.Money` for required
+and response values and `*money.Money` for optional and request values. Raw
+`decimal.Decimal` is not the DTO API.
 
 ```go
-Quantity:  "100",
-LimitPrice: "150.25",
+import "github.com/shing1211/webullapi4go/pkg/domain/money"
+
+quantity := money.MustNew("100")
+limitPrice := money.MustNew("150.25")
+
+req := trade.OrderRequest{
+    Quantity:   &quantity,
+    LimitPrice: &limitPrice,
+}
+
+log.Printf("price=%s qty=%s", req.LimitPrice, req.Quantity)
 ```
+
+`MustNew` is appropriate for trusted constants and panics on invalid input.
+For external input, handle the error:
+
+```go
+amount, err := money.NewFromString(input)
+if err != nil {
+    return err
+}
+```
+
+`Money` implements `String`, comparison, arithmetic, and JSON methods. It
+marshals back to a JSON string, so the wire format is unchanged.
 
 ## Error handling
 
-All SDK errors are typed and support `errors.Is`/`errors.As`:
+Use the public `pkg/errors` codes and sentinels with `errors.Is`/`errors.As`;
+never branch on `err.Error()` text.
 
 ```go
-result, err := trading.PlaceOrder(ctx, req)
-if err != nil {
-    if errors.Is(err, client.ErrAccessTokenRequired) {
-        // Token expired; refresh and retry
-        if _, err := cl.EnsureToken(ctx); err != nil {
-            log.Fatal(err)
-        }
-        // retry...
-    } else if errors.Is(err, client.ErrCircuitOpen) {
-        // Circuit breaker open; back off
-        time.Sleep(backoff)
-    } else {
-        log.Printf("order failed: %v", err)
+placed, err := trading.PlaceOrder(ctx, req)
+switch {
+case err == nil:
+    log.Printf("placed %s", placed.OrderID)
+case errors.Is(err, client.ErrAccessTokenRequired):
+    // Complete token activation explicitly before retrying.
+case errors.Is(err, client.ErrCircuitOpen):
+    // Back off until the breaker permits another attempt.
+case errors.Is(err, errs.ErrOrderGuardrail):
+    // Reduce size/notional or change the application guardrail.
+case errs.Is(err, errs.CodeRateLimited):
+    // Back off; do not automatically retry a non-idempotent placement.
+default:
+    var sdkErr *errs.Error
+    if errors.As(err, &sdkErr) {
+        log.Printf("order failed: code=%s status=%d: %v",
+            sdkErr.Code, sdkErr.Status, err)
     }
 }
 ```
 
-See [Errors](errors.md) for the full code table and handling guidance.
+Import the standard library as `errors` and the SDK package with an alias:
+
+```go
+import (
+    "errors"
+
+    "github.com/shing1211/webullapi4go/client"
+    errs "github.com/shing1211/webullapi4go/pkg/errors"
+)
+```
+
+See [Errors](errors.md) for the code table and OMS error behavior.
 
 ## Display Service
 
@@ -140,23 +179,58 @@ authentication setup is required.
 
 ## Streaming
 
-MQTT streaming and gRPC events follow a callback + run pattern:
+MQTT streaming and gRPC events use callback or channel delivery:
 
 ```go
-// MQTT (Market Data)
-s, err := stream.New(cl, stream.WithWebSocket(true))
-s.Connect(ctx)
-s.Subscribe(ctx, stream.SubscribeRequest{...})
-s.OnQuote(func(q *marketdatav1.Quote) { /* handle */ })
+s, err := stream.New(cl,
+    stream.WithWebSocket(true),
+    stream.WithAutoReconnect(true),
+    stream.WithHealthWatchdog(30*time.Second),
+)
+if err != nil {
+    return err
+}
+defer func() { _ = s.Close() }()
 
-// gRPC (Trading Events)
-ev, err := events.New(cl)
-ev.OnOrder(func(o *events.OrderEvent) { /* handle */ })
-ev.Run(ctx) // blocks
+s.OnQuote(func(q *marketdatav1.Quote) {
+    // Keep callback work short; it runs on the MQTT pump.
+})
+
+quotes, cancel := s.SubscribeQuoteChan(stream.ChannelConfig{
+    Policy:     stream.DropOldest,
+    BufferSize: 256,
+})
+defer cancel() // idempotent; closes the channel
+
+s.OnStateChange(func(previous, next stream.State) {
+    log.Printf("stream %s -> %s", previous, next)
+})
 ```
 
-Register handlers before calling `Connect`/`Run`. Handlers run on the stream
-pump and must not block.
+Only quote, snapshot, and tick data refresh the health watchdog. Notice and
+echo traffic do not. `DropBlock` is the default; `DropOldest` preserves the
+newest unread value, while `DropSample` randomly discards under pressure.
+`Client.Close` closes all active channel subscriptions and unblocks a dispatch
+waiting in `DropBlock`.
+
+For gRPC Trading Events:
+
+```go
+ev, err := events.New(cl)
+if err != nil {
+    return err
+}
+defer func() { _ = ev.Close() }()
+
+ev.OnOrder(func(e *events.OrderEvent) {
+    // Decode and apply quickly; Run blocks on the receive loop.
+})
+if err := ev.Run(ctx); err != nil {
+    return err
+}
+```
+
+See [Streaming](streaming.md) and [Observability](observability.md).
 
 ## HK BCAN party IDs
 
@@ -181,4 +255,5 @@ NoPartyIDs: trade.BuildHKDerivativesPartyIDs(partyID),
 - [Getting Started](getting-started.md) — install and first call.
 - [Authentication](authentication.md) — signing and tokens.
 - [Errors](errors.md) — typed errors and classification.
+- [Observability](observability.md) — logging, tracing, metrics, and correlation.
 - [Sandbox](sandbox.md) — environments and test credentials.

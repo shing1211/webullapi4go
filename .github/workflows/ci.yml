@@ -2,9 +2,8 @@ name: CI
 
 # Public Go SDK module: github.com/shing1211/webullapi4go (Apache-2.0).
 #
-# The Go toolchain version is NOT hard-coded here: actions/setup-go reads it
-# from the `go` directive in go.mod via `go-version-file`, so go.mod remains
-# the single source of truth (currently `go 1.26`).
+# The build job tests the Go 1.26 baseline from go.mod and the current stable
+# release. Other jobs use go.mod as their single source of truth.
 
 on:
   push:
@@ -22,31 +21,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Build, vet, and test across operating systems.
+  # Build, vet, and test across operating systems and Go versions.
   build:
-    name: build, vet, test (${{ matrix.os }})
+    name: build, vet, test (${{ matrix.os }}, Go ${{ matrix.go-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    env:
-      # On Windows, the test binary can trigger a file-lock on a.out.exe;
-      # point Go at a writable temp directory (see AGENTS.md).
-      GOTMPDIR: ${{ github.workspace }}/.gotmp
+        go-version: ["1.26.x", stable]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
       - name: Prepare writable temp dir (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path $env:GOTMPDIR -Force | Out-Null
+          $gotmpdir = Join-Path $env:GITHUB_WORKSPACE ".gotmp"
+          New-Item -ItemType Directory -Path $gotmpdir -Force | Out-Null
+          "GOTMPDIR=$gotmpdir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Set up Go (version from go.mod)
+      - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: ${{ matrix.go-version }}
           check-latest: true
           cache: true
 
@@ -58,6 +57,41 @@ jobs:
 
       - name: Test (race detector)
         run: go test -race -count=1 ./...
+
+  nested-modules:
+    name: ${{ matrix.module }} (build, vet, test)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - broker
+          - examples/watchlist-cmd
+          - examples/broker-probe
+          - examples/futures-probe
+          - examples/options-multi-leg
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          check-latest: true
+          cache: true
+
+      - name: Build
+        run: go build -mod=readonly ./...
+
+      - name: Vet
+        run: go vet -mod=readonly ./...
+
+      - name: Test (race detector)
+        run: go test -mod=readonly -race -count=1 ./...
 
   # Lint: formatting and static analysis. Runs on ubuntu-latest (grep-based
   # gofmt check); formatting is OS-independent.
@@ -112,8 +146,11 @@ jobs:
       - name: Report coverage
         run: go tool cover -func=coverage.out
 
-      # Artifact is retained for the baseline; a coverage gate (85% on touched
-      # code) can be added once the baseline is established.
+      - name: Enforce coverage baseline
+        run: |
+          TOTAL=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub("%", "", $3); print $3}')
+          awk -v total="$TOTAL" 'BEGIN { if (total + 0 < 60.0) { printf "coverage %.1f%% is below the 60.0%% baseline\n", total; exit 1 } }'
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:

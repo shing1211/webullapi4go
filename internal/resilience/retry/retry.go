@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/internal/resilience/clock"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Defaults applied by [DefaultConfig].

@@ -22,7 +22,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
 	"github.com/shing1211/webullapi4go/pkg/domain/order"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Order modification endpoint paths.
@@ -198,20 +198,21 @@ func (c *Client) ReplaceOrder(ctx context.Context, req ReplaceOrderRequest) (*Re
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	if c.orderRegistry != nil {
-		for _, m := range req.ModifyOrders {
-			c.ordMu.RLock()
-			o, ok := c.getOrder(m.ClientOrderID)
-			c.ordMu.RUnlock()
-			if ok && order.IsTerminal(o.Machine.State()) {
+	for _, m := range req.ModifyOrders {
+		if o, ok := c.getOrder(req.AccountID, m.ClientOrderID); ok && o != nil && o.Machine != nil {
+			state := o.Machine.State()
+			if order.IsTerminal(state) {
 				return nil, errs.Wrap(errs.CodeInvalidTransition,
-					fmt.Sprintf("order %s is %s: cannot replace", m.ClientOrderID, o.Machine.State()), nil)
+					fmt.Sprintf("order %s is %s: cannot replace", m.ClientOrderID, state), nil)
 			}
 		}
 	}
 	var out ReplaceOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersReplace, nil, req, &out); err != nil {
 		return nil, err
+	}
+	for _, m := range req.ModifyOrders {
+		c.applyTrackedEvent(req.AccountID, m.ClientOrderID, order.EventReplace)
 	}
 	return &out, nil
 }
@@ -235,19 +236,18 @@ func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*Canc
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	if c.orderRegistry != nil {
-		c.ordMu.RLock()
-		o, ok := c.getOrder(req.ClientOrderID)
-		c.ordMu.RUnlock()
-		if ok && order.IsTerminal(o.Machine.State()) {
+	if o, ok := c.getOrder(req.AccountID, req.ClientOrderID); ok && o != nil && o.Machine != nil {
+		state := o.Machine.State()
+		if order.IsTerminal(state) {
 			return nil, errs.Wrap(errs.CodeInvalidTransition,
-				fmt.Sprintf("order %s is %s: cannot cancel", req.ClientOrderID, o.Machine.State()), nil)
+				fmt.Sprintf("order %s is %s: cannot cancel", req.ClientOrderID, state), nil)
 		}
 	}
 	var out CancelOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersCancel, nil, req, &out); err != nil {
 		return nil, err
 	}
+	c.applyTrackedEvent(req.AccountID, req.ClientOrderID, order.EventCancel)
 	return &out, nil
 }
 

@@ -1,39 +1,47 @@
 # Webull SDK toolchain.
 #
 # Usage:
-#   make build      compile all packages
+#   make build      compile all packages in every Go module
+#   make vet        run go vet in every Go module
 #   make test       run unit tests (sandbox tests need WEBULL_SANDBOX=1 and valid creds)
-#   make test-race  run tests with the race detector
-#   make cover      run tests with coverage profiling
+#   make test-race  run tests with the race detector in every Go module
+#   make cover      run tests with coverage profiling in every Go module
 #   make lint       run golangci-lint (includes gosec)
 #   make fuzz       fuzz the data package deserializers
-#   make vuln       run govulncheck
+#   make vuln       run govulncheck in every Go module
 #   make docs       build the MkDocs site (strict)
 #   make generate   regenerate protobuf code
 #   make proto-tools install protobuf codegen tools
 
-.PHONY: build test test-race cover lint fuzz vuln docs generate proto-tools
+MODULES := . broker examples/watchlist-cmd examples/broker-probe examples/futures-probe examples/options-multi-leg
+
+.PHONY: build vet test test-race cover lint fuzz vuln docs generate proto-tools
 
 build:
-	go build ./...
+	@set -e; for module in $(MODULES); do go -C "$$module" build -mod=readonly ./...; done
+
+vet:
+	@set -e; for module in $(MODULES); do go -C "$$module" vet -mod=readonly ./...; done
 
 test:
-	go test ./...
+	@set -e; for module in $(MODULES); do go -C "$$module" test -mod=readonly ./...; done
 
 test-race:
-	go test -race -count=1 ./...
+	@set -e; for module in $(MODULES); do go -C "$$module" test -mod=readonly -race -count=1 ./...; done
 
 cover:
-	go test ./... -cover
+	@set -e; for module in $(MODULES); do go -C "$$module" test -mod=readonly ./... -cover; done
 
 lint:
 	golangci-lint run
 
 fuzz:
 	go test -fuzz=FuzzDecodeQuote -fuzztime=1s ./data/...
+	go test -fuzz=FuzzDecodeSnapshot -fuzztime=1s ./data/...
+	go test -fuzz=FuzzDecodeTick -fuzztime=1s ./data/...
 
 vuln:
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@set -e; for module in $(MODULES); do go -C "$$module" run -mod=mod golang.org/x/vuln/cmd/govulncheck@latest ./...; done
 
 docs:
 	mkdocs build --strict

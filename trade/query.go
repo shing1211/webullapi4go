@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	"github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Order query endpoint paths.
