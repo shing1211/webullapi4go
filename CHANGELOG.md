@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-24
+
+Phase 13 vet warnings fixed.
+
+### Fixed
+
+- `pkg/observability/otel.go`: `Tracer`, `Meter`, `InjectTraceContext`, and
+  `ExtractTraceContext` now use `*Config` pointer receivers, eliminating the
+  `passes lock by value` vet warnings.
+- `client/config.go`: `Validate` now uses `*Config` pointer receiver.
+- `client/config.go`: `client.Config.otel` field changed from embedded
+  `observability.Config` to `*observability.Config` (pointer), so that
+  returning `Config` by value does not copy the embedded `sync.RWMutex`.
+- `client/client.go`: `Client.cfg` changed to `*Config` (pointer) to avoid
+  copying the mutex when constructing a `Client`; `Config()` returns
+  `*c.cfg` by value-copy of the pointer.
+
 ## [2.0.9] - 2026-09-24
 
 Phase 9 structured errors.

@@ -123,13 +123,16 @@ type Config struct {
 	// hooks exposes lifecycle callbacks for observability integration.
 	hooks Hooks
 	// otel holds OpenTelemetry tracing and metrics handles and the logger.
-	// The default is observability.DefaultConfig() (all no-op).
-	otel observability.Config
+	// The default is observability.DefaultConfig() (all no-op). Stored as a
+	// pointer so that returning [Config] by value does not copy the embedded
+	// sync.RWMutex in observability.Config.
+	otel *observability.Config
 }
 
 // DefaultConfig returns a [Config] pre-filled with production Hong Kong
 // endpoints and the SDK's transport defaults.
 func DefaultConfig() Config {
+	otelCfg := observability.DefaultConfig()
 	return Config{
 		Region:      HK,
 		Environment: Production,
@@ -138,13 +141,13 @@ func DefaultConfig() Config {
 		UserAgent:   DefaultUserAgent,
 		APIVersion:  DefaultAPIVersion,
 		retry:       defaultRetrier(),
-		otel:        observability.DefaultConfig(),
+		otel:        &otelCfg,
 	}
 }
 
 // Validate reports whether the configuration is usable. It does not make any
 // network calls.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	switch {
 	case c.AppKey == "":
 		return errs.New(errs.CodeInvalidConfig, "app key is required")

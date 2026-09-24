@@ -31,7 +31,7 @@ import (
 // A Client is safe for concurrent use. All network access flows through
 // [Client.Do].
 type Client struct {
-	cfg       Config
+	cfg       *Config
 	transport *transport.Client
 	brokerTr  *transport.Client
 
@@ -83,7 +83,7 @@ func New(opts ...Option) (*Client, error) {
 	if err != nil {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "invalid HTTP endpoint", err)
 	}
-	c := &Client{cfg: cfg, transport: t}
+	c := &Client{cfg: &cfg, transport: t}
 	if cfg.Endpoints.BrokerHTTP != "" {
 		c.brokerTr, _ = transport.New(cfg.Endpoints.BrokerHTTP, cfg.HTTPClient, cfg.UserAgent)
 	}
@@ -91,7 +91,7 @@ func New(opts ...Option) (*Client, error) {
 }
 
 // Config returns a copy of the client configuration.
-func (c *Client) Config() Config { return c.cfg }
+func (c *Client) Config() Config { return *c.cfg }
 
 // Region returns the configured region.
 func (c *Client) Region() Region { return c.cfg.Region }

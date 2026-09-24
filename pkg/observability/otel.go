@@ -79,7 +79,7 @@ func DefaultConfig() Config {
 
 // Tracer returns a tracer for the given name, scoped to the configured
 // TracerProvider. If no TracerProvider is configured, the global no-op is used.
-func (c Config) Tracer(name string, opts ...trace.TracerOption) Tracer {
+func (c *Config) Tracer(name string, opts ...trace.TracerOption) Tracer {
 	if c.TracerProvider == nil {
 		return otel.Tracer(name, opts...)
 	}
@@ -88,7 +88,7 @@ func (c Config) Tracer(name string, opts ...trace.TracerOption) Tracer {
 
 // Meter returns a meter for the given name, scoped to the configured
 // MeterProvider. If no MeterProvider is configured, the global no-op is used.
-func (c Config) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+func (c *Config) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	if c.MeterProvider == nil {
 		return otel.Meter(name, opts...)
 	}
@@ -196,7 +196,7 @@ func SpanName(method, path string) string {
 
 // InjectTraceContext propagates trace context from ctx into carrier using
 // cfg.Propagator. It is a no-op when no propagator is configured.
-func (c Config) InjectTraceContext(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (c *Config) InjectTraceContext(ctx context.Context, carrier propagation.TextMapCarrier) {
 	if c.Propagator != nil {
 		c.Propagator.Inject(ctx, carrier)
 	}
@@ -204,7 +204,7 @@ func (c Config) InjectTraceContext(ctx context.Context, carrier propagation.Text
 
 // ExtractTraceContext extracts trace context from carrier into ctx using
 // cfg.Propagator. It returns ctx unchanged when no propagator is configured.
-func (c Config) ExtractTraceContext(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (c *Config) ExtractTraceContext(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	if c.Propagator != nil {
 		return c.Propagator.Extract(ctx, carrier)
 	}
