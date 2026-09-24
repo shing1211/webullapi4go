@@ -61,6 +61,8 @@ func (c *channelConfig) recordDrop() { c.dropCnt.Add(1) }
 
 func (c *channelConfig) recordDropToMeter() {
 	c.dropCnt.Add(1)
+	// OTel metric recording is intentionally fire-and-forget: the metric SDK
+	// records synchronously and cannot block, so context.Background() is safe.
 	if c.otelCounter != nil {
 		c.otelCounter.Add(context.Background(), 1,
 			metric.WithAttributes(attribute.String("topic", c.topic)))

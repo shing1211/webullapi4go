@@ -307,9 +307,15 @@ func (c *Client) Connect(ctx context.Context) error {
 	}
 
 	token := c.pc.Connect()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		token.Wait()
+	}()
 	done := make(chan struct{})
 	go func() {
-		token.Wait()
+		wg.Wait()
 		close(done)
 	}()
 

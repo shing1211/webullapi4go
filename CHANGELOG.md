@@ -17,6 +17,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.8] - 2026-09-24
+
+Phase 8 context hygiene.
+
+### Fixed
+
+- `pkg/transport/mqtt/mqtt.go`: `Connect()` now uses `sync.WaitGroup` so the
+  `token.Wait()` goroutine exits promptly when the context is cancelled, instead
+  of leaking until the MQTT stack processes the disconnect.
+- `stream/client.go`: `resubscribeContext()` panics on a nil `resubCtx` instead of
+  silently using an uncancellable `context.Background()`.
+
+### Documentation
+
+- `stream/client.go`, `stream/channels.go`: added comments explaining that OTel
+  metric `Add` calls use `context.Background()` intentionally (fire-and-forget;
+  the metric SDK records synchronously and cannot block).
+
 ## [2.0.7] - 2026-09-24
 
 Phase 6.3 OTel metrics hooks.

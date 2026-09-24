@@ -598,6 +598,8 @@ func (c *Client) handleConnectionLost(err error) {
 func (c *Client) handleReconnecting() {
 	c.reconnecting.Store(true)
 	c.setState(StateReconnecting)
+	// OTel metric recording is intentionally fire-and-forget: the metric SDK
+	// records synchronously and cannot block, so context.Background() is safe.
 	if c.metrics != nil && c.metrics.reconnectCounter != nil {
 		c.metrics.reconnectCounter.Add(context.Background(), 1)
 	}
@@ -637,11 +639,10 @@ func (c *Client) resubscribe() {
 // resubscribeContext returns a context bounded by the re-subscribe timeout and
 // tied to the client lifetime.
 func (c *Client) resubscribeContext() (context.Context, context.CancelFunc) {
-	base := c.resubCtx
-	if base == nil {
-		base = context.Background()
+	if c.resubCtx == nil {
+		panic("stream: resubCtx is nil — New() was not called or context was already cancelled")
 	}
-	return context.WithTimeout(base, c.cfg.resubscribeTimeout)
+	return context.WithTimeout(c.resubCtx, c.cfg.resubscribeTimeout)
 }
 
 // healthWatchdog monitors message-age and transitions to Degraded when no data
