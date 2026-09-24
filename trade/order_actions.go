@@ -142,7 +142,7 @@ func (r ModifyOrderRequest) validate(prefix string) error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 	if r.TimeInForce != "" && !r.TimeInForce.valid() {
@@ -174,7 +174,7 @@ func (r CancelOrderRequest) Validate() error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 	return nil

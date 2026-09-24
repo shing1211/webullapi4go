@@ -467,3 +467,123 @@ func readBody(t *testing.T, r *http.Request) []byte {
 	}
 	return data
 }
+
+func TestNewClientOrderID(t *testing.T) {
+	t.Parallel()
+
+	id1, err := trade.NewClientOrderID()
+	if err != nil {
+		t.Fatalf("NewClientOrderID() error = %v", err)
+	}
+	if len(id1) != 20 {
+		t.Fatalf("len(NewClientOrderID()) = %d, want 20", len(id1))
+	}
+	if !trade.ValidClientOrderID(id1) {
+		t.Fatalf("NewClientOrderID() = %q, is not valid per ValidClientOrderID", id1)
+	}
+
+	id2, err := trade.NewClientOrderID()
+	if err != nil {
+		t.Fatalf("NewClientOrderID() second call error = %v", err)
+	}
+	if id1 == id2 {
+		t.Fatalf("NewClientOrderID() generated duplicate IDs: %q == %q", id1, id2)
+	}
+}
+
+func TestClientOrderIDFrom(t *testing.T) {
+	t.Parallel()
+
+	content := []byte(`{"symbol":"AAPL","quantity":"100"}`)
+	id := trade.ClientOrderIDFrom(content)
+
+	if len(id) != 32 {
+		t.Fatalf("len(ClientOrderIDFrom(...)) = %d, want 32", len(id))
+	}
+	if !trade.ValidClientOrderID(id) {
+		t.Fatalf("ClientOrderIDFrom(...) = %q, is not valid per ValidClientOrderID", id)
+	}
+
+	id2 := trade.ClientOrderIDFrom(content)
+	if id != id2 {
+		t.Fatalf("ClientOrderIDFrom deterministic: got %q then %q, want same", id, id2)
+	}
+
+	different := trade.ClientOrderIDFrom([]byte(`different`))
+	if id == different {
+		t.Fatalf("ClientOrderIDFrom different content should differ, got same %q", id)
+	}
+}
+
+func TestAutoClientOrderID(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	var capturedBody map[string]any
+	mux.HandleFunc("/trading/orders/place", func(w http.ResponseWriter, r *http.Request) {
+		capturedBody = nil
+		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"client_order_id":"ID-from-server","order_id":"OID-1"}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	t.Run("auto fills empty IDs", func(t *testing.T) {
+		c := newTradeClient(t, srv.URL, trade.WithAutoClientOrderID(true))
+		req := trade.PlaceOrderRequest{
+			AccountID: "ACC1",
+			NewOrders: []trade.OrderRequest{validOrder()},
+		}
+		req.NewOrders[0].ClientOrderID = ""
+
+		_, err := c.PlaceOrder(context.Background(), req)
+		if err != nil {
+			t.Fatalf("PlaceOrder() error = %v", err)
+		}
+
+		ordersRaw := capturedBody["new_orders"].([]any)
+		order0 := ordersRaw[0].(map[string]any)
+		gotID := order0["client_order_id"].(string)
+		if gotID == "" {
+			t.Fatal("client_order_id was not auto-filled")
+		}
+		if len(gotID) > 32 {
+			t.Fatalf("auto-filled client_order_id len = %d, exceeds 32", len(gotID))
+		}
+	})
+
+	t.Run("does not overwrite existing IDs", func(t *testing.T) {
+		c := newTradeClient(t, srv.URL, trade.WithAutoClientOrderID(true))
+		req := trade.PlaceOrderRequest{
+			AccountID: "ACC1",
+			NewOrders: []trade.OrderRequest{validOrder()},
+		}
+		req.NewOrders[0].ClientOrderID = "my-custom-id"
+
+		_, err := c.PlaceOrder(context.Background(), req)
+		if err != nil {
+			t.Fatalf("PlaceOrder() error = %v", err)
+		}
+
+		ordersRaw := capturedBody["new_orders"].([]any)
+		order0 := ordersRaw[0].(map[string]any)
+		if gotID := order0["client_order_id"].(string); gotID != "my-custom-id" {
+			t.Fatalf("client_order_id = %q, want my-custom-id", gotID)
+		}
+	})
+
+	t.Run("disabled does not fill", func(t *testing.T) {
+		c := newTradeClient(t, srv.URL, trade.WithAutoClientOrderID(false))
+		req := trade.PlaceOrderRequest{
+			AccountID: "ACC1",
+			NewOrders: []trade.OrderRequest{validOrder()},
+		}
+		req.NewOrders[0].ClientOrderID = ""
+
+		_, err := c.PlaceOrder(context.Background(), req)
+		if !errs.Is(err, errs.CodeInvalidConfig) {
+			t.Fatalf("PlaceOrder() error = %v, want invalid_config when auto-ID disabled and ID empty", err)
+		}
+	})
+}

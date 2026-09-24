@@ -17,6 +17,7 @@ package client
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/pkg/transport"
@@ -44,6 +45,13 @@ type Client struct {
 	// autoTokenMu serialises automatic token acquisition for this client so that
 	// concurrent first requests do not create several tokens.
 	autoTokenMu sync.Mutex
+
+	// clockOffset and clockOffsetMu implement clock-drift correction: when
+	// enabled, the offset between the local clock and the server's clock is
+	// learned from the Date response header and applied to subsequent signing
+	// timestamps.
+	clockOffset   time.Duration
+	clockOffsetMu sync.Mutex
 }
 
 // New returns a Client configured by opts. Options are applied in order on top
@@ -67,6 +75,9 @@ func New(opts ...Option) (*Client, error) {
 	}
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = &http.Client{Timeout: cfg.Timeout}
+	}
+	if cfg.httpTransport != nil {
+		cfg.HTTPClient.Transport = cfg.httpTransport
 	}
 	t, err := transport.New(cfg.Endpoints.HTTP, cfg.HTTPClient, cfg.UserAgent)
 	if err != nil {

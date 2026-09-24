@@ -28,6 +28,10 @@ type config struct {
 	// maxOrderQuantity, when non-empty, is the advisory cap on a single
 	// order's quantity, as a decimal string.
 	maxOrderQuantity string
+	// autoClientOrderID, when true, causes [Client.PlaceOrder],
+	// [Client.ModifyOrder], and [Client.CancelOrder] to generate and assign a
+	// fresh [NewClientOrderID] to any order whose ClientOrderID is empty.
+	autoClientOrderID bool
 }
 
 // defaultConfig returns the trade client defaults: both order guardrails are
@@ -78,4 +82,12 @@ func normalizeGuardrail(name, v string) string {
 		panic("trade: " + name + ": " + strconv.Quote(v) + " is not a non-negative decimal number")
 	}
 	return v
+}
+
+// WithAutoClientOrderID controls whether order methods automatically generate
+// and assign a [NewClientOrderID] to any order whose ClientOrderID is empty.
+// The default is false (disabled). When enabled, each call that needs an ID
+// generates a fresh one, so retried calls produce distinct order identifiers.
+func WithAutoClientOrderID(v bool) Option {
+	return func(c *config) { c.autoClientOrderID = v }
 }

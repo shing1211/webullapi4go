@@ -40,6 +40,7 @@ type Config struct {
 	BaseDelay   time.Duration
 	MaxDelay    time.Duration
 	Jitter      bool
+	FullJitter  bool
 	IsRetryable func(error) bool
 	Clock       clock.Clock
 }
@@ -73,6 +74,15 @@ func WithJitter(enabled bool) Option {
 	return func(c *Config) { c.Jitter = enabled }
 }
 
+func WithFullJitter(enabled bool) Option {
+	return func(c *Config) {
+		c.FullJitter = enabled
+		if enabled {
+			c.Jitter = true
+		}
+	}
+}
+
 func WithIsRetryable(fn func(error) bool) Option {
 	return func(c *Config) { c.IsRetryable = fn }
 }
@@ -86,6 +96,7 @@ type Retrier struct {
 	baseDelay   time.Duration
 	maxDelay    time.Duration
 	jitter      bool
+	fullJitter  bool
 	isRetryable func(error) bool
 	clk         clock.Clock
 }
@@ -121,6 +132,7 @@ func NewWithConfig(cfg Config) *Retrier {
 		baseDelay:   cfg.BaseDelay,
 		maxDelay:    cfg.MaxDelay,
 		jitter:      cfg.Jitter,
+		fullJitter:  cfg.FullJitter,
 		isRetryable: cfg.IsRetryable,
 		clk:         cfg.Clock,
 	}
@@ -170,12 +182,17 @@ func (r *Retrier) wait(ctx context.Context, d time.Duration) error {
 }
 
 func (r *Retrier) delay(attempt int) time.Duration {
-	d := float64(r.baseDelay) * math.Pow(2, float64(attempt))
-	if max := float64(r.maxDelay); d > max {
-		d = max
+	cap := float64(r.baseDelay) * math.Pow(2, float64(attempt))
+	if max := float64(r.maxDelay); cap > max {
+		cap = max
 	}
-	if r.jitter {
-		d *= 0.8 + 0.4*rand.Float64()
+	var d float64
+	if r.fullJitter {
+		d = rand.Float64() * cap
+	} else if r.jitter {
+		d = cap * (0.8 + 0.4*rand.Float64())
+	} else {
+		d = cap
 	}
 	if d < 0 {
 		d = 0

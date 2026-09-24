@@ -107,6 +107,13 @@ type Config struct {
 	rateLimiter RateLimiter
 	// breaker, when non-nil, gates outgoing requests.
 	breaker CircuitBreaker
+	// clockDriftCorrection, when true, learns the clock offset between the
+	// client and the Webull server from the Date response header and applies
+	// it to subsequent request signing timestamps.
+	clockDriftCorrection bool
+	// httpTransport, when non-nil, is used as the [http.Transport] for the
+	// HTTP client created by [New] or set by [WithHTTPClient].
+	httpTransport *http.Transport
 }
 
 // DefaultConfig returns a [Config] pre-filled with production Hong Kong

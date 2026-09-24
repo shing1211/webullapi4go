@@ -17,6 +17,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-09-24
+
+Phase 3 production hardening: clock-drift correction, idempotency helpers,
+transport tuning, resilience presets.
+
+### Added
+
+- `client/option.go`: `WithClockDriftCorrection(bool)` — learns the clock offset
+  between the client and Webull server from the `Date` response header and applies
+  it to subsequent request signing timestamps, clamped to ±5 minutes.
+- `client/option.go`: `WithHTTPTransport(*http.Transport)` — sets a custom HTTP
+  transport on the client, applied after `WithHTTPClient` so callers can tune
+  connection pooling and TLS without replacing the whole client.
+- `client/option.go`: `WithResiliencePreset(ProductionPreset)` — applies a
+  production-ready resilience composition: per-path rate limiter (10 req/s, burst
+  20), circuit breaker (5-failure threshold, 30 s cooldown), and exponential
+  backoff retry with full jitter (base 200 ms, cap 2 s, up to 3 attempts).
+- `pkg/resilience/retry/`: `WithFullJitter(bool)` option — enables the full
+  jitter formula `rand(0, min(cap, base·2ⁿ))` giving uniformly distributed
+  delays in `[0, cap]` instead of ±20% jitter around the exponential.
+- `trade/orders.go`: `NewClientOrderID()` — generates a fresh 20-character
+  client-order identifier using `crypto/rand`, suitable for idempotent order
+  placement.
+- `trade/orders.go`: `ClientOrderIDFrom([]byte)` — derives a deterministic
+  32-character client-order identifier from arbitrary content via SHA-256.
+- `trade/orders.go`: `ValidClientOrderID(string) bool` — exported validation
+  helper for the client-order identifier character set.
+- `trade/option.go`: `WithAutoClientOrderID(bool)` — configures `PlaceOrder`
+  and `BatchPlaceOrder` to auto-generate and assign a `NewClientOrderID` to
+  each order whose `ClientOrderID` is empty.
+
 ### Documentation
 
 - Reorganized the docs site nav into Guides / API Reference / Official Webull

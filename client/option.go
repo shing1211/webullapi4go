@@ -98,6 +98,15 @@ func WithHTTPClient(hc *http.Client) Option {
 	return func(c *Config) { c.HTTPClient = hc }
 }
 
+// WithHTTPTransport sets the [http.Transport] used for REST calls. It is
+// applied after [WithHTTPClient]; if no HTTP client has been set, [New] creates
+// one with the configured timeout before applying the transport. This allows
+// callers to tune connection pooling, TLS, timeouts, and other transport-level
+// parameters without replacing the entire HTTP client.
+func WithHTTPTransport(tr *http.Transport) Option {
+	return func(c *Config) { c.httpTransport = tr }
+}
+
 // WithTimeout sets the per-request timeout used when [New] creates the HTTP
 // client.
 func WithTimeout(d time.Duration) Option {
@@ -224,4 +233,49 @@ func NewBreaker(threshold int, cooldown time.Duration) CircuitBreaker {
 		breaker.WithThreshold(threshold),
 		breaker.WithCooldown(cooldown),
 	)
+}
+
+// WithClockDriftCorrection enables clock-drift correction. When enabled, the
+// client learns the offset between the local clock and the Webull server's clock
+// by observing the Date response header on each successful request, and applies
+// that offset to subsequent x-timestamp values used in request signing. The offset
+// is clamped to the range [-5 minutes, +5 minutes] to prevent extreme offsets from
+// being injected. Disable with false to opt out.
+func WithClockDriftCorrection(enabled bool) Option {
+	return func(c *Config) {
+		c.clockDriftCorrection = enabled
+	}
+}
+
+// ResiliencePreset applies a named set of resilience defaults. Presets are
+// composable: each call adds to or overrides the existing configuration.
+type ResiliencePreset string
+
+const (
+	// ProductionPreset applies sensible production defaults: a per-path rate
+	// limiter (10 requests per second, burst 20), a circuit breaker (opens after
+	// 5 consecutive failures, 30-second cooldown), and exponential backoff retry
+	// with full jitter (base 200 ms, cap 2 s, up to 3 attempts).
+	ProductionPreset ResiliencePreset = "production"
+)
+
+// WithResiliencePreset applies a named resilience preset. Currently only
+// [ProductionPreset] is defined. The preset is applied by setting a per-path
+// rate limiter, circuit breaker, and retry policy; earlier options take precedence
+// so callers can override individual components.
+func WithResiliencePreset(preset ResiliencePreset) Option {
+	return func(c *Config) {
+		switch preset {
+		case ProductionPreset:
+			c.rateLimiter = NewRateLimiter(10, 20)
+			c.breaker = NewBreaker(5, 30*time.Second)
+			c.retry = retry.New(
+				retry.WithMaxAttempts(3),
+				retry.WithBaseDelay(200*time.Millisecond),
+				retry.WithMaxDelay(2*time.Second),
+				retry.WithFullJitter(true),
+				retry.WithIsRetryable(retry.DefaultIsRetryable),
+			)
+		}
+	}
 }

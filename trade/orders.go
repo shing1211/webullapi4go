@@ -16,6 +16,8 @@ package trade
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math/big"
@@ -362,7 +364,7 @@ func (r OrderRequest) validate(prefix string) error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 
@@ -515,7 +517,32 @@ func (c *Client) PreviewOrder(ctx context.Context, req PlaceOrderRequest) (*Prev
 // [WithMaxOrderQuantity] to bound what can be sent.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/common-order-place.md
+// autoFillClientOrderIDs generates and assigns a [NewClientOrderID] to each
+// order in orders whose ClientOrderID is empty. It returns the first error
+// encountered, if any.
+func (c *Client) autoFillClientOrderIDs(orders []OrderRequest) error {
+	if !c.cfg.autoClientOrderID {
+		return nil
+	}
+	for i := range orders {
+		if orders[i].ClientOrderID != "" {
+			continue
+		}
+		id, err := NewClientOrderID()
+		if err != nil {
+			return fmt.Errorf("auto-generating client_order_id for order[%d]: %w", i, err)
+		}
+		orders[i].ClientOrderID = id
+	}
+	return nil
+}
+
 func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*PlaceOrderResult, error) {
+	if c.cfg.autoClientOrderID {
+		if err := c.autoFillClientOrderIDs(req.NewOrders); err != nil {
+			return nil, err
+		}
+	}
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -552,6 +579,11 @@ type BatchPlaceOrderResponse struct {
 //
 // Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
 func (c *Client) BatchPlaceOrder(ctx context.Context, req PlaceOrderRequest) (*BatchPlaceOrderResponse, error) {
+	if c.cfg.autoClientOrderID {
+		if err := c.autoFillClientOrderIDs(req.NewOrders); err != nil {
+			return nil, err
+		}
+	}
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -653,9 +685,9 @@ func orderNotional(o *OrderRequest) (*big.Rat, bool) {
 	return new(big.Rat).Mul(o.Quantity.Rat(), o.LimitPrice.Rat()), true
 }
 
-// validClientOrderID reports whether id contains only the characters the API
+// ValidClientOrderID reports whether id contains only the characters the API
 // allows in a client order identifier: letters, digits, hyphen, and underscore.
-func validClientOrderID(id string) bool {
+func ValidClientOrderID(id string) bool {
 	for i := 0; i < len(id); i++ {
 		switch c := id[i]; {
 		case c >= 'A' && c <= 'Z':
@@ -667,6 +699,40 @@ func validClientOrderID(id string) bool {
 		}
 	}
 	return true
+}
+
+// charset64 is the set of characters allowed in a client order identifier.
+const charset64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+// NewClientOrderID returns a new random client order identifier. It generates a
+// fresh 20-character string from [crypto/rand], giving approximately 118 bits of
+// entropy, well within the 32-character limit enforced by [OrderRequest.Validate]
+// and the Webull API.
+func NewClientOrderID() (string, error) {
+	b := make([]byte, 15)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating client order id: %w", err)
+	}
+	result := make([]byte, 20)
+	for i := 0; i < 15; i++ {
+		result[i] = charset64[int(b[i])&63]
+	}
+	for i := 15; i < 20; i++ {
+		var j byte
+		if _, err := rand.Read([]byte{j}); err != nil {
+			return "", fmt.Errorf("generating client order id: %w", err)
+		}
+		result[i] = charset64[int(j)&63]
+	}
+	return string(result), nil
+}
+
+// ClientOrderIDFrom returns a deterministic client order identifier derived from
+// content by taking the first 32 hexadecimal characters of its SHA-256 digest.
+// The result is valid according to [validClientOrderID] and the Webull API.
+func ClientOrderIDFrom(content []byte) string {
+	h := sha256.Sum256(content)
+	return fmt.Sprintf("%x", h[:16])
 }
 
 // valid reports whether t is a recognized instrument type.

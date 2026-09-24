@@ -161,6 +161,7 @@ func (c *Client) executeBroker(ctx context.Context, method, reqPath string, quer
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return errs.FromHTTPStatus(resp.StatusCode, data)
 	}
+	c.maybeUpdateClockOffset(resp.Header)
 	if out == nil || len(data) == 0 {
 		return nil
 	}
@@ -179,7 +180,7 @@ func (c *Client) buildSignedRequestForTransport(ctx context.Context, method, req
 	host := signingHost(req.URL)
 	req.Host = host
 
-	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, time.Now())
+	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, c.signingTime())
 	if err != nil {
 		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
 	}
@@ -271,6 +272,7 @@ func (c *Client) execute(ctx context.Context, method, reqPath string, query url.
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return errs.FromHTTPStatus(resp.StatusCode, data)
 	}
+	c.maybeUpdateClockOffset(resp.Header)
 	if out == nil || len(data) == 0 {
 		return nil
 	}
@@ -298,7 +300,7 @@ func (c *Client) buildSignedRequest(ctx context.Context, method, reqPath string,
 	host := signingHost(req.URL)
 	req.Host = host
 
-	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, time.Now())
+	signingHeaders, err := auth.NewSigningHeaders(c.cfg.AppKey, host, c.signingTime())
 	if err != nil {
 		return nil, errs.Wrap(errs.CodeAuth, "building signing headers", err)
 	}
@@ -394,4 +396,51 @@ func applySigningHeaders(dst, src http.Header) {
 			dst.Add(name, v)
 		}
 	}
+}
+
+// signingTime returns the time used in the x-timestamp signing header. When
+// clock-drift correction is enabled, it includes the learned offset between the
+// local clock and the server's clock.
+func (c *Client) signingTime() time.Time {
+	if !c.cfg.clockDriftCorrection {
+		return time.Now()
+	}
+	c.clockOffsetMu.Lock()
+	offset := c.clockOffset
+	c.clockOffsetMu.Unlock()
+	return time.Now().Add(offset)
+}
+
+// maybeUpdateClockOffset parses the Date header from a successful response and
+// updates the learned clock offset, clamped to the range [-5 minutes, +5 minutes].
+// It is a no-op when clock-drift correction is disabled.
+func (c *Client) maybeUpdateClockOffset(respHeaders http.Header) {
+	if !c.cfg.clockDriftCorrection {
+		return
+	}
+	dateStr := respHeaders.Get("Date")
+	if dateStr == "" {
+		return
+	}
+	serverTime, err := parseDateHeader(dateStr)
+	if err != nil {
+		return
+	}
+	offset := serverTime.Sub(time.Now())
+	clamped := offset
+	const maxOffset = 5 * time.Minute
+	if offset > maxOffset {
+		clamped = maxOffset
+	} else if offset < -maxOffset {
+		clamped = -maxOffset
+	}
+	c.clockOffsetMu.Lock()
+	c.clockOffset = clamped
+	c.clockOffsetMu.Unlock()
+}
+
+// parseDateHeader parses an RFC 7231 Date header value (e.g.
+// "Tue, 23 Sep 2025 12:34:56 GMT") into a time.Time in UTC.
+func parseDateHeader(s string) (time.Time, error) {
+	return time.Parse(http.TimeFormat, s)
 }

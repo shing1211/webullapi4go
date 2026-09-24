@@ -353,3 +353,142 @@ func TestNewValidatesConfig(t *testing.T) {
 		t.Fatalf("New() invalid endpoint error = %v, want invalid_config", err)
 	}
 }
+
+func TestClockDriftCorrection(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	var capturedTimestamp string
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		capturedTimestamp = r.Header.Get(auth.HeaderTimestamp)
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithClockDriftCorrection(true),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	ctx := context.Background()
+
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if capturedTimestamp == "" {
+		t.Fatal("timestamp header was not captured")
+	}
+	ts, err := time.Parse(auth.TimestampFormat, capturedTimestamp)
+	if err != nil {
+		t.Fatalf("time.Parse(%q) error = %v", capturedTimestamp, err)
+	}
+
+	now := time.Now()
+	drift := ts.Sub(now)
+	if drift < -time.Minute || drift > time.Minute {
+		t.Fatalf("captured timestamp drift = %v, want roughly 0 (within 1 minute)", drift)
+	}
+}
+
+func TestWithHTTPTransport(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	customTransport := &http.Transport{
+		MaxIdleConns:        99,
+		MaxIdleConnsPerHost: 50,
+	}
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithHTTPTransport(customTransport),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	cfg := cl.Config()
+	if got := cfg.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost; got != 50 {
+		t.Errorf("MaxIdleConnsPerHost = %d, want 50", got)
+	}
+
+	ctx := context.Background()
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+}
+
+type trackingLimiter struct {
+	calls int
+}
+
+func (l *trackingLimiter) Wait(ctx context.Context, key string) error {
+	l.calls++
+	return nil
+}
+
+func TestWithResiliencePreset(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithResiliencePreset(client.ProductionPreset),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	ctx := context.Background()
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+}
