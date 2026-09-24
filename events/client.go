@@ -450,7 +450,7 @@ func (c *Client) dispatch(resp *eventsevents.SubscribeResponse) error {
 	case eventsevents.EventType_NumOfConnExceed:
 		return errs.Wrap(errs.CodeTransport, "events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errTerminalStream)
 	case eventsevents.EventType_SubscribeExpired:
-		return errs.New(errs.CodeAuth, "events: subscription expired; reconnect to resume")
+		return errs.Wrap(errs.CodeAuth, "events: subscription expired; reconnect to resume", errs.ErrSubscriptionExpired)
 	default:
 		c.routeDataEvent(resp)
 		return nil

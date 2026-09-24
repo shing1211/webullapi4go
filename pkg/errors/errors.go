@@ -61,6 +61,16 @@ const (
 	// current state of the target resource (for example cancelling an already-filled
 	// order).
 	CodeInvalidTransition Code = "invalid_transition"
+	// CodeNotInitialized indicates a client or resource that is required to be
+	// initialized has not been (for example, a stream or events client whose
+	// Run method has not been called).
+	CodeNotInitialized Code = "not_initialized"
+	// CodeValidation indicates an input value failed validation (distinct from
+	// a client configuration error).
+	CodeValidation Code = "validation"
+	// CodeOrderGuardrail indicates an order was rejected because it exceeded a
+	// risk guardrail (max quantity, max notional, or similar).
+	CodeOrderGuardrail Code = "order_guardrail"
 )
 
 // Error is the SDK's typed error. It is safe to return by value as *Error and
@@ -109,6 +119,9 @@ func (e *Error) Is(target error) bool {
 	if e == nil {
 		return false
 	}
+	if e == target {
+		return true
+	}
 	var t *Error
 	if errors.As(target, &t) {
 		return t.Code == e.Code
@@ -152,6 +165,18 @@ var (
 	ErrServer = New(CodeServer, "server error")
 	// ErrInvalidTransition matches [CodeInvalidTransition].
 	ErrInvalidTransition = New(CodeInvalidTransition, "invalid state transition")
+	// ErrNotInitialized matches [CodeNotInitialized].
+	ErrNotInitialized = New(CodeNotInitialized, "client not initialized")
+	// ErrValidation matches [CodeValidation].
+	ErrValidation = New(CodeValidation, "validation failed")
+	// ErrOrderGuardrail matches [CodeOrderGuardrail].
+	ErrOrderGuardrail = New(CodeOrderGuardrail, "order guardrail exceeded")
+	// ErrSubscriptionExpired matches [CodeAuth] for subscription/tocket expiry in
+	// streaming event clients.
+	ErrSubscriptionExpired = New(CodeAuth, "subscription expired")
+	// ErrConnectionLimitExceeded matches [CodeTransport] for gRPC-stream connection
+	// limit rejection (at most 5 concurrent connections per App Key).
+	ErrConnectionLimitExceeded = New(CodeTransport, "connection limit exceeded")
 )
 
 // FromHTTPStatus maps a non-2xx HTTP response status to a typed [Error]. When

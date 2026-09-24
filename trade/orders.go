@@ -633,7 +633,7 @@ func (c *Client) enforceGuardrails(req PlaceOrderRequest) error {
 		if err := c.enforceOrderGuardrails(&req.NewOrders[i]); err != nil {
 			var e *errs.Error
 			if errors.As(err, &e) {
-				return errs.New(e.Code, fmt.Sprintf("new_orders[%d]: %s", i, e.Message))
+				return errs.Wrap(e.Code, fmt.Sprintf("new_orders[%d]: %s", i, e.Message), err)
 			}
 			return err
 		}

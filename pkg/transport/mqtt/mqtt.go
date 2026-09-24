@@ -26,6 +26,8 @@ import (
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+
+	pkgerrs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 const (
@@ -40,8 +42,8 @@ const (
 const ConnackConnectionLimit byte = 105
 
 var (
-	ErrConnectionRefused = errors.New("mqtt: connection refused by broker")
-	ErrConnectionLimit   = errors.New("mqtt: exceeds connection limit (code 105): at most 5 concurrent connections per App Key; wait about 1 minute after a disconnect before reconnecting")
+	ErrConnectionRefused = pkgerrs.New(pkgerrs.CodeTransport, "mqtt: connection refused by broker")
+	ErrConnectionLimit   = pkgerrs.New(pkgerrs.CodeTransport, "mqtt: exceeds connection limit (code 105): at most 5 concurrent connections per App Key; wait about 1 minute after a disconnect before reconnecting")
 )
 
 type ConnackError struct {
@@ -59,14 +61,13 @@ func (e *ConnackError) Error() string {
 func (e *ConnackError) Unwrap() error { return e.Err }
 
 func (e *ConnackError) Is(target error) bool {
-	switch target {
-	case ErrConnectionLimit:
-		return e.Code == ConnackConnectionLimit
-	case ErrConnectionRefused:
-		return true
-	default:
-		return errors.Is(e.Err, target)
+	if target == ErrConnectionLimit {
+		return e.Code == ConnackConnectionLimit && errors.Is(e.Err, ErrConnectionLimit)
 	}
+	if target == ErrConnectionRefused {
+		return true
+	}
+	return errors.Is(e.Err, target)
 }
 
 type Message struct {

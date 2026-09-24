@@ -19,7 +19,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -83,7 +82,7 @@ func newCorrelationID() string {
 
 // ErrCircuitOpen is wrapped into the error returned by [Client.Do] when a
 // configured circuit breaker rejects a call.
-var ErrCircuitOpen = errors.New("webull: circuit breaker is open")
+var ErrCircuitOpen = errs.New(errs.CodeTransport, "circuit breaker is open")
 
 // Do performs a signed request against the Webull OpenAPI and decodes the JSON
 // response into out. It is the single transport entry point for the SDK.

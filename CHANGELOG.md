@@ -17,6 +17,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-09-24
+
+Phase 9 structured errors.
+
+### Added
+
+- `pkg/errors/errors.go`: three new error codes (`CodeNotInitialized`,
+  `CodeValidation`, `CodeOrderGuardrail`) and four new sentinels
+  (`ErrNotInitialized`, `ErrValidation`, `ErrOrderGuardrail`,
+  `ErrSubscriptionExpired`, `ErrConnectionLimitExceeded`).
+- `pkg/errors/errors.go`: `Error.Is` now compares by pointer equality first,
+  ensuring `ErrX.Is(ErrX)` returns true even when `ErrX` is a typed
+  `*Error`.
+
+### Changed
+
+- `client/request.go`: `ErrCircuitOpen` is now `*pkgerrors.Error` with
+  `CodeTransport`; existing `errors.Is(err, client.ErrCircuitOpen)` checks
+  continue to work.
+- `pkg/transport/mqtt/mqtt.go`: `ErrConnectionRefused` and `ErrConnectionLimit`
+  are now `*pkgerrors.Error` with `CodeTransport`; `errors.Is(err,
+  mqtt.ErrConnectionLimit)` and `errors.Is(err, mqtt.ErrConnectionRefused)`
+  continue to work.
+- `trade/orders.go`: `enforceGuardrails` now uses `errs.Wrap` instead of
+  `errs.New` when prefixing batch-order index, preserving the full error chain.
+- `events/client.go`, `brokerfd/events/events.go`: subscription-expired errors
+  now wrap `ErrSubscriptionExpired` so callers can check
+  `errors.Is(err, errs.ErrSubscriptionExpired)`.
+
 ## [2.0.8] - 2026-09-24
 
 Phase 8 context hygiene.
