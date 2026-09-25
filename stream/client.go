@@ -41,12 +41,25 @@ import (
 const password = "webullapi4go"
 
 // streamMetrics holds the OTel instruments for stream telemetry.
-// All fields are nil when no Meter is configured.
+// All fields are nil when neither an explicit nor inherited meter is available.
 type streamMetrics struct {
-	reconnectCounter    metric.Int64Counter
-	quoteDropCounter    metric.Int64Counter
-	snapshotDropCounter metric.Int64Counter
-	tickDropCounter     metric.Int64Counter
+	reconnectCounter   metric.Int64Counter
+	channelDropCounter metric.Int64Counter
+}
+
+type watchdogTicker interface {
+	C() <-chan time.Time
+	Stop()
+}
+
+type realWatchdogTicker struct {
+	*time.Ticker
+}
+
+func (t realWatchdogTicker) C() <-chan time.Time { return t.Ticker.C }
+
+func newRealWatchdogTicker(interval time.Duration) watchdogTicker {
+	return realWatchdogTicker{Ticker: time.NewTicker(interval)}
 }
 
 // Client is a Webull market-data streaming client. It owns an MQTT connection
@@ -77,9 +90,13 @@ type Client struct {
 	resubCancel context.CancelFunc
 
 	// connCtx bounds the health watchdog; cancelled by Close.
-	connCtx    context.Context
-	connCancel context.CancelFunc
-	healthOnce sync.Once
+	connCtx           context.Context
+	connCancel        context.CancelFunc
+	healthMu          sync.Mutex
+	healthDone        chan struct{}
+	healthStarted     bool
+	newWatchdogTicker func(time.Duration) watchdogTicker
+	healthClock       func() time.Time
 	// state is the current connection lifecycle state.
 	state atomic.Value
 	// lastMessageAt records the arrival time of the most recent data message
@@ -154,9 +171,6 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 	}
 
 	obs := cl.ObservabilityConfig()
-	if cfg.meter == nil && obs != nil {
-		cfg.meter = obs.Meter("webullapi4go/stream")
-	}
 	c := &Client{core: cl, cfg: cfg, mqtt: mc, obs: obs}
 	if obs != nil {
 		c.tracer = obs.Tracer("webullapi4go/stream")
@@ -165,7 +179,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 	c.connCtx, c.connCancel = context.WithCancel(context.Background())
 	c.state.Store(StateDisconnected)
 	c.chanReg = newChanRegistry()
-	c.metrics = newStreamMetrics(cfg.meter)
+	c.metrics = newStreamMetrics(cfg.meter, obs)
 	mc.SetMessageHandler(c.handleMessage)
 	mc.SetConnectHandler(c.handleConnect)
 	mc.SetConnectionLostHandler(c.handleConnectionLost)
@@ -224,7 +238,7 @@ func (c *Client) Connect(ctx context.Context) error {
 		return streamConnectError(err)
 	}
 	if c.cfg.healthWatchdogInterval > 0 {
-		c.healthOnce.Do(func() { go c.healthWatchdog() })
+		c.startHealthWatchdog()
 	}
 	return nil
 }
@@ -400,17 +414,36 @@ func (c *Client) setState(next State) {
 			return
 		}
 		if c.state.CompareAndSwap(prev, next) {
-			break
+			c.notifyStateChange(prev, next)
+			return
 		}
 	}
-	if prev != next {
-		c.mu.RLock()
-		handlers := make([]func(State, State), len(c.onStateChange))
-		copy(handlers, c.onStateChange)
-		c.mu.RUnlock()
-		for _, h := range handlers {
-			h(prev, next)
+}
+
+func (c *Client) setStateIfCurrent(expected, next State) bool {
+	c.State()
+	for {
+		prev, _ := c.state.Load().(State)
+		if prev != expected || (prev == StateClosed && next != StateClosed) {
+			return false
 		}
+		if c.state.CompareAndSwap(prev, next) {
+			c.notifyStateChange(prev, next)
+			return true
+		}
+	}
+}
+
+func (c *Client) notifyStateChange(prev, next State) {
+	if prev == next {
+		return
+	}
+	c.mu.RLock()
+	handlers := make([]func(State, State), len(c.onStateChange))
+	copy(handlers, c.onStateChange)
+	c.mu.RUnlock()
+	for _, h := range handlers {
+		h(prev, next)
 	}
 }
 
@@ -437,10 +470,12 @@ func (c *Client) handleMessage(m mqtt.Message) {
 	}
 	if err := c.dispatch(m.Topic, m.Payload); err != nil {
 		if span != nil {
-			span.RecordError(err)
+			span.RecordError(errors.New(observability.SafeErrorText(err)))
 			span.SetStatus(otelcodes.Error, "stream message dispatch failed")
 		}
 		c.emitError(err)
+	} else if span != nil {
+		span.SetStatus(otelcodes.Ok, "")
 	}
 }
 
@@ -475,9 +510,7 @@ func (c *Client) markDataMessage() {
 		return
 	}
 	c.lastMessageAt.Store(time.Now().UnixMilli())
-	if c.State() == StateDegraded {
-		c.setState(StateConnected)
-	}
+	c.setStateIfCurrent(StateDegraded, StateConnected)
 }
 
 // ChannelConfig configures a channel-based subscription. The default is a
@@ -509,9 +542,9 @@ func (c *Client) SubscribeQuoteChan(cfg ChannelConfig) (<-chan *marketdatav1.Quo
 	entry := newChanQuote(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
-		otelCounter = c.metrics.quoteDropCounter
+		otelCounter = c.metrics.channelDropCounter
 	}
-	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "quote"}
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "quote", sampleKeep: keepSample}
 	if !c.chanReg.addQuote(entry, config) {
 		entry.shutdown()
 	}
@@ -527,9 +560,9 @@ func (c *Client) SubscribeSnapshotChan(cfg ChannelConfig) (<-chan *marketdatav1.
 	entry := newChanSnapshot(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
-		otelCounter = c.metrics.snapshotDropCounter
+		otelCounter = c.metrics.channelDropCounter
 	}
-	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "snapshot"}
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "snapshot", sampleKeep: keepSample}
 	if !c.chanReg.addSnapshot(entry, config) {
 		entry.shutdown()
 	}
@@ -545,9 +578,9 @@ func (c *Client) SubscribeTickChan(cfg ChannelConfig) (<-chan *marketdatav1.Tick
 	entry := newChanTick(ch)
 	otelCounter := metric.Int64Counter(nil)
 	if c.metrics != nil {
-		otelCounter = c.metrics.tickDropCounter
+		otelCounter = c.metrics.channelDropCounter
 	}
-	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "tick"}
+	config := &channelConfig{policy: policy, bufSize: bufSize, otelCounter: otelCounter, topic: "tick", sampleKeep: keepSample}
 	if !c.chanReg.addTick(entry, config) {
 		entry.shutdown()
 	}
@@ -699,7 +732,10 @@ func (c *Client) handleConnectionLost(err error) {
 		c.reconnecting.Store(false)
 	}
 	if !c.cfg.autoReconnect || !c.Reconnecting() {
-		c.setState(StateDisconnected)
+		state := c.State()
+		if state != StateReconnecting {
+			c.setStateIfCurrent(state, StateDisconnected)
+		}
 	}
 	if c.State() == StateClosed {
 		return
@@ -781,27 +817,61 @@ func (c *Client) resubscribeContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.resubCtx, c.cfg.resubscribeTimeout)
 }
 
+func (c *Client) startHealthWatchdog() {
+	c.healthMu.Lock()
+	if c.healthStarted || c.State() == StateClosed {
+		c.healthMu.Unlock()
+		return
+	}
+	c.healthStarted = true
+	if c.healthDone == nil {
+		c.healthDone = make(chan struct{})
+	}
+	c.healthMu.Unlock()
+	go c.healthWatchdog()
+}
+
 // healthWatchdog monitors message-age and transitions to Degraded when no data
 // arrives within the configured interval. It recovers to Connected when a
 // message arrives. The watchdog is started by [Client.Connect] and cancelled by
 // [Client.Close].
 func (c *Client) healthWatchdog() {
+	c.healthMu.Lock()
+	factory := c.newWatchdogTicker
+	if factory == nil {
+		factory = newRealWatchdogTicker
+	}
+	clock := c.healthClock
+	if clock == nil {
+		clock = time.Now
+	}
+	done := c.healthDone
+	c.healthMu.Unlock()
+	if done != nil {
+		defer close(done)
+	}
 	if c.connCtx == nil || c.cfg.healthWatchdogInterval <= 0 {
 		return
 	}
-	ticker := time.NewTicker(c.cfg.healthWatchdogInterval)
+	ticker := factory(c.cfg.healthWatchdogInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-c.connCtx.Done():
 			return
-		case <-ticker.C:
-			c.checkHealth(time.Now())
+		case <-ticker.C():
+			c.checkHealth(clock())
 		}
 	}
 }
 
+type healthStateTransition func(State, State) bool
+
 func (c *Client) checkHealth(now time.Time) {
+	c.checkHealthWithTransition(now, c.setStateIfCurrent)
+}
+
+func (c *Client) checkHealthWithTransition(now time.Time, transition healthStateTransition) {
 	interval := c.cfg.healthWatchdogInterval
 	if interval <= 0 {
 		return
@@ -813,11 +883,11 @@ func (c *Client) checkHealth(now time.Time) {
 	age := now.Sub(time.UnixMilli(last))
 	state := c.State()
 	if state == StateConnected && age > interval {
-		c.setState(StateDegraded)
+		transition(state, StateDegraded)
 		return
 	}
 	if state == StateDegraded && age <= interval {
-		c.setState(StateConnected)
+		transition(state, StateConnected)
 	}
 }
 
@@ -863,16 +933,22 @@ func newSessionID() string {
 }
 
 // newStreamMetrics creates OTel instruments for stream telemetry if a meter is
-// supplied; otherwise it returns nil.
-func newStreamMetrics(m metric.Meter) *streamMetrics {
+// supplied; otherwise it returns nil. An inherited meter uses the shared
+// observability instruments so stream and core telemetry do not create duplicate
+// instruments.
+func newStreamMetrics(m metric.Meter, inherited *observability.Config) *streamMetrics {
+	if inherited != nil && m == nil {
+		return &streamMetrics{
+			reconnectCounter:   inherited.StreamReconnectsCounter(),
+			channelDropCounter: inherited.StreamChannelDropsCounter(),
+		}
+	}
 	if m == nil {
 		return nil
 	}
 	return &streamMetrics{
-		reconnectCounter:    newCounter(m, "reconnects", "Stream reconnection events"),
-		quoteDropCounter:    newCounter(m, "channel_drops", "Channel message drops"),
-		snapshotDropCounter: newCounter(m, "channel_drops", "Channel message drops"),
-		tickDropCounter:     newCounter(m, "channel_drops", "Channel message drops"),
+		reconnectCounter:   newCounter(m, "reconnects", "Stream reconnection events"),
+		channelDropCounter: newCounter(m, "channel_drops", "Channel message drops by topic"),
 	}
 }
 

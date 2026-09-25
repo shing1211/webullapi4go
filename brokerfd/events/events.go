@@ -172,8 +172,8 @@ func (c *Client) OnData(fn func(subscribeType uint32, contentType string, payloa
 // auto-reconnect is enabled (the default), Run retries transient transport
 // errors indefinitely up to [WithMaxReconnectAttempts]; when disabled it
 // returns after a single stream attempt. Run must not be called more than once
-// concurrently, but may be called again after [Client.Close] is used to shut
-// down the client.
+// concurrently. [Client.Close] is terminal for this client; callers must not
+// reuse it by calling Run again.
 func (c *Client) Run(ctx context.Context) error {
 	if c == nil || c.conn == nil {
 		return errs.New(errs.CodeInvalidConfig, "brokerfd/events: client is not initialized")
@@ -241,13 +241,11 @@ func (c *Client) runReconnecting(ctx context.Context) error {
 	}
 }
 
-var errTerminalStream = errors.New("brokerfd/events: terminal stream event")
-
 func isRetryableStreamError(err error) bool {
 	if err == nil {
 		return true
 	}
-	if errors.Is(err, errTerminalStream) {
+	if errors.Is(err, errs.ErrConnectionLimitExceeded) {
 		return false
 	}
 	return errs.Is(err, errs.CodeTransport)
@@ -419,7 +417,7 @@ func (c *Client) dispatch(resp *SubscribeResponse) error {
 	case eventsevents.EventType_AuthError:
 		return errs.New(errs.CodeAuth, "brokerfd/events: authentication failed; verify the App Key, App Secret, and signing parameters")
 	case eventsevents.EventType_NumOfConnExceed:
-		return errs.Wrap(errs.CodeTransport, "brokerfd/events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errTerminalStream)
+		return errs.Wrap(errs.CodeTransport, "brokerfd/events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errs.ErrConnectionLimitExceeded)
 	case eventsevents.EventType_SubscribeExpired:
 		return errs.Wrap(errs.CodeAuth, "brokerfd/events: subscription expired; reconnect to resume", errs.ErrSubscriptionExpired)
 	default:

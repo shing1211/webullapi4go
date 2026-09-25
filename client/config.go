@@ -108,6 +108,12 @@ type Config struct {
 	rateLimiter RateLimiter
 	// breaker, when non-nil, gates outgoing requests.
 	breaker CircuitBreaker
+	// breakerExplicit records whether WithBreaker was supplied, including a nil
+	// breaker that intentionally disables circuit breaking.
+	breakerExplicit bool
+	// resiliencePreset records a preset whose deferred components are resolved
+	// after all options have been applied.
+	resiliencePreset ResiliencePreset
 	// clockDriftCorrection, when true, learns the clock offset between the
 	// client and the Webull server from the Date response header and applies
 	// it to subsequent request signing timestamps.

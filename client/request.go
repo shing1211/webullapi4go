@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -35,6 +36,7 @@ import (
 	"github.com/shing1211/webullapi4go/pkg/transport"
 
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -92,7 +94,7 @@ func ensureCorrelationID(ctx context.Context) (context.Context, string) {
 // ErrCircuitOpen is wrapped into the error returned by [Client.Do],
 // [Client.DoBroker], and [Client.DoStream] when a configured circuit breaker
 // rejects a call.
-var ErrCircuitOpen = errs.New(errs.CodeTransport, "circuit breaker is open")
+var ErrCircuitOpen = errs.NewSentinel(errs.CodeTransport, "circuit breaker is open")
 
 // Do performs a signed request against the Webull OpenAPI and decodes the JSON
 // response into out. It is the single transport entry point for the SDK.
@@ -274,7 +276,12 @@ func (c *Client) runAttempt(ctx context.Context, method, reqPath string, attempt
 		span.SetAttributes(attribute.Int("http.status_code", result.status))
 	}
 	if err != nil {
-		span.SetAttributes(attribute.String("error", err.Error()))
+		safeError := observability.SafeErrorText(err)
+		span.SetAttributes(attribute.String("error", safeError))
+		span.RecordError(errors.New(safeError))
+		span.SetStatus(otelcodes.Error, safeError)
+	} else {
+		span.SetStatus(otelcodes.Ok, "")
 	}
 
 	if hist := c.cfg.otel.ClientLatencyHistogram(); hist != nil {
@@ -291,7 +298,7 @@ func (c *Client) runAttempt(ctx context.Context, method, reqPath string, attempt
 			slog.Duration("latency", latency),
 		}
 		if err != nil {
-			attrs = append(attrs, slog.String("error", err.Error()))
+			attrs = append(attrs, slog.String("error", observability.SafeErrorText(err)))
 			log.LogAttrs(ctx, slog.LevelError, "webull request done", attrs...)
 		} else {
 			log.LogAttrs(ctx, slog.LevelInfo, "webull request done", attrs...)

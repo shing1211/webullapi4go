@@ -2,10 +2,16 @@
 
 Last updated: 2026-09-25
 
-- Latest tagged release: **`v2.1.0`**
-- Current hardening: **Unreleased**
-- Offline verification: `go test ./...` passes for the root module and the nested `broker/` module
-- Live verification: partial; see the blocked surfaces below
+- Latest repository tag: **`v2.1.1`** (2026-09-25)
+- Current hardening: **tagged in repository `v2.1.1`**
+- Go-semver-compatible v2 module publication: **Deferred**; the root module path
+  remains `github.com/shing1211/webullapi4go`
+- Offline evidence recorded 2026-09-25: module-aware race/vet checks passed;
+  `make cover` measured 71.6% aggregate root coverage and 80.8% in nested
+  `broker/` (measurements, not behavior guarantees)
+- Live verification: partial historical evidence only; the current hardening
+  was not newly live-verified. The repository tag is not a published
+  Go-semver v2 module.
 
 ## Status definitions
 
@@ -15,7 +21,8 @@ Last updated: 2026-09-25
 | Offline-tested | Credential-free unit tests or local HTTP/gRPC/MQTT fakes pass |
 | Live-verified | Successfully exercised against an available Webull environment |
 | Blocked | Live verification is prevented by credentials, scope, entitlement, host, or sandbox data |
-| Released | Included in a tag; current working-tree hardening remains Unreleased until a new tag is created |
+| Repository-tagged | Included in the authorized repository Git tag `v2.1.1`; this is not a published Go-semver v2 module |
+| Released | Included in a published module release; the unchanged root path means `v2.x` Git tags are not published Go-semver v2 modules |
 
 Implementation and offline tests do not imply live verification.
 
@@ -64,24 +71,38 @@ The generated [SDK ↔ API reconciliation](docs/reconciliation.md) is authoritat
 
 The SDK therefore has no documented-only endpoint gaps, but it is inaccurate to call the snapshot a zero-discrepancy report. Do not hand-edit generated pages under `docs/webull-api/`; regenerate derived documentation with the doc generator when its inputs or the SDK change.
 
-## Unreleased work
+## v2.1.1 repository-tagged work
 
 | Work | State | Verification |
 |---|---|---|
+| Category matching plus identity-specific semantic sentinels | Implemented | Offline-tested across public client/MQTT/event sentinels |
+| HTTP 417 compatibility mapping and MQTT/event terminal mappings | Implemented | Offline-tested; 417 API-message caveat preserved |
 | Shared `Do`, `DoBroker`, and `DoStream` attempt pipeline | Implemented | Offline-tested; not newly live-verified |
-| One-based hook attempts, stable correlation IDs, status/latency telemetry, and W3C propagation | Implemented | Offline-tested |
+| One-based hook attempts, stable correlation IDs, status/latency telemetry, W3C propagation, and `SafeErrorText` | Implemented | Offline-tested with real OTel readers and local servers |
+| Provider-order-independent resilience metrics and caller-owned custom breakers | Implemented | Offline-tested |
 | OMS status snapshots, stale/terminal reconciliation, and correct failure-scene mapping | Implemented | Offline-tested |
 | Account-scoped order registry and successful replace/cancel transitions | Implemented | Offline-tested |
 | Stable auto-generated client order IDs without mutating caller requests | Implemented | Offline-tested |
-| Idempotent MQTT/channel shutdown and blocked-dispatch cancellation | Implemented | Offline-tested |
-| Serialized resubscription and data-only stream health recovery | Implemented | Offline-tested |
-| Trading and Broker FD gRPC event telemetry | Implemented | Offline-tested with local gRPC servers |
-| Account monitor and updated order/stream examples | Implemented | Included in the offline root build/test |
-| Documentation reconciliation | In progress | `mkdocs build --strict` is the final gate |
+| Compare-and-swap stream state and deterministic data-only health recovery | Implemented | Offline-tested with deterministic watchdog ticks/barriers |
+| Terminal MQTT/channel shutdown, cancellation unblocking, and synchronous registration-order dispatch | Implemented | Offline-tested for quote/snapshot/tick channels |
+| MQTT Connect cancellation, Connect/Close races, and late-callback suppression | Implemented | Offline-tested |
+| Serialized resubscription and active-subscription replay | Implemented | Offline-tested |
+| Trading and Broker FD gRPC event telemetry, including cancellation/failure outcomes | Implemented | Offline-tested with local gRPC servers |
+| Trading `Close` cancellation of all active `Run` calls | Implemented | Offline-tested |
+| Cancellation, strict data/event leak checks, and public resilience/transport/type/`webull` coverage | Implemented | Offline race/vet evidence recorded 2026-09-25 |
+| Account monitor and updated order/stream examples | Implemented | Included in offline module build/test |
+| Documentation reconciliation | Implemented | Final strict MkDocs/link/diff gates recorded in the F1 report |
 
-None of these items is represented as released until a corresponding tag exists.
+These items are included in repository tag `v2.1.1` (2026-09-25). They are
+not a published Go-semver v2 module, and the current hardening was not newly
+live-verified.
 
 ## Version history
+
+The `v2.x` rows below are repository-tag records, not published Go-semver v2
+modules; `v2.1.1` is the current authorized repository tag and earlier rows are
+historical. The root module path remains `github.com/shing1211/webullapi4go` and
+v2 module publication is deferred.
 
 | Version | Date | Scope | Status |
 |---|---|---|---|
@@ -107,18 +128,18 @@ None of these items is represented as released until a corresponding tag exists.
 | v1.0.3 | 2026-09-22 | Generated API reference, reconciliation, and path probe | Released |
 | v1.1.0 | 2026-09-22 | Full documented endpoint coverage and zero documented-only gaps | Released |
 | v1.1.1 | 2026-09-23 | DevOps, security checks, multi-OS CI, leak tests, and fuzzing | Released |
-| v2.0.0 | 2026-09-23 | Public error/transport/resilience/domain foundations and thin `webull` aliases; root services retained | Released |
-| v2.0.1 | 2026-09-23 | `money.Money` conversion in `data/` and `trade/` | Released |
-| v2.0.2 | 2026-09-23 | `money.Money` conversion in `brokerfd/` | Released |
-| v2.0.3 | 2026-09-23 | MQTT/paho goroutine cleanup compatibility in leak tests | Released |
-| v2.0.4 | 2026-09-24 | Clock correction, idempotency helpers, transport tuning, resilience preset | Released |
-| v2.0.5 | 2026-09-24 | Request interceptors/hooks and initial OMS integration | Released |
-| v2.0.6 | 2026-09-24 | Stream state/channels, structured logging, and OTel tracing | Released |
-| v2.0.7 | 2026-09-24 | HTTP latency, breaker, reconnect, and drop metrics | Released |
-| v2.0.8 | 2026-09-24 | MQTT and resubscription context cleanup | Released |
-| v2.0.9 | 2026-09-24 | Structured public error codes and wrapped sentinels | Released |
-| v2.1.0 | 2026-09-24 | `go vet` mutex-copy fixes | Released |
-| Unreleased | 2026-09-25 | Request, OMS, stream, event telemetry, and documentation hardening | Implemented; offline-tested; not released |
+| v2.0.0 | 2026-09-23 | Public error/transport/resilience/domain foundations and thin `webull` aliases; root services retained | Historical tag |
+| v2.0.1 | 2026-09-23 | `money.Money` conversion in `data/` and `trade/` | Historical tag |
+| v2.0.2 | 2026-09-23 | `money.Money` conversion in `brokerfd/` | Historical tag |
+| v2.0.3 | 2026-09-23 | MQTT/paho goroutine cleanup compatibility in leak tests | Historical tag |
+| v2.0.4 | 2026-09-24 | Clock correction, idempotency helpers, transport tuning, resilience preset | Historical tag |
+| v2.0.5 | 2026-09-24 | Request interceptors/hooks and initial OMS integration | Historical tag |
+| v2.0.6 | 2026-09-24 | Stream state/channels, structured logging, and OTel tracing | Historical tag |
+| v2.0.7 | 2026-09-24 | HTTP latency, breaker, reconnect, and drop metrics | Historical tag |
+| v2.0.8 | 2026-09-24 | MQTT and resubscription context cleanup | Historical tag |
+| v2.0.9 | 2026-09-24 | Structured public error codes and wrapped sentinels | Historical tag |
+| v2.1.0 | 2026-09-24 | `go vet` mutex-copy fixes | Historical tag; not a published v2 module |
+| v2.1.1 | 2026-09-25 | Error specificity, request/OMS, stream/MQTT, event telemetry, cancellation/leak coverage, and documentation hardening | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
 
 ## Previously exercised HK surface
 
@@ -126,12 +147,20 @@ Earlier sandbox runs exercised the core token flow, selected AAPL market-data an
 
 ## Test status
 
-- `go test ./...` passes in the root module as of 2026-09-25.
-- `go test ./...` passes in the nested `broker/` module as of 2026-09-25.
-- Unit tests are offline and credential-free.
-- Live tests remain environment-gated and are skipped by default.
-- No `TODO` markers remain in Go source as of this update.
-- Test counts are intentionally not presented as a coverage guarantee; the commands above are the reproducible check.
+- The module-aware offline race/vet checks recorded for this run passed on
+  2026-09-25. `make test` and `make test-race` traverse the root, `broker/`, and
+  nested example modules; root-only `go test ./...` does not.
+- `make cover` measured 71.6% aggregate coverage for the root module and 80.8%
+  for `broker/`. These dated measurements are not a guarantee of behavior or
+  correctness and must not be combined into one aggregate percentage.
+- Unit tests are offline and credential-free. Live tests use the actual
+  `Sandbox` selector and remain environment-gated and skipped by default.
+- Data and both event packages use strict goroutine-leak checks; DNS-dependent
+  failure tests use local deterministic dialers.
+- CI runs root race tests across three operating systems and build/vet/race for
+  nested modules. Its 60% coverage gate is root-only; nested coverage and a
+  strict MkDocs build are not CI gates.
+- No live verification was added for the v2.1.1 repository-tagged hardening.
 
 ## Examples
 
@@ -163,17 +192,22 @@ Earlier sandbox runs exercised the core token flow, selected AAPL market-data an
 3. **Broker API HK:** returns `401 ROUTE_NOT_PERMITTED` because the app lacks the required scope.
 4. **HK symbols:** sandbox data is limited to `AAPL`.
 5. **Footprint:** requires an entitlement and returns `403` in the sandbox.
-6. **Option contracts:** may be absent for the sandbox account/symbol and return `417 Invalid Symbol`.
+6. **Option contracts:** may be absent for the sandbox account/symbol and return `417 Invalid Symbol`. HTTP 417 is mapped to `INVALID_TOKEN` for compatibility even when the API message reports business validation.
 7. **Multi-leg options:** HK rejects non-`SINGLE` strategies with `417`; US behavior is unverified.
 8. **Futures/event-contract trading:** request validation is offline-tested; live product behavior is unverified.
 9. **Order-book depth:** may be empty outside regular trading hours.
 10. **Plain MQTT:** port `1883` may be blocked; prefer the configured MQTT-over-WebSocket endpoint.
 11. **SSE news:** the HK upstream currently returns `504`.
 12. **Generated path status:** four paths match only the docs summary and 25 are unresolved; see the generated reconciliation rather than claiming zero discrepancies.
+13. **Broker FD event API:** data remains raw, `OnData` omits response request ID/timestamp, only one active `Run` is supported, and no public option injects a non-zero raw subscribe bitmask.
+14. **Stream backpressure:** callbacks and channel dispatch are synchronous; a slow handler or full `DropBlock` subscriber causes head-of-line delay until cancellation or terminal close.
+15. **CI gaps:** nested coverage and strict documentation builds are Makefile/release gates, not CI gates; measured percentages are not behavior guarantees.
 
 ## Next steps
 
-1. Live-verify the Unreleased request, OMS, stream, and event-telemetry changes when suitable credentials and non-production test access are available.
+1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event-telemetry changes when suitable credentials and non-production test access are available.
 2. Supply US sandbox credentials for the US-only surfaces.
 3. Resolve the 25 generated unresolved paths and the four summary-only matches through the doc generator and official OpenAPI sources.
-4. Run the full race, vet, formatting, lint, and strict documentation gates before creating a release tag.
+4. Decide whether Broker FD needs a public raw-subscribe option, richer `OnData` metadata, and all-runs lifecycle parity before any future release tag.
+5. Benchmark a separately approved asynchronous stream-dispatch design only if synchronous head-of-line latency is unacceptable.
+6. Run the full race, vet, formatting, lint, and strict documentation gates before any future release tag.

@@ -83,8 +83,7 @@ func TestSandboxEvents(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
+	startTestRun(t, cl, ctx)
 
 	select {
 	case <-connected:
@@ -179,7 +178,7 @@ func TestSandboxOrderEvent(t *testing.T) {
 
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
-	go func() { _ = cl.Run(runCtx) }()
+	startTestRun(t, cl, runCtx)
 
 	select {
 	case <-connected:

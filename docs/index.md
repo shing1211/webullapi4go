@@ -4,18 +4,22 @@
 [Webull OpenAPI](https://developer.webull.hk/apis/docs/). It wraps Webull's HTTP,
 MQTT, and gRPC services in typed Go clients.
 
-The latest tagged release is `v2.1.0`. Current request-pipeline, OMS,
-streaming, and event-telemetry hardening is **Unreleased**, implemented, and
-offline-tested; it is not presented as live-verified. See the
+The latest repository tag is **`v2.1.1`** (2026-09-25). Current
+request-pipeline, OMS, streaming, event-telemetry, and documentation hardening
+is tagged in repository `v2.1.1`, implemented, and offline-tested; it is not
+presented as live-verified. This is a repository patch release, not a
+Go-semver-compatible v2 module because the root module path is unchanged and
+v2 module publication remains deferred. See the
 [implementation status](implementation-status.md) and
 [changelog](https://github.com/shing1211/webullapi4go/blob/main/CHANGELOG.md).
 
 ## Coverage
 
 The generated [SDK ↔ API Reconciliation](reconciliation.md) reports 209
-implemented endpoints and 0 documented-only gaps in its 2026-09-22 snapshot.
-It also reports four paths that match only the docs summary and 25 unresolved
-paths, so coverage does not mean every endpoint has been live-verified.
+implemented endpoints, 0 documented-only gaps, 180 exact OpenAPI JSON path
+matches, 4 summary-only matches, 0 paths differing from both sources, and 25
+unresolved SDK paths in its 2026-09-22 snapshot. Coverage does not mean every
+endpoint has been live-verified.
 
 ## Feature status
 
@@ -55,11 +59,18 @@ superseded and closed. Public financial DTOs use `money.Money` or
 
 ## Install
 
+The current hardening is recorded in repository tag `v2.1.1`, and publication
+of a Go-semver-compatible v2 module remains deferred. The repository's module
+path remains `github.com/shing1211/webullapi4go`; an unqualified `go get` does
+not install the tagged tree. The `v2.1.1` tag does not make it a published v2
+module. For a released v1.x line, pin it explicitly:
+
 ```sh
-go get github.com/shing1211/webullapi4go
+go get github.com/shing1211/webullapi4go@v1.1.1
 ```
 
-Requires Go 1.26 or newer.
+Use a checkout of the `v2.1.1` tag or current tree for work that is not yet
+published as a Go module. Requires Go 1.26 or newer.
 
 ## Quickstart
 
@@ -141,7 +152,7 @@ export WEBULL_ENVIRONMENT="sandbox"
 - [Go Packages](api.md) — public package map.
 - [Webull API Reference](webull-api.md) — documented endpoints mapped to SDK methods.
 - [SDK ↔ API Reconciliation](reconciliation.md) — generated coverage and path states.
-- [Implementation Status](implementation-status.md) — released, Unreleased, offline-tested, live-verified, and blocked work.
+- [Implementation Status](implementation-status.md) — repository-tagged, released, offline-tested, live-verified, and blocked work.
 - [Troubleshooting](troubleshooting.md) — symptoms and fixes.
 
 ## Links

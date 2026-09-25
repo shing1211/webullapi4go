@@ -9,8 +9,9 @@ documented endpoint to its Go method, request fields and response fields.
   OpenAPI definition JSON). Broker FD US is documented on the
   [US site](https://developer.webull.com/apis/llms.txt).
 - Every page below links back to the official reference for that endpoint.
-- The official `path` is authoritative; the SDK follows it (v1.1.0 aligned all
-  paths — see [Path status](#path-status) below).
+- The official `path` is authoritative; the generated [SDK ↔ API
+  Reconciliation](reconciliation.md) tracks exact matches, summary-only
+  matches, differing paths, and unresolved SDK paths.
 
 Go type references live on pkg.go.dev:
 [`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) ·
@@ -36,8 +37,10 @@ Each endpoint entry is laid out as:
 | **Response 200** | Success schema fields. |
 | **Errors** | `401` / `417` / `500`; see [Errors](errors.md) for the typed model. |
 
-Prices, sizes, and quantities are **strings on the wire** and are kept as strings
-in the Go DTOs to preserve precision.
+Prices, sizes, and quantities remain **strings on the wire**. Public financial
+DTOs preserve precision with `money.Money` for required/response values and
+`*money.Money` for optional/request values; raw `decimal.Decimal` is not the
+public DTO model.
 
 ## Environments and base URLs
 
@@ -99,16 +102,22 @@ breaker (`client.WithRetry`, `client.NewRateLimiter`, `client.NewBreaker`).
 
 ## Errors
 
-Business failures return HTTP `417` with `{ "error_code", "message" }`;
-`401` is unauthorized and `500` is a server error. `401` on Display Solution
-means the client token expired and is refreshed automatically. The SDK maps all
-of these onto typed `errs` codes — see [Errors](errors.md).
+Webull uses HTTP `417` for both token and business failures, commonly with
+`{ "error_code", "message" }`; `401` is unauthorized and `500` is a server
+error. `401` on Display Solution means the client token expired and is refreshed
+automatically. For compatibility, the SDK maps every HTTP 417 to
+`errs.CodeInvalidToken` while preserving the API message and status. Therefore
+`INVALID_TOKEN` does not by itself prove that the access token is invalid—for
+example, unsupported categories and `Invalid Symbol` can also return 417. See
+[Errors](errors.md) for category versus semantic-sentinel matching.
 
 ## Path status
 
-Since v1.1.0 every SDK path follows the official OpenAPI definition —
-[SDK ↔ API Reconciliation](reconciliation.md) reports **209 implemented
-endpoints, 0 gaps, and 0 path discrepancies**. What remains unverified is live
+Since v1.1.0 every documented endpoint has an SDK implementation. The generated
+[SDK ↔ API Reconciliation](reconciliation.md) snapshot reports **209 implemented
+endpoints, 0 documented-only gaps, 180 exact OpenAPI JSON path matches, 4
+summary-only matches, 0 paths differing from both sources, and 25 unresolved SDK
+paths**. This is not a zero-discrepancy report. What remains unverified is live
 behaviour in environments the HK sandbox cannot exercise:
 
 | Area | Status |

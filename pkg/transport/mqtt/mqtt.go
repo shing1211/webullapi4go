@@ -42,8 +42,9 @@ const (
 const ConnackConnectionLimit byte = 105
 
 var (
-	ErrConnectionRefused = pkgerrs.New(pkgerrs.CodeTransport, "mqtt: connection refused by broker")
-	ErrConnectionLimit   = pkgerrs.New(pkgerrs.CodeTransport, "mqtt: exceeds connection limit (code 105): at most 5 concurrent connections per App Key; wait about 1 minute after a disconnect before reconnecting")
+	ErrConnectionRefused = pkgerrs.NewSentinel(pkgerrs.CodeTransport, "mqtt: connection refused by broker")
+	ErrConnectionLimit   = pkgerrs.NewSentinel(pkgerrs.CodeTransport, "mqtt: exceeds connection limit (code 105): at most 5 concurrent connections per App Key; wait about 1 minute after a disconnect before reconnecting")
+	errClientClosed      = errors.New("mqtt: client is closed")
 )
 
 type ConnackError struct {
@@ -62,7 +63,7 @@ func (e *ConnackError) Unwrap() error { return e.Err }
 
 func (e *ConnackError) Is(target error) bool {
 	if target == ErrConnectionLimit {
-		return e.Code == ConnackConnectionLimit && errors.Is(e.Err, ErrConnectionLimit)
+		return e.Code == ConnackConnectionLimit
 	}
 	if target == ErrConnectionRefused {
 		return true
@@ -167,9 +168,11 @@ func hasScheme(s string) bool {
 }
 
 type Client struct {
-	mu  sync.RWMutex
-	cfg Config
-	pc  paho.Client
+	mu          sync.RWMutex
+	lifecycleMu sync.Mutex
+	cfg         Config
+	pc          paho.Client
+	closedCh    chan struct{}
 
 	closeOnce    sync.Once
 	closed       atomic.Bool
@@ -188,7 +191,7 @@ func New(cfg Config) (*Client, error) {
 		return nil, err
 	}
 
-	c := &Client{cfg: cfg}
+	c := &Client{cfg: cfg, closedCh: make(chan struct{})}
 
 	opts := paho.NewClientOptions()
 	opts.AddBroker(cfg.Broker)
@@ -213,43 +216,55 @@ func New(cfg Config) (*Client, error) {
 		c.handleMessage(m)
 	})
 	opts.SetOnConnectHandler(func(_ paho.Client) {
-		if c.closed.Load() {
-			return
-		}
-		c.reconnecting.Store(false)
-		c.mu.RLock()
-		h := c.onConnect
-		c.mu.RUnlock()
-		if h != nil {
-			h()
-		}
+		c.handlePahoConnect()
 	})
 	opts.SetConnectionLostHandler(func(_ paho.Client, err error) {
-		if c.closed.Load() {
-			return
-		}
-		c.mu.RLock()
-		h := c.onConnectionLost
-		c.mu.RUnlock()
-		if h != nil {
-			h(err)
-		}
+		c.handlePahoConnectionLost(err)
 	})
 	opts.SetReconnectingHandler(func(_ paho.Client, _ *paho.ClientOptions) {
-		if c.closed.Load() {
-			return
-		}
-		c.reconnecting.Store(true)
-		c.mu.RLock()
-		h := c.onReconnect
-		c.mu.RUnlock()
-		if h != nil {
-			h()
-		}
+		c.handlePahoReconnecting()
 	})
 
 	c.pc = paho.NewClient(opts)
 	return c, nil
+}
+
+func (c *Client) handlePahoConnect() {
+	if c.closed.Load() {
+		return
+	}
+	c.reconnecting.Store(false)
+	c.mu.RLock()
+	h := c.onConnect
+	c.mu.RUnlock()
+	if h != nil {
+		h()
+	}
+}
+
+func (c *Client) handlePahoConnectionLost(err error) {
+	if c.closed.Load() {
+		return
+	}
+	c.mu.RLock()
+	h := c.onConnectionLost
+	c.mu.RUnlock()
+	if h != nil {
+		h(err)
+	}
+}
+
+func (c *Client) handlePahoReconnecting() {
+	if c.closed.Load() {
+		return
+	}
+	c.reconnecting.Store(true)
+	c.mu.RLock()
+	h := c.onReconnect
+	c.mu.RUnlock()
+	if h != nil {
+		h()
+	}
 }
 
 func (c *Client) SetMessageHandler(h Handler) {
@@ -314,30 +329,45 @@ func (c *Client) emitError(err error) {
 }
 
 func (c *Client) Connect(ctx context.Context) error {
-	if c.pc == nil {
-		return errors.New("mqtt: client is not initialized")
-	}
-	if c.closed.Load() {
-		return errors.New("mqtt: client is closed")
-	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	c.lifecycleMu.Lock()
+	if c.pc == nil {
+		c.lifecycleMu.Unlock()
+		return errors.New("mqtt: client is not initialized")
+	}
+	if c.closed.Load() {
+		c.lifecycleMu.Unlock()
+		return errClientClosed
+	}
 	if c.IsConnected() {
+		c.lifecycleMu.Unlock()
 		return nil
 	}
 	if err := ctx.Err(); err != nil {
+		c.lifecycleMu.Unlock()
 		return err
 	}
-
+	if c.closedCh == nil {
+		c.closedCh = make(chan struct{})
+	}
+	closedCh := c.closedCh
 	token := c.pc.Connect()
+	c.lifecycleMu.Unlock()
+
 	select {
 	case <-ctx.Done():
+		if c.closed.Load() {
+			return errClientClosed
+		}
 		c.Disconnect(0)
 		return ctx.Err()
+	case <-closedCh:
+		return errClientClosed
 	case <-token.Done():
 		if c.closed.Load() {
-			return errors.New("mqtt: client is closed")
+			return errClientClosed
 		}
 		if err := classifyConnectError(token, token.Error()); err != nil {
 			c.emitError(err)
@@ -405,10 +435,17 @@ func (c *Client) Disconnect(quiesce uint) {
 
 func (c *Client) Close() error {
 	c.closeOnce.Do(func() {
+		c.lifecycleMu.Lock()
 		c.closed.Store(true)
 		c.reconnecting.Store(false)
-		if c.pc != nil {
-			c.pc.Disconnect(250)
+		if c.closedCh == nil {
+			c.closedCh = make(chan struct{})
+		}
+		close(c.closedCh)
+		pc := c.pc
+		c.lifecycleMu.Unlock()
+		if pc != nil {
+			pc.Disconnect(250)
 		}
 	})
 	return nil

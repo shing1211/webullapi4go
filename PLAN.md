@@ -2,7 +2,11 @@
 
 Last updated: 2026-09-25
 
-Status: **Latest release `v2.1.0`; current hardening is implemented and offline-tested under Unreleased, not released or newly live-verified.**
+Status: **Current request, OMS, streaming, event-telemetry, and documentation
+hardening is tagged in repository `v2.1.1` (2026-09-25) and offline-tested. It
+is a repository patch release, not a published Go-semver v2 module, and was
+not newly live-verified.** The root module path is unchanged, and module
+publication remains deferred.
 
 ## Architecture baseline
 
@@ -27,7 +31,8 @@ Public DTOs that model decimal financial values use `money.Money` (required/resp
 | Offline-tested | Credential-free unit or local-server tests pass |
 | Live-verified | Exercised successfully against an available Webull sandbox or production surface |
 | Blocked | Cannot be live-verified with the currently available credentials, host, or entitlement |
-| Released | Present in a tagged release; Unreleased work is not included |
+| Repository-tagged | Included in the authorized repository Git tag `v2.1.1`; this is not a published Go-semver v2 module |
+| Released | Present in a published module release; the unchanged root path means `v2.x` Git tags are not published Go-semver v2 modules |
 
 An implemented endpoint is not automatically live-verified. Offline tests do not prove that an upstream host, entitlement, symbol set, or response schema is available.
 
@@ -58,33 +63,43 @@ An implemented endpoint is not automatically live-verified. Offline tests do not
 
 ## Workstream status
 
-| Workstream | Released baseline | Unreleased follow-up | Verification |
+| Workstream | Published/historical baseline | v2.1.1 repository-tagged follow-up | Verification |
 |---|---|---|---|
-| DevOps and tests | Build/test/lint targets, security checks, multi-OS CI, dependabot, leak and fuzz tests | Current changes | Offline suite passes 2026-09-25 |
-| Shared foundations | Public errors, transport, resilience, observability, `money.Money`, and order domain packages | Additional money and order-state regression coverage | Offline-tested |
+| DevOps and tests | Build/test/lint targets, security checks, multi-OS CI, dependabot, leak and fuzz tests | Direct public-primitive tests, deterministic cancellation/leak coverage, and reproducible per-module coverage measurement | Module-aware race/vet evidence recorded 2026-09-25; root 71.6% and broker 80.8% measurements are not guarantees |
+| Error contracts | Public typed categories and compatibility sentinels | Category matching remains stable; `NewSentinel` provides identity-specific semantics; HTTP 417, MQTT, and event terminal mappings are tested | Offline-tested |
+| Shared foundations | Public errors, transport, resilience, observability, `money.Money`, and order domain packages | Provider-order-independent metrics, safe error text, cancellation-safe rate limiting, and direct public-package tests | Offline-tested |
 | REST pipeline | Interceptors, hooks, resilience, clock correction, tracing, metrics, and logging | `Do`, `DoBroker`, and `DoStream` share one attempt pipeline; one-based attempt telemetry; stable correlation IDs; W3C propagation; response status and clock-offset parity | Offline-tested; not newly live-verified |
 | Trading OMS | Placement tracking and terminal preflight | Account-scoped tracking, status reconciliation, stable auto-generated client IDs, and success-only action transitions | Offline-tested; not newly live-verified |
-| MQTT streaming | State machine, reconnect/resubscribe, callbacks, and bounded channel policies | Terminal close, idempotent channel cancellation, blocked-dispatch cancellation, serialized resubscription, data-only health recovery, and MQTT dispatch tracing | Offline-tested; not newly live-verified |
-| Event telemetry | Typed event streams and reconnect | Per-attempt gRPC spans, attempt/duration metrics, structured logs, correlation metadata, and trace propagation for Trading and Broker FD events | Offline-tested with local gRPC servers; not newly live-verified |
-| Documentation | Guides, generated API pages, and reconciliation | Architecture/status reconciliation, OMS, streaming health/channels, typed errors, money, and OTel setup | `mkdocs build --strict` is the release gate |
+| MQTT streaming | State machine, reconnect/resubscribe, callbacks, and bounded channel policies | Compare-and-swap state, deterministic data-only recovery, terminal close, idempotent channel cancellation, blocked-dispatch cancellation, serialized replay, and explicit synchronous head-of-line dispatch | Offline-tested; not newly live-verified |
+| Event telemetry | Typed event streams and reconnect | Per-attempt gRPC spans/metrics/logs, sanitized failure text, cancellation telemetry, correlation propagation, and Trading `Close` cancellation of all active runs | Offline-tested with local gRPC servers; not newly live-verified |
+| Documentation | Guides, generated API pages, and reconciliation | Architecture/status synchronization, errors/417, streaming lifecycle, Broker FD raw-event limits, testing boundaries, and exact telemetry contracts | `mkdocs build --strict` is the release gate |
 
-## Unreleased scope
+## v2.1.1 repository-tagged scope
 
-Current work is intentionally recorded as Unreleased until a tag is created.
+Current work is included in the authorized repository tag `v2.1.1`. It is not
+a published Go-semver v2 module, and the current hardening was not newly
+live-verified.
 
-1. Request-pipeline parity and observability hardening.
-2. OMS status reconciliation and account-scoped order tracking.
-3. MQTT/channel shutdown, reconnect serialization, and health correctness.
-4. Trading and Broker FD event telemetry.
-5. Updated account-monitor/order/stream examples and documentation.
+1. Error-category/semantic-sentinel contracts, HTTP 417 caveats, and terminal
+   MQTT/gRPC mappings.
+2. Request-pipeline parity and observability hardening, including provider-order
+   independence and sanitized error text.
+3. OMS status reconciliation and account-scoped order tracking.
+4. MQTT/channel shutdown, reconnect serialization, compare-and-swap state, and
+   deterministic health recovery.
+5. Trading and Broker FD event telemetry, cancellation metrics, and Trading
+   all-runs shutdown.
+6. Cancellation, leak, flakiness, and public-primitive test coverage.
+7. Updated account-monitor/order/stream examples and synchronized documentation.
 
-No item in this section is represented as released merely because it exists in the working tree.
+No item in this section is represented as a published module release merely
+because it is included in the repository tag.
 
 ## Live-verification boundaries
 
 | Surface | Current state |
 |---|---|
-| Core auth, selected HK market data, accounts, read-only assets, MQTT streaming, and Trading events | Previously exercised against available HK sandbox paths; not all endpoints or current hardening changes are live-verified |
+| Core auth, selected HK market data, accounts, read-only assets, MQTT streaming, and Trading events | Previously exercised against available HK sandbox paths; not all endpoints or v2.1.1 hardening changes are live-verified |
 | Footprint | Implemented and offline-tested; live request blocked by entitlement (`403`) |
 | Options contracts and multi-leg orders | Implemented and offline-tested; HK sandbox may return `417`, and US live behavior is unavailable |
 | US-only crypto, fund, screener, Broker FD, and related data | Implemented and offline-tested where covered; live verification blocked without US sandbox credentials |
@@ -96,17 +111,50 @@ The generated [SDK ↔ API reconciliation](docs/reconciliation.md) remains autho
 
 ## Verification gates
 
+Run from the repository root. These Makefile targets traverse the root module
+and every nested module in `MODULES`:
+
 ```sh
-go build ./...
-go vet ./...
+make build
+make vet
+make test
+make test-race
+make cover
+make lint
 gofmt -l .                 # must print nothing
-go test ./...
-go test -race -count=1 ./...
-golangci-lint run ./...
-mkdocs build --strict
+make docs
 ```
 
-The nested `broker/` module is tested separately with `go test ./...` from that directory.
+Root-only `go build ./...` and `go test ./...` are useful for package iteration
+but do not traverse `broker/` or the nested example modules. `make cover`
+records per-module measurements; it does not make coverage a behavioral
+guarantee.
+
+CI runs the root race matrix and nested-module build/vet/race checks, but its
+60% coverage gate is root-only and it does not run the strict documentation
+build. The local Makefile gates remain the release verification source.
+
+## Remaining risks
+
+- The v2.1.1 repository-tagged request, OMS, stream, and event-telemetry
+  behavior has not been newly exercised against a live Webull service.
+- US-only, Display Solution, Broker HK, entitlement-gated, SSE, and unsupported
+  sandbox product paths remain blocked or unverified as listed in
+  `IMPLEMENTATION_STATUS.md`.
+- Stream dispatch is intentionally synchronous. A slow callback or full
+  `DropBlock` channel creates head-of-line latency; cancellation and terminal
+  close guarantee release, not asynchronous delivery.
+- Broker FD events remain raw-only, do not expose response request ID/timestamp
+  through `OnData`, support one active `Run`, and have no public option that
+  injects a non-zero raw subscribe bitmask.
+- The 2026-09-22 generated reconciliation still has four summary-only and 25
+  unresolved SDK paths despite zero documented-only endpoint gaps.
+- CI does not enforce nested coverage or a strict docs build; root aggregate
+  coverage percentages are measurements, not correctness guarantees.
+- The repository patch release is recorded as `v2.1.1`; the root module remains
+  on `github.com/shing1211/webullapi4go`, so the repository tag is not an
+  installable Go-semver v2 module. Module publication remains deferred until a
+  separately approved decision.
 
 ## Out of scope
 
@@ -115,7 +163,7 @@ The nested `broker/` module is tested separately with `go test ./...` from that 
 - Raw `decimal.Decimal` DTO migration.
 - Unconditional or speculative `sync.Pool` use.
 - Editing generated files under `docs/webull-api/`.
-- Editing internal run artifacts under `docs/runs/`.
+- Editing run artifacts under `docs/runs/` other than the explicitly authorized release/status records.
 - Claiming blocked or newly hardened surfaces are live-verified without the required access.
 
 ## Reference

@@ -68,6 +68,9 @@ Configuration options include:
 - Observability: `WithLogger`, `WithTracerProvider`, `WithMeterProvider`,
   `WithPropagator`
 
+`WithMeterProvider` and `WithResiliencePreset` are order-independent. An
+explicit `WithBreaker`, including `WithBreaker(nil)`, remains caller-owned.
+
 Accessors include `Config`, `ObservabilityConfig`, `Region`, `Environment`,
 `Endpoints`, `HTTPClient`, `AppKey`, and `AppSecret`. `ObservabilityConfig`
 returns a shared pointer that service clients inherit and callers must treat as
@@ -109,7 +112,9 @@ Lifecycle and state:
 - States: `StateDisconnected`, `StateConnecting`, `StateConnected`,
   `StateReconnecting`, `StateDegraded`, `StateClosed`
 
-`StateClosed` is terminal. Handlers and channel sends that race with `Close`
+`StateClosed` is terminal. State changes use compare-and-swap expected-state
+transitions, so a stale health check or late data callback cannot overwrite a
+newer reconnect/close state. Handlers and channel sends that race with `Close`
 are ignored or unblocked.
 
 Subscriptions and handlers:
@@ -126,6 +131,8 @@ Channel subscriptions:
 - `ChannelConfig` with `DropBlock`, `DropOldest`, or `DropSample`
 - Default buffer: 100 messages; returned cancel functions are idempotent and
   close their channel
+- Dispatch is synchronous and registration-ordered; a full `DropBlock`
+  subscriber causes head-of-line blocking until it is cancelled or closed
 
 `WithHealthWatchdog(interval)` enables message-age health monitoring. Only
 quote, snapshot, and tick messages count as fresh data; notice and echo
@@ -135,7 +142,10 @@ a data-age signal, not sequence-gap detection.
 
 Reconnect/resubscribe is serialized with subscription mutations. After a
 successful reconnect, active HTTP subscriptions are replayed before
-`OnConnect` handlers run. See [Streaming](streaming.md) for lifecycle and
+`OnConnect` handlers run. `Connect` does not start a broker attempt for an
+already-cancelled context; cancellation after start disconnects the attempt.
+Low-level MQTT `Close` is idempotent, suppresses late callbacks/messages, and
+races safely with `Connect`. See [Streaming](streaming.md) for lifecycle and
 channel behavior.
 
 ## `trade`
@@ -203,7 +213,9 @@ Every stream attempt emits an optional client-kind span named
 `/grpc.trade.event.EventService/Subscribe`, records optional attempt and
 duration metrics, and writes optional structured start/done logs. Correlation
 IDs and configured trace propagators are sent as gRPC metadata. Credentials
-are not telemetry attributes or log fields.
+are not telemetry attributes or log fields. `Close` cancels all active Trading
+`Run` calls; cancellation returns `context.Canceled` without invoking
+`OnError`, while the cancelled attempt still records telemetry.
 
 ## `brokerfd` and `brokerfd/events`
 
@@ -214,7 +226,11 @@ package; it is not a separate Go module.
 `grpc.event.EventService` RPC. It follows the same per-attempt telemetry model
 as Trading Events, with instrumentation scope
 `webullapi4go/brokerfd/events`, span name `/grpc.event.EventService/Subscribe`,
-and shared metric names scoped separately by the OTel meter.
+and shared metric names scoped separately by the OTel meter. `OnData` receives
+raw category, content type, and payload bytes; there are no typed Broker FD
+payload structs and the callback does not receive response request ID or
+timestamp. The client supports one active `Run` and currently has no public
+option to set its raw non-zero subscribe bitmask.
 
 ## Shared foundations
 
@@ -238,13 +254,18 @@ machine lock.
 
 `Error` carries `Code`, `Message`, optional HTTP `Status`, and an optional
 wrapped cause. Use `errors.Is`, `errors.As`, `errs.Is`, and exported sentinels
-instead of parsing strings. See [Errors](errors.md).
+instead of parsing strings. `errs.Is(err, code)` matches the wrapped error's
+category. Public `NewSentinel` creates identity-specific semantic sentinels;
+those do not match an unrelated error with the same code. See
+[Errors](errors.md).
 
 ### `pkg/observability`
 
-The package provides OTel aliases, lazy instruments, span helpers, and trace
-propagation helpers. SDK service clients use the core configuration inherited
-from `client.Client`. See [Observability](observability.md).
+The package provides OTel aliases, lazy instruments, span helpers, trace
+propagation helpers, and `SafeErrorText`, which reduces typed errors to a code
+and untyped errors to `operation failed` before telemetry records them. SDK
+service clients use the core configuration inherited from `client.Client`. See
+[Observability](observability.md).
 
 ## Internal packages
 

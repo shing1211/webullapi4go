@@ -1,12 +1,18 @@
 # Examples
 
-Runnable examples for the current API surface of `webullapi4go`. Each example is a
-small `main` program in its own directory, so they all compile together:
+Runnable examples for the current API surface of `webullapi4go`. Examples are
+split between the root module and standalone modules. From the repository root,
+use the module-aware Makefile targets:
 
 ```sh
-go build ./...
-go vet ./...
+make build
+make vet
 ```
+
+Those targets cover the root module plus `broker/`,
+`examples/watchlist-cmd/`, `examples/broker-probe/`,
+`examples/futures-probe/`, and `examples/options-multi-leg/`. A root
+`go build ./...` or `go vet ./...` does not traverse nested modules.
 
 ## Credentials
 
@@ -181,11 +187,11 @@ prints each decoded `OrderEvent` until Ctrl+C. The event service signs each
 go run ./examples/events
 ```
 
-The subscription is scoped to `WEBULL_TRADE_ACCOUNT_ID` when it is set; the
-account must belong to the App Key. The stream reconnects and re-subscribes
-automatically after a transient drop. In the sandbox, placement events may not
-be pushed for a resting order; a cancellation produces the observed
-`CANCEL_SUCCESS` event.
+The subscription is unfiltered when `WEBULL_TRADE_ACCOUNT_ID` is unset. When
+it is set, the selected account must belong to the App Key. The stream
+reconnects and re-subscribes automatically after a transient drop. In the
+sandbox, placement events may not be pushed for a resting order; a cancellation
+produces the observed `CANCEL_SUCCESS` event.
 
 ## data-fundamentals
 
@@ -326,7 +332,7 @@ While trying these examples against the sandbox, expect a few restrictions:
 - The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
   5 concurrent connections per App Key.
 - The gRPC event stream may not push a placement event for a resting order; only
-  `CANCEL_SUCCESS` has been observed. The subscribed account must belong to the
-  App Key.
+  `CANCEL_SUCCESS` has been observed. If an account filter is configured, the
+  selected account must belong to the App Key.
 
 See [Troubleshooting](../docs/troubleshooting.md) for symptoms and fixes.

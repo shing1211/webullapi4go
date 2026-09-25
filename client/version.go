@@ -46,7 +46,7 @@ func IsValidAPIVersion(v string) bool {
 // production environment. Production tokens require the caller to complete the
 // Webull App 2FA flow, which the SDK refuses to start implicitly; call
 // [Client.EnsureToken] once to create and activate a token, then retry.
-var ErrAccessTokenRequired = errs.New(
+var ErrAccessTokenRequired = errs.NewSentinel(
 	errs.CodeAuth,
 	"access token required: call client.EnsureToken to complete the 2FA flow before running in production",
 )

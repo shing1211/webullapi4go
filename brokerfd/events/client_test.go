@@ -19,6 +19,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -65,6 +66,21 @@ func (s *fakeServer) captured() capture {
 	return s.got
 }
 
+type reconnectServer struct {
+	eventsevents.UnimplementedEventServiceServer
+	subscribes      atomic.Int32
+	secondSubscribe chan struct{}
+}
+
+func (s *reconnectServer) Subscribe(_ *eventsevents.SubscribeRequest, stream grpc.ServerStreamingServer[eventsevents.SubscribeResponse]) error {
+	if s.subscribes.Add(1) == 1 {
+		return nil
+	}
+	close(s.secondSubscribe)
+	<-stream.Context().Done()
+	return stream.Context().Err()
+}
+
 func newCore(t *testing.T) *client.Client {
 	t.Helper()
 	return newCoreWithOptions(t)
@@ -94,8 +110,15 @@ func newClientWithCore(t *testing.T, core *client.Client, impl eventsevents.Even
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
 	eventsevents.RegisterEventServiceServer(srv, impl)
-	go func() { _ = srv.Serve(lis) }()
-	t.Cleanup(srv.Stop)
+	serveDone := make(chan struct{})
+	go func() {
+		defer close(serveDone)
+		_ = srv.Serve(lis)
+	}()
+	t.Cleanup(func() {
+		srv.Stop()
+		<-serveDone
+	})
 
 	base := []Option{
 		WithGRPCEndpoint("passthrough:///bufnet"),
@@ -117,6 +140,41 @@ type receivedData struct {
 	subscribeType uint32
 	contentType   string
 	payload       []byte
+}
+
+type testRun struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+	err    error
+}
+
+func startTestRun(t *testing.T, cl *Client, ctx context.Context) *testRun {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	run := &testRun{cancel: cancel, done: make(chan struct{})}
+	go func() {
+		run.err = cl.Run(ctx)
+		close(run.done)
+	}()
+	t.Cleanup(func() { _ = run.stop(t) })
+	return run
+}
+
+func (r *testRun) wait(t *testing.T) error {
+	t.Helper()
+	select {
+	case <-r.done:
+		return r.err
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return")
+		return nil
+	}
+}
+
+func (r *testRun) stop(t *testing.T) error {
+	t.Helper()
+	r.cancel()
+	return r.wait(t)
 }
 
 func TestRunDispatchesSignedEvents(t *testing.T) {
@@ -143,10 +201,7 @@ func TestRunDispatchesSignedEvents(t *testing.T) {
 	})
 	cl.OnError(func(err error) { trySend(errCh, err) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	waitSignal(t, connected, "OnConnect")
 	waitSignal(t, pinged, "OnPing")
@@ -208,14 +263,8 @@ func TestRunDispatchesSignedEvents(t *testing.T) {
 		t.Errorf("accounts = %v, want [acct-1]", got)
 	}
 
-	cancel()
-	select {
-	case err := <-runErr:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("Run() error = %v, want context.Canceled", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not return after context cancellation")
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}
 }
 
@@ -225,22 +274,66 @@ func TestRunStopsOnContextCancel(t *testing.T) {
 	}}
 	cl := newClient(t, fake)
 	connected := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
 	cl.OnConnect(func() { trySend(connected, struct{}{}) })
+	cl.OnError(func(err error) { trySend(errCh, err) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
-
+	run := startTestRun(t, cl, context.Background())
 	waitSignal(t, connected, "OnConnect")
-	cancel()
-
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
 	select {
-	case err := <-runErr:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("Run() error = %v, want context.Canceled", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not return after context cancellation")
+	case err := <-errCh:
+		t.Fatalf("OnError received cancellation error %v", err)
+	default:
+	}
+}
+
+func TestCloseCancelsActiveRunWithoutReportingError(t *testing.T) {
+	fake := &fakeServer{messages: []*eventsevents.SubscribeResponse{
+		{EventType: eventsevents.EventType_SubscribeSuccess},
+	}}
+	cl := newClient(t, fake)
+	connected := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
+	cl.OnConnect(func() { trySend(connected, struct{}{}) })
+	cl.OnError(func(err error) { trySend(errCh, err) })
+
+	run := startTestRun(t, cl, context.Background())
+	waitSignal(t, connected, "OnConnect")
+	if err := cl.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := run.wait(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
+	select {
+	case err := <-errCh:
+		t.Fatalf("OnError received shutdown error %v", err)
+	default:
+	}
+}
+
+func TestReconnectCancellationStopsWithoutReportingError(t *testing.T) {
+	srv := &reconnectServer{secondSubscribe: make(chan struct{})}
+	cl := newClient(t, srv,
+		WithReconnectBaseDelay(time.Millisecond),
+		WithReconnectMaxDelay(2*time.Millisecond),
+		WithMaxReconnectAttempts(2),
+	)
+	errCh := make(chan error, 1)
+	cl.OnError(func(err error) { trySend(errCh, err) })
+	run := startTestRun(t, cl, context.Background())
+	waitSignal(t, srv.secondSubscribe, "reconnected Subscribe")
+	run.cancel()
+	if err := run.wait(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
+	select {
+	case err := <-errCh:
+		t.Fatalf("OnError received reconnect cancellation %v", err)
+	default:
 	}
 }
 
@@ -266,6 +359,31 @@ func TestRunReportsTerminalEvent(t *testing.T) {
 	}
 }
 
+func TestRunReportsTerminalSubscribeExpired(t *testing.T) {
+	fake := &fakeServer{messages: []*eventsevents.SubscribeResponse{
+		{EventType: eventsevents.EventType_SubscribeExpired},
+	}}
+	cl := newClient(t, fake)
+	errCh := make(chan error, 4)
+	cl.OnError(func(err error) { trySend(errCh, err) })
+
+	runErr := cl.Run(context.Background())
+	if !errs.Is(runErr, errs.CodeAuth) {
+		t.Fatalf("Run() error = %v, want auth error", runErr)
+	}
+	if !errors.Is(runErr, errs.ErrSubscriptionExpired) {
+		t.Fatalf("Run() error = %v, want ErrSubscriptionExpired", runErr)
+	}
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, errs.ErrSubscriptionExpired) {
+			t.Errorf("OnError received %v, want ErrSubscriptionExpired", err)
+		}
+	case <-time.After(time.Second):
+		t.Error("OnError was not invoked for SubscribeExpired")
+	}
+}
+
 func TestRunReportsTerminalNumOfConnExceed(t *testing.T) {
 	fake := &fakeServer{messages: []*eventsevents.SubscribeResponse{
 		{EventType: eventsevents.EventType_NumOfConnExceed},
@@ -278,10 +396,16 @@ func TestRunReportsTerminalNumOfConnExceed(t *testing.T) {
 	if !errs.Is(runErr, errs.CodeTransport) {
 		t.Fatalf("Run() error = %v, want transport error", runErr)
 	}
+	if !errors.Is(runErr, errs.ErrConnectionLimitExceeded) {
+		t.Fatalf("Run() error = %v, want ErrConnectionLimitExceeded", runErr)
+	}
 	select {
 	case err := <-errCh:
 		if !errs.Is(err, errs.CodeTransport) {
 			t.Errorf("OnError received %v, want transport error", err)
+		}
+		if !errors.Is(err, errs.ErrConnectionLimitExceeded) {
+			t.Errorf("OnError received %v, want ErrConnectionLimitExceeded", err)
 		}
 	case <-time.After(time.Second):
 		t.Error("OnError was not invoked for NumOfConnExceed")
@@ -296,10 +420,11 @@ func TestNewRequiresClient(t *testing.T) {
 
 func TestNewWithGRPCEndpointOverride(t *testing.T) {
 	cl := newCore(t)
-	_, err := New(cl, WithGRPCEndpoint("buffered-host"))
+	ev, err := New(cl, WithGRPCEndpoint("buffered-host"))
 	if err != nil {
 		t.Fatalf("New with explicit endpoint failed: %v", err)
 	}
+	t.Cleanup(func() { _ = ev.Close() })
 }
 
 func TestPayloadToDataEvent(t *testing.T) {

@@ -9,7 +9,8 @@ Shared patterns and conventions used across the SDK.
 
 ## Client construction
 
-Every API package follows the same construction pattern:
+The HTTP service clients generally use a shared core client, but their
+constructors and options are package-specific. The common REST pattern is:
 
 ```go
 cl, err := client.New(client.WithEnv())
@@ -22,9 +23,18 @@ ctx := context.Background()
 if _, err := cl.EnsureToken(ctx); err != nil {
     log.Fatal(err)
 }
+
+market := data.New(cl)
 ```
 
-`WithEnv()` reads credentials from the environment. Alternative constructors:
+Streaming and gRPC event clients have their own constructors and option types;
+the `webull` package only aliases selected core-client types and options. It
+does not return service clients from `webull.New`.
+
+`WithEnv()` reads credentials from the environment. Explicit functional options
+always win over environment values regardless of order. The observability
+provider and resilience preset are also order-independent; an explicitly
+supplied circuit breaker remains caller-owned. Alternative core options:
 
 | Option | Purpose |
 |--------|---------|
@@ -33,10 +43,10 @@ if _, err := cl.EnsureToken(ctx); err != nil {
 | `client.WithRegion(client.HK)` / `client.WithRegion(client.US)` | Select region |
 | `client.WithBaseURL(url)` | Override the base URL |
 | `client.WithTimeout(d)` | Set HTTP timeout |
-| `client.WithAutoToken(true)` | Auto-obtain token on first sandbox request |
+| `client.WithAutoToken(true)` | Auto-obtain a sandbox token on the first non-token request |
 
-Options are applied in order. `WithSandbox()` is equivalent to
-`WithEnvironment(client.Sandbox)`.
+Options are applied in order within each package. `WithSandbox()` is equivalent
+to `WithEnvironment(client.Sandbox)`.
 
 `client`, `data`, `trade`, `stream`, and `events` remain the canonical service
 packages. `pkg/` contains shared foundations such as `errors`, `observability`,
@@ -46,18 +56,21 @@ core client and does not replace the root service constructors.
 
 ## Option pattern
 
-All packages use the functional options pattern:
+Each package defines its own functional `Option` type. For example:
 
 ```go
-package, err := pkg.New(cl,
-    pkg.WithOption1(value),
-    pkg.WithOption2(value),
+trading := trade.New(cl,
+    trade.WithMaxOrderQuantity("10"),
 )
 ```
 
-Each `WithX` constructor returns a `func(*Config)` that is applied during
-construction. Options are validated immediately; invalid options fail the
-constructor.
+Options are applied in order to that package's internal configuration.
+Constructors that return an error validate the resolved configuration; a
+constructor without an error may defer validation to the operation that uses
+the value. Option behavior is package-specific: some options ignore
+non-positive values to retain defaults, while others reject an invalid
+resolved value. Do not assume that one package's `Option` can be passed to
+another package or that every option is a `func(*Config)`.
 
 ## Pagination
 
@@ -126,7 +139,11 @@ marshals back to a JSON string, so the wire format is unchanged.
 ## Error handling
 
 Use the public `pkg/errors` codes and sentinels with `errors.Is`/`errors.As`;
-never branch on `err.Error()` text.
+never branch on `err.Error()` text. Use `errs.Is(err, code)` for category
+matching. Identity-specific semantic sentinels such as
+`errs.ErrSubscriptionExpired`, `client.ErrCircuitOpen`, and
+`mqtt.ErrConnectionLimit` match only themselves or wrappers that preserve
+that identity, not every error with the same code.
 
 ```go
 placed, err := trading.PlaceOrder(ctx, req)
@@ -161,7 +178,11 @@ import (
 )
 ```
 
-See [Errors](errors.md) for the code table and OMS error behavior.
+HTTP 417 is mapped to the historical `INVALID_TOKEN` category for compatibility,
+but Webull also uses 417 for business validation such as `Invalid Symbol`.
+Read `Error.Status` and `Error.Message` for diagnosis; never branch on the
+message string. See [Errors](errors.md) for the code table, semantic sentinel
+matrix, and OMS error behavior.
 
 ## Display Service
 
@@ -208,10 +229,13 @@ s.OnStateChange(func(previous, next stream.State) {
 ```
 
 Only quote, snapshot, and tick data refresh the health watchdog. Notice and
-echo traffic do not. `DropBlock` is the default; `DropOldest` preserves the
-newest unread value, while `DropSample` randomly discards under pressure.
-`Client.Close` closes all active channel subscriptions and unblocks a dispatch
-waiting in `DropBlock`.
+echo traffic do not. State recovery requires a fresh data message and uses
+expected-state transitions, so a stale health tick cannot restore a reconnect
+state. `DropBlock` is the default; `DropOldest` preserves the newest unread
+value, while `DropSample` randomly discards under pressure. Dispatch is
+synchronous and registration-ordered, so a full `DropBlock` subscriber causes
+head-of-line blocking for later subscribers of that topic until cancellation or
+`Client.Close`.
 
 For gRPC Trading Events:
 

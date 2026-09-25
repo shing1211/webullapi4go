@@ -2,8 +2,12 @@
 
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
 It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
-release is `v2.1.0`; current request, OMS, streaming, and telemetry hardening is
-still **Unreleased** and must not be inferred from the latest tag.
+repository tag is **`v2.1.1`** (2026-09-25); the current request, OMS,
+streaming, telemetry, and documentation hardening is tagged in repository
+`v2.1.1`. This is a repository patch release, not a published Go-semver v2
+module: publication of a v2 module remains deferred, and the root module path
+remains `github.com/shing1211/webullapi4go`. The tagged tree is therefore not
+an installable published v2 module.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
@@ -31,9 +35,21 @@ not mean every endpoint is live-verified; see the
 
 ## Install
 
+The module path is `github.com/shing1211/webullapi4go` and does not include the
+`/v2` suffix required by Go's semantic import versioning. The `v2.1.1`
+repository tag therefore does not make the tagged tree installable as a
+published v2 module. Module publication is deferred; use a checkout of the
+`v2.1.1` tag or current tree for that work.
+
+If you need a released v1.x line, pin it explicitly:
+
 ```sh
-go get github.com/shing1211/webullapi4go
+go get github.com/shing1211/webullapi4go@v1.1.1
 ```
+
+The `broker/` package is a separate Broker API HK module. Its `go.mod` replaces
+the root module with `../`; it is not a nested package that root
+`go build ./...` traverses.
 
 ## Quickstart
 
@@ -276,15 +292,15 @@ export WEBULL_APP_KEY="your-sandbox-app-key"
 export WEBULL_APP_SECRET="your-sandbox-app-secret"
 ```
 
-The integration tests are skipped unless explicitly enabled and require sandbox
-credentials. Never commit the values.
+Core, data, stream, and events sandbox tests are skipped unless explicitly
+enabled. Use the actual `Sandbox` test selector, and never commit credentials:
 
 ```sh
 # macOS / Linux
 WEBULL_SANDBOX=1 \
 WEBULL_APP_KEY=your-sandbox-app-key \
 WEBULL_APP_SECRET=your-sandbox-app-secret \
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
 
 ```powershell
@@ -292,15 +308,32 @@ go test ./... -run Integration
 $env:WEBULL_SANDBOX = "1"
 $env:WEBULL_APP_KEY = "your-sandbox-app-key"
 $env:WEBULL_APP_SECRET = "your-sandbox-app-secret"
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
 
-MQTT over WebSocket tests additionally read `WEBULL_MQTT_WEBSOCKET=1`. See the
-[sandbox documentation](https://shing1211.github.io/webullapi4go/sandbox/) and
-[troubleshooting guide](https://shing1211.github.io/webullapi4go/troubleshooting/)
-for known sandbox limitations (a single supported symbol, entitlement-gated
-footprint data, empty depth outside market hours, and network blocking of plain
-MQTT on port 1883).
+Trading-package sandbox tests use separate credentials and the
+`WEBULL_TRADE_SANDBOX=1`, `WEBULL_TRADE_APP_KEY`,
+`WEBULL_TRADE_APP_SECRET`, and `WEBULL_TRADE_ACCOUNT_ID` variables:
+
+```sh
+WEBULL_TRADE_SANDBOX=1 \
+WEBULL_TRADE_APP_KEY=your-trading-sandbox-app-key \
+WEBULL_TRADE_APP_SECRET=your-trading-sandbox-app-secret \
+WEBULL_TRADE_ACCOUNT_ID=your-trading-account-id \
+go test ./trade -run Sandbox
+```
+
+The mutating trade test additionally requires `WEBULL_TRADE_MUTATE=1`. The
+mutating order-event test uses the generic `WEBULL_SANDBOX` credentials plus
+`WEBULL_TRADE_ACCOUNT_ID` and `WEBULL_TRADE_MUTATE=1`. MQTT over WebSocket
+tests additionally read `WEBULL_MQTT_WEBSOCKET=1`. See the local
+[sandbox guide](docs/sandbox.md) and [troubleshooting guide](docs/troubleshooting.md)
+for the complete gates and known limitations (a single supported symbol,
+entitlement-gated footprint data, empty depth outside market hours, and network
+blocking of plain MQTT on port 1883). HTTP 417 is mapped to the historical
+`INVALID_TOKEN` category for compatibility, but Webull also uses it for invalid
+symbols and other business validation; inspect the API message before treating
+it as a token failure.
 
 ## Package map
 
@@ -313,12 +346,12 @@ MQTT on port 1883).
 | `events` | Canonical Trading Events gRPC client |
 | `connect` | OAuth 2.0 authorization-code flow for third-party apps (US only) |
 | `display` | Display Solution client-to-server authentication and token management |
-| `broker` | Broker API HK (own Go module; root module uses `replace`) |
+| `broker` | Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go => ../`) |
 | `brokerfd` | Broker FD US HTTP endpoints (accounts, orders, funding, instruments, etc.) |
 | `brokerfd/events` | Broker FD US events over gRPC |
 | `webull` | Optional thin aliases for the core client; service clients remain in their root packages |
 | `pkg/errors` | Public typed errors, codes, and sentinels |
-| `pkg/observability` | OpenTelemetry handles, span helpers, and shared instruments |
+| `pkg/observability` | OpenTelemetry handles, span helpers, shared instruments, and sanitized telemetry error text |
 | `pkg/resilience` | Public retry, rate-limit, circuit-breaker, and clock primitives |
 | `pkg/transport` | Public HTTP transport and MQTT transport |
 | `pkg/domain/money` | `money.Money`, the public DTO decimal type |
@@ -333,16 +366,17 @@ MQTT on port 1883).
 |---|---|---|
 | v0.x–v1.0 | Core API, Trading, Events, full endpoint coverage, examples, and API stabilization | Released |
 | v1.1.1 | Production test/security tooling, multi-OS CI, leak checks, and fuzzing | Released |
-| v2.0.0–v2.0.2 | Public error/resilience/transport foundations, OMS domain, `money.Money`, and thin `webull` aliases; root services retained | Released |
-| v2.0.3–v2.0.4 | Context hygiene, structured resilience, clock correction, idempotency, and transport tuning | Released |
-| v2.0.5–v2.0.7 | Request interceptors/hooks, initial OMS, stream state/channels, slog, OTel tracing, and metrics | Released |
-| v2.0.8–v2.0.9 | Context and typed-error hardening | Released |
-| v2.1.0 | `go vet` mutex-copy fixes | Latest release |
-| Unreleased | Request-pipeline parity, OMS reconciliation, stream/channel hardening, gRPC event telemetry, and documentation reconciliation | Implemented and offline-tested; not live-verified or released |
+| v2.0.0–v2.0.2 | Public error/resilience/transport foundations, OMS domain, `money.Money`, and thin `webull` aliases; root services retained | Historical tag; not a published v2 module |
+| v2.0.3–v2.0.4 | Context hygiene, structured resilience, clock correction, idempotency, and transport tuning | Historical tag; not a published v2 module |
+| v2.0.5–v2.0.7 | Request interceptors/hooks, initial OMS, stream state/channels, slog, OTel tracing, and metrics | Historical tag; not a published v2 module |
+| v2.0.8–v2.0.9 | Context and typed-error hardening | Historical tag; not a published v2 module |
+| v2.1.0 | `go vet` mutex-copy fixes | Historical tag; not a published v2 module |
+| v2.1.1 | Error matching specificity, request-pipeline parity, OMS reconciliation, stream/MQTT lifecycle hardening, gRPC event telemetry, cancellation/leak coverage, and documentation reconciliation | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
 
-The next version number is intentionally unassigned until the release gate is
-complete. See [CHANGELOG.md](CHANGELOG.md) and
-[PLAN.md](PLAN.md) for the decision record.
+The next version number is intentionally unassigned for future work. The
+current hardening is represented by repository tag `v2.1.1`; module publication
+and live verification remain separate follow-up decisions. See
+[CHANGELOG.md](CHANGELOG.md) and [PLAN.md](PLAN.md) for the decision record.
 
 ## Links
 
@@ -363,14 +397,25 @@ complete. See [CHANGELOG.md](CHANGELOG.md) and
 
 | Target | Description |
 |--------|-------------|
-| `make build` | compile all packages |
-| `make test` | unit tests (sandbox tests need `WEBULL_SANDBOX=1` and valid creds) |
-| `make test-race` | tests with the race detector |
-| `make cover` | coverage profiling |
+| `make build` | compile the root module and every nested module listed by the Makefile |
+| `make vet` | vet the root module and every nested module listed by the Makefile |
+| `make test` | unit tests across those modules (sandbox tests remain environment-gated) |
+| `make test-race` | tests with the race detector across those modules |
+| `make cover` | coverage profiling across those modules |
 | `make lint` | `golangci-lint` (includes `gosec`) |
 | `make fuzz` | fuzz the data deserializers |
-| `make vuln` | `govulncheck` |
+| `make vuln` | `govulncheck` in every module |
 | `make docs` | build the MkDocs site (`mkdocs build --strict`) |
+
+Root `go build ./...` and `go test ./...` cover only the root module; use the
+Makefile targets for module-aware verification. The 2026-09-25 offline run
+measured 71.6% aggregate coverage in the root module and 80.8% in the nested
+`broker/` module. These are reproducible measurements, not behavior or release
+guarantees; CI's 60% gate is root-only.
+
+The current hardening was not newly live-verified. Historical live results are
+listed separately and must not be read as verification of the `v2.1.1`
+repository tag.
 
 ## License
 

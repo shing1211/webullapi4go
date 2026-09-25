@@ -17,12 +17,37 @@ package retry_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
 	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
+
+type backoffBarrierClock struct {
+	now          time.Time
+	afterStarted chan struct{}
+	afterOnce    sync.Once
+	after        chan time.Time
+}
+
+func newBackoffBarrierClock(now time.Time) *backoffBarrierClock {
+	return &backoffBarrierClock{
+		now:          now,
+		afterStarted: make(chan struct{}),
+		after:        make(chan time.Time),
+	}
+}
+
+func (c *backoffBarrierClock) Now() time.Time {
+	return c.now
+}
+
+func (c *backoffBarrierClock) After(time.Duration) <-chan time.Time {
+	c.afterOnce.Do(func() { close(c.afterStarted) })
+	return c.after
+}
 
 func TestFullJitterNoRetryOnPermanent(t *testing.T) {
 	t.Parallel()
@@ -75,29 +100,48 @@ func TestFullJitterRespectsContextCancel(t *testing.T) {
 	}
 }
 
-func TestFullJitterRetriesWithRealClock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
+func TestCancellationInterruptsBackoffWait(t *testing.T) {
 	t.Parallel()
 
+	fake := newBackoffBarrierClock(time.Now())
 	r := retry.New(
 		retry.WithMaxAttempts(3),
-		retry.WithBaseDelay(10*time.Millisecond),
-		retry.WithMaxDelay(40*time.Millisecond),
-		retry.WithFullJitter(true),
-		retry.WithIsRetryable(func(err error) bool { return err != nil }),
+		retry.WithBaseDelay(time.Hour),
+		retry.WithMaxDelay(time.Hour),
+		retry.WithJitter(false),
+		retry.WithIsRetryable(func(error) bool { return true }),
+		retry.WithClock(fake),
 	)
 
-	calls := 0
-	err := r.Do(context.Background(), func(ctx context.Context) error {
-		calls++
-		return errors.New("transient")
-	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	ctx, cancel := context.WithCancel(context.Background())
+	attempted := make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		result <- r.Do(ctx, func(context.Context) error {
+			close(attempted)
+			return errors.New("transient")
+		})
+	}()
+
+	waitForRetrySignal(t, attempted, "first attempt")
+	waitForRetrySignal(t, fake.afterStarted, "backoff wait")
+	cancel()
+
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Do() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Do did not return after cancellation")
 	}
-	if calls != 3 {
-		t.Errorf("calls = %d, want 3", calls)
+}
+
+func waitForRetrySignal(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
 	}
 }

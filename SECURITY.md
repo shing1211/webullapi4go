@@ -2,17 +2,25 @@
 
 ## Supported versions
 
-The latest tagged release is `v2.1.0`. Security fixes are applied to the
-current `v2.1.x` release line on `main`.
+The latest repository tag is `v2.1.1` (2026-09-25). Current request, OMS,
+streaming, telemetry, and documentation hardening is tagged in repository
+`v2.1.1`, but this is a repository Git patch release, not a
+Go-semver-compatible v2 module. The root module path remains
+`github.com/shing1211/webullapi4go`, and publication of a v2 module remains
+deferred. The tagged hardening was not newly live-verified. Security fixes for
+that work are prepared on `main`; the repository tag is not a published v2
+module security-fix line. The pinned `v1.1.1` install command is historical v1
+guidance.
 
-| Version | Supported |
+| Version or state | Supported |
 |---|---|
-| `v2.1.x` | Yes |
+| `v2.1.1` | Repository tag only; no published v2 module; fixes are tracked in the repository |
+| `v2.1.0` and earlier `v2.x` tags | No — historical Git tags only; v2 module publication is deferred |
 | `v2.0.x` and earlier | No |
 
 Older lines may receive a fix when the correction is low risk and backporting
 it does not create a disproportionate maintenance burden. A backport is not
-guaranteed; upgrade to the current release line for security fixes.
+guaranteed; use a separately published module release when one is authorized.
 
 ## Reporting a vulnerability
 
@@ -64,9 +72,17 @@ tests.
 
 ## Telemetry and logging
 
-The SDK's request and event telemetry does not include App Keys, App Secrets,
-access tokens, or signing values. It does include request paths, status,
-timing, attempt numbers, RPC metadata names, and correlation IDs.
+The SDK's REST, MQTT, and gRPC telemetry does not include App Keys, App
+Secrets, access tokens, or signing values. Production telemetry uses
+`observability.SafeErrorText`: typed errors are reduced to their category,
+context errors retain only the standard cancellation/deadline text, and other
+errors become `operation failed`. Response bodies, gRPC status messages, and
+wrapped error causes are not copied into SDK spans or logs.
+
+Telemetry still includes request paths without query strings, HTTP status,
+timing, attempt numbers, topic/category labels, RPC metadata names, and
+correlation IDs. Those fields can be operationally sensitive even though they
+are not authentication material.
 
 Applications remain responsible for:
 

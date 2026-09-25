@@ -88,6 +88,13 @@ func TestOrderGuardrailKeepsCompatibilityCode(t *testing.T) {
 	if !errors.Is(err, errs.ErrOrderGuardrail) {
 		t.Fatalf("PlaceOrder() error = %v, want ErrOrderGuardrail in the chain", err)
 	}
+	var typed *errs.Error
+	if !errors.As(err, &typed) {
+		t.Fatal("errors.As() did not find the compatibility error")
+	}
+	if typed.Code != errs.CodeInvalidConfig {
+		t.Fatalf("typed error code = %q, want %q", typed.Code, errs.CodeInvalidConfig)
+	}
 }
 
 func TestPlaceAndBatchResultsAreRegistered(t *testing.T) {

@@ -12,37 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package webull provides the public entry point for the Webull OpenAPI SDK.
+// Package webull provides optional aliases for selected core-client types and
+// options. It is a convenience layer, not an aggregate service facade.
 //
-// The recommended import path is github.com/shing1211/webullapi4go/webull:
-//
-//	import "github.com/shing1211/webullapi4go/webull"
-//
-// Create a client with webull.New:
+// Import the service packages directly when typed service clients are needed:
 //
 //	cl, err := webull.New(
 //	    webull.WithCredentials(appKey, appSecret),
 //	    webull.WithRegion(webull.RegionHK),
 //	)
+//	if err != nil {
+//	    return err
+//	}
 //
-// Obtain typed service clients from the returned Client:
+//	market := data.New(cl)
+//	trading := trade.New(cl)
+//	streaming, err := stream.New(cl)
+//	if err != nil {
+//	    return err
+//	}
+//	ev, err := events.New(cl)
+//	if err != nil {
+//	    return err
+//	}
 //
-//	mdCl := data.New(cl)         // market data
-//	trCl := trade.New(cl)        // trading
-//	stCl := stream.New(cl)       // MQTT streaming
-//	evCl := events.New(cl)       // gRPC events
+// webull.New delegates to client.New and returns a *client.Client. The
+// returned client does not construct or return data, trade, stream, or events
+// service clients. The root service packages remain canonical.
 //
-// All clients are safe for concurrent use.
+// # Package-level aliases
 //
-// # Package-level re-exports
-//
-// The following types and constructors are re-exported from webull for
-// convenience so callers need only one import:
+// The following identifiers are aliases or thin delegations for the
+// corresponding client constructors, types, and options:
 //
 //	Option                    from client
 //	Region                    from client  (webull.RegionHK, webull.RegionUS)
 //	Environment               from client  (webull.EnvProduction, webull.EnvSandbox)
 //	Endpoints                 from client
+//	Client                    from client
+//	New                       from client
 //	WithCredentials           from client
 //	WithAppKey, WithAppSecret from client
 //	WithRegion, WithEnvironment from client

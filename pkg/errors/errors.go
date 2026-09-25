@@ -87,18 +87,28 @@ type Error struct {
 	Err error
 }
 
+type sentinelIdentity struct {
+	name string
+}
+
+func (s *sentinelIdentity) Error() string { return s.name }
+
 // Error implements the error interface.
 func (e *Error) Error() string {
 	if e == nil {
 		return "<nil>"
 	}
+	cause := e.Err
+	if _, marker := cause.(*sentinelIdentity); marker {
+		cause = nil
+	}
 	switch {
-	case e.Err != nil && e.Message != "":
-		return fmt.Sprintf("webull: %s: %s: %v", e.Code, e.Message, e.Err)
+	case cause != nil && e.Message != "":
+		return fmt.Sprintf("webull: %s: %s: %v", e.Code, e.Message, cause)
 	case e.Message != "":
 		return fmt.Sprintf("webull: %s: %s", e.Code, e.Message)
-	case e.Err != nil:
-		return fmt.Sprintf("webull: %s: %v", e.Code, e.Err)
+	case cause != nil:
+		return fmt.Sprintf("webull: %s: %v", e.Code, cause)
 	default:
 		return fmt.Sprintf("webull: %s", e.Code)
 	}
@@ -110,11 +120,45 @@ func (e *Error) Unwrap() error {
 	if e == nil {
 		return nil
 	}
+	if _, marker := e.Err.(*sentinelIdentity); marker {
+		return nil
+	}
 	return e.Err
 }
 
-// Is reports whether e matches target. Two Errors match when they share a
-// [Code]; otherwise matching delegates to the wrapped cause.
+func sentinelID(e *Error) *sentinelIdentity {
+	if e == nil {
+		return nil
+	}
+	id, _ := e.Err.(*sentinelIdentity)
+	return id
+}
+
+func semanticID(err error) *sentinelIdentity {
+	e, ok := err.(*Error)
+	if !ok || e == nil {
+		return nil
+	}
+	if id := sentinelID(e); id != nil {
+		return id
+	}
+	next, ok := e.Err.(*Error)
+	if !ok || next == e {
+		return nil
+	}
+	return semanticID(next)
+}
+
+// NewSentinel returns a semantic sentinel with the given category and message.
+// Unlike [New], it does not match an unrelated error carrying the same category.
+func NewSentinel(code Code, message string) *Error {
+	return &Error{Code: code, Message: message, Err: &sentinelIdentity{name: "sentinel"}}
+}
+
+// Is reports whether e matches target. Ordinary errors match another *Error
+// with the same [Code]. A semantic sentinel matches only itself, a copy of
+// itself, or an error that wraps that sentinel; matching otherwise delegates
+// to the wrapped cause.
 func (e *Error) Is(target error) bool {
 	if e == nil {
 		return false
@@ -122,9 +166,15 @@ func (e *Error) Is(target error) bool {
 	if e == target {
 		return true
 	}
+	if id := semanticID(target); id != nil {
+		if semanticID(e) == id {
+			return true
+		}
+		return errors.Is(e.Err, target)
+	}
 	var t *Error
-	if errors.As(target, &t) {
-		return t.Code == e.Code
+	if errors.As(target, &t) && t != nil && e.Code == t.Code {
+		return true
 	}
 	return errors.Is(e.Err, target)
 }
@@ -173,10 +223,10 @@ var (
 	ErrOrderGuardrail = New(CodeOrderGuardrail, "order guardrail exceeded")
 	// ErrSubscriptionExpired matches [CodeAuth] for subscription/tocket expiry in
 	// streaming event clients.
-	ErrSubscriptionExpired = New(CodeAuth, "subscription expired")
+	ErrSubscriptionExpired = NewSentinel(CodeAuth, "subscription expired")
 	// ErrConnectionLimitExceeded matches [CodeTransport] for gRPC-stream connection
 	// limit rejection (at most 5 concurrent connections per App Key).
-	ErrConnectionLimitExceeded = New(CodeTransport, "connection limit exceeded")
+	ErrConnectionLimitExceeded = NewSentinel(CodeTransport, "connection limit exceeded")
 )
 
 // FromHTTPStatus maps a non-2xx HTTP response status to a typed [Error]. When

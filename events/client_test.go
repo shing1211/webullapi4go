@@ -102,8 +102,15 @@ func newClientWithCore(t *testing.T, core *client.Client, impl eventsevents.Even
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
 	eventsevents.RegisterEventServiceServer(srv, impl)
-	go func() { _ = srv.Serve(lis) }()
-	t.Cleanup(srv.Stop)
+	serveDone := make(chan struct{})
+	go func() {
+		defer close(serveDone)
+		_ = srv.Serve(lis)
+	}()
+	t.Cleanup(func() {
+		srv.Stop()
+		<-serveDone
+	})
 
 	base := []events.Option{
 		events.WithGRPCEndpoint("passthrough:///bufnet"),
@@ -126,6 +133,41 @@ type dataEvent struct {
 	kind        uint32
 	contentType string
 	payload     string
+}
+
+type testRun struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+	err    error
+}
+
+func startTestRun(t *testing.T, cl *events.Client, ctx context.Context) *testRun {
+	t.Helper()
+	ctx, cancel := context.WithCancel(ctx)
+	run := &testRun{cancel: cancel, done: make(chan struct{})}
+	go func() {
+		run.err = cl.Run(ctx)
+		close(run.done)
+	}()
+	t.Cleanup(func() { _ = run.stop(t) })
+	return run
+}
+
+func (r *testRun) wait(t *testing.T) error {
+	t.Helper()
+	select {
+	case <-r.done:
+		return r.err
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return")
+		return nil
+	}
+}
+
+func (r *testRun) stop(t *testing.T) error {
+	t.Helper()
+	r.cancel()
+	return r.wait(t)
 }
 
 func TestRunDispatchesSignedEvents(t *testing.T) {
@@ -152,10 +194,7 @@ func TestRunDispatchesSignedEvents(t *testing.T) {
 	})
 	cl.OnError(func(err error) { trySend(errCh, err) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	waitSignal(t, connected, "OnConnect")
 	waitSignal(t, pinged, "OnPing")
@@ -220,14 +259,8 @@ func TestRunDispatchesSignedEvents(t *testing.T) {
 		t.Errorf("accounts = %v, want [acct-1]", got)
 	}
 
-	cancel()
-	select {
-	case err := <-runErr:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("Run() error = %v, want context.Canceled", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not return after context cancellation")
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}
 }
 
@@ -237,22 +270,60 @@ func TestRunStopsOnContextCancel(t *testing.T) {
 	}}
 	cl := newClient(t, fake)
 	connected := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
 	cl.OnConnect(func() { trySend(connected, struct{}{}) })
+	cl.OnError(func(err error) { trySend(errCh, err) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
-
+	run := startTestRun(t, cl, context.Background())
 	waitSignal(t, connected, "OnConnect")
-	cancel()
-
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
 	select {
-	case err := <-runErr:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("Run() error = %v, want context.Canceled", err)
+	case err := <-errCh:
+		t.Fatalf("OnError received cancellation error %v", err)
+	default:
+	}
+}
+
+func TestRunAfterCloseReturnsContextCanceled(t *testing.T) {
+	cl := newClient(t, &fakeServer{})
+	if err := cl.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := cl.Run(context.Background()); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() after Close error = %v, want context.Canceled", err)
+	}
+}
+
+func TestCloseCancelsEveryActiveRunWithoutReportingError(t *testing.T) {
+	fake := &fakeServer{messages: []*eventsevents.SubscribeResponse{
+		{EventType: eventsevents.EventType_SubscribeSuccess},
+	}}
+	cl := newClient(t, fake)
+	connected := make(chan struct{}, 2)
+	errCh := make(chan error, 2)
+	cl.OnConnect(func() { trySend(connected, struct{}{}) })
+	cl.OnError(func(err error) { trySend(errCh, err) })
+
+	runs := []*testRun{
+		startTestRun(t, cl, context.Background()),
+		startTestRun(t, cl, context.Background()),
+	}
+	waitSignal(t, connected, "first OnConnect")
+	waitSignal(t, connected, "second OnConnect")
+	if err := cl.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	for i, run := range runs {
+		if err := run.wait(t); !errors.Is(err, context.Canceled) {
+			t.Fatalf("Run(%d) error = %v, want context.Canceled", i+1, err)
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not return after context cancellation")
+	}
+	select {
+	case err := <-errCh:
+		t.Fatalf("OnError received shutdown error %v", err)
+	default:
 	}
 }
 

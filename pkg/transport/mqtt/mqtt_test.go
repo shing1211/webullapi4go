@@ -17,6 +17,8 @@ package mqtt
 import (
 	"errors"
 	"testing"
+
+	pkgerrs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 func TestConfigValidate(t *testing.T) {
@@ -123,18 +125,42 @@ func TestConnackErrorClassification(t *testing.T) {
 	if !errors.Is(limit, ErrConnectionRefused) {
 		t.Error("code 105 error does not match ErrConnectionRefused")
 	}
+	if !errors.Is((&ConnackError{Code: ConnackConnectionLimit}), ErrConnectionLimit) {
+		t.Error("code 105 without a cause does not match ErrConnectionLimit")
+	}
 
 	var asConnack *ConnackError
 	if !errors.As(limit, &asConnack) || asConnack.Code != ConnackConnectionLimit {
 		t.Errorf("errors.As() did not recover the ConnackError: %v", asConnack)
 	}
 
-	other := &ConnackError{Code: 4}
+	other := &ConnackError{Code: 4, Err: errors.New("bad credentials")}
 	if errors.Is(other, ErrConnectionLimit) {
 		t.Error("non-105 code matches ErrConnectionLimit")
 	}
 	if !errors.Is(other, ErrConnectionRefused) {
 		t.Error("rejection code does not match ErrConnectionRefused")
+	}
+	genericTransport := pkgerrs.New(pkgerrs.CodeTransport, "transport category")
+	otherWithTransportCause := &ConnackError{Code: 4, Err: genericTransport}
+	if !errors.Is(otherWithTransportCause, genericTransport) {
+		t.Error("ConnackError does not preserve a wrapped transport cause")
+	}
+}
+
+func TestSemanticMQTTSentinelsAreSpecific(t *testing.T) {
+	generic := pkgerrs.New(pkgerrs.CodeTransport, "dial failed")
+	if errors.Is(generic, ErrConnectionLimit) {
+		t.Fatal("generic transport error matches ErrConnectionLimit")
+	}
+	if errors.Is(generic, ErrConnectionRefused) {
+		t.Fatal("generic transport error matches ErrConnectionRefused")
+	}
+	if errors.Is(ErrConnectionLimit, ErrConnectionRefused) {
+		t.Fatal("connection-limit sentinel matches connection-refused sentinel")
+	}
+	if errors.Is(ErrConnectionRefused, ErrConnectionLimit) {
+		t.Fatal("connection-refused sentinel matches connection-limit sentinel")
 	}
 }
 

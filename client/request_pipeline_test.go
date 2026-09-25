@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -99,6 +100,225 @@ func (b *pipelineBreaker) Allow() bool {
 
 func (b *pipelineBreaker) RecordSuccess() {}
 func (b *pipelineBreaker) RecordFailure() {}
+
+type closeTrackingBody struct {
+	io.ReadCloser
+	closed      chan struct{}
+	readStarted chan struct{}
+	closeOnce   sync.Once
+	readOnce    sync.Once
+}
+
+func (b *closeTrackingBody) Read(p []byte) (int, error) {
+	b.readOnce.Do(func() { close(b.readStarted) })
+	return b.ReadCloser.Read(p)
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closeOnce.Do(func() { close(b.closed) })
+	return b.ReadCloser.Close()
+}
+
+type closeTrackingRoundTripper struct {
+	base        http.RoundTripper
+	closed      chan struct{}
+	readStarted chan struct{}
+}
+
+func (t *closeTrackingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		resp.Body = &closeTrackingBody{
+			ReadCloser:  resp.Body,
+			closed:      t.closed,
+			readStarted: t.readStarted,
+		}
+	}
+	return resp, err
+}
+
+func newCloseTrackingClient(t *testing.T, serverURL string) (*client.Client, <-chan struct{}, <-chan struct{}) {
+	t.Helper()
+	closed := make(chan struct{})
+	readStarted := make(chan struct{})
+	base := http.DefaultTransport.(*http.Transport).Clone()
+	cl, err := client.New(
+		client.WithCredentials(testAppKey, testAppSecret),
+		client.WithEndpoints(client.Endpoints{HTTP: serverURL, BrokerHTTP: serverURL}),
+		client.WithHTTPClient(&http.Client{Transport: &closeTrackingRoundTripper{
+			base:        base,
+			closed:      closed,
+			readStarted: readStarted,
+		}}),
+		client.WithoutRetry(),
+	)
+	if err != nil {
+		t.Fatalf("client.New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+	return cl, closed, readStarted
+}
+
+func waitForClientSignal(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
+	}
+}
+
+type requestCancellationCase struct {
+	name string
+	call func(context.Context, *client.Client) error
+}
+
+func TestEntrypointsPropagateBlockedRequestCancellation(t *testing.T) {
+	cases := []requestCancellationCase{
+		{
+			name: "do",
+			call: func(ctx context.Context, cl *client.Client) error {
+				return cl.Do(ctx, http.MethodGet, "/blocked", nil, nil)
+			},
+		},
+		{
+			name: "broker",
+			call: func(ctx context.Context, cl *client.Client) error {
+				return cl.DoBroker(ctx, http.MethodGet, "/blocked", nil, nil)
+			},
+		},
+		{
+			name: "stream",
+			call: func(ctx context.Context, cl *client.Client) error {
+				resp, err := cl.DoStream(ctx, http.MethodGet, "/blocked", nil)
+				if resp != nil {
+					_ = resp.Body.Close()
+				}
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			started := make(chan struct{})
+			stopped := make(chan struct{})
+			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				close(started)
+				<-r.Context().Done()
+				close(stopped)
+			}))
+			t.Cleanup(srv.Close)
+
+			cl, _, _ := newCloseTrackingClient(t, srv.URL)
+			ctx, cancel := context.WithCancel(context.Background())
+			result := make(chan error, 1)
+			go func() { result <- tc.call(ctx, cl) }()
+			waitForClientSignal(t, started, "blocked server request")
+			cancel()
+
+			select {
+			case err := <-result:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("request error = %v, want context.Canceled", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("request did not return after cancellation")
+			}
+			waitForClientSignal(t, stopped, "server request cleanup")
+		})
+	}
+}
+
+func TestBufferedEntrypointsCloseCanceledResponseBodies(t *testing.T) {
+	cases := []requestCancellationCase{
+		{
+			name: "do",
+			call: func(ctx context.Context, cl *client.Client) error {
+				return cl.Do(ctx, http.MethodGet, "/stalled-body", nil, nil)
+			},
+		},
+		{
+			name: "broker",
+			call: func(ctx context.Context, cl *client.Client) error {
+				return cl.DoBroker(ctx, http.MethodGet, "/stalled-body", nil, nil)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stopped := make(chan struct{})
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.(http.Flusher).Flush()
+				<-r.Context().Done()
+				close(stopped)
+			}))
+			t.Cleanup(srv.Close)
+
+			cl, bodyClosed, readStarted := newCloseTrackingClient(t, srv.URL)
+			ctx, cancel := context.WithCancel(context.Background())
+			result := make(chan error, 1)
+			go func() { result <- tc.call(ctx, cl) }()
+			waitForClientSignal(t, readStarted, "stalled response body read")
+			cancel()
+
+			select {
+			case err := <-result:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("request error = %v, want context.Canceled", err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("request did not return after cancellation")
+			}
+			waitForClientSignal(t, bodyClosed, "response body cleanup")
+			waitForClientSignal(t, stopped, "server request cleanup")
+		})
+	}
+}
+
+func TestDoStreamCancellationClosesOwnedResponseBody(t *testing.T) {
+	stopped := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+		close(stopped)
+	}))
+	t.Cleanup(srv.Close)
+
+	cl, bodyClosed, readStarted := newCloseTrackingClient(t, srv.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+	resp, err := cl.DoStream(ctx, http.MethodGet, "/stalled-stream", nil)
+	if err != nil {
+		t.Fatalf("DoStream() error = %v", err)
+	}
+
+	readResult := make(chan error, 1)
+	go func() {
+		_, readErr := io.ReadAll(resp.Body)
+		readResult <- readErr
+	}()
+	waitForClientSignal(t, readStarted, "stalled stream body read")
+	cancel()
+
+	select {
+	case readErr := <-readResult:
+		if !errors.Is(readErr, context.Canceled) {
+			t.Fatalf("stream body read error = %v, want context.Canceled", readErr)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("stream body read did not return after cancellation")
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Fatalf("response body Close() error = %v", err)
+	}
+	waitForClientSignal(t, bodyClosed, "stream response body cleanup")
+	waitForClientSignal(t, stopped, "server stream cleanup")
+}
 
 func TestEntrypointsShareHooksInterceptorsAndLogger(t *testing.T) {
 	cases := []struct {

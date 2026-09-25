@@ -66,6 +66,7 @@ func New(opts ...Option) (*Client, error) {
 			opt(&cfg)
 		}
 	}
+	cfg.applyResiliencePreset()
 	// Endpoints default to production Hong Kong; recompute them from the
 	// resolved region and environment unless the caller overrode them.
 	if !cfg.endpointsOverride {

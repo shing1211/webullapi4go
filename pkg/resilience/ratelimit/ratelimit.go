@@ -96,7 +96,14 @@ func (l *Limiter) Tokens() float64 {
 
 func (l *Limiter) Wait(ctx context.Context) error {
 	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		l.mu.Lock()
+		if err := ctx.Err(); err != nil {
+			l.mu.Unlock()
+			return err
+		}
 		now := l.clk.Now()
 		if l.refill(now) >= 1 {
 			l.toks--

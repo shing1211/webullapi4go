@@ -16,6 +16,7 @@ package mqtt
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -53,6 +54,9 @@ func (t *mqttHardeningFakeToken) complete() {
 
 type mqttHardeningFakePahoClient struct {
 	token           *mqttHardeningFakeToken
+	connectStarted  chan struct{}
+	connectStart    sync.Once
+	manualConnect   bool
 	open            atomic.Bool
 	connectCalls    atomic.Int32
 	disconnectCalls atomic.Int32
@@ -62,8 +66,13 @@ func (f *mqttHardeningFakePahoClient) IsConnected() bool      { return f.open.Lo
 func (f *mqttHardeningFakePahoClient) IsConnectionOpen() bool { return f.open.Load() }
 func (f *mqttHardeningFakePahoClient) Connect() paho.Token {
 	f.connectCalls.Add(1)
-	f.open.Store(true)
-	f.token.complete()
+	if f.connectStarted != nil {
+		f.connectStart.Do(func() { close(f.connectStarted) })
+	}
+	if !f.manualConnect {
+		f.open.Store(true)
+		f.token.complete()
+	}
 	return f.token
 }
 func (f *mqttHardeningFakePahoClient) Disconnect(uint) {
@@ -127,5 +136,107 @@ func TestMQTTHardeningCloseIsTerminalAndIdempotent(t *testing.T) {
 	}
 	if got := fake.connectCalls.Load(); got != 1 {
 		t.Fatalf("Connect() calls after Close() = %d, want 1", got)
+	}
+}
+
+func TestMQTTHardeningConnectCancellationAfterAttemptStarts(t *testing.T) {
+	fake := &mqttHardeningFakePahoClient{
+		token:          &mqttHardeningFakeToken{done: make(chan struct{})},
+		connectStarted: make(chan struct{}),
+		manualConnect:  true,
+	}
+	c := &Client{pc: fake}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- c.Connect(ctx)
+	}()
+	<-fake.connectStarted
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Connect() error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Connect() did not return after cancellation")
+	}
+	if got := fake.disconnectCalls.Load(); got != 1 {
+		t.Fatalf("Disconnect() calls after cancellation = %d, want 1", got)
+	}
+	select {
+	case <-fake.token.done:
+		t.Fatal("test token unexpectedly completed without a waiter")
+	default:
+	}
+}
+
+func TestMQTTHardeningConnectCloseRaceAfterAttemptStarts(t *testing.T) {
+	for iteration := 0; iteration < 128; iteration++ {
+		fake := &mqttHardeningFakePahoClient{
+			token:          &mqttHardeningFakeToken{done: make(chan struct{})},
+			connectStarted: make(chan struct{}),
+			manualConnect:  true,
+		}
+		c := &Client{pc: fake}
+		connectDone := make(chan error, 1)
+		go func() {
+			connectDone <- c.Connect(context.Background())
+		}()
+		<-fake.connectStarted
+		closeDone := make(chan error, 1)
+		go func() {
+			closeDone <- c.Close()
+		}()
+		select {
+		case err := <-connectDone:
+			if !errors.Is(err, errClientClosed) {
+				t.Fatalf("iteration %d Connect() error = %v, want closed", iteration, err)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("iteration %d Connect() remained blocked after Close", iteration)
+		}
+		select {
+		case err := <-closeDone:
+			if err != nil {
+				t.Fatalf("iteration %d Close() error = %v", iteration, err)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("iteration %d Close() remained blocked", iteration)
+		}
+		if got := fake.connectCalls.Load(); got != 1 {
+			t.Fatalf("iteration %d Connect() calls = %d, want 1", iteration, got)
+		}
+		if got := fake.disconnectCalls.Load(); got != 1 {
+			t.Fatalf("iteration %d Disconnect() calls = %d, want 1", iteration, got)
+		}
+	}
+}
+
+func TestMQTTHardeningCallbacksAfterCloseAreIgnored(t *testing.T) {
+	fake := &mqttHardeningFakePahoClient{token: &mqttHardeningFakeToken{done: make(chan struct{})}}
+	c := &Client{pc: fake}
+	var connects, disconnects, reconnects, messages, errorsSeen atomic.Int32
+	c.SetConnectHandler(func() { connects.Add(1) })
+	c.SetConnectionLostHandler(func(error) { disconnects.Add(1) })
+	c.SetReconnectHandler(func() { reconnects.Add(1) })
+	c.SetMessageHandler(func(Message) { messages.Add(1) })
+	c.SetErrorHandler(func(error) { errorsSeen.Add(1) })
+	c.reconnecting.Store(true)
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	c.handlePahoConnect()
+	c.handlePahoConnectionLost(errors.New("late disconnect"))
+	c.handlePahoReconnecting()
+	c.handleMessage(nil)
+	c.emitError(errors.New("late error"))
+	if connects.Load() != 0 || disconnects.Load() != 0 || reconnects.Load() != 0 || messages.Load() != 0 || errorsSeen.Load() != 0 {
+		t.Fatalf("late callbacks fired: connect=%d disconnect=%d reconnect=%d message=%d error=%d",
+			connects.Load(), disconnects.Load(), reconnects.Load(), messages.Load(), errorsSeen.Load())
+	}
+	if c.IsReconnecting() {
+		t.Fatal("IsReconnecting() = true after Close()")
 	}
 }

@@ -2,15 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+version labels follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The `v2.x` entries below preserve repository Git-tag facts; because the root
+module path is unchanged and v2 module publication is deferred, they are not
+published Go-semver v2 modules.
 
 ## [Unreleased]
+
+No changes yet.
+
+## [2.1.1] - 2026-09-25
+
+Repository patch release of the current hardening. `v2.1.1` is a repository Git
+tag, not a published Go-semver v2 module; the root module path remains
+`github.com/shing1211/webullapi4go`, and module publication remains deferred.
+The hardening was not newly live-verified.
 
 ### Added
 
 - `client.Client.ObservabilityConfig` exposes the shared, read-only telemetry
   configuration inherited by service clients.
+- `pkg/errors.NewSentinel` creates identity-specific semantic sentinels while
+  preserving category checks through `errs.Is`.
+- `pkg/observability.SafeErrorText` reduces errors to credential-free,
+  stable telemetry text without copying API bodies, status messages, or causes.
 - `events` and `brokerfd/events` now emit one client-kind OpenTelemetry span
   per gRPC stream attempt, `event_stream_attempts` and
   `event_stream_attempt_duration` metrics, structured start/done logs, and
@@ -26,6 +42,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Ordinary `pkg/errors` values continue to match by category, while semantic
+  sentinels now match only themselves or wrappers preserving their identity.
+  This applies to subscription expiry, event/MQTT connection limits, broker
+  refusal, circuit-open, and explicit-token-required sentinels.
+- HTTP 417 remains mapped to `INVALID_TOKEN` for compatibility, while tests and
+  documentation now make clear that the same status can carry business
+  validation messages such as invalid symbols or unsupported categories.
+- `WithMeterProvider` and `WithResiliencePreset` are order-independent, and an
+  explicitly supplied `WithBreaker` remains caller-owned.
+- Stream handlers and channel subscribers dispatch synchronously in
+  registration order. A full `DropBlock` subscriber therefore has documented
+  head-of-line behavior until cancellation or terminal close.
+- Trading `events.Close` cancels every active `Run`; each run returns
+  `context.Canceled` without a shutdown `OnError` callback.
 - `client.Do`, `client.DoBroker`, and `client.DoStream` now share one
   per-attempt request pipeline for rate limiting, circuit breaking, hooks,
   interceptors, signing, correlation, logging, tracing, and metrics. Hook
@@ -52,9 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `client.Close` now forwards `CloseIdleConnections` through the token-injection
+  transport wrapper, so caller-supplied transports release idle connections.
 - MQTT `Connect` no longer starts a `Token.Wait` waiter goroutine, checks an
   already-cancelled context before connecting, and rejects use after `Close`.
   MQTT close is idempotent and suppresses late callbacks/messages.
+- Stream state changes use compare-and-swap expected-state transitions, so
+  stale health ticks and late data cannot overwrite reconnect or terminal-close
+  state.
+- REST, MQTT, and gRPC failure telemetry now records sanitized error text
+  instead of raw response bodies, gRPC status messages, or wrapped causes.
 - `DropOldest` now removes the oldest unread value. Cancelling or closing while
   dispatch is blocked no longer deadlocks the stream.
 - Stream health only treats quote/snapshot/tick messages as fresh data; notices
@@ -70,12 +107,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - Added offline regression coverage for the shared request pipeline, raw-body
-  retries, clock correction, account-scoped OMS tracking, status reconciliation,
-  concurrent order machines, stable auto IDs, guardrail sentinels, MQTT/channel
-  shutdown, stream health, resubscription serialization, `money.Money` wire
-  forms, and Trading/Broker FD event telemetry.
-- `go test ./...` passes in the root module and nested `broker/` module on
-  2026-09-25. The new hardening was not newly live-verified.
+  retries, clock correction, cancellation cleanup, account-scoped OMS tracking,
+  status reconciliation, concurrent order machines, stable auto IDs, category
+  versus semantic-sentinel matching, HTTP 417 diagnostics, MQTT/channel
+  shutdown, compare-and-swap stream state, health recovery, resubscription
+  serialization, deterministic drop policies, `money.Money` wire forms, and
+  Trading/Broker FD event telemetry.
+- Added direct offline tests for the public resilience, transport, shared type,
+  and `webull` alias packages. Data and both event packages now use strict
+  goroutine-leak checks; event tests now cancel and wait for completed runs.
+- The module-aware offline race/vet checks recorded for this run passed on
+  2026-09-25. `make cover` measured 71.6% aggregate root coverage and 80.8% in
+  the nested `broker/` module; these are measurements, not behavior
+  guarantees.
+- No live verification was added for the v2.1.1 repository-tagged hardening.
 
 ### Documentation
 
@@ -83,12 +128,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   packages and public `money.Money`; marked the full `pkg` relocation,
   root-service shim plan, raw `decimal.Decimal` DTO migration, and `sync.Pool`
   decisions as superseded or closed.
-- Added OMS reconciliation, streaming state/health/channel behavior, typed
-  error examples, OpenTelemetry setup, event telemetry, and explicit
+- Added OMS reconciliation, compare-and-swap streaming state/health/channel
+  behavior, category versus semantic-sentinel matching, HTTP 417 caveats,
+  MQTT/Connect cancellation semantics, exact OTel instrument contracts,
+  `SafeErrorText`, event all-runs shutdown behavior, and explicit
   implemented/offline-tested/live-verified/blocked distinctions.
 - Corrected generated reconciliation summaries so they no longer claim zero
   path discrepancies while the generated report contains summary-only and
   unresolved paths.
+- The current error, request, OMS, streaming, event-telemetry, testing, and
+  documentation hardening is tagged in repository `v2.1.1`; Go-semver-compatible
+  v2 module publication remains deferred and the root module path is unchanged.
 
 ## [2.1.0] - 2026-09-24
 
@@ -219,11 +269,44 @@ Phase 5 streaming engine hardening + Phase 6 observability.
   `SpanName(method, path)` helpers for consistent span naming and attribute
   sets.
 
+## [2.0.5] - 2026-09-24
+
+Phase 4 production hardening: interceptor pipeline, initial OMS integration,
+and typed order builders.
+
+### Added
+
+- `client/option.go`: `Interceptor` func type and `WithInterceptor(Interceptor)`
+  option — composable request pipeline interceptors that run after rate-limiting
+  and circuit-breaking but before signing and send.
+- `client/option.go`: `Hooks` struct with `OnRequest`, `OnResponse`, `OnError`,
+  and `OnLatency` callbacks — observability integration point for Phase 6.
+- `client/request.go`: `attempt()` refactored to run an ordered interceptor
+  chain; hooks fire on every request attempt including retries.
+- `pkg/domain/order/order.go`: new `Order` struct embeds `PlaceOrderResult`
+  plus `AccountID` and a local `*Machine` state machine; `SceneTypeToEvent`
+  maps Webull gRPC scene types to domain events.
+- `trade/client.go`: added `orderRegistry` map and `registerOrder`/`getOrder`
+  helpers for local order state tracking.
+- `trade/orders.go`: `PlaceOrder` now returns `*order.Order` (not
+  `*PlaceOrderResult`); the order is registered with `StatePending` on
+  placement. `PlaceOrderResult` is embedded so `order.OrderID` and
+  `order.ClientOrderID` remain accessible. `BatchPlaceOrder` unchanged.
+- `trade/order_actions.go`: `CancelOrder` and `ReplaceOrder` check local order
+  state before sending; terminal orders (filled, cancelled, failed, expired)
+  return `errs.CodeInvalidTransition` without an API call.
+- `trade/orders.go`: `NewPlaceOrderRequest(accountID, orders...)`,
+  `NewEquityOrder(symbol, side, qty)`, and `EquityOrderBuilder` fluent API —
+  typed request constructors with US equity defaults.
+- `trade/order_actions.go`: `NewCancelOrderRequest(accountID, clientOrderID)` and
+  `NewModifyOrderRequest(accountID, clientOrderID)` convenience constructors.
+- `pkg/errors/errors.go`: added `CodeInvalidTransition` and `ErrInvalidTransition`
+  for local state validation failures.
+
 ## [2.0.4] - 2026-09-24
 
-Phase 3 + Phase 4 production hardening: clock-drift correction, idempotency
-helpers, transport tuning, resilience presets, interceptor pipeline, OMS state
-machine integration, typed request builders.
+Phase 3 production hardening: clock-drift correction, idempotency helpers,
+transport tuning, and resilience presets.
 
 ### Added
 
@@ -250,35 +333,6 @@ machine integration, typed request builders.
 - `trade/option.go`: `WithAutoClientOrderID(bool)` — configures `PlaceOrder`
   and `BatchPlaceOrder` to auto-generate and assign a `NewClientOrderID` to
   each order whose `ClientOrderID` is empty.
-
-### Added (Phase 4)
-
-- `client/option.go`: `Interceptor` func type and `WithInterceptor(Interceptor)`
-  option — composable request pipeline interceptors that run after rate-limiting
-  and circuit-breaking but before signing and send.
-- `client/option.go`: `Hooks` struct with `OnRequest`, `OnResponse`, `OnError`,
-  `OnLatency` callbacks — observability integration point for Phase 6.
-- `client/request.go`: `attempt()` refactored to run an ordered interceptor
-  chain; hooks fire on every request attempt including retries.
-- `pkg/domain/order/order.go`: new `Order` struct embeds `PlaceOrderResult`
-  plus `AccountID` and a local `*Machine` state machine; `SceneTypeToEvent`
-  maps Webull gRPC scene types to domain events.
-- `trade/client.go`: added `orderRegistry` map and `registerOrder`/`getOrder`
-  helpers for local order state tracking.
-- `trade/orders.go`: `PlaceOrder` now returns `*order.Order` (not
-  `*PlaceOrderResult`); the order is registered with `StatePending` on
-  placement. `PlaceOrderResult` is embedded so `order.OrderID` and
-  `order.ClientOrderID` remain accessible. `BatchPlaceOrder` unchanged.
-- `trade/order_actions.go`: `CancelOrder` and `ReplaceOrder` check local order
-  state before sending; terminal orders (filled, cancelled, failed, expired) return
-  `errs.CodeInvalidTransition` without an API call.
-- `trade/orders.go`: `NewPlaceOrderRequest(accountID, orders...)`,
-  `NewEquityOrder(symbol, side, qty)`, and `EquityOrderBuilder` fluent API —
-  typed request constructors with US equity defaults.
-- `trade/order_actions.go`: `NewCancelOrderRequest(accountID, clientOrderID)` and
-  `NewModifyOrderRequest(accountID, clientOrderID)` convenience constructors.
-- `pkg/errors/errors.go`: added `CodeInvalidTransition` and `ErrInvalidTransition`
-  for local state validation failures.
 
 ### Documentation
 
@@ -321,6 +375,26 @@ machine integration, typed request builders.
 - Added `connect` and `display` packages to Go Packages reference (`api.md`).
 - Added Documentation Standards section to `CONTRIBUTING.md`.
 - Fixed broken Options table in streaming guide.
+
+## [2.0.3] - 2026-09-23
+
+### Fixed
+
+- `stream/` and `data/`: `go.uber.org/goleak` false positives from
+  `net/http.(*http2clientConnReadLoop).run` goroutines left after paho-mqtt
+  WebSocket disconnect. Added `goleak.IgnoreAnyFunction` filters to both
+  packages' `TestMain`. The goroutines are cleaned up asynchronously by the Go
+  runtime and are not an SDK leak.
+
+## [2.0.2] - 2026-09-23
+
+### Changed (breaking)
+
+- All numeric string fields in `brokerfd/` converted to `*money.Money`
+  (optional/request-side) or `money.Money` (required/response-side).
+  Approximately 30 fields affected across `assets.go`, `orders.go`,
+  `funding.go`, `activity.go`, `journals.go`, and `instruments.go`.
+  JSON serialization is preserved (decimal strings).
 
 ## [2.0.1] - 2026-09-23
 
@@ -374,25 +448,29 @@ Phase 2 production hardening: public API restructuring and type-safe numeric fie
 - Direct use of `client.Client` remains canonical; `webull.New` and
   `webull.Client` are optional aliases for callers that prefer one import.
 
-## [2.0.3] - 2026-09-23
+## [2.0.0] - 2026-09-23
 
-### Fixed
+Phase 2 architecture: introduce the public SDK foundations and the optional
+core-client alias package. The later decision to retain the root service
+packages supersedes any broader service-relocation reading of this historical
+tag; the current tree keeps those services at the repository root.
 
-- `stream/` and `data/`: `go.uber.org/goleak` false positives from
-  `net/http.(*http2clientConnReadLoop).run` goroutines left after paho-mqtt
-  WebSocket disconnect. Added `goleak.IgnoreAnyFunction` filters to both
-  packages' `TestMain`. The goroutines are cleaned up asynchronously by the Go
-  runtime and are not an SDK leak.
+### Added
 
-## [2.0.2] - 2026-09-23
+- `pkg/errors`: public typed errors, codes, and sentinels, with a deprecated
+  `internal/errs` compatibility shim.
+- `pkg/transport`: public HTTP and MQTT transport foundations.
+- `pkg/resilience`: public retry, rate-limit, circuit-breaker, and clock
+  primitives.
+- `pkg/domain/money`: exact decimal `Money` support for JSON financial values.
+- `pkg/domain/order`: the public order lifecycle state machine.
+- `webull`: optional aliases for selected `client` and `trade` constructors and
+  types; it is not an aggregate service facade.
 
-### Changed (breaking)
+### Changed
 
-- All numeric string fields in `brokerfd/` converted to `*money.Money`
-  (optional/request-side) or `money.Money` (required/response-side).
-  Approximately 30 fields affected across `assets.go`, `orders.go`,
-  `funding.go`, `activity.go`, `journals.go`, and `instruments.go`.
-  JSON serialization is preserved (decimal strings).
+- The public foundation packages became the canonical import paths while the
+  root service packages remained available as the service layer.
 
 ## [1.1.1] - 2026-09-23
 
@@ -505,36 +583,23 @@ in options-multi-leg example, and updated TODO markers with HK sandbox findings.
 - `data/futures_market.go`: header comment notes that product-codes path is confirmed
   while market data paths remain unconfirmed.
 
-## [0.9.0] - 2026-09-22
+## [1.0.0] - 2026-09-22
 
-GoDoc coverage, HK options stubs, HK futures market data, new examples, and graceful credential handling.
+Futures market-data bug fix and two new probe examples. The release also
+recorded the remaining provisional audit items that required US sandbox access.
+
+### Fixed
+
+- `data/futures_market.go`: added the missing `Category` field to all five
+  futures market-data query structs, fixing the hard-coded US-futures query
+  behavior that prevented HK futures queries.
 
 ### Added
 
-- `brokerfd/brokerfd.go`: GoDoc on all 12 files and ~80 exported identifiers.
-- `brokerfd/events/events.go`, `brokerfd/events/option.go`, `brokerfd/events/sign.go`:
-  GoDoc on all event types and sign functions.
-- `examples/brokerfd/`: Broker FD US read-only endpoint probe (accounts, orders,
-  assets, instruments, funding, activity, journals, master data, agreements, documents).
-- `examples/brokerfd-events/`: Broker FD gRPC event subscription probe (order, option,
-  position streams).
-- `examples/options/`: HK options discovery probe (expirations, option chain).
-- `examples/`: graceful credential handling in all 9 existing examples — no more
-  panic on missing env vars; instead a descriptive message and zero-value client.
-- `data/futures.go`: `FuturesCategoryCN` constant for CN futures queries.
-- `data/futures_market.go`: `GetHKFuturesTick`, `GetHKFuturesSnapshot`,
-  `GetHKFuturesBars`, `GetHKFuturesDepth`, `GetHKFuturesFootprint` — 5 new HK
-  futures market data functions.
-- `data/options.go`: `OptionCategoryHK`, `OptionCategoryCN` constants.
-- `data/options.go`: `GetHKOptionExpirations`, `GetHKOptionChain` — HK options
-  discovery stubs (TODO t10, paths unconfirmed).
-- `trade/derivatives_hk.go`: new file for HK derivatives-specific trading helpers.
-
-### Tests Added
-
-- `brokerfd/brokerfd_test.go`: unit tests for broker FD root package.
-- `broker/options_test.go`: unit tests for broker options.
-- `brokerfd/events/option_test.go`: unit tests for broker FD option events.
+- `examples/futures-probe/`: futures discovery and market-data probe.
+- `examples/options-multi-leg/`: multi-leg options preview probe.
+- The 49 remaining provisional audit items were documented as requiring US
+  sandbox credentials for verification.
 
 ## [0.9.2] - 2026-09-22
 
@@ -601,9 +666,35 @@ Bug fixes found during remaining endpoint verification sweep.
   HK sandbox — the endpoint group is not available in the sandbox environment.
   Broker HK remains unverified pending production or US sandbox access.
 
-## [0.9.0] - 2026-09-21
+## [0.9.0] - 2026-09-22
 
-Full sandbox verification: all core SDK functionality tested against live HK sandbox.
+GoDoc coverage, HK options stubs, HK futures market data, new examples, graceful
+credential handling, and full sandbox verification.
+
+### Added
+
+- `brokerfd/brokerfd.go`: GoDoc on all 12 files and ~80 exported identifiers.
+- `brokerfd/events/events.go`, `brokerfd/events/option.go`, `brokerfd/events/sign.go`:
+  GoDoc on all event types and sign functions.
+- `examples/brokerfd/`: Broker FD US read-only endpoint probe (accounts, orders,
+  assets, instruments, funding, activity, journals, master data, agreements, documents).
+- `examples/brokerfd-events/`: Broker FD gRPC event subscription probe (order, option,
+  position streams).
+- `examples/options/`: HK options discovery probe (expirations, option chain).
+- `examples/`: graceful credential handling in all 9 existing examples — no more
+  panic on missing env vars; instead a descriptive message and zero-value client.
+- `data/futures.go`: `FuturesCategoryCN` constant for CN futures queries.
+- `data/futures_market.go`: `GetHKFuturesTick`, `GetHKFuturesSnapshot`,
+  `GetHKFuturesBars`, `GetHKFuturesDepth`, `GetHKFuturesFootprint` — 5 new HK
+  futures market data functions.
+- `data/options.go`: `OptionCategoryHK`, `OptionCategoryCN` constants.
+- `data/options.go`: `GetHKOptionExpirations`, `GetHKOptionChain` — HK options
+  discovery stubs (TODO t10, paths unconfirmed).
+- `trade/derivatives_hk.go`: new file for HK derivatives-specific trading helpers.
+- `examples/`: all examples verified against HK sandbox (auth, marketdata,
+  account, watchlist, order preview, data-fundamentals, streaming, events).
+- Documentation complete: `IMPLEMENTATION_STATUS.md` with full codebase audit
+  (49 TODOs, 522 tests), README roadmap sync, AGENTS.md constraints updated.
 
 ### Fixed
 
@@ -611,12 +702,11 @@ Full sandbox verification: all core SDK functionality tested against live HK san
   `map[string]any` to handle numeric values returned by the income statement,
   balance sheet, and cash flow endpoints.
 
-### Added
+### Tests Added
 
-- `examples/`: all examples verified against HK sandbox (auth, marketdata,
-  account, watchlist, order preview, data-fundamentals, streaming, events).
-- Documentation complete: `IMPLEMENTATION_STATUS.md` with full codebase audit
-  (49 TODOs, 522 tests), README roadmap sync, AGENTS.md constraints updated.
+- `brokerfd/brokerfd_test.go`: unit tests for broker FD root package.
+- `broker/options_test.go`: unit tests for broker options.
+- `brokerfd/events/option_test.go`: unit tests for broker FD option events.
 
 ## [0.7.0] - 2026-09-21
 
@@ -972,7 +1062,8 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.1
 [2.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.0
 [2.0.9]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.9
 [2.0.8]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.8

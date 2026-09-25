@@ -24,8 +24,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/shing1211/webullapi4go/client"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // subscribeRecorder is a stub HTTP server that records the decoded bodies of
@@ -316,5 +318,84 @@ func TestResubscribeUsesClientSession(t *testing.T) {
 	}
 	if got := replayed[0]["session_id"]; got != "sess-reconnect" {
 		t.Fatalf("replayed session_id = %v, want sess-reconnect", got)
+	}
+}
+
+func TestSubscribeAndUnsubscribeAfterClose(t *testing.T) {
+	rec := &subscribeRecorder{}
+	s := newReconnectTestClient(t, rec)
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := s.Subscribe(context.Background(), SubscribeRequest{
+		Symbols:  []string{"AAPL"},
+		Category: CategoryUSStock,
+		SubTypes: []SubType{SubTypeQuote},
+	}); !errs.Is(err, errs.CodeInvalidConfig) {
+		t.Fatalf("Subscribe() after Close error = %v, want invalid_config", err)
+	}
+	if err := s.Unsubscribe(context.Background(), UnsubscribeRequest{UnsubscribeAll: true}); !errs.Is(err, errs.CodeInvalidConfig) {
+		t.Fatalf("Unsubscribe() after Close error = %v, want invalid_config", err)
+	}
+	if got := rec.len(); got != 0 {
+		t.Fatalf("HTTP requests after Close = %d, want 0", got)
+	}
+}
+
+func TestSubscribeConcurrentWithCloseDoesNotRecordSubscription(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var enteredOnce sync.Once
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == subscribePath {
+			enteredOnce.Do(func() { close(entered) })
+			<-release
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	core := newTestCore(t, srv.URL)
+	core.SetToken(&client.Token{Value: "tok", Status: client.TokenStatusNormal})
+	s, err := New(core, WithSessionID("close-race-session"))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	done := make(chan error, 1)
+	go func() {
+		done <- s.Subscribe(context.Background(), SubscribeRequest{
+			Symbols:  []string{"AAPL"},
+			Category: CategoryUSStock,
+			SubTypes: []SubType{SubTypeQuote},
+		})
+	}()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("Subscribe request did not reach the server")
+	}
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	close(release)
+	released = true
+	select {
+	case err := <-done:
+		if !errs.Is(err, errs.CodeInvalidConfig) {
+			t.Fatalf("Subscribe() racing Close error = %v, want invalid_config", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Subscribe() racing Close did not finish")
+	}
+	if !s.subs.empty() {
+		t.Fatal("subscription was recorded after Close")
 	}
 }

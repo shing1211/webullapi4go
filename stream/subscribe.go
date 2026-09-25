@@ -294,6 +294,9 @@ func (c *Client) subscribe(ctx context.Context, req SubscribeRequest) error {
 	if err := c.core.Do(ctx, http.MethodPost, subscribePath, body, nil); err != nil {
 		return err
 	}
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
+	}
 	c.subs.add(body)
 	return nil
 }
@@ -323,6 +326,9 @@ func (c *Client) Unsubscribe(ctx context.Context, req UnsubscribeRequest) error 
 	}
 	if err := c.core.Do(ctx, http.MethodPost, unsubscribePath, body, nil); err != nil {
 		return err
+	}
+	if c.State() == StateClosed {
+		return errs.New(errs.CodeInvalidConfig, "stream: client is closed")
 	}
 	c.subs.remove(body)
 	return nil

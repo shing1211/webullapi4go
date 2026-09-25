@@ -6,6 +6,12 @@ This document describes the architecture of `webullapi4go` from the GitNexus kno
 
 The initial `gitnexus://repo/webullapi4go/context` resource reported 405 files, 8,557 symbols, and 608 processes, with the index one commit behind `HEAD`. The graph was then rebuilt at commit `0e6f978` with `gitnexus analyze --index-only --force`.
 
+The figures and graph-derived labels below are a generated index snapshot from
+`0e6f978`, one commit behind the current `b3c647b` baseline. They are
+architectural observations, not current test guarantees, live-verification
+claims, or proof that every path is exercised. Source inspection and the
+repository tests remain the authority for current behavior.
+
 The refreshed index contains:
 
 | Metric | Value |
@@ -40,7 +46,7 @@ The largest functional communities, aggregated by their heuristic labels, are:
 | Errors | 2 | 11 | 0.706 |
 | Observability | 2 | 9 | 0.889 |
 
-The graph also contains smaller communities for generated protobuf (`V1`), the documentation generator, probes, examples, rate limiting, and transport. The architecture below uses the graph's cross-community relationships to show the important boundaries, then uses source inspection to clarify runtime behavior.
+The graph also contains smaller communities for generated protobuf (`V1`), the documentation generator, probes, examples, rate limiting, and transport. The architecture below uses the graph's cross-community relationships to show the important boundaries, then uses source inspection to clarify runtime behavior. The final v2.1.1 repository-tagged E1–T1 work is newer than that snapshot; its contracts are called out explicitly and are not inferred from the graph counts.
 
 ## Overview
 
@@ -48,14 +54,34 @@ The graph also contains smaller communities for generated protobuf (`V1`), the d
 
 - `client.Client` is the public entry point. It resolves region/environment endpoints, owns the shared HTTP transport, manages the token cache, and applies request signing, resilience, typed errors, correlation IDs, and OpenTelemetry instrumentation (`client/client.go:27`, `client/client.go:62`).
 - `data.Client`, `trade.Client`, and `broker.Client` are thin typed HTTP adapters. They construct requests and delegate all transport concerns to the core client (`data/client.go:48`, `trade/client.go:48`, `broker/client.go:25`).
-- `stream.Client` owns the market-data MQTT connection and uses the core client for HTTP subscription control (`stream/client.go:52`, `stream/client.go:117`).
+- `stream.Client` owns the market-data MQTT connection and uses the core client for HTTP subscription control (`stream/client.go:71`, `stream/client.go:134`).
 - `events.Client` and `brokerfd/events.Client` own gRPC event streams. They use the core client for credentials, endpoint configuration, and observability, but sign and send gRPC subscriptions independently (`events/client.go:43`, `brokerfd/events/events.go:43`).
 - `pkg/domain/order` owns the concurrency-safe order lifecycle state machine, while `pkg/domain/money` preserves decimal precision for quantities, prices, and cash amounts (`pkg/domain/order/order.go:15`, `pkg/domain/money/money.go`).
-- `pkg/errors` provides the stable error-code model used across HTTP, MQTT, and gRPC clients (`pkg/errors/errors.go:15`).
-- `pkg/observability` provides no-op-by-default OpenTelemetry tracers, meters, propagation, and lazily created instruments (`pkg/observability/otel.go:15`).
+- `pkg/errors` provides stable category codes plus identity-specific semantic sentinels across HTTP, MQTT, and gRPC clients (`pkg/errors/errors.go:152`).
+- `pkg/observability` provides no-op-by-default OpenTelemetry tracers, meters, propagation, lazily created instruments, and `SafeErrorText` telemetry redaction (`pkg/observability/otel.go:54`, `pkg/observability/redact.go:24`).
 - `gen/webull/...` contains generated protobuf contracts used by the streaming clients and is not hand-edited.
 
 The SDK keeps service clients independent of ownership of the core client. A service client's `Close` method does not close the caller's `client.Client`; the caller owns the shared HTTP connection pool and closes it explicitly (`client/client.go:139`).
+
+## v2.1.1 repository-tagged E1–T1 hardening
+
+These changes are included in repository tag `v2.1.1` (2026-09-25), a
+repository patch release rather than a published Go-semver v2 module. They are
+implemented and offline-tested, but were not newly live-verified:
+
+| Area | Final architectural contract |
+|---|---|
+| Error model | `errs.Is(err, code)` performs category matching; `NewSentinel` values retain identity across copies/wrappers and do not cross-match unrelated same-category errors. HTTP 417 keeps the `INVALID_TOKEN` compatibility mapping even for business messages. |
+| Metrics and redaction | Shared instruments are lazy and concurrency-safe. Preset breaker wiring resolves after all client options, so meter/preset order does not matter; `SafeErrorText` keeps bodies, status messages, and causes out of SDK telemetry. |
+| Stream state | Lifecycle transitions are compare-and-swap operations; health changes require the expected state, and `StateClosed` is terminal. |
+| Channel dispatch | Callbacks and channel subscribers run synchronously in registration order. `DropBlock` can create head-of-line delay; idempotent cancel and terminal close release it. |
+| MQTT lifecycle | An already-cancelled Connect starts no broker attempt; cancellation after start disconnects. Connect/Close races, terminal use, and late callbacks are covered offline. |
+| Event lifecycle | Trading `events` tracks concurrent runs and `Close` cancels all of them. Broker FD remains a single-run raw event client. |
+| Telemetry verification | REST/MQTT/gRPC spans, W3C propagation, exact metric values/attributes, structured logs, failure redaction, and cancellation outcomes use real OTel or local protocol servers. |
+| Test surface | Public resilience, transport, shared type, and `webull` packages have direct tests; cancellation checks cover client, data, stream, and event boundaries, with strict leak checks in data and both event packages. |
+
+The root and nested `broker` coverage measurements (71.6% and 80.8% on
+2026-09-25) are dated measurements, not architecture or correctness guarantees.
 
 ## Functional areas
 
@@ -63,12 +89,12 @@ The SDK keeps service clients independent of ownership of the core client. A ser
 
 The `client` package is the central kernel of the SDK.
 
-- `New` applies options over `DefaultConfig`, resolves endpoints from region and environment, creates a tuned `http.Transport`, and constructs both the normal and optional Broker transports (`client/client.go:62`, `client/config.go:134`, `client/region.go:99`).
-- `Do`, `DoBroker`, and `DoStream` share request construction and the common `runAttempt` pipeline (`client/request.go:116`, `client/request.go:147`, `client/stream.go:47`).
-- `Do` buffers and decodes JSON responses and retries only idempotent methods by default. `DoBroker` uses the Broker endpoint with the same policy. `DoStream` returns an open response body and deliberately does not retry because the body is long-lived and cannot be safely replayed (`client/request.go:97`, `client/stream.go:27`).
-- Every attempt establishes a correlation ID, starts an OpenTelemetry client span, logs start/finish events, applies the rate limiter and circuit breaker, invokes request hooks and interceptors, records breaker outcome, records latency metrics, and maps errors (`client/request.go:84`, `client/request.go:190`).
-- The exact compact JSON bytes produced for a request are the bytes signed and transmitted. Signing adds Webull headers after the request is built; the access-token header is injected by a transport wrapper after signing (`client/request.go:393`, `client/token.go:304`).
-- Non-2xx responses are classified by `errs.FromHTTPStatus`; JSON decoding failures become API errors and network failures become transport errors (`client/request.go:324`, `pkg/errors/errors.go:182`).
+- `New` applies options over `DefaultConfig`, resolves deferred resilience components after all options, resolves endpoints from region and environment, creates a tuned `http.Transport`, and constructs both the normal and optional Broker transports (`client/client.go:62`, `client/option.go:327`, `client/region.go:99`). This makes `WithMeterProvider`/`WithResiliencePreset` order-independent while preserving an explicit breaker.
+- `Do`, `DoBroker`, and `DoStream` share request construction and the common `runAttempt` pipeline (`client/request.go:118`, `client/request.go:149`, `client/stream.go:47`).
+- `Do` buffers and decodes JSON responses and retries only idempotent methods by default. `DoBroker` uses the Broker endpoint with the same policy. `DoStream` returns an open response body and deliberately does not retry because the body is long-lived and cannot be safely replayed (`client/request.go:99`, `client/stream.go:27`).
+- Every attempt establishes a correlation ID, starts an OpenTelemetry client span, logs start/finish events, applies the rate limiter and circuit breaker, invokes request hooks and interceptors, records breaker outcome, records latency metrics, and maps errors (`client/request.go:195`).
+- The exact compact JSON bytes produced for a request are the bytes signed and transmitted. Signing adds Webull headers after the request is built; the access-token header is injected by a transport wrapper after signing (`client/request.go:406`, `client/token.go:319`).
+- Non-2xx responses are classified by `errs.FromHTTPStatus`; JSON decoding failures become API errors and network failures become transport errors (`client/request.go:331`, `pkg/errors/errors.go:238`). Failed telemetry records `SafeErrorText`, not the API body or wrapped cause (`client/request.go:274`).
 
 ### 2. Authentication and signing
 
@@ -85,7 +111,10 @@ Authentication is stateful but client-scoped.
 `data.Client` provides typed market-data HTTP endpoints, including instruments, quotes, snapshots, ticks, bars, options, fundamentals, futures data, screeners, watchlists, and news (`data/client.go:15`).
 
 - All standard market-data methods delegate to `core.Do` through the package-local `do` helper (`data/client.go:100`).
-- Numeric wire values remain strings in DTOs so JSON precision is not lost.
+- Numeric financial values remain decimal strings on the wire so JSON
+  precision is not lost. Public DTOs represent them as `money.Money` for
+  required/response values and `*money.Money` for optional/request values;
+  fields that are not decimal financial values may remain strings or integers.
 - `data.Client.DisplayService` lazily creates `display.Service` using the core client's app credentials and environment (`data/client.go:68`).
 - `display.Service` has its own bearer-token flow and signing implementation for the Hosted Display Solution endpoints (`display/service.go:75`, `display/service.go:206`).
 
@@ -105,37 +134,40 @@ Authentication is stateful but client-scoped.
 
 - Its package-local `do` helper delegates to `core.DoBroker`, preserving signing, token injection, rate limiting, circuit breaking, retries, telemetry, and typed error mapping (`broker/client.go:54`).
 - Broker-specific types and endpoint files are kept under `broker/`; the Broker FD HTTP surface is under `brokerfd/`.
-- The nested `broker` Go module has its own `go.mod` but is part of the same repository and depends on the root module through `replace`.
+- The nested `broker` Go module has its own `go.mod`; it depends on the root
+  module and replaces it with `../`, so the replacement direction is broker to
+  root.
 
 ### 6. Market-data streaming
 
-`stream.Client` combines HTTP subscription control with an MQTT push transport (`stream/client.go:52`).
+`stream.Client` combines HTTP subscription control with an MQTT push transport (`stream/client.go:71`).
 
-- `New` resolves the MQTT or MQTT-over-WebSocket endpoint, creates a `pkg/transport/mqtt.Client`, and inherits the core OpenTelemetry configuration (`stream/client.go:117`).
-- `Connect` establishes the MQTT connection and starts the optional health watchdog (`stream/client.go:196`).
-- Active HTTP subscriptions are stored in `subscriptionRegistry`. After a reconnect, `resubscribe` reissues them under a mutex before connection callbacks run (`stream/client.go:741`, `stream/registry.go:108`).
-- Paho callbacks enter the stream client through `pkg/transport/mqtt`. `handleMessage` identifies data topics, updates health, starts a consumer span, decodes the payload, and dispatches it (`stream/client.go:419`, `pkg/transport/mqtt/mqtt.go:285`).
-- Quote, snapshot, and tick payloads are delivered either to registered handlers or to per-subscription channels. Channels support blocking, drop-oldest, and drop-sample policies, and close exactly once through a lifecycle guard (`stream/channels.go:97`, `stream/client.go:506`).
-- The MQTT wrapper normalizes close/cancel behavior and classifies Webull connection-limit and refused-connection errors (`pkg/transport/mqtt/mqtt.go:42`, `pkg/transport/mqtt/mqtt.go:396`).
+- `New` resolves the MQTT or MQTT-over-WebSocket endpoint, creates a `pkg/transport/mqtt.Client`, and inherits the core OpenTelemetry configuration (`stream/client.go:134`).
+- `Connect` establishes the MQTT connection and starts the optional health watchdog. State writes are compare-and-swap operations; health/data recovery requires the expected state and cannot overwrite reconnect or terminal close (`stream/client.go:223`, `stream/client.go:407`, `stream/client.go:870`).
+- Active HTTP subscriptions are stored in `subscriptionRegistry`. After a reconnect, `resubscribe` reissues them under a mutex before connection callbacks run (`stream/client.go:777`, `stream/registry.go:108`).
+- Paho callbacks enter the stream client through `pkg/transport/mqtt`. `handleMessage` identifies data topics, updates health, starts a consumer span, decodes the payload, and dispatches it (`stream/client.go:452`, `pkg/transport/mqtt/mqtt.go:300`).
+- Quote, snapshot, and tick payloads are delivered either to registered handlers or to per-subscription channels. Both handler classes and same-topic channel subscribers run synchronously in registration order; a full `DropBlock` subscriber can delay later subscribers. Idempotent cancellation and terminal close free blocked sends and close channels exactly once (`stream/client.go:625`, `stream/channels.go:103`, `stream/channels.go:368`).
+- The MQTT wrapper checks pre-cancelled contexts, disconnects an in-flight Connect on cancellation, makes Close terminal/idempotent, suppresses late callbacks, and classifies Webull connection-limit and refused-connection errors (`pkg/transport/mqtt/mqtt.go:44`, `pkg/transport/mqtt/mqtt.go:331`, `pkg/transport/mqtt/mqtt.go:436`).
 
 ### 7. Trading and Broker FD event streams
 
 `events.Client` and `brokerfd/events.Client` are parallel gRPC event clients with separate generated protobuf contracts.
 
-- `events.New` creates a TLS or insecure gRPC channel and a generated `EventServiceClient` (`events/client.go:72`, `events/client.go:99`).
-- `Run` starts a reconnecting loop. Each attempt waits for channel readiness, signs and marshals a subscribe request, adds gRPC metadata, opens the server stream, receives responses, and dispatches them (`events/client.go:197`, `events/client.go:217`, `events/client.go:393`).
-- Retryable transport failures and clean stream ends use exponential backoff with jitter. Authentication, permission, account, configuration, and terminal server events stop the loop (`events/client.go:240`, `events/client.go:272`).
+- `events.New` creates a TLS or insecure gRPC channel and a generated `EventServiceClient` (`events/client.go:81`, `events/client.go:109`).
+- Trading `Run` starts a reconnecting loop. Each attempt waits for channel readiness, signs and marshals a subscribe request, adds gRPC metadata, opens the server stream, receives responses, and dispatches them (`events/client.go:197`, `events/client.go:221`, `events/client.go:412`).
+- Retryable transport failures and clean stream ends use exponential backoff with jitter. Authentication, permission, account, configuration, and terminal server events stop the loop (`events/client.go:249`, `events/client.go:278`).
+- Trading events track every active `Run`; `Close` cancels all of them and closes gRPC without invoking `OnError` for normal cancellation (`events/client.go:335`, `events/client.go:358`).
 - `events.routeDataEvent` first emits the raw event, then decodes JSON order, position, or option payloads into typed callbacks; decode failures are reported without terminating the stream (`events/payload.go:223`).
-- `brokerfd/events` follows the same lifecycle with the Broker FD protobuf service and Broker FD-specific endpoint/payload handling (`brokerfd/events/events.go:42`, `brokerfd/events/events.go:170`).
-- Both event clients use `pkg/observability` for attempt spans, reconnect metrics, and correlation metadata (`events/observability.go`, `brokerfd/events/observability.go`).
+- `brokerfd/events` follows the same per-attempt lifecycle and terminal mappings with the Broker FD protobuf service, but supports one active run and exposes raw category/content/payload data without typed decoding or public raw-bitmask injection (`brokerfd/events/events.go:170`, `brokerfd/events/events.go:218`).
+- Both event clients use `pkg/observability` for attempt spans, attempt/duration metrics, structured logs, correlation metadata, and sanitized failure text (`events/observability.go:91`, `brokerfd/events/observability.go:91`).
 
 ### 8. Shared domain, errors, and resilience
 
 - `pkg/domain/money` provides exact decimal-backed money and quantity helpers. It is used by trading guardrails, option validation, and DTO builders (`pkg/domain/money/money.go`).
 - `pkg/domain/order` is independent of transport packages and provides the canonical lifecycle state/events (`pkg/domain/order/order.go:15`).
-- `pkg/errors` maps HTTP statuses and transport failures to stable codes and preserves wrapped causes for `errors.Is`/`errors.As` (`pkg/errors/errors.go:32`).
-- `pkg/resilience` contains retry, rate-limit, and circuit-breaker implementations. The root client configures these policies before interceptors and records breaker outcomes after each attempt (`pkg/resilience/retry/retry.go:143`, `pkg/resilience/breaker/breaker.go:231`).
-- `pkg/observability` is API-only and defaults to no-op providers, so enabling tracing or metrics is opt-in (`pkg/observability/otel.go:70`).
+- `pkg/errors` maps HTTP statuses and transport failures to stable categories, preserves wrapped causes, and provides identity-specific semantic sentinels through `NewSentinel` (`pkg/errors/errors.go:152`, `pkg/errors/errors.go:238`).
+- `pkg/resilience` contains retry, rate-limit, and circuit-breaker implementations. The root client configures these policies before interceptors and records breaker outcomes after each attempt (`pkg/resilience/retry/retry.go:143`, `pkg/resilience/breaker/breaker.go:224`).
+- `pkg/observability` is API-only and defaults to no-op providers, so enabling tracing or metrics is opt-in. `SafeErrorText` is the common telemetry boundary for error redaction (`pkg/observability/otel.go:70`, `pkg/observability/redact.go:24`).
 
 ### 9. Generated contracts, tools, and examples
 
@@ -146,7 +178,11 @@ Authentication is stateful but client-scoped.
 
 ## Key execution flows
 
-The following five flows were selected from the graph's process traces to cover authentication, synchronous HTTP, market-data streaming, event streaming, and order reconciliation. The graph process names are retained so the traces can be reproduced with GitNexus.
+The following five flows are observations extracted from the graph snapshot to
+cover authentication, synchronous HTTP, market-data streaming, event streaming,
+and order reconciliation. The graph process names are retained so the traces can
+be reproduced with GitNexus; they are not a claim that each listed step is
+currently covered by a test or live verification.
 
 ### 1. Token acquisition and injection
 
@@ -167,10 +203,10 @@ The following five flows were selected from the graph's process traces to cover 
 **Entry:** `Method:client/request.go:Client.executeBuffered#7`
 
 1. A typed client such as `data.Client` or `trade.Client` builds a typed request and calls `core.Do` (`data/client.go:100`, `trade/client.go:84`).
-2. `Do` normalizes the path/query, ensures a correlation ID, obtains a token, and serializes the body once (`client/request.go:116`).
-3. `runWithRetry` selects retry behavior; default retries apply only to GET/HEAD (`client/request.go:133`, `client/request.go:177`).
-4. `runAttempt` starts telemetry, applies the rate limiter and breaker, runs hooks/interceptors, and records the result (`client/request.go:193`).
-5. `executeBuffered` builds a signed request through `pkg/transport`, executes it, classifies non-2xx responses, updates clock offset, and JSON-decodes the body (`client/request.go:324`).
+2. `Do` normalizes the path/query, ensures a correlation ID, obtains a token, and serializes the body once (`client/request.go:118`).
+3. `runWithRetry` selects retry behavior; default retries apply only to GET/HEAD (`client/request.go:179`).
+4. `runAttempt` starts telemetry, applies the rate limiter and breaker, runs hooks/interceptors, and records the result (`client/request.go:195`).
+5. `executeBuffered` builds a signed request through `pkg/transport`, executes it, classifies non-2xx responses, updates clock offset, and JSON-decodes the body (`client/request.go:331`).
 6. The typed endpoint returns its DTO to the caller.
 
 The Broker flow follows the same sequence through `DoBroker`; the only transport difference is the Broker endpoint (`client/request.go:143`).
@@ -180,25 +216,26 @@ The Broker flow follows the same sequence through `DoBroker`; the only transport
 **Graph process:** `HandleMessage → DispatchEntry` — 5 steps
 **Entry:** `Method:stream/client.go:Client.handleMessage#1`
 
-1. Paho receives a message and calls the MQTT wrapper's `handleMessage` (`pkg/transport/mqtt/mqtt.go:285`).
-2. The wrapper forwards topic and payload to `stream.Client.handleMessage` (`stream/client.go:169`).
-3. The stream client starts a consumer span, identifies the topic, updates data-message health, and decodes the payload (`stream/client.go:419`).
-4. `dispatch` selects the quote, snapshot, tick, notice, or error route; typed protobuf decoders live under `gen/webull/marketdata/v1` (`stream/client.go:560`).
-5. The channel registry applies the configured drop policy, updates drop metrics, and delivers to handlers or subscription channels (`stream/channels.go:351`).
+1. Paho receives a message and calls the MQTT wrapper's `handleMessage` (`pkg/transport/mqtt/mqtt.go:300`).
+2. The wrapper forwards topic and payload to `stream.Client.handleMessage` (`stream/client.go:452`).
+3. The stream client starts a consumer span, identifies the topic, updates data-message health, and decodes the payload (`stream/client.go:452`).
+4. `dispatch` selects the quote, snapshot, tick, notice, or error route; typed protobuf decoders live under `gen/webull/marketdata/v1` (`stream/client.go:593`).
+5. Handlers run in registration order, then same-topic channel subscribers run synchronously in registration order under their configured drop policies (`stream/client.go:625`, `stream/channels.go:368`).
 
-On connection loss, the MQTT wrapper reports the state, the stream client enters reconnecting state, and `resubscribe` reissues the HTTP subscription registry under `resubMu` (`stream/client.go:741`).
+On connection loss, the MQTT wrapper reports the state, the stream client enters reconnecting state, and `resubscribe` reissues the HTTP subscription registry under `resubMu` (`stream/client.go:747`, `stream/client.go:777`).
 
 ### 4. Reconnecting gRPC event stream
 
 **Graph process:** `RunReconnecting → NewSubscribeRequest` — 4 steps
 **Entry:** `Method:events/client.go:Client.runReconnecting#1`
 
-1. `Run` establishes a cancellable run context and selects either one attempt or `runReconnecting` (`events/client.go:197`).
-2. `runOnce` waits for gRPC readiness, opens the stream, and loops over `Recv` (`events/client.go:217`).
-3. `open` creates a fresh signed subscribe request and metadata for every connection attempt (`events/client.go:393`, `events/subscribe.go:58`).
-4. `dispatch` and `routeDataEvent` emit raw or typed order/position/option payloads; retryable failures return to `runReconnecting`, while terminal failures call `fail` and stop (`events/client.go:240`, `events/payload.go:223`).
+1. `Run` registers a cancellable run, then selects either one attempt or `runReconnecting` (`events/client.go:197`).
+2. `runOnce` starts attempt telemetry, waits for gRPC readiness, opens the stream, and loops over `Recv` (`events/client.go:221`).
+3. `open` creates a fresh signed subscribe request and metadata for every connection attempt (`events/client.go:412`, `events/subscribe.go:58`).
+4. `dispatch` and `routeDataEvent` emit raw or typed order/position/option payloads; retryable failures return to `runReconnecting`, while terminal failures call `fail` and stop (`events/client.go:249`, `events/payload.go:223`).
+5. Trading `Close` cancels every registered run; cancelled attempts still end their telemetry with gRPC `Canceled` (`events/client.go:335`, `events/observability.go:140`).
 
-`brokerfd/events` has the same reconnect topology, with the Broker FD generated service and event payload types (`brokerfd/events/events.go:218`).
+`brokerfd/events` shares the per-attempt topology, with the Broker FD generated service and raw payload types, but tracks one active run (`brokerfd/events/events.go:170`).
 
 ### 5. Order status reconciliation
 
@@ -298,10 +335,30 @@ flowchart TB
 - Construct one `client.Client` and pass it to the service clients that share credentials and endpoint configuration.
 - Close the core client once at the application boundary. Service clients are intentionally non-owning wrappers.
 - Close `stream.Client` to stop the MQTT connection, health watchdog, resubscription context, and subscription channels.
-- Close `events.Client` or `brokerfd/events.Client` to cancel an active `Run` loop and close its gRPC connection.
+- Close `events.Client` to cancel every active Trading `Run` and close gRPC; close `brokerfd/events.Client` to cancel its one supported active run.
 - Use the account ID together with the client order ID when accessing the OMS registry; client order IDs are only unique within an account scope.
 - Do not add global registries for client state. Token state, stream state, and OMS state belong to their owning client.
-- Keep numeric market-data and trading values as strings or exact decimal-backed values at DTO boundaries.
+- Keep wire decimal strings as the JSON representation, and use
+  `money.Money` or `*money.Money` at DTO boundaries according to whether the
+  value is required/response or optional/request.
+
+## Verification boundaries and remaining risks
+
+- E1–T1 was verified offline with local HTTP, MQTT, and gRPC fakes/real OTel
+  readers. It was not newly live-verified.
+- The Makefile traverses every module in `MODULES`; CI separately runs root
+  race tests on three operating systems and nested build/vet/race checks. CI's
+  coverage gate is root-only, and strict docs are not a CI gate.
+- The dated 71.6% root and 80.8% nested `broker` coverage measurements are not
+  correctness guarantees and must not be combined into an aggregate.
+- Stream callbacks and channels are synchronous, so full `DropBlock` channels
+  intentionally impose head-of-line latency until cancellation or close.
+- Broker FD events remain raw-only, omit response metadata from `OnData`, expose
+  no public raw-subscribe-bitmask option, and support one active `Run`.
+- Historical `v2.x` Git tags are not installable semantic-import-versioned Go
+  modules; v2 module publication remains deferred.
+- Four summary-only and 25 unresolved generated path states remain; zero
+  documented-only endpoint gaps is not a zero-discrepancy claim.
 
 ## Graph coverage notes
 

@@ -43,6 +43,18 @@ type tokenResponse struct {
 	Status    string `json:"status"`
 }
 
+type closeTrackingTransport struct {
+	closed bool
+}
+
+func (t *closeTrackingTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("transport should not be called")
+}
+
+func (t *closeTrackingTransport) CloseIdleConnections() {
+	t.closed = true
+}
+
 // tokenServer is a fake Webull token API. It records how often each endpoint is
 // called and the body/token header of the corresponding requests.
 type tokenServer struct {
@@ -169,6 +181,28 @@ func newTokenClient(t *testing.T, baseURL string, opts ...client.Option) *client
 }
 
 func futureMillis() int64 { return time.Now().Add(24 * time.Hour).UnixMilli() }
+
+func TestClientCloseForwardsThroughTokenTransport(t *testing.T) {
+	tracker := &closeTrackingTransport{}
+	cl, err := client.New(
+		client.WithCredentials(tokenTestAppKey, tokenTestAppSecret),
+		client.WithHTTPClient(&http.Client{Transport: tracker}),
+	)
+	if err != nil {
+		t.Fatalf("client.New() error = %v", err)
+	}
+	cl.SetToken(&client.Token{
+		Value:     "tok-close",
+		Status:    client.TokenStatusNormal,
+		ExpiresAt: time.Now().Add(time.Hour),
+	})
+	if err := cl.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if !tracker.closed {
+		t.Fatal("Client.Close() did not close the wrapped transport")
+	}
+}
 
 func TestCreateTokenReturnsPending(t *testing.T) {
 	t.Parallel()

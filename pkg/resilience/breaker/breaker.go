@@ -106,6 +106,18 @@ type Breaker struct {
 }
 
 func New(opts ...Option) *Breaker {
+	return newWithCounter(nil, opts...)
+}
+
+// NewWithCounter returns a breaker that records state transitions with the
+// supplied counter. It is useful when the caller owns a shared instrument and
+// wants to avoid creating a second counter from a meter. Options still
+// configure the breaker.
+func NewWithCounter(counter metric.Int64Counter, opts ...Option) *Breaker {
+	return newWithCounter(counter, opts...)
+}
+
+func newWithCounter(counter metric.Int64Counter, opts ...Option) *Breaker {
 	cfg := Config{
 		Threshold:   DefaultThreshold,
 		Cooldown:    DefaultCooldown,
@@ -117,10 +129,14 @@ func New(opts ...Option) *Breaker {
 			opt(&cfg)
 		}
 	}
-	return NewWithConfig(cfg)
+	return newWithConfig(cfg, counter)
 }
 
 func NewWithConfig(cfg Config) *Breaker {
+	return newWithConfig(cfg, nil)
+}
+
+func newWithConfig(cfg Config, counter metric.Int64Counter) *Breaker {
 	if cfg.Threshold < 1 {
 		cfg.Threshold = DefaultThreshold
 	}
@@ -141,7 +157,9 @@ func NewWithConfig(cfg Config) *Breaker {
 		onStateChange: cfg.OnStateChange,
 		clk:           cfg.Clock,
 	}
-	if cfg.Meter != nil {
+	if counter != nil {
+		b.transitionCounter = counter
+	} else if cfg.Meter != nil {
 		b.transitionCounter, _ = cfg.Meter.Int64Counter(
 			"breaker.state_transitions",
 			metric.WithDescription("Circuit breaker state transitions"),

@@ -17,6 +17,7 @@ package events_test
 import (
 	"context"
 	"errors"
+	"net"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -69,24 +70,14 @@ func TestReconnectsAndResubscribes(t *testing.T) {
 		events.WithMaxReconnectAttempts(10),
 	)
 
-	var connects atomic.Int32
+	connectSignals := make(chan struct{}, 4)
 	orders := make(chan *events.OrderEvent, 4)
-	cl.OnConnect(func() { connects.Add(1) })
+	cl.OnConnect(func() { trySend(connectSignals, struct{}{}) })
 	cl.OnOrder(func(ev *events.OrderEvent) { trySend(orders, ev) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	runErr := make(chan error, 1)
-	go func() { runErr <- cl.Run(ctx) }()
-
-	deadline := time.After(5 * time.Second)
-	for connects.Load() < 2 {
-		select {
-		case <-deadline:
-			t.Fatalf("client did not reconnect: connects=%d subscribes=%d", connects.Load(), srv.subscribes.Load())
-		case <-time.After(5 * time.Millisecond):
-		}
-	}
+	run := startTestRun(t, cl, context.Background())
+	waitSignal(t, connectSignals, "initial connection")
+	waitSignal(t, connectSignals, "reconnect")
 
 	select {
 	case ev := <-orders:
@@ -101,14 +92,8 @@ func TestReconnectsAndResubscribes(t *testing.T) {
 		t.Errorf("Subscribe calls = %d, want 2", got)
 	}
 
-	cancel()
-	select {
-	case err := <-runErr:
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("Run() error = %v, want context.Canceled", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not return after cancellation")
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}
 }
 
@@ -144,6 +129,38 @@ func TestTerminalErrorStopsReconnect(t *testing.T) {
 	}
 }
 
+func TestSubscriptionExpiredIsTerminal(t *testing.T) {
+	srv := &countingServer{}
+	srv.behavior = func(_ int32, stream grpc.ServerStreamingServer[eventsevents.SubscribeResponse]) error {
+		return stream.Send(&eventsevents.SubscribeResponse{EventType: eventsevents.EventType_SubscribeExpired})
+	}
+
+	cl := newClient(t, srv,
+		events.WithReconnectBaseDelay(time.Millisecond),
+		events.WithMaxReconnectAttempts(3),
+	)
+	errCh := make(chan error, 1)
+	cl.OnError(func(err error) { trySend(errCh, err) })
+	runErr := cl.Run(context.Background())
+	if !errs.Is(runErr, errs.CodeAuth) {
+		t.Fatalf("Run() error = %v, want an auth error", runErr)
+	}
+	if !errors.Is(runErr, errs.ErrSubscriptionExpired) {
+		t.Fatalf("Run() error = %v, want ErrSubscriptionExpired", runErr)
+	}
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, errs.ErrSubscriptionExpired) {
+			t.Errorf("OnError received %v, want ErrSubscriptionExpired", err)
+		}
+	case <-time.After(time.Second):
+		t.Error("OnError was not invoked for SubscribeExpired")
+	}
+	if got := srv.subscribes.Load(); got != 1 {
+		t.Errorf("Subscribe calls = %d, want 1 (no retry on subscription expiry)", got)
+	}
+}
+
 // TestConnectionLimitIsTerminal verifies that NumOfConnExceed is not retried
 // even though it is classified as a transport error.
 func TestConnectionLimitIsTerminal(t *testing.T) {
@@ -156,9 +173,22 @@ func TestConnectionLimitIsTerminal(t *testing.T) {
 		events.WithReconnectBaseDelay(time.Millisecond),
 		events.WithMaxReconnectAttempts(3),
 	)
+	errCh := make(chan error, 1)
+	cl.OnError(func(err error) { trySend(errCh, err) })
 	runErr := cl.Run(context.Background())
 	if !errs.Is(runErr, errs.CodeTransport) {
 		t.Fatalf("Run() error = %v, want a transport error", runErr)
+	}
+	if !errors.Is(runErr, errs.ErrConnectionLimitExceeded) {
+		t.Fatalf("Run() error = %v, want ErrConnectionLimitExceeded", runErr)
+	}
+	select {
+	case err := <-errCh:
+		if !errors.Is(err, errs.ErrConnectionLimitExceeded) {
+			t.Errorf("OnError received %v, want ErrConnectionLimitExceeded", err)
+		}
+	case <-time.After(time.Second):
+		t.Error("OnError was not invoked for NumOfConnExceed")
 	}
 	if got := srv.subscribes.Load(); got != 1 {
 		t.Errorf("Subscribe calls = %d, want 1 (no retry on a connection-limit event)", got)
@@ -207,12 +237,47 @@ func TestAutoReconnectDisabled(t *testing.T) {
 	}
 }
 
+func TestReconnectCancellationStopsWithoutReportingError(t *testing.T) {
+	secondSubscribe := make(chan struct{})
+	srv := &countingServer{}
+	srv.behavior = func(attempt int32, stream grpc.ServerStreamingServer[eventsevents.SubscribeResponse]) error {
+		if attempt == 1 {
+			return nil
+		}
+		close(secondSubscribe)
+		<-stream.Context().Done()
+		return stream.Context().Err()
+	}
+
+	cl := newClient(t, srv,
+		events.WithReconnectBaseDelay(time.Millisecond),
+		events.WithReconnectMaxDelay(2*time.Millisecond),
+		events.WithMaxReconnectAttempts(2),
+	)
+	errCh := make(chan error, 1)
+	cl.OnError(func(err error) { trySend(errCh, err) })
+	run := startTestRun(t, cl, context.Background())
+	waitSignal(t, secondSubscribe, "reconnected Subscribe")
+	run.cancel()
+	if err := run.wait(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
+	select {
+	case err := <-errCh:
+		t.Fatalf("OnError received reconnect cancellation %v", err)
+	default:
+	}
+}
+
 // TestDialTimeoutIsRetryable verifies that a connect timeout is classified as a
 // transient transport failure and retried rather than treated as terminal.
 func TestDialTimeoutIsRetryable(t *testing.T) {
 	cl, err := events.New(newCore(t),
-		events.WithGRPCEndpoint("passthrough:///unreachable.invalid:1"),
+		events.WithGRPCEndpoint("passthrough:///blocked"),
 		events.WithTLS(false),
+		events.WithGRPCDialOption(grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return nil, errors.New("deterministic dial failure")
+		})),
 		events.WithDialTimeout(50*time.Millisecond),
 		events.WithReconnectBaseDelay(time.Millisecond),
 		events.WithReconnectMaxDelay(2*time.Millisecond),

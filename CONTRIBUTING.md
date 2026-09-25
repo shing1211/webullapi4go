@@ -35,28 +35,48 @@ cd webullapi4go
 go mod download
 ```
 
-Build and check the tree:
+Build and check the tree with the module-aware Makefile targets:
 
 ```sh
-go build ./...
-go vet ./...
+make build
+make vet
 gofmt -l .        # must print nothing
 ```
 
+The Makefile traverses the root module and every nested module in its
+`MODULES` list. Root `go build ./...` and `go vet ./...` cover only the root
+module.
+
 ## Testing
 
-Unit tests need no credentials and must pass offline:
+Unit tests need no credentials and must pass offline. The Makefile runs the
+root module and every nested module listed there:
 
 ```sh
-go test ./...
-go test -race ./...
+make test
+make test-race
+make cover
 ```
 
 Lint with:
 
 ```sh
-golangci-lint run
+make lint
 ```
+
+For a root-module-only package check, `go test ./...` and
+`go test -race -count=1 ./...` are valid, but they do not traverse nested
+modules.
+
+Coverage is a measurement, not a behavior guarantee. The 2026-09-25 offline
+run recorded 71.6% aggregate coverage for the root module and 80.8% for the
+nested `broker/` module; use the reproducible command and date rather than
+quoting an aggregate as proof.
+
+CI mirrors the module matrix for build/vet/race tests, but its 60% coverage gate
+measures only the root module. It does not enforce nested-module coverage or run
+`mkdocs build --strict`. Before a release, run the module-aware Makefile gates
+rather than relying on the CI coverage job alone.
 
 ### Documentation
 
@@ -92,15 +112,15 @@ Internal run artifacts under `docs/runs/` are excluded from the published site.
 
 Integration tests hit the Webull sandbox and are skipped unless explicitly
 enabled. Webull publishes shared public test accounts for the HK sandbox —
-see [Sandbox > Test credentials](sandbox.md#test-credentials) for the
-values.
+see [Sandbox > Test credentials](docs/sandbox.md#test-credentials) for the
+values. Use the actual `Sandbox` test selector, not `Integration`:
 
 ```sh
 # macOS / Linux
 WEBULL_SANDBOX=1 \
 WEBULL_APP_KEY=your-sandbox-app-key \
 WEBULL_APP_SECRET=your-sandbox-app-secret \
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
 
 ```powershell
@@ -108,8 +128,26 @@ go test ./... -run Integration
 $env:WEBULL_SANDBOX = "1"
 $env:WEBULL_APP_KEY = "your-sandbox-app-key"
 $env:WEBULL_APP_SECRET = "your-sandbox-app-secret"
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
+
+These generic gates cover the core, data, stream, and events tests. MQTT
+reconnect tests over WebSocket also require `WEBULL_MQTT_WEBSOCKET=1`.
+
+Trading-package tests use a separate gate and credentials:
+
+```sh
+WEBULL_TRADE_SANDBOX=1 \
+WEBULL_TRADE_APP_KEY=your-trading-sandbox-app-key \
+WEBULL_TRADE_APP_SECRET=your-trading-sandbox-app-secret \
+WEBULL_TRADE_ACCOUNT_ID=your-trading-account-id \
+go test ./trade -run Sandbox
+```
+
+The mutating trade test additionally requires `WEBULL_TRADE_MUTATE=1`. The
+mutating order-event test uses the generic `WEBULL_SANDBOX` credentials plus
+`WEBULL_TRADE_ACCOUNT_ID` and `WEBULL_TRADE_MUTATE=1`. Never enable those
+mutation gates against production or a shared account.
 
 Private credentials must never be committed. The shared public test accounts
 published by Webull are the exception — they are public by design.
@@ -159,8 +197,8 @@ Contributions are accepted under the project's [Apache-2.0 license](LICENSE).
 - Add or update tests for behavior changes.
 - Update the README, docs, and ADRs where behavior or decisions change. See
   `docs/adr/index.md` for the ADR format and conventions.
-- Ensure `go build ./...`, `go vet ./...`, `go test ./...`, and
-  `golangci-lint run` pass before requesting review.
+- Ensure `make build`, `make vet`, `make test`, and `make lint` pass before
+  requesting review; these targets cover the nested modules as well as the root.
 - Fill in the [pull request template](.github/pull_request_template.md).
 - Pull requests are squash-merged into `main`.
 

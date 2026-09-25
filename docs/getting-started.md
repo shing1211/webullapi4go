@@ -5,11 +5,19 @@ first call.
 
 ## Install
 
+The current hardening is recorded in repository tag `v2.1.1`, and publication
+of a Go-semver-compatible v2 module remains deferred. The module path remains
+`github.com/shing1211/webullapi4go`; an unqualified `go get` does not install
+the tagged tree. The `v2.1.1` tag does not make it a published v2 module. For
+a released v1.x line, pin it explicitly:
+
 ```sh
-go get github.com/shing1211/webullapi4go
+go get github.com/shing1211/webullapi4go@v1.1.1
 ```
 
-The module requires Go 1.26 or newer and has no cgo dependencies.
+Use a checkout of the `v2.1.1` tag or current tree for work that is not yet
+published as a Go module. The module requires Go 1.26 or newer and has no cgo
+dependencies.
 
 ## Credentials
 
@@ -123,11 +131,17 @@ and error handling are shared across every request. For streaming, see
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `UNAUTHORIZED: http 401` | Bad app key or secret | Check `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` — no trailing whitespace |
-| `INVALID_TOKEN: http 417` | Wrong region or expired token | Ensure `WEBULL_REGION` matches your account; call `EnsureToken` again |
+| `INVALID_TOKEN: http 417` | Token failure, or another business failure using status 417 | Check the API message: verify token/region for a token error; do not assume every 417 is token-related |
 | Token stays `PENDING` | Production 2FA not completed | In production, complete the Webull App verification within 5 minutes; in sandbox, tokens are `NORMAL` immediately |
 | `FORBIDDEN: http 403` | Missing entitlement | The endpoint requires a paid subscription (e.g., Footprint, Display Solution) |
 | `417 Invalid Symbol` | Symbol not in sandbox | Sandbox data is limited to `AAPL`; try that symbol first |
 | Connection refused | Wrong host or network | Verify `WEBULL_ENVIRONMENT` is `sandbox`; check firewall and DNS |
+
+The SDK maps every HTTP 417 to the historical `INVALID_TOKEN` code so existing
+callers remain compatible, but Webull also uses 417 for unsupported categories,
+invalid symbols, and rejected trading strategies. Use `Error.Status` and the
+human-readable `Error.Message` for diagnosis; do not match the message text in
+program logic.
 
 ## Next steps
 

@@ -11,16 +11,22 @@ data/                           Market Data HTTP endpoints (typed requests and r
 stream/                         Market Data streaming over MQTT (reconnect + resubscribe)
 trade/                          Trading HTTP API: accounts, balances, positions, orders, rules
 events/                         Trading events over gRPC (order, position, option streams)
-broker/                         Broker API HK (own Go module; root module via `replace`)
+broker/                         Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go => ../`)
 brokerfd/                       Broker FD US HTTP endpoints
 brokerfd/events/                Broker FD events over gRPC + protobuf payloads
 display/                        Display Solution client-token authentication
 connect/                        Connect API OAuth 2.0 authorization-code flow
 gen/webull/...                  Generated protobuf types (committed; do not hand-edit)
-pkg/types/                      Shared public domain types
-internal/...                    auth, errs, region, transport, resilience, mqtt
+pkg/errors/                     Canonical public typed errors, codes, and sentinels
+pkg/observability/              Public OpenTelemetry helpers and instruments
+pkg/resilience/                 Public retry, rate-limit, circuit-breaker, and clock primitives
+pkg/transport/                  Public HTTP and MQTT transport foundations
+pkg/types/                      Shared public market and instrument types
+pkg/domain/money/               Public money.Money decimal type
+pkg/domain/order/               Public order state machine and reconciliation model
+internal/...                    Authentication and compatibility implementation details
 proto/, buf.gen.yaml, buf.yaml  Protobuf sources and codegen configuration
-examples/                       Runnable main programs
+examples/                       Runnable main programs and nested example modules
 tools/webull-docgen/            Doc generator for docs/webull-api/** and docs/reconciliation.md
 docs/                           Documentation site sources (MkDocs Material)
 docs/adr/                       Architecture Decision Records
@@ -73,23 +79,36 @@ authoritative; regenerate derived docs with
 
 ## Build, test, and lint
 
+The Makefile is module-aware: its targets run the root module and every nested
+module listed in `MODULES`. Root `go build ./...` and `go test ./...` do not
+traverse nested modules.
+
 ```sh
-go build ./...
-go vet ./...
+make build
+make vet
+make test
+make test-race
+make cover
+make lint
 gofmt -l .                 # must print nothing
-go test ./...
-go test -race -count=1 ./...
-golangci-lint run ./...
+make docs
 ```
 
-- `go build ./...` and `go vet ./...` must pass without credentials.
+- `make build`, `make vet`, and `make test` must pass without credentials.
+- `make test-race` runs the race detector in every module.
+- `make cover` produces per-module measurements, not a guarantee. Record the
+  command/date and do not present an aggregate percentage as proof of behavior.
+- CI runs root race tests across three operating systems and build/vet/race for
+  nested modules. Its 60% coverage gate is root-only; it does not enforce nested
+  coverage or a strict documentation build, so the Makefile gates remain the
+  local/release verification source.
 - `gofmt -l .` must be empty. Generated code under `gen/` is excluded from the CI
   gofmt check and from golangci-lint (see `.golangci.yml`).
 - Unit tests are offline and credential-free. They must not require network
   access.
-- On Windows, if `go build ./...` fails with a file-lock error on
-  `a.out.exe`, set `GOTMPDIR` to a writable, non-scanned directory and retry;
-  this is a host-level antivirus/indexing issue, not a code problem.
+- On Windows, if a Go build fails with a file-lock error on `a.out.exe`, set
+  `GOTMPDIR` to a writable, non-scanned directory and retry; this is a host-level
+  antivirus/indexing issue, not a code problem.
 
 Docs:
 
@@ -119,18 +138,26 @@ make generate
   identifier name and explains behavior, not just restates the signature. Flag
   edge cases and defaults.
 - **No internal types in public signatures.** Exported types and function
-  signatures in `client`, `data`, `stream`, `gen/...`, and `pkg/types` must use
+  signatures in the public service packages, `gen/...`, and `pkg/...` must use
   public types only. When a public mirror of an internal type is needed, define
   it in the public package (see `client.Region` and `client.Endpoints`) and do
   not expose `internal/*`.
-- **Errors.** Use `internal/errs` for typed errors: `errs.New(code, msg)` and
-  `errs.Wrap(code, msg, cause)`. Never match on error strings in library code.
-  Wrap underlying causes so `errors.Is`/`errors.As` traversal keeps working.
-- **Options.** Follow the `Option func(*Config)` pattern; new options get a
-  `WithX` constructor with a GoDoc comment. Options are applied in order on top
-  of the defaults.
-- **Numeric precision.** Market-data prices and sizes are strings on the wire;
-  keep them as strings in DTOs.
+- **Errors.** `pkg/errors` (imported as `errs`) is the canonical typed-error
+  package. Use `errs.New(code, msg)` and `errs.Wrap(code, msg, cause)` for
+  category errors; use a package-level `errs.NewSentinel` value only when one
+  category contains an identity-specific meaning. `errs.Is(err, code)` is
+  category matching, while semantic sentinels match only themselves or wrappers
+  preserving their identity. The `internal/errs` shim exists only for
+  compatibility. Never match on error strings in library code. Wrap underlying
+  causes so `errors.Is`/`errors.As` traversal keeps working.
+- **Options.** Follow the package's functional-option convention; new options
+  get a `WithX` constructor with a GoDoc comment. Options are applied in order
+  on top of that package's defaults. Constructors that return an error validate
+  the resolved configuration; other packages may validate at operation time.
+- **Numeric precision.** Webull prices, sizes, balances, and other decimal
+  financial values are JSON strings on the wire. Public DTOs expose
+  `money.Money` for required/response values and `*money.Money` for
+  optional/request values; raw `decimal.Decimal` is not a DTO type.
 - **Comments.** Do not add comments that merely restate the code. Comment
   intent, invariants, and non-obvious decisions. The project deliberately omits
   inline comments where the code is self-explanatory.
@@ -152,23 +179,44 @@ make generate
 - The only sandbox host that may appear in committed material is
   `api.sandbox.webull.hk` (and the corresponding `data-api.sandbox.webull.hk`
   MQTT hosts). App keys, app secrets, and access tokens are per-account secrets.
-- Sandbox integration tests are gated by `WEBULL_SANDBOX=1` plus
-  `WEBULL_APP_KEY` and `WEBULL_APP_SECRET`; MQTT-over-WebSocket tests also need
+- Core, data, stream, and events sandbox tests are gated by `WEBULL_SANDBOX=1`
+  plus `WEBULL_APP_KEY` and `WEBULL_APP_SECRET`. `WEBULL_BASE_URL` may select a
+  different regional sandbox; MQTT-over-WebSocket tests also need
   `WEBULL_MQTT_WEBSOCKET=1`.
+- Trading-package sandbox tests use a separate gate: `WEBULL_TRADE_SANDBOX=1`,
+  `WEBULL_TRADE_APP_KEY`, `WEBULL_TRADE_APP_SECRET`, and
+  `WEBULL_TRADE_ACCOUNT_ID`. The mutating trade test additionally requires
+  `WEBULL_TRADE_MUTATE=1`; the HK BCAN preview additionally reads
+  `WEBULL_TRADE_PARTY_ID`.
+- The mutating order-event test uses the generic `WEBULL_SANDBOX` credentials
+  plus `WEBULL_TRADE_ACCOUNT_ID` and `WEBULL_TRADE_MUTATE=1`.
 - `.env` is gitignored. Never paste private credentials into issues, PRs, docs,
   or tests.
 
 ## Known constraints
 
-- **v1.1.0 brings full coverage of the Webull OpenAPI**: every documented
-  endpoint is implemented and all paths follow the official OpenAPI definition
-  (`docs/reconciliation.md`: 209 implemented, 0 gaps, 0 path discrepancies).
-  Earlier version history lives in `CHANGELOG.md`.
+- **Release status:** current request, OMS, streaming, event-telemetry, and
+  documentation hardening is tagged in repository `v2.1.1` (2026-09-25), an
+  authorized repository Git patch release. The root module path remains
+  `github.com/shing1211/webullapi4go`; Go-semver-compatible v2 module
+  publication remains deferred, so `v2.1.1` and historical `v2.x` Git tags
+  are not installable v2 modules. The current hardening was not newly
+  live-verified.
+- **v1.1.0 brought full documented-endpoint coverage**: every documented
+  endpoint is implemented. The generated 2026-09-22 reconciliation snapshot
+  reports 209 implemented endpoints, 0 documented-only gaps, 180 exact
+  OpenAPI JSON path matches, 4 summary-only matches, 0 paths differing from
+  both sources, and 25 unresolved SDK paths. Do not describe that snapshot as
+  a zero-discrepancy report. Earlier version history lives in `CHANGELOG.md`.
 - US-only surfaces are blocked in this environment: the HK sandbox returns `404`
   (fund data, crypto data, screener v2, broker FD, instrument v3/logos) or `417`
   (crypto category), and no US sandbox credentials are available. Those items stay
   unverified until `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` for the US sandbox are
   supplied.
+- HTTP `417` maps to `errs.CodeInvalidToken` for compatibility, but Webull also
+  uses it for business validation such as invalid symbols, unsupported
+  categories, and rejected strategies. Preserve status/message for diagnostics;
+  never infer every 417 is a token failure or match the message string.
 - Display Solution requires a paid Webull subscription; the HK sandbox host
   (`hk-co-branding-openapi.uat.webullbroker.com`) returns `403 Forbidden` at the
   host level, blocking all Display Solution endpoints even with valid credentials.
@@ -187,8 +235,9 @@ make generate
 - The token endpoint allows 10 requests per 30 seconds, and MQTT allows at most
   5 concurrent connections per App Key.
 - `docs/runs/**` is excluded from the published docs site. Do not edit
-  `docs/runs/**`. Accepted ADRs (0001, 0002) are immutable; supersede them with
-  a new ADR instead.
+  `docs/runs/**` unless the task explicitly authorizes a release/status artifact
+  update. Accepted ADRs (0001, 0002) are immutable; supersede them with a new ADR
+  instead.
 - Generated docs (`docs/webull-api/**` and `docs/reconciliation.md`) start with
   a "Generated file — do not edit" banner. Change `tools/webull-docgen/` (or its
   manifest `_common.py`) and regenerate instead of editing them by hand.

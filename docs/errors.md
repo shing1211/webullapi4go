@@ -88,10 +88,20 @@ change.
 |---|---|
 | `UNAUTHORIZED` | HTTP 401 |
 | `FORBIDDEN` | HTTP 403 |
-| `INVALID_TOKEN` | HTTP 417 |
+| `INVALID_TOKEN` | HTTP 417 compatibility mapping |
 | `RATE_LIMITED` | HTTP 429 |
 | `SERVER_ERROR` | HTTP 5xx |
 | `api` | Any other non-2xx response or response decode failure |
+
+!!! warning "HTTP 417 is not proof of an invalid token"
+    Webull uses HTTP `417` for both token failures and business validation.
+    `errs.FromHTTPStatus` preserves the historical `INVALID_TOKEN` category for
+    every `417`, so an error can report `INVALID_TOKEN` with a message such as
+    `Invalid Symbol`, an unsupported category, or a rejected multi-leg
+    strategy. Inspect `Error.Status` and `Error.Message` for human diagnosis,
+    but do not branch on message text. If the endpoint context shows a valid
+    token, treat a non-token API message as a business failure rather than
+    repeatedly creating tokens.
 
 ### SDK codes
 
@@ -110,46 +120,66 @@ HTTP messages use the API's `message`, `msg`, `error_msg`, `errorMessage`, or
 `error_description` field when present. A short raw body is retained when no
 recognized field exists.
 
-## Sentinels and matching
+## Category matching and semantic sentinels
 
-Export a sentinel when callers need semantic matching; do not parse a code from
-text.
+The SDK deliberately supports two matching styles.
+
+`errs.Is(err, code)` is category matching. It traverses a wrapped error chain,
+finds an `*errs.Error`, and compares its `Code` with the requested code. A
+generic transport error therefore matches `CodeTransport`, but it does **not**
+mean that every transport failure has the same operational meaning.
 
 ```go
-if errors.Is(err, client.ErrAccessTokenRequired) {
-    // Complete the production token/2FA flow explicitly.
-}
-if errors.Is(err, client.ErrCircuitOpen) {
-    // Back off until the breaker permits another attempt.
-}
-if errs.Is(err, errs.CodeRateLimited) {
-    // Stable code-based classification.
-}
-if errors.Is(err, errs.ErrOrderGuardrail) {
-    // A quantity or notional guardrail stopped the order.
+if errs.Is(err, errs.CodeTransport) {
+    // Category: this is a transport-class failure.
 }
 ```
 
-Public sentinels in `pkg/errors` include:
-
-- `ErrUnsupported`
-- `ErrUnauthorized`, `ErrForbidden`, `ErrInvalidToken`, `ErrRateLimited`,
-  `ErrServer`
-- `ErrValidation`, `ErrNotInitialized`, `ErrInvalidTransition`
-- `ErrOrderGuardrail`
-- `ErrSubscriptionExpired`, `ErrConnectionLimitExceeded`
-
-`errors.Is` on two `*errs.Error` values matches when their `Code` values are
-equal, so both of these work:
+Most package sentinels created with `New` retain category behavior. For example,
+both checks classify an HTTP 429 response:
 
 ```go
 errors.Is(err, errs.ErrRateLimited)
 errs.Is(err, errs.CodeRateLimited)
 ```
 
-The underlying cause remains in the chain. Context cancellation and deadlines
-match `context.Canceled` and `context.DeadlineExceeded`; network failures keep
-their `net` error chain.
+`NewSentinel` is public and creates an identity-specific semantic sentinel.
+A semantic sentinel matches itself, a copy carrying the same sentinel identity,
+or an error that wraps it. It does not match an unrelated error merely because
+the outer `Code` is equal:
+
+```go
+expired := errs.NewSentinel(errs.CodeAuth, "broker subscription expired")
+genericAuth := errs.New(errs.CodeAuth, "signing failed")
+
+errors.Is(expired, expired)                           // true
+errors.Is(genericAuth, expired)                       // false
+errors.Is(errs.Wrap(errs.CodeAuth, "outer", expired), expired) // true
+errs.Is(genericAuth, errs.CodeAuth)                   // true: category matching
+```
+
+Use `New` for ordinary category errors and `NewSentinel` only when one category
+contains distinct meanings that callers must identify independently. Store a
+semantic sentinel in a package-level variable; constructing a new sentinel at
+each failure site creates a new identity.
+
+The public semantic sentinels are:
+
+| Sentinel | Category | Meaning |
+|---|---|---|
+| `client.ErrAccessTokenRequired` | `auth` | Production token/2FA must be completed explicitly |
+| `client.ErrCircuitOpen` | `transport` | A configured circuit breaker rejected the attempt |
+| `mqtt.ErrConnectionRefused` | `transport` | The MQTT broker refused the connection |
+| `mqtt.ErrConnectionLimit` | `transport` | MQTT CONNACK code 105 exceeded the per-App-Key connection limit |
+| `errs.ErrConnectionLimitExceeded` | `transport` | A gRPC event stream reported `NumOfConnExceed` |
+| `errs.ErrSubscriptionExpired` | `auth` | A gRPC event stream reported `SubscribeExpired` |
+
+Other exported `pkg/errors` sentinels, including `ErrUnsupported`,
+`ErrUnauthorized`, `ErrForbidden`, `ErrInvalidToken`, `ErrRateLimited`, `ErrServer`,
+`ErrValidation`, `ErrNotInitialized`, `ErrInvalidTransition`, and
+`ErrOrderGuardrail`, match by category. The underlying cause remains in the
+chain. Context cancellation and deadlines match `context.Canceled` and
+`context.DeadlineExceeded`; network failures keep their `net` error chain.
 
 ## Order errors
 
@@ -183,11 +213,49 @@ A guardrail error intentionally keeps the historical outer
 `errs.ErrOrderGuardrail`. Existing checks for either classification continue
 to work.
 
+## MQTT and event terminal mappings
+
+The low-level MQTT wrapper maps broker CONNACK failures to semantic sentinels:
+
+| Failure | Category check | Identity check |
+|---|---|---|
+| Any broker-rejected MQTT connection | `errs.Is(err, errs.CodeTransport)` | `errors.Is(err, mqtt.ErrConnectionRefused)` |
+| Webull MQTT code 105 | `errs.Is(err, errs.CodeTransport)` | `errors.Is(err, mqtt.ErrConnectionLimit)` |
+
+A code-105 `ConnackError` also satisfies the general broker-refused sentinel, so
+check `mqtt.ErrConnectionLimit` first when the limit is the condition you need
+to distinguish. A generic transport error matches neither MQTT semantic
+sentinel.
+
+Both Trading and Broker FD gRPC event clients use these terminal mappings:
+
+| Server event | Category | Semantic sentinel | Reconnect behavior |
+|---|---|---|---|
+| `AuthError` | `auth` | — | Terminal; `Run` returns and `OnError` fires |
+| `NumOfConnExceed` | `transport` | `errs.ErrConnectionLimitExceeded` | Terminal even though the category is transport |
+| `SubscribeExpired` | `auth` | `errs.ErrSubscriptionExpired` | Terminal; `Run` returns and `OnError` fires |
+
+Transport gRPC statuses map as follows; other statuses remain
+`errs.CodeTransport`:
+
+| gRPC status | SDK category |
+|---|---|
+| `Unauthenticated` | `auth` |
+| `PermissionDenied` | `FORBIDDEN` |
+| `InvalidArgument`, `NotFound`, `AlreadyExists`, `FailedPrecondition` | `api` |
+| `ResourceExhausted` | `RATE_LIMITED` |
+| `Unimplemented` | `unsupported` |
+
+Context cancellation remains `context.Canceled`. It is normal shutdown when it
+comes from `Run(ctx)` or `Close`, is not sent to `OnError`, and is not converted
+into a retryable stream error.
+
 ## Handling guidance
 
 | Category | Transient? | Recommended handling |
 |---|---|---|
-| `UNAUTHORIZED`, `INVALID_TOKEN` | Authentication failure | Create or refresh a token, then retry once where safe |
+| `UNAUTHORIZED` | Authentication failure | Create or refresh a token, then retry once where safe |
+| `INVALID_TOKEN` from HTTP 417 | Sometimes | Confirm token/region first, then inspect the API message for a business validation failure |
 | `FORBIDDEN` | No | Check account scope and data entitlement |
 | `RATE_LIMITED` | Yes | Back off; the SDK retries eligible idempotent requests |
 | `SERVER_ERROR`, `transport` | Usually | Retry idempotent operations with backoff; inspect connectivity and breaker state |

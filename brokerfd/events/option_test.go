@@ -26,6 +26,7 @@ func TestWithReconnectMaxDelay_LessThanBaseDelay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
+	t.Cleanup(func() { _ = cl.Close() })
 
 	_, err = New(cl,
 		WithGRPCEndpoint("localhost:50051"),
@@ -41,6 +42,7 @@ func TestWithMaxReconnectAttempts_Zero(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
+	t.Cleanup(func() { _ = cl.Close() })
 
 	c, err := New(cl,
 		WithGRPCEndpoint("localhost:50051"),
@@ -48,6 +50,9 @@ func TestWithMaxReconnectAttempts_Zero(t *testing.T) {
 	)
 	if err != nil {
 		t.Errorf("expected no error for max reconnect attempts 0 (unlimited), got: %v", err)
+	}
+	if c != nil {
+		t.Cleanup(func() { _ = c.Close() })
 	}
 	if c == nil {
 		t.Error("expected client to be created, got nil")
@@ -63,6 +68,7 @@ func TestWithAccounts_EmptyList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
+	t.Cleanup(func() { _ = cl.Close() })
 
 	c, err := New(cl,
 		WithGRPCEndpoint("localhost:50051"),
@@ -70,6 +76,9 @@ func TestWithAccounts_EmptyList(t *testing.T) {
 	)
 	if err != nil {
 		t.Errorf("expected no error for empty accounts list, got: %v", err)
+	}
+	if c != nil {
+		t.Cleanup(func() { _ = c.Close() })
 	}
 	if c == nil {
 		t.Error("expected client to be created, got nil")
@@ -89,6 +98,7 @@ func TestWithGRPCEndpoint_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
+	t.Cleanup(func() { _ = cl.Close() })
 
 	_, err = New(cl,
 		WithGRPCEndpoint(""),

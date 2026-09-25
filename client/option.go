@@ -27,7 +27,9 @@ import (
 )
 
 // Option mutates a [Config] during [New]. Options are applied in order on top
-// of [DefaultConfig], so a later option overrides an earlier one.
+// of [DefaultConfig], so a later option normally overrides an earlier one. A
+// breaker explicitly supplied with [WithBreaker] remains caller-owned when a
+// resilience preset is applied.
 type Option func(*Config)
 
 // WithAppKey sets the Webull OpenAPI app key.
@@ -223,9 +225,13 @@ type CircuitBreaker interface {
 }
 
 // WithBreaker sets the circuit breaker consulted before every request attempt.
-// A nil breaker disables circuit breaking (the default).
+// A nil breaker disables circuit breaking (the default). A breaker supplied
+// here remains caller-owned when [WithResiliencePreset] is also used.
 func WithBreaker(b CircuitBreaker) Option {
-	return func(c *Config) { c.breaker = b }
+	return func(c *Config) {
+		c.breaker = b
+		c.breakerExplicit = true
+	}
 }
 
 // NewBreaker returns a circuit breaker that opens after threshold consecutive
@@ -319,19 +325,16 @@ const (
 )
 
 // WithResiliencePreset applies a named resilience preset. Currently only
-// [ProductionPreset] is defined. The preset is applied by setting a per-path
-// rate limiter, circuit breaker, and retry policy; earlier options take precedence
-// so callers can override individual components.
+// [ProductionPreset] is defined. The preset sets a per-path rate limiter and
+// retry policy immediately; its circuit breaker is created by [New] after all
+// options have been applied so the configured meter provider is independent of
+// option order. An explicitly supplied breaker, including nil, is preserved.
 func WithResiliencePreset(preset ResiliencePreset) Option {
 	return func(c *Config) {
 		switch preset {
 		case ProductionPreset:
+			c.resiliencePreset = preset
 			c.rateLimiter = NewRateLimiter(10, 20)
-			c.breaker = breaker.NewWithConfig(breaker.Config{
-				Threshold: 5,
-				Cooldown:  30 * time.Second,
-				Meter:     c.otel.Meter("webullapi4go/resilience"),
-			})
 			c.retry = retry.New(
 				retry.WithMaxAttempts(3),
 				retry.WithBaseDelay(200*time.Millisecond),
@@ -341,6 +344,17 @@ func WithResiliencePreset(preset ResiliencePreset) Option {
 			)
 		}
 	}
+}
+
+func (c *Config) applyResiliencePreset() {
+	if c.resiliencePreset != ProductionPreset || c.breakerExplicit {
+		return
+	}
+	c.breaker = breaker.NewWithCounter(
+		c.otel.BreakerTransitionsCounter(),
+		breaker.WithThreshold(5),
+		breaker.WithCooldown(30*time.Second),
+	)
 }
 
 // WithLogger sets the structured logger used by [Client.Do],

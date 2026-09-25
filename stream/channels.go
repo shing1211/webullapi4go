@@ -17,6 +17,7 @@ package stream
 import (
 	"context"
 	"math/rand"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -55,6 +56,7 @@ type channelConfig struct {
 	dropCnt     atomic.Int64
 	otelCounter metric.Int64Counter
 	topic       string
+	sampleKeep  func() bool
 }
 
 func (c *channelConfig) recordDropToMeter() {
@@ -94,6 +96,10 @@ func (l *channelLifecycle) stop(closeFn func()) {
 	})
 }
 
+func keepSample() bool {
+	return rand.Intn(2) == 0
+}
+
 func sendChannelMessage[T any](l *channelLifecycle, ch chan T, cfg *channelConfig, msg T, policy DropPolicy) {
 	l.sendMu.Lock()
 	defer l.sendMu.Unlock()
@@ -125,7 +131,8 @@ func sendChannelMessage[T any](l *channelLifecycle, ch chan T, cfg *channelConfi
 			recordChannelDrop(cfg)
 		}
 	case DropSample:
-		if rand.Intn(2) == 0 {
+		keep := cfg == nil || cfg.sampleKeep == nil || cfg.sampleKeep()
+		if !keep {
 			recordChannelDrop(cfg)
 			return
 		}
@@ -158,16 +165,18 @@ func recordChannelDrop(cfg *channelConfig) {
 }
 
 type chanRegistry struct {
-	mu       sync.RWMutex
-	closed   bool
-	quote    map[*chanQuote]*channelConfig
-	snapshot map[*chanSnapshot]*channelConfig
-	tick     map[*chanTick]*channelConfig
+	mu        sync.RWMutex
+	closed    bool
+	nextOrder uint64
+	quote     map[*chanQuote]*channelConfig
+	snapshot  map[*chanSnapshot]*channelConfig
+	tick      map[*chanTick]*channelConfig
 }
 
 type chanQuote struct {
 	ch        chan *marketdatav1.Quote
 	stop      func()
+	order     uint64
 	lifecycle channelLifecycle
 }
 
@@ -196,6 +205,7 @@ func (e *chanQuote) send(msg *marketdatav1.Quote, cfg *channelConfig) {
 type chanSnapshot struct {
 	ch        chan *marketdatav1.Snapshot
 	stop      func()
+	order     uint64
 	lifecycle channelLifecycle
 }
 
@@ -224,6 +234,7 @@ func (e *chanSnapshot) send(msg *marketdatav1.Snapshot, cfg *channelConfig) {
 type chanTick struct {
 	ch        chan *marketdatav1.Tick
 	stop      func()
+	order     uint64
 	lifecycle channelLifecycle
 }
 
@@ -266,6 +277,8 @@ func (r *chanRegistry) addQuote(entry *chanQuote, cfg *channelConfig) bool {
 	if r.quote == nil {
 		r.quote = make(map[*chanQuote]*channelConfig)
 	}
+	entry.order = r.nextOrder
+	r.nextOrder++
 	r.quote[entry] = cfg
 	return true
 }
@@ -279,6 +292,8 @@ func (r *chanRegistry) addSnapshot(entry *chanSnapshot, cfg *channelConfig) bool
 	if r.snapshot == nil {
 		r.snapshot = make(map[*chanSnapshot]*channelConfig)
 	}
+	entry.order = r.nextOrder
+	r.nextOrder++
 	r.snapshot[entry] = cfg
 	return true
 }
@@ -292,6 +307,8 @@ func (r *chanRegistry) addTick(entry *chanTick, cfg *channelConfig) bool {
 	if r.tick == nil {
 		r.tick = make(map[*chanTick]*channelConfig)
 	}
+	entry.order = r.nextOrder
+	r.nextOrder++
 	r.tick[entry] = cfg
 	return true
 }
@@ -360,6 +377,9 @@ func (r *chanRegistry) dispatchQuote(msg *marketdatav1.Quote) {
 		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].entry.order < entries[j].entry.order
+	})
 	for _, item := range entries {
 		item.entry.send(msg, item.cfg)
 	}
@@ -377,6 +397,9 @@ func (r *chanRegistry) dispatchSnapshot(msg *marketdatav1.Snapshot) {
 		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].entry.order < entries[j].entry.order
+	})
 	for _, item := range entries {
 		item.entry.send(msg, item.cfg)
 	}
@@ -394,6 +417,9 @@ func (r *chanRegistry) dispatchTick(msg *marketdatav1.Tick) {
 		entries = append(entries, dispatchEntry{entry: entry, cfg: cfg})
 	}
 	r.mu.RUnlock()
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].entry.order < entries[j].entry.order
+	})
 	for _, item := range entries {
 		item.entry.send(msg, item.cfg)
 	}

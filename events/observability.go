@@ -155,7 +155,7 @@ func (a *eventAttempt) finish(err error) {
 			attribute.String("webull.stream.outcome", outcome),
 		)
 		if err != nil {
-			a.span.RecordError(err)
+			a.span.RecordError(errors.New(observability.SafeErrorText(err)))
 			a.span.SetStatus(otelcodes.Error, "gRPC event stream attempt failed")
 		} else {
 			a.span.SetStatus(otelcodes.Ok, "")

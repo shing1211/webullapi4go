@@ -337,6 +337,16 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return base.RoundTrip(req)
 }
 
+func (t *tokenTransport) CloseIdleConnections() {
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	if closer, ok := base.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
+}
+
 // isTokenEndpoint reports whether path is one of the token lifecycle endpoints,
 // which must not carry a previously cached token.
 func isTokenEndpoint(path string) bool {

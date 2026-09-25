@@ -220,8 +220,9 @@ func WithHealthWatchdog(interval time.Duration) Option {
 	return func(cfg *config) { cfg.healthWatchdogInterval = interval }
 }
 
-// WithMeter sets the OpenTelemetry meter used to record stream metrics
-// (reconnects, channel drops). When nil (the default), no metrics are recorded.
+// WithMeter overrides the core client's OpenTelemetry meter for stream metrics
+// (reconnects and channel drops). A nil value inherits the core client's meter,
+// including its nil default; a non-nil value explicitly overrides it.
 func WithMeter(m metric.Meter) Option {
 	return func(cfg *config) { cfg.meter = m }
 }
