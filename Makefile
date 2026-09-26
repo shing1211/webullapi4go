@@ -8,7 +8,7 @@
 #   make cover      run tests with coverage profiling in every Go module
 #   make lint       run golangci-lint (includes gosec)
 #   make fuzz       fuzz the data package deserializers
-#   make vuln       run govulncheck in every Go module
+#   make vuln       run govulncheck in every Go module (pinned tool version)
 #   make docs       build the MkDocs site (strict)
 #   make generate   regenerate protobuf code
 #   make proto-tools install protobuf codegen tools
@@ -40,8 +40,13 @@ fuzz:
 	go test -fuzz=FuzzDecodeSnapshot -fuzztime=1s ./data/...
 	go test -fuzz=FuzzDecodeTick -fuzztime=1s ./data/...
 
+# Pinned so scan results are reproducible across runs. The vulnerability
+# database is still fetched live from vuln.go.dev, so pinning the tool does not
+# freeze or stale the reported findings. Bump GOVULNCHECK_VERSION deliberately.
+GOVULNCHECK_VERSION := v1.8.0
+
 vuln:
-	@set -e; for module in $(MODULES); do go -C "$$module" run -mod=mod golang.org/x/vuln/cmd/govulncheck@latest ./...; done
+	@set -e; for module in $(MODULES); do go -C "$$module" run -mod=mod golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...; done
 
 docs:
 	mkdocs build --strict

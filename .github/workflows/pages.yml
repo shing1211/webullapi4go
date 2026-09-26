@@ -5,6 +5,9 @@ name: Docs
 # One-time repository setup (manual): Settings -> Pages -> Build and
 # deployment -> Source -> "GitHub Actions". Without this the deploy job
 # has no Pages environment to target.
+#
+# setup-python v6+ runs on Node.js 24 and requires a runner of v2.327.1 or newer;
+# both jobs use GitHub-hosted runners, so that floor is satisfied.
 
 on:
   push:
@@ -31,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -44,7 +47,7 @@ jobs:
         run: mkdocs build --strict
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
@@ -61,4 +64,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

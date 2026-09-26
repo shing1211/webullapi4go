@@ -4,6 +4,11 @@ name: CI
 #
 # The build job tests the Go 1.26 baseline from go.mod and the current stable
 # release. Other jobs use go.mod as their single source of truth.
+#
+# upload-artifact v6+ and golangci-lint-action v9 run on Node.js 24 and require a
+# runner of v2.327.1 or newer. Every job here uses a GitHub-hosted runner, so
+# that floor is satisfied; a self-hosted runner must be updated before these
+# versions will start.
 
 on:
   push:
@@ -121,7 +126,7 @@ jobs:
           fi
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.9
 
@@ -152,7 +157,7 @@ jobs:
           awk -v total="$TOTAL" 'BEGIN { if (total + 0 < 60.0) { printf "coverage %.1f%% is below the 60.0%% baseline\n", total; exit 1 } }'
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.out
@@ -173,4 +178,7 @@ jobs:
           cache: true
 
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        # Pinned so scan results are reproducible across runs. The vulnerability
+        # database is still fetched live from vuln.go.dev, so pinning the tool
+        # does not freeze or stale the reported findings.
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
