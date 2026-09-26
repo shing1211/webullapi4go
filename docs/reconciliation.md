@@ -6,15 +6,19 @@
 
 | | |
 |---|---|
-| **Snapshot** | 2026-09-22 |
+| **Snapshot** | 2026-09-26 |
 | **Sources** | [HK llms.txt](https://developer.webull.hk/apis/llms.txt), [US llms.txt](https://developer.webull.com/apis/llms.txt) |
 | **Implemented endpoints** | 209 |
 | **Documented-only endpoints (gaps)** | 0 |
-| ✅ Path matches OpenAPI JSON | 180 |
+| ✅ Path matches OpenAPI JSON | 184 |
 | 🟡 Matches docs summary only | 4 |
-| ⚠️ Path differs from both | 0 |
-| ❓ Unresolved | 25 |
+| ⚠️ Path differs from both | 1 |
+| ❓ Unresolved SDK path | 0 |
+| 📄 No OpenAPI schema on page (gRPC page, not a REST endpoint) | 3 |
+| ➖ No SDK symbol (manifest entry unmapped) | 17 |
 | ℹ️ Intentionally not implemented | 0 |
+
+> **Unresolved SDK path** is the only status that means the SDK path could not be read from the code. **No OpenAPI schema on page** records an official page that embeds no REST definition (gRPC documentation), and **No SDK symbol** records a manifest entry deliberately left unmapped; neither implies a defect in the SDK. The 3 above is a label count, not a page count: 7 pages embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol are recorded as unmapped, since that status is evaluated first and each row is counted exactly once.
 
 ## Implemented endpoints
 
@@ -53,7 +57,8 @@ Reference: [check-token.md](https://developer.webull.hk/apis/docs/reference/chec
 | **SDK** | `display.Service.EnsureToken` |
 | **Official (OpenAPI JSON)** | `POST /auth/client-tokens/create` |
 | **Official (llms.txt summary)** | `/openapi/auth/client/token/create` |
-| **Status** | ❓ SDK path unresolved |
+| **SDK path** | `/auth/client-tokens/create` (displayTokenCreatePath) |
+| **Status** | ✅ match |
 | **Note** | Internal to `display.Service`; `client_user_id` is fixed to `openapi_client`. |
 
 Reference: [create-client-token.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/create-client-token.md)
@@ -1160,7 +1165,9 @@ Reference: [broker-account-create.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `broker.UpdateVirtualAccount` |
 | **Official (OpenAPI JSON)** | `POST /broker/accounts/virtual-accounts/update` |
-| **Status** | ❓ SDK path unresolved |
+| **SDK path** | `/broker/accounts/virtual-accounts/update` (pathVirtualAccountsUpdate) |
+| **Status** | ✅ match |
+| **Note** | Path matches, but the documented verb is POST with `account_id` and `client_request_id` in the body, and the SDK issues PUT. Not live-verified; see IMPLEMENTATION_STATUS.md. |
 
 Reference: [broker-account-update.md](https://developer.webull.hk/apis/docs/reference/broker-api/broker-account-update.md)
 
@@ -1467,7 +1474,7 @@ Reference: [broker-trade-calendar.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-account-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-account-events.md)
@@ -1478,7 +1485,7 @@ Reference: [broker-account-events.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-instrument-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-instrument-events.md)
@@ -1489,7 +1496,7 @@ Reference: [broker-instrument-events.md](https://developer.webull.hk/apis/docs/r
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-ca-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-ca-events.md)
@@ -1500,7 +1507,7 @@ Reference: [broker-ca-events.md](https://developer.webull.hk/apis/docs/reference
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-trade-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-trade-events.md)
@@ -1511,7 +1518,7 @@ Reference: [broker-trade-events.md](https://developer.webull.hk/apis/docs/refere
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-funding-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-funding-events.md)
@@ -1522,7 +1529,7 @@ Reference: [broker-funding-events.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-journal-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-journal-events.md)
@@ -1533,7 +1540,7 @@ Reference: [broker-journal-events.md](https://developer.webull.hk/apis/docs/refe
 |---|---|
 | **SDK** | `—` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | ➖ no SDK symbol |
 | **Note** | gRPC subscription. |
 
 Reference: [broker-master-data-events.md](https://developer.webull.hk/apis/docs/reference/custom/broker-master-data-events.md)
@@ -1601,7 +1608,7 @@ Reference: [close-account.md](https://developer.webull.com/apis/docs/reference/b
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/accounts/applications/get` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [get-account-application-detail.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-account-application-detail.md)
 
@@ -1622,7 +1629,7 @@ Reference: [get-form-list.md](https://developer.webull.com/apis/docs/reference/b
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/forms/versions/list` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [get-form-version-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-version-list.md)
 
@@ -1632,7 +1639,7 @@ Reference: [get-form-version-list.md](https://developer.webull.com/apis/docs/ref
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/forms/get` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [get-form-content.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/get-form-content.md)
 
@@ -1664,7 +1671,8 @@ Reference: [document-download.md](https://developer.webull.com/apis/docs/referen
 |---|---|
 | **SDK** | `brokerfd.GetAccountsSummary / GetFDAssetsSummary` |
 | **Official (OpenAPI JSON)** | `GET /broker/assets/summaries/get` |
-| **Status** | ❓ SDK path unresolved |
+| **SDK path** | `/broker-fd/assets/summary` (pathFDAssetsSummary) |
+| **Status** | ⚠️ path differs from both |
 
 Reference: [summary.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/summary.md)
 
@@ -1806,7 +1814,7 @@ Reference: [transfer-detail.md](https://developer.webull.com/apis/docs/reference
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/funding/transfers/cancel` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [cancel-transfer.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/cancel-transfer.md)
 
@@ -1838,7 +1846,7 @@ Reference: [broker-funding-instant-query.md](https://developer.webull.com/apis/d
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/fees/create` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-funding-fee-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-fee-create.md)
 
@@ -1859,7 +1867,7 @@ Reference: [broker-funding-fee-query.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/credits/create` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-funding-credit-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-funding-credit-create.md)
 
@@ -1891,7 +1899,7 @@ Reference: [list-stock-instruments.md](https://developer.webull.com/apis/docs/re
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/categories/list` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-event-categories-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-categories-list.md)
 
@@ -1901,7 +1909,7 @@ Reference: [broker-event-categories-list.md](https://developer.webull.com/apis/d
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/series/list` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-event-series-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-series-list.md)
 
@@ -1911,7 +1919,7 @@ Reference: [broker-event-series-list.md](https://developer.webull.com/apis/docs/
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `GET /broker/instruments/event-contracts/events/list` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-event-events-list.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-event-events-list.md)
 
@@ -2020,7 +2028,7 @@ Reference: [order-history.md](https://developer.webull.com/apis/docs/reference/b
 |---|---|
 | **SDK** | `—` |
 | **Official (OpenAPI JSON)** | `POST /broker/journals/cash-journals/create` |
-| **Status** | ❓ SDK path unresolved |
+| **Status** | ➖ no SDK symbol |
 
 Reference: [broker-journal-cash-create.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/broker-journal-cash-create.md)
 
@@ -2089,6 +2097,7 @@ Reference: [broker-get-agreement-details.md](https://developer.webull.com/apis/d
 | **Official (OpenAPI JSON)** | `GET /market-data/screeners/gainers-losers/list` |
 | **SDK path** | `/market-data/screeners/gainers-losers/list` (pathDSGainersLosers) |
 | **Status** | ✅ match |
+| **Note** | SDK rank_type values: `MIN_3`, `MIN_5`, `DAY_1`, `DAY_5`, `MONTH_1`, `MONTH_3`, `WEEK_52` (not `M3`, `D1`, etc.). |
 
 Reference: [top-gainers-using-get-new.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/top-gainers-using-get-new.md)
 
@@ -2112,6 +2121,7 @@ Reference: [top-active-using-get-new.md](https://developer.webull.hk/apis/docs/r
 | **Official (llms.txt summary)** | `/openapi/market-data/stock/snapshot` |
 | **SDK path** | `/openapi/market-data/stock/snapshot` (pathDSSnapshot) |
 | **Status** | 🟡 SDK matches docs summary, not OpenAPI JSON |
+| **Note** | SDK sends GET with query params (`symbols`, `category`, `extend_hour_required`, `overnight_required`), not POST with `category_symbols` body. |
 
 Reference: [snapshot-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/snapshot-using-get.md)
 
@@ -2123,6 +2133,7 @@ Reference: [snapshot-using-get.md](https://developer.webull.hk/apis/docs/referen
 | **Official (OpenAPI JSON)** | `POST /market-data/stocks/bars/list` |
 | **SDK path** | `/market-data/stocks/bars/list` (pathDSBars) |
 | **Status** | ✅ match |
+| **Note** | SDK field name is `timespan` (not `interval`). |
 
 Reference: [query-batch-bars-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/query-batch-bars-using-post.md)
 
@@ -2134,6 +2145,7 @@ Reference: [query-batch-bars-using-post.md](https://developer.webull.hk/apis/doc
 | **Official (OpenAPI JSON)** | `GET /market-data/stocks/bars/get` |
 | **SDK path** | `/market-data/stocks/bars/get` (pathDSBarsSingle) |
 | **Status** | ✅ match |
+| **Note** | SDK query param is `timespan` (not `interval`). Omits `last_time`, `real_time_required`, `trading_sessions`. |
 
 Reference: [bars-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/bars-using-get.md)
 
@@ -2167,6 +2179,7 @@ Reference: [quotes-using-get.md](https://developer.webull.hk/apis/docs/reference
 | **Official (OpenAPI JSON)** | `POST /market-data/news/summaries/get` |
 | **SDK path** | `/market-data/news/summaries/get` (pathDSNewsSummary) |
 | **Status** | ✅ match |
+| **Note** | SDK sends bare `[]string` body (not `{category_symbols, lang}`). |
 
 Reference: [watchlist-summary-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/watchlist-summary-using-post.md)
 
@@ -2178,6 +2191,7 @@ Reference: [watchlist-summary-using-post.md](https://developer.webull.hk/apis/do
 | **Official (OpenAPI JSON)** | `GET /market-data/news/market-news/list` |
 | **SDK path** | `/market-data/news/market-news/list` (pathDSMarketNews) |
 | **Status** | ✅ match |
+| **Note** | SDK sends only `category` query param (not `market`, `language`, `last_news_id`, `page_size`). |
 
 Reference: [list-news-by-market-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-market-using-get.md)
 
@@ -2189,6 +2203,7 @@ Reference: [list-news-by-market-using-get.md](https://developer.webull.hk/apis/d
 | **Official (OpenAPI JSON)** | `GET /market-data/news/symbol-news/list` |
 | **SDK path** | `/market-data/news/symbol-news/list` (pathDSSymbolNews) |
 | **Status** | ✅ match |
+| **Note** | SDK sends only `symbol` query param (not `category`, `language`, `last_news_id`, `page_size`). |
 
 Reference: [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-news-by-ticker-using-get.md)
 
@@ -2200,6 +2215,7 @@ Reference: [list-news-by-ticker-using-get.md](https://developer.webull.hk/apis/d
 | **Official (OpenAPI JSON)** | `GET /market-data/news/latest-news/list` |
 | **SDK path** | `/market-data/news/latest-news/list` (pathDSLatestNews) |
 | **Status** | ✅ match |
+| **Note** | SDK sends no query params (not `language`, `last_news_id`, `page_size`). |
 
 Reference: [list-latest-news-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-latest-news-using-get.md)
 
@@ -2244,6 +2260,7 @@ Reference: [list-using-get.md](https://developer.webull.hk/apis/docs/reference/m
 | **Official (OpenAPI JSON)** | `POST /market-data/fundamentals/logos/list` |
 | **SDK path** | `/market-data/fundamentals/logos/list` (pathLogosBatch) |
 | **Status** | ✅ match |
+| **Note** | SDK sends `symbols` as query param with nil body (not `{category_symbols}` body). Response field is `logo` (not `logo_url`). |
 
 Reference: [batch-logo-using-post.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/batch-logo-using-post.md)
 
@@ -2255,6 +2272,7 @@ Reference: [batch-logo-using-post.md](https://developer.webull.hk/apis/docs/refe
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/company-profiles/get` |
 | **SDK path** | `/market-data/fundamentals/company-profiles/get` (pathDSCompanyProfile) |
 | **Status** | ✅ match |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 Reference: [list-company-profile-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-company-profile-using-get.md)
 
@@ -2266,6 +2284,7 @@ Reference: [list-company-profile-using-get.md](https://developer.webull.hk/apis/
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/analysis/target-prices/get` |
 | **SDK path** | `/market-data/fundamentals/analysis/target-prices/get` (pathDSAnalystTarget) |
 | **Status** | ✅ match |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 Reference: [list-analyst-target-price-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-target-price-using-get.md)
 
@@ -2277,6 +2296,7 @@ Reference: [list-analyst-target-price-using-get.md](https://developer.webull.hk/
 | **Official (OpenAPI JSON)** | `GET /market-data/fundamentals/analysis/ratings/get` |
 | **SDK path** | `/market-data/fundamentals/analysis/ratings/get` (pathDSAnalystRating) |
 | **Status** | ✅ match |
+| **Note** | SDK sends only `symbol` query param (not `category`). |
 
 Reference: [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-analyst-rating-using-get.md)
 
@@ -2288,7 +2308,7 @@ Reference: [list-analyst-rating-using-get.md](https://developer.webull.hk/apis/d
 | **Official (OpenAPI JSON)** | `POST /market-data/streaming/subscribe` |
 | **SDK path** | `/market-data/streaming/subscribe` (pathDSSubscribe) |
 | **Status** | ✅ match |
-| **Note** | US-site reference. |
+| **Note** | US-site reference. SDK sends `{symbols: []string}` body (not `{session_id, category_symbols, sub_types, depth, overnight_required}`). |
 
 Reference: [subscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/subscribe-using-post.md)
 
@@ -2300,7 +2320,7 @@ Reference: [subscribe-using-post.md](https://developer.webull.com/apis/docs/refe
 | **Official (OpenAPI JSON)** | `POST /market-data/streaming/unsubscribe` |
 | **SDK path** | `/market-data/streaming/unsubscribe` (pathDSUnsubscribe) |
 | **Status** | ✅ match |
-| **Note** | US-site reference. |
+| **Note** | US-site reference. SDK sends `{symbols: []string}` body (not `{session_id, category_symbols, sub_types, unsubscribe_all}`). |
 
 Reference: [unsubscribe-using-post.md](https://developer.webull.com/apis/docs/reference/broker-market-data-api/unsubscribe-using-post.md)
 
@@ -2340,7 +2360,8 @@ Reference: [unsubscribe.md](https://developer.webull.hk/apis/docs/reference/unsu
 |---|---|
 | **SDK** | `events.New / events.Run` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **SDK path** | `/grpc.trade.event.EventService/Subscribe` (eventGRPCPath) |
+| **Status** | 📄 no OpenAPI schema on page |
 | **Note** | Order status changes. |
 
 Reference: [subscribe-trade-events.md](https://developer.webull.hk/apis/docs/reference/custom/subscribe-trade-events.md)
@@ -2351,7 +2372,7 @@ Reference: [subscribe-trade-events.md](https://developer.webull.hk/apis/docs/ref
 |---|---|
 | **SDK** | `events + SubscribePosition` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | 📄 no OpenAPI schema on page |
 | **Note** | Position changes. |
 
 Reference: [subscribe-position-events.md](https://developer.webull.com/apis/docs/reference/custom/subscribe-position-events.md)
@@ -2362,7 +2383,7 @@ Reference: [subscribe-position-events.md](https://developer.webull.com/apis/docs
 |---|---|
 | **SDK** | `brokerfd/events` |
 | **Official** | _no OpenAPI schema_ |
-| **Status** | ❓ no OpenAPI schema on page |
+| **Status** | 📄 no OpenAPI schema on page |
 
 Reference: [subscribe-events.md](https://developer.webull.com/apis/docs/reference/fd-events/subscribe-events.md)
 
@@ -2374,7 +2395,8 @@ Reference: [subscribe-events.md](https://developer.webull.com/apis/docs/referenc
 |---|---|
 | **SDK** | `connect.AuthorizationURL` |
 | **Official (OpenAPI JSON)** | `GET /oauth2/auth-codes/get` |
-| **Status** | ❓ SDK path unresolved |
+| **SDK path** | `/oauth2/auth-codes/get` (pathAuthorizationCode) |
+| **Status** | ✅ match |
 | **Note** | Browser redirect URL builder. |
 
 Reference: [get-authorization-code.md](https://developer.webull.com/apis/docs/reference/connect-api/get-authorization-code.md)
@@ -2385,7 +2407,9 @@ Reference: [get-authorization-code.md](https://developer.webull.com/apis/docs/re
 |---|---|
 | **SDK** | `connect.CreateToken` |
 | **Official (OpenAPI JSON)** | `POST /oauth2/tokens/create` |
-| **Status** | ❓ SDK path unresolved |
+| **SDK path** | `/oauth2/tokens/create` (pathTokenCreate) |
+| **Status** | ✅ match |
+| **Note** | Takes `TokenRequest` with fields: `GrantType` (`"authorization_code"` or `"refresh_token"`), `Code`, `RedirectURI`, `RefreshToken`. |
 
 Reference: [create-and-refresh-token.md](https://developer.webull.com/apis/docs/reference/connect-api/create-and-refresh-token.md)
 

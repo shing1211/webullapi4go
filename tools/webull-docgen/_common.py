@@ -43,6 +43,17 @@ CACHE = os.path.join(_HERE, ".cache")
 
 UA = "Mozilla/5.0 (compatible; webullapi4go-docgen/1.0)"
 
+# Manifest placeholder for a documented endpoint that deliberately carries no SDK
+# symbol (gRPC subscriptions, undocumented Broker FD actions). It is printed
+# verbatim by render_endpoint and resolve_method_path returns no path for it, so
+# callers must recognise the placeholder instead of reporting an unresolved path.
+UNMAPPED = "—"
+
+# Manifest markers for a documented endpoint the SDK intentionally does not
+# implement. A stronger claim than UNMAPPED: the endpoint is documented and the
+# omission is a decision, not an absent mapping.
+NOT_IMPLEMENTED = ("not implemented", "not exposed")
+
 # area key -> (page title, blurb, [ (label, official .md url, sdk func, note) ])
 AREAS = OrderedDict()
 
@@ -231,7 +242,7 @@ AREAS["broker-hk"] = (
     "HK sandbox returns `401 ROUTE_NOT_PERMITTED` (missing app scope).",
     [
         ("Create Virtual Account", HK + "broker-api/broker-account-create.md", "broker.CreateVirtualAccount", ""),
-        ("Update Virtual Account", HK + "broker-api/broker-account-update.md", "broker.UpdateVirtualAccount", ""),
+        ("Update Virtual Account", HK + "broker-api/broker-account-update.md", "broker.UpdateVirtualAccount", "Path matches, but the documented verb is POST with `account_id` and `client_request_id` in the body, and the SDK issues PUT. Not live-verified; see IMPLEMENTATION_STATUS.md."),
         ("Get Virtual Account Detail", HK + "broker-api/broker-account-detail.md", "broker.GetVirtualAccount", ""),
         ("List Virtual Accounts", HK + "broker-api/broker-account-list.md", "broker.ListVirtualAccounts", ""),
         ("Get Stock Instrument", HK + "broker-api/broker-instrument-list.md", "broker.GetStockInstruments", ""),
@@ -697,7 +708,11 @@ def render_verbatim_page(url):
 # --------------------------------------------------------------------------
 # Go source introspection (for reconciliation)
 # --------------------------------------------------------------------------
-GO_DIRS = ["data", "trade", "broker", "brokerfd", "display", "stream", "events", "client"]
+# `connect` is walked like the other package directories even though it has no
+# nested module boundary of its own: the root module owns it, so its path consts
+# are visible here exactly as for `client`.
+GO_DIRS = ["data", "trade", "broker", "brokerfd", "connect", "display", "stream",
+           "events", "client"]
 PKG_DIR = {d: d for d in GO_DIRS}
 _CONST_LINE_RE = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"(/[^"]*)"')
 
@@ -716,17 +731,23 @@ def parse_consts():
     return consts
 
 
-def find_method_body(funcname, pkg):
+def find_method(funcname, pkg):
+    """Return the receiver name and body of ``pkg``'s method ``funcname``.
+
+    The receiver is returned because a method reaches its helpers through it,
+    and because the receiver is not always ``c``. Returns ``(None, None)`` when
+    ``pkg`` is unknown or holds no pointer-receiver method of that name.
+    """
     d = PKG_DIR.get(pkg)
     if not d:
-        return None
+        return None, None
     for root, _, files in os.walk(os.path.join(ROOT, d)):
         for f in files:
             if not f.endswith(".go") or f.endswith("_test.go"):
                 continue
             with open(os.path.join(root, f), encoding="utf-8") as fh:
                 txt = fh.read()
-            m = re.search(r'func \([a-z] \*\w+\) ' + re.escape(funcname) + r'\(', txt)
+            m = re.search(r'func \(([a-z]) \*\w+\) ' + re.escape(funcname) + r'\(', txt)
             if not m:
                 continue
             i = txt.find("{", m.end() - 1)
@@ -738,38 +759,75 @@ def find_method_body(funcname, pkg):
                 elif ch == "}":
                     depth -= 1
                     if depth == 0:
-                        return txt[m.start():i + 1]
+                        return m.group(1), txt[m.start():i + 1]
                 i += 1
-    return None
+    return None, None
 
 
 _SKIP_DELEGATE = {"get", "post", "put", "delete", "do", "DoStream", "DisplayService",
                   "Core", "Close", "New", "EnsureToken"}
 
+# Prefix that can precede a path const in a request. A const reaches the request
+# as a direct call argument (`c.get(ctx, pathFoo, ...)`), as an operand of a
+# concatenation (`... + pathFoo + "?"`), or through a local bound to it
+# (`path := pathFoo + "?id=" + id`), which the assignment token covers.
+# Tracking the local's later uses instead would buy nothing: parse_consts only
+# ever collects path-shaped strings, so any mention of one is path evidence.
+_PATH_USE_PREFIX = r'[\(,+=]\s*'
 
-def resolve_method_path(sdk_func, consts, depth=0):
-    if sdk_func in (None, "", "—", "not implemented", "not exposed"):
-        return None, None
-    first = (sdk_func or "").split(" ")[0].strip()
-    parts = first.split(".")
+_SYMBOL_RE = re.compile(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*")
+
+
+def _sdk_symbols(sdk_func):
+    """Candidate SDK symbols of one manifest entry, in manifest order.
+
+    An entry may name several alternatives (``A / B``), and a bare second name
+    belongs to the package of the first qualified one, which is how the
+    alternatives are written. Separators are dropped; only selector-shaped
+    tokens can name a symbol.
+    """
+    toks = _SYMBOL_RE.findall(sdk_func or "")
+    qualified = [t for t in toks if "." in t]
+    pkg = qualified[0].split(".")[0] if qualified else ""
+    return [t if "." in t or not pkg else pkg + "." + t for t in toks]
+
+
+def _resolve_symbol(sym, consts, depth):
+    parts = sym.split(".")
     pkg, funcname = parts[0], parts[-1]
-    body = find_method_body(funcname, pkg)
+    recv, body = find_method(funcname, pkg)
     if not body:
         return None, None
     for name, path in consts.get(pkg, {}).items():
-        if re.search(r'[\(,]\s*' + re.escape(name) + r'\b', body):
+        if re.search(_PATH_USE_PREFIX + re.escape(name) + r'\b', body):
             return path, name
-    m = re.search(r'c\.\w+\(ctx,\s*"(/[^"]+)"', body)
+    m = re.search(re.escape(recv) + r'\.\w+\(ctx,\s*"(/[^"]+)"', body)
     if m:
         return m.group(1), None
     if depth < 3:
-        for m in re.finditer(r'c\.(\w+)\(', body):
+        for m in re.finditer(re.escape(recv) + r'\.(\w+)\(', body):
             sub = m.group(1)
             if sub in _SKIP_DELEGATE:
                 continue
-            path, name = resolve_method_path(pkg + "." + sub, consts, depth + 1)
+            path, name = _resolve_symbol(pkg + "." + sub, consts, depth + 1)
             if path:
                 return path, name
+    return None, None
+
+
+def resolve_method_path(sdk_func, consts):
+    """Resolve the request path an SDK manifest entry sends.
+
+    Every symbol the entry lists is tried in turn and the first one that yields
+    a path wins, so an alternative left in the manifest after a rename cannot
+    hide the endpoint behind a symbol that no longer exists.
+    """
+    if sdk_func in (None, "", UNMAPPED) + NOT_IMPLEMENTED:
+        return None, None
+    for sym in _sdk_symbols(sdk_func):
+        path, name = _resolve_symbol(sym, consts, 0)
+        if path:
+            return path, name
     return None, None
 
 

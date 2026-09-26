@@ -224,15 +224,33 @@ def _category_for(path):
     return "Other"
 
 
+# (status key, per-entry label, summary row label) in report order. The summary
+# table is generated from this list, so every per-entry status is counted exactly
+# once and the rows always add up to the implemented total.
+# `no-openapi` and `unmapped` are documentation/manifest facts rather than SDK
+# path defects, which is why they have their own rows instead of being folded
+# into the unresolved count.
+_STATUSES = [
+    ("match", "✅ match", "✅ Path matches OpenAPI JSON"),
+    ("summary", "🟡 SDK matches docs summary, not OpenAPI JSON", "🟡 Matches docs summary only"),
+    ("differs", "⚠️ path differs from both", "⚠️ Path differs from both"),
+    ("no-sdk-path", "❓ SDK path unresolved", "❓ Unresolved SDK path"),
+    ("no-openapi", "📄 no OpenAPI schema on page",
+     "📄 No OpenAPI schema on page (gRPC page, not a REST endpoint)"),
+    ("unmapped", "➖ no SDK symbol", "➖ No SDK symbol (manifest entry unmapped)"),
+    ("intentional", "ℹ️ intentionally not implemented", "ℹ️ Intentionally not implemented"),
+]
+
+_STATUS_LABELS = {key: entry for key, entry, _ in _STATUSES}
+
+
 def _status_row(status):
-    return {
-        "match": "✅ match",
-        "summary": "🟡 SDK matches docs summary, not OpenAPI JSON",
-        "differs": "⚠️ path differs from both",
-        "no-sdk-path": "❓ SDK path unresolved",
-        "no-openapi": "❓ no OpenAPI schema on page",
-        "intentional": "ℹ️ intentionally not implemented",
-    }.get(status, status)
+    return _STATUS_LABELS.get(status, status)
+
+
+def _summary_rows(counts):
+    return ["| %s | %d |" % (summary, counts.get(key, 0))
+            for key, _, summary in _STATUSES]
 
 
 def _reconcile_data():
@@ -267,8 +285,12 @@ def _reconcile_data():
         info = official_all.get(url)
         sdk_path, sdk_const = c.resolve_method_path(sdk, consts)
         summ = summary.get(url)
-        if sdk in ("not implemented", "not exposed"):
+        if sdk in c.NOT_IMPLEMENTED:
             status = "intentional"
+        elif sdk == c.UNMAPPED:
+            # The manifest records no SDK symbol on purpose, so there is no SDK
+            # path to resolve; report it as unmapped instead of unresolved.
+            status = "unmapped"
         elif info is None:
             status = "no-openapi"
         elif not sdk_path:
@@ -334,6 +356,14 @@ def generate_reconciliation():
     rows, gaps_by_cat, counts = _reconcile_data()
     gaps_total = sum(len(v) for v in gaps_by_cat.values())
 
+    # Fail loudly rather than emit a summary that silently drops a status: the
+    # status rows below come from _STATUSES, so any status missing from that
+    # list would under-count and break the sum against the implemented total.
+    unknown = sorted(set(counts) - set(_STATUS_LABELS))
+    if unknown:
+        raise SystemExit("reconciliation: status(es) absent from _STATUSES: %s"
+                         % ", ".join(unknown))
+
     def render(label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note):
         lines = ["### %s" % label, "", "| | |", "|---|---|"]
         lines.append("| **SDK** | `%s` |" % sdk)
@@ -370,11 +400,25 @@ def generate_reconciliation():
         "| **Sources** | [HK llms.txt](%s), [US llms.txt](%s) |" % (HK_LLMS, US_LLMS),
         "| **Implemented endpoints** | %d |" % len(rows),
         "| **Documented-only endpoints (gaps)** | %d |" % gaps_total,
-        "| ✅ Path matches OpenAPI JSON | %d |" % counts.get("match", 0),
-        "| 🟡 Matches docs summary only | %d |" % counts.get("summary", 0),
-        "| ⚠️ Path differs from both | %d |" % counts.get("differs", 0),
-        "| ❓ Unresolved | %d |" % (counts.get("no-sdk-path", 0) + counts.get("no-openapi", 0)),
-        "| ℹ️ Intentionally not implemented | %d |" % counts.get("intentional", 0),
+    ]
+    # The no-openapi label is not exhaustive of the schema-less pages: _reconcile_data
+    # tests the unmapped branch before the no-openapi branch, so a page that is both
+    # schema-less and unmapped is counted once, as unmapped. Those pages are
+    # indistinguishable from a schema whose JSON yields no `path` in the row tuple,
+    # so the page count is stated as a snapshot figure rather than derived. The
+    # label count itself is interpolated so it cannot drift from the table above.
+    out += _summary_rows(counts)
+    out += [
+        "",
+        "> **Unresolved SDK path** is the only status that means the SDK path "
+        "could not be read from the code. **No OpenAPI schema on page** records "
+        "an official page that embeds no REST definition (gRPC documentation), "
+        "and **No SDK symbol** records a manifest entry deliberately left "
+        "unmapped; neither implies a defect in the SDK. The %d above is a label "
+        "count, not a page count: 7 pages embed no OpenAPI schema, and the 4 "
+        "that the manifest also maps to no SDK symbol are recorded as unmapped, "
+        "since that status is evaluated first and each row is counted exactly "
+        "once." % counts.get("no-openapi", 0),
         "",
         "## Implemented endpoints",
         "",
@@ -404,10 +448,9 @@ def generate_reconciliation():
 
     with open(c.RECON_OUT, "w", encoding="utf-8") as fh:
         fh.write("\n".join(out) + "\n")
-    print("wrote %s (implemented=%d gaps=%d match=%d summary=%d differs=%d unresolved=%d intentional=%d)"
-          % (c.RECON_OUT, len(rows), gaps_total, counts.get("match", 0), counts.get("summary", 0),
-             counts.get("differs", 0), counts.get("no-sdk-path", 0) + counts.get("no-openapi", 0),
-             counts.get("intentional", 0)))
+    print("wrote %s (implemented=%d gaps=%d %s)"
+          % (c.RECON_OUT, len(rows), gaps_total,
+             " ".join("%s=%d" % (key, counts.get(key, 0)) for key, _, _ in _STATUSES)))
 
 
 def main():
