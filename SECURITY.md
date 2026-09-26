@@ -6,16 +6,27 @@ The latest repository tag is `v2.1.1` (2026-09-25). Current request, OMS,
 streaming, telemetry, and documentation hardening is tagged in repository
 `v2.1.1`, but this is a repository Git patch release, not a
 Go-semver-compatible v2 module. The root module path remains
-`github.com/shing1211/webullapi4go`, and publication of a v2 module remains
-deferred. The tagged hardening was not newly live-verified. Security fixes for
-that work are prepared on `main`; the repository tag is not a published v2
-module security-fix line. The pinned `v1.1.1` install command is historical v1
-guidance.
+`github.com/shing1211/webullapi4go`, and the module stays on the v1 import path
+**by decision**: no `/v2` migration is planned. Because the import path carries
+no major-version suffix, the Go module proxy serves only the `v1.x` line, and
+`v2.x` tags cannot be installed with `go get`. `v1.1.1` (2026-09-23) is
+therefore the newest installable version and predates the tagged hardening;
+consumers who need that work pin a commit:
+
+```sh
+go get github.com/shing1211/webullapi4go@78c164c
+```
+
+The tagged hardening was not newly live-verified. Security fixes for that work
+are prepared on `main`; the repository tag is not a published v2 module
+security-fix line. A `/v2` migration, if ever reconsidered, would be a breaking
+change requiring the `/v2` module path and explicit maintainer approval.
 
 | Version or state | Supported |
 |---|---|
-| `v2.1.1` | Repository tag only; no published v2 module; fixes are tracked in the repository |
-| `v2.1.0` and earlier `v2.x` tags | No — historical Git tags only; v2 module publication is deferred |
+| `v1.1.1` | Yes — newest version installable via `go get`; predates the tagged hardening |
+| `v2.1.1` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.0` and earlier `v2.x` tags | No — repository Git tags only; the module stays on the v1 import path |
 | `v2.0.x` and earlier | No |
 
 Older lines may receive a fix when the correction is low risk and backporting

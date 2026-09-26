@@ -5,19 +5,28 @@ first call.
 
 ## Install
 
-The current hardening is recorded in repository tag `v2.1.1`, and publication
-of a Go-semver-compatible v2 module remains deferred. The module path remains
-`github.com/shing1211/webullapi4go`; an unqualified `go get` does not install
-the tagged tree. The `v2.1.1` tag does not make it a published v2 module. For
-a released v1.x line, pin it explicitly:
+The current hardening is recorded in repository tag `v2.1.1`. The module path
+remains `github.com/shing1211/webullapi4go` and stays on the v1 import path **by
+decision**; no `/v2` migration is planned. Because the import path carries no
+major-version suffix, the module proxy serves only the `v1.x` line, so an
+unqualified `go get` installs `v1.1.1` — which predates the tagged hardening —
+and the `v2.1.1` tag is not a published module version. To install the current
+tree, pin a commit:
+
+```sh
+go get github.com/shing1211/webullapi4go@78c164c
+```
+
+Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
+the time of writing). To pin the released v1.x line instead:
 
 ```sh
 go get github.com/shing1211/webullapi4go@v1.1.1
 ```
 
-Use a checkout of the `v2.1.1` tag or current tree for work that is not yet
-published as a Go module. The module requires Go 1.26 or newer and has no cgo
-dependencies.
+A commit pin moves only when you change it, whereas a branch reference such as
+`@main` tracks the newest code. The module requires Go 1.26 or newer and has no
+cgo dependencies.
 
 ## Credentials
 

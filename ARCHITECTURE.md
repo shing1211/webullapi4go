@@ -355,8 +355,10 @@ flowchart TB
   intentionally impose head-of-line latency until cancellation or close.
 - Broker FD events remain raw-only, omit response metadata from `OnData`, expose
   no public raw-subscribe-bitmask option, and support one active `Run`.
-- Historical `v2.x` Git tags are not installable semantic-import-versioned Go
-  modules; v2 module publication remains deferred.
+- The module stays on the v1 import path by decision; no `/v2` migration is
+  planned. `v2.x` Git tags are repository-only and are not installable Go
+  modules, so the module proxy serves only the `v1.x` line and `v1.1.1` is the
+  newest installable version. Consume newer work by pinning a commit.
 - Four summary-only and 25 unresolved generated path states remain; zero
   documented-only endpoint gaps is not a zero-discrepancy claim.
 

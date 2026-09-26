@@ -5,9 +5,9 @@ It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
 repository tag is **`v2.1.1`** (2026-09-25); the current request, OMS,
 streaming, telemetry, and documentation hardening is tagged in repository
 `v2.1.1`. This is a repository patch release, not a published Go-semver v2
-module: publication of a v2 module remains deferred, and the root module path
-remains `github.com/shing1211/webullapi4go`. The tagged tree is therefore not
-an installable published v2 module.
+module: the root module path remains `github.com/shing1211/webullapi4go` and
+stays on the v1 import path **by decision**, with no `/v2` migration planned.
+The tagged tree is therefore not an installable published v2 module.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
@@ -36,12 +36,22 @@ not mean every endpoint is live-verified; see the
 ## Install
 
 The module path is `github.com/shing1211/webullapi4go` and does not include the
-`/v2` suffix required by Go's semantic import versioning. The `v2.1.1`
-repository tag therefore does not make the tagged tree installable as a
-published v2 module. Module publication is deferred; use a checkout of the
-`v2.1.1` tag or current tree for that work.
+`/v2` suffix required by Go's semantic import versioning; it stays that way by
+decision, and no `/v2` migration is planned. The module proxy therefore serves
+only the `v1.x` line. The `v2.1.1` repository tag does not make the tagged tree
+installable, and an unqualified `go get` installs `v1.1.1`, which predates it.
 
-If you need a released v1.x line, pin it explicitly:
+To install the current tree, pin a commit:
+
+```sh
+go get github.com/shing1211/webullapi4go@78c164c
+```
+
+Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
+the time of writing). A commit pin moves only when you change it, whereas
+`@main` tracks the newest code.
+
+To pin the released v1.x line instead:
 
 ```sh
 go get github.com/shing1211/webullapi4go@v1.1.1
@@ -374,8 +384,9 @@ it as a token failure.
 | v2.1.1 | Error matching specificity, request-pipeline parity, OMS reconciliation, stream/MQTT lifecycle hardening, gRPC event telemetry, cancellation/leak coverage, and documentation reconciliation | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
 
 The next version number is intentionally unassigned for future work. The
-current hardening is represented by repository tag `v2.1.1`; module publication
-and live verification remain separate follow-up decisions. See
+current hardening is represented by repository tag `v2.1.1`. The module-path
+decision is settled (stay on the v1 import path, no `/v2` migration); live
+verification remains a separate follow-up decision. See
 [CHANGELOG.md](CHANGELOG.md) and [PLAN.md](PLAN.md) for the decision record.
 
 ## Links

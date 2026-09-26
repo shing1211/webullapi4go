@@ -4,9 +4,10 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version labels follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-The `v2.x` entries below preserve repository Git-tag facts; because the root
-module path is unchanged and v2 module publication is deferred, they are not
-published Go-semver v2 modules.
+The `v2.x` entries below preserve repository Git-tag facts. The module stays on
+the v1 import path by decision, so the module proxy serves only the `v1.x` line
+and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
+newest installable version.
 
 ## [Unreleased]
 
@@ -23,8 +24,9 @@ published Go-semver v2 modules.
 
 Repository patch release of the current hardening. `v2.1.1` is a repository Git
 tag, not a published Go-semver v2 module; the root module path remains
-`github.com/shing1211/webullapi4go`, and module publication remains deferred.
-The hardening was not newly live-verified.
+`github.com/shing1211/webullapi4go` and stays on the v1 import path by
+decision, with no `/v2` migration planned. The hardening was not newly
+live-verified.
 
 ### Added
 
@@ -144,8 +146,8 @@ The hardening was not newly live-verified.
   path discrepancies while the generated report contains summary-only and
   unresolved paths.
 - The current error, request, OMS, streaming, event-telemetry, testing, and
-  documentation hardening is tagged in repository `v2.1.1`; Go-semver-compatible
-  v2 module publication remains deferred and the root module path is unchanged.
+  documentation hardening is tagged in repository `v2.1.1`; the module stays on
+  the v1 import path by decision, so `v2.x` tags are repository-only.
 
 ## [2.1.0] - 2026-09-24
 

@@ -4,8 +4,11 @@ Last updated: 2026-09-25
 
 - Latest repository tag: **`v2.1.1`** (2026-09-25)
 - Current hardening: **tagged in repository `v2.1.1`**
-- Go-semver-compatible v2 module publication: **Deferred**; the root module path
-  remains `github.com/shing1211/webullapi4go`
+- Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
+  **by decision**; no `/v2` migration is planned
+- Installable version: **`v1.1.1`** — the module proxy serves only the `v1.x`
+  line, so `v2.x` tags are not installable with `go get`. Consume newer work by
+  pinning a commit
 - Offline evidence recorded 2026-09-25: module-aware race/vet checks passed;
   `make cover` measured 71.6% aggregate root coverage and 80.8% in nested
   `broker/` (measurements, not behavior guarantees)
@@ -102,7 +105,7 @@ live-verified.
 The `v2.x` rows below are repository-tag records, not published Go-semver v2
 modules; `v2.1.1` is the current authorized repository tag and earlier rows are
 historical. The root module path remains `github.com/shing1211/webullapi4go` and
-v2 module publication is deferred.
+stays on the v1 import path by decision.
 
 | Version | Date | Scope | Status |
 |---|---|---|---|

@@ -204,10 +204,18 @@ make generate
 - **Release status:** current request, OMS, streaming, event-telemetry, and
   documentation hardening is tagged in repository `v2.1.1` (2026-09-25), an
   authorized repository Git patch release. The root module path remains
-  `github.com/shing1211/webullapi4go`; Go-semver-compatible v2 module
-  publication remains deferred, so `v2.1.1` and historical `v2.x` Git tags
-  are not installable v2 modules. The current hardening was not newly
-  live-verified.
+  `github.com/shing1211/webullapi4go`; the module stays on the v1 import path
+  **by decision** and no `/v2` migration is planned. Go-semver-compatible v2
+  module publication is therefore not pending: it is declined. Because the
+  import path carries no major-version suffix, the module proxy serves only the
+  `v1.x` line, `v2.x` Git tags are not installable with `go get`, and `v1.1.1`
+  is the newest installable version. Work after that tag is consumed by pinning
+  a commit, for example `go get github.com/shing1211/webullapi4go@78c164c`.
+  Treat any future claim that a `v2.x` tag can be installed as inaccurate.
+- A `/v2` migration is a breaking change that alters every consumer import path
+  and the meaning of the historical tags. Do not migrate the module path
+  implicitly; it requires explicit maintainer approval and a documented
+  migration. The current hardening was not newly live-verified.
 - **v1.1.0 brought full documented-endpoint coverage**: every documented
   endpoint is implemented. The generated 2026-09-22 reconciliation snapshot
   reports 209 implemented endpoints, 0 documented-only gaps, 180 exact

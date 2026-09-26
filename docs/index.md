@@ -8,8 +8,8 @@ The latest repository tag is **`v2.1.1`** (2026-09-25). Current
 request-pipeline, OMS, streaming, event-telemetry, and documentation hardening
 is tagged in repository `v2.1.1`, implemented, and offline-tested; it is not
 presented as live-verified. This is a repository patch release, not a
-Go-semver-compatible v2 module because the root module path is unchanged and
-v2 module publication remains deferred. See the
+Go-semver-compatible v2 module: the module path stays on the v1 import path by
+decision, so `v2.x` tags are repository-only. See the
 [implementation status](implementation-status.md) and
 [changelog](https://github.com/shing1211/webullapi4go/blob/main/CHANGELOG.md).
 
@@ -59,18 +59,26 @@ superseded and closed. Public financial DTOs use `money.Money` or
 
 ## Install
 
-The current hardening is recorded in repository tag `v2.1.1`, and publication
-of a Go-semver-compatible v2 module remains deferred. The repository's module
-path remains `github.com/shing1211/webullapi4go`; an unqualified `go get` does
-not install the tagged tree. The `v2.1.1` tag does not make it a published v2
-module. For a released v1.x line, pin it explicitly:
+The current hardening is recorded in repository tag `v2.1.1`. The repository's
+module path remains `github.com/shing1211/webullapi4go` and stays on the v1
+import path **by decision**; no `/v2` migration is planned. The module proxy
+serves only the `v1.x` line, so an unqualified `go get` installs `v1.1.1` and
+the `v2.1.1` tag is not a published module version. To install the current tree,
+pin a commit:
+
+```sh
+go get github.com/shing1211/webullapi4go@78c164c
+```
+
+Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
+the time of writing). To pin the released v1.x line instead:
 
 ```sh
 go get github.com/shing1211/webullapi4go@v1.1.1
 ```
 
-Use a checkout of the `v2.1.1` tag or current tree for work that is not yet
-published as a Go module. Requires Go 1.26 or newer.
+A commit pin moves only when you change it, whereas a branch reference such as
+`@main` tracks the newest code. Requires Go 1.26 or newer.
 
 ## Quickstart
 

@@ -5,8 +5,8 @@ Last updated: 2026-09-25
 Status: **Current request, OMS, streaming, event-telemetry, and documentation
 hardening is tagged in repository `v2.1.1` (2026-09-25) and offline-tested. It
 is a repository patch release, not a published Go-semver v2 module, and was
-not newly live-verified.** The root module path is unchanged, and module
-publication remains deferred.
+not newly live-verified.** The root module path is unchanged and stays on the v1
+import path by decision, with no `/v2` migration planned.
 
 ## Architecture baseline
 
@@ -152,9 +152,11 @@ build. The local Makefile gates remain the release verification source.
 - CI does not enforce nested coverage or a strict docs build; root aggregate
   coverage percentages are measurements, not correctness guarantees.
 - The repository patch release is recorded as `v2.1.1`; the root module remains
-  on `github.com/shing1211/webullapi4go`, so the repository tag is not an
-  installable Go-semver v2 module. Module publication remains deferred until a
-  separately approved decision.
+  on `github.com/shing1211/webullapi4go` and stays on the v1 import path by
+  decision, so `v2.x` tags are not installable Go-semver v2 modules and
+  `v1.1.1` is the newest installable version. A `/v2` migration is declined
+  rather than deferred; it would require a breaking import-path change and
+  explicit maintainer approval.
 
 ## Out of scope
 
