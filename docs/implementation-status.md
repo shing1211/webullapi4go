@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-26
 
-- Latest repository tag: **`v2.1.6`** (2026-09-26)
+- Latest repository tag: **`v2.1.8`** (2026-09-26)
 - Current hardening: **tagged in repository `v2.1.4`**; introduced in `v2.1.1`
 - Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
   **by decision**; no `/v2` migration is planned
@@ -78,6 +78,8 @@ The generated [SDK ↔ API Reconciliation](reconciliation.md) is authoritative. 
 The states partition the 209 implemented endpoints: 184 + 4 + 1 = 189 rows carry a verified path, and the remaining 20 are the 3 rows labelled `📄 No OpenAPI schema on page` plus 17 manifest entries deliberately mapped to no SDK symbol. 189 + 3 + 17 = 209, so no endpoint is missing. **The 3 is a label count, not a page count**: 7 gRPC reference pages embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol are labelled `➖ No SDK symbol` instead, because `_reconcile_data()` in `tools/webull-docgen/docgen.py` evaluates the unmapped branch before the no-openapi branch and the status table must partition the 209 rows. A further 3 rows have a JSON block that yields no `path` and are likewise labelled unmapped, so 10 rows in total have no usable official path. Those two categories are why the previously quoted "25 unresolved" was wrong: 20 of those 25 entries were generator artifacts, and the remaining 5 were investigated individually — 4 were correct SDK code the generator could not statically follow, and 1 is the real path mismatch now reported as ⚠️.
 
 There are no documented-only endpoint gaps, but the snapshot is not a zero-discrepancy report: 4 summary-only and 1 differing remain. Generated pages under `webull-api/` are not hand-edited; the label correction that produced this partition lives in `tools/webull-docgen/`.
+
+A `✅ match` row is a path comparison, not a correctness verdict. The reconciler compares path strings only: it reports `broker.UpdateVirtualAccount` as a clean `✅ match` although the request behind that path is defective, and it cannot observe HTTP verbs, request bodies, or transport-host routing at all, so it is blind to the `brokerfd` host-routing and `data.GetDisplaySnapshot` defects recorded below as well. That is a limit of what a path comparison can show rather than a defect in the generator, which is doing its stated job of comparing documented paths against SDK paths. A green row in `reconciliation.md` is not evidence that an endpoint is correct.
 
 ## v2.1.1 repository-tagged hardening
 
@@ -192,9 +194,28 @@ it.
   of its own and `brokerfd.GetFDAssetsSummary`'s DTO
   (`brokerfd/assets.go:32-41`) does not match the documented
   `balance`/`positions` envelope. Impact: the affected `brokerfd` endpoints.
-  Minimal fix: align each literal with the documented path and reconcile the
-  duplicate symbol pair. Unblock: US sandbox credentials; probe
+  The size is larger than the literal count suggests, because only a minority of
+  the 14 have an unambiguous documented counterpart. 4 align mechanically —
+  `assets.go:25` → `/broker/assets/summaries/get`, `brokerfd.go:68` →
+  `/broker/assets/positions/list`, `instruments.go:29` →
+  `/broker/instruments/stocks/corporate-actions/get`, and `journals.go:25` →
+  `/broker/journals/cash-journals/get` — while 1 (`brokerfd.go:58`) is a probable
+  duplicate, 6 are plausibly ambiguous (`accounts.go:29-31`, `funding.go:26,30`,
+  `instruments.go:31`, where a documented page exists in the same area but not
+  for the same operation), and 3 have no documented counterpart at all
+  (`instruments.go:27` stock-locate, `documents.go:23` documents,
+  `documents.go:24` documents/detail; the cache holds only
+  `/broker/documents/download` and `/broker/documents/upload` in the documents
+  namespace, and no stock-locate page). Those buckets are a plausibility
+  assessment summing to the 14 literals, not settled mappings. Minimal fix:
+  align the 4 unambiguous literals, reconcile the duplicate symbol pair, and
+  investigate the other 9; do not guess the 3 that have no documented
+  counterpart. Unblock: US sandbox credentials; probe
   `/broker/assets/summaries/get` and `/broker-fd/assets/summary` side by side.
+  Credentials alone cannot settle those 3, because a US `404` does not
+  distinguish an undocumented path from an endpoint Webull does not offer, so
+  they also need a written answer from Webull about whether the endpoints exist
+  at all.
 - **`broker.UpdateVirtualAccount` sends the wrong verb and body shape.**
   `broker/accounts.go:66-68` builds
   `pathVirtualAccountsUpdate + "?account_id=" + accountID` and issues
@@ -221,10 +242,36 @@ it.
   `TODO(ds): Confirm exact paths against US sandbox` marker covering it. The
   reference page is self-contradictory — `operationId` `snapshotUsingGET` against
   `method` `post` — so this is genuinely ambiguous. Impact:
-  `data.GetDisplaySnapshot` only. Minimal fix: align the path and switch to the
-  documented POST body, but only with a probe; interim, restore an explicit
-  unverified marker. Unblock: a paid Display Solution entitlement; the host
-  returns `403` without one.
+  `data.GetDisplaySnapshot`. The size is larger than a path-and-verb change, and
+  correcting the request is a **breaking public API change**. The documented
+  request is a JSON body with `requestBody` `required: true`, whose only required
+  property is `category_symbols`: an **array** whose items each require a
+  `category` string enum and a `symbols` **array of strings**, at most 100
+  symbols per query, with `extend_hour_required` and `overnight_required`
+  documented as **strings** defaulting to `"false"`. The SDK models one category
+  with one flat symbol list (`data/snapshot.go:35-47`) and encodes it as query
+  parameters (`data/display_quotes.go:41-49`): `:43` comma-joins `Symbols` into a
+  single string, `:46` sends one flat `category` instead of a list of
+  `{category, symbols}` objects, and `:52` sends a GET instead of the documented
+  POST. The array-versus-scalar and GET-versus-POST mismatches are the real work;
+  the path is the smallest part of it. The two flags are already
+  type-compatible, since `strconv.FormatBool` at `data/display_quotes.go:48-49`
+  emits `"true"`/`"false"`, matching the documented string type. The breaking
+  element is `data.SnapshotQuery` itself: it is the public parameter type of both
+  `GetDisplaySnapshot` (`data/display_quotes.go:40`) and `GetSnapshot`
+  (`data/snapshot.go:142`), so moving it to the documented array breaks every
+  consumer of either method. Minimal fix: not a patch — it needs a new public
+  request shape, and therefore a maintainer decision on how to version a
+  breaking change on a module that stays on the v1 import path (an added field
+  with a deprecation window, a new method alongside the retained old one, or a
+  `/v2` migration declined by decision so far). The path can still be aligned
+  once probed; interim, restore an explicit unverified marker. Unblock: a paid
+  Display Solution entitlement; the host returns `403` without one. Probing alone
+  does not settle which contract the host honours, because the page contradicts
+  itself and a second cached page for the same path, `reference/snapshot.md`,
+  documents it as `method: get` with flat `symbols` and `category` query
+  parameters; which contract applies to a Display client is a question for
+  Webull.
 
 ## Remaining risks
 
@@ -239,17 +286,19 @@ it.
 - Four summary-only matches and one differing path remain; unresolved SDK paths
   are `0`.
 - Four live-blocked SDK defects are recorded above, none live-verified; the two
-  `brokerfd` items need US sandbox credentials, `broker.UpdateVirtualAccount`
-  needs a production or US-scoped Broker credential, and
-  `data.GetDisplaySnapshot` needs a paid Display Solution entitlement.
+  `brokerfd` items need US sandbox credentials, and three of the second item's
+  undocumented paths additionally need a written answer from Webull,
+  `broker.UpdateVirtualAccount` needs a production or US-scoped Broker credential,
+  and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
+  maintainer decision on versioning a breaking public API change.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
   not behavior guarantees.
 
 ## Next steps
 
 1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event telemetry with suitable non-production access.
-2. Add US sandbox verification for US-only surfaces; this also unblocks the two `brokerfd` defects above.
+2. Add US sandbox verification for US-only surfaces; this also unblocks most of the second `brokerfd` defect, and the three paths with no documented counterpart need a written answer from Webull.
 3. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
-4. Correct `broker.UpdateVirtualAccount` and `data.GetDisplaySnapshot` only against the credentials each entry names, and update their tests in the same change.
+4. Correct `broker.UpdateVirtualAccount` only against the credential it names, and update its test in the same change. Treat `data.GetDisplaySnapshot` as a breaking-API decision rather than a patch: obtain the maintainer decision on versioning a public `data.SnapshotQuery` change first, then probe before touching the path.
 5. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
 6. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.

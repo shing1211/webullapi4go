@@ -9,6 +9,40 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.8] - 2026-09-26
+
+### Fixed
+
+- Two of the four live-blocked SDK defects recorded in `2.1.7` understated the
+  size of their own fixes. The `2.1.7` wording described
+  `data.GetDisplaySnapshot` as an "align the path and switch to the documented
+  POST body" change; it is larger, and correcting the request is a **breaking
+  public API change**. The documented request is a required JSON body whose only
+  required property is `category_symbols`, an array of `{category, symbols[]}`
+  objects, while `data.SnapshotQuery` (`data/snapshot.go:35-47`) models a single
+  category with a flat symbol list and `data/display_quotes.go:41-49` sends it as
+  query parameters. Because `data.SnapshotQuery` is the public parameter type of
+  both `GetDisplaySnapshot` (`data/display_quotes.go:40`) and `GetSnapshot`
+  (`data/snapshot.go:142`), moving it to the documented array breaks consumers of
+  either method, so the fix needs a maintainer decision on how to version a
+  breaking change on a module that stays on the v1 import path. The
+  `extend_hour_required` and `overnight_required` flags are already
+  type-compatible. The same `2.1.7` entry implied a uniform one-line fix for the
+  14 undocumented `brokerfd` `/broker-fd/*` literals; only 4 have an unambiguous
+  documented counterpart, 1 is a probable duplicate, 6 are plausibly ambiguous,
+  and 3 have no documented counterpart at all, which credentials cannot settle
+  and which need a written answer from Webull. The unblock requirements recorded
+  in `2.1.7` are unchanged.
+- The reconciler's limits are now stated as a caveat in
+  `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`. It compares
+  path strings only, so a `✅ match` row is not evidence that an endpoint is
+  correct: it reports `broker.UpdateVirtualAccount` as a clean match although its
+  request is defective, and it cannot observe HTTP verbs, request bodies, or
+  transport-host routing. This is a limit of a path comparison, not a defect in
+  the generator, which is doing its stated job.
+
+Nothing in this entry is live-verified; no network call was made.
+
 ## [2.1.7] - 2026-09-26
 
 ### Fixed
