@@ -21,4 +21,4 @@
 | 2026-09-22 | hk-sandbox-probe | BUILD | done (released v1.0.1) | fabd98b |
 | 2026-09-21 | lint-ci | BUILD | done (no-op — already configured) | 1617d1f |
 | 2026-09-22 | sandbox-integration-tests | TEST | 20/20 pass (18 pass + 2 skip) | (post-v1.1.0) |
-| 2026-09-25 | quality-docs-orchestration | BUILD | done; v2.1.1 repository release preparation in progress | v2.1.1 |
+| 2026-09-25 | quality-docs-orchestration | BUILD | done (released v2.1.1; post-release dep/CI commits through 7d1489d) | 0ec3105 |
