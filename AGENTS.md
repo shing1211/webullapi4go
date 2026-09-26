@@ -24,7 +24,7 @@ pkg/transport/                  Public HTTP and MQTT transport foundations
 pkg/types/                      Shared public market and instrument types
 pkg/domain/money/               Public money.Money decimal type
 pkg/domain/order/               Public order state machine and reconciliation model
-internal/...                    Authentication and compatibility implementation details
+internal/...                    Authentication and region implementation details
 proto/, buf.gen.yaml, buf.yaml  Protobuf sources and codegen configuration
 examples/                       Runnable main programs and nested example modules
 tools/webull-docgen/            Doc generator for docs/webull-api/** and docs/reconciliation.md
@@ -147,9 +147,11 @@ make generate
   category errors; use a package-level `errs.NewSentinel` value only when one
   category contains an identity-specific meaning. `errs.Is(err, code)` is
   category matching, while semantic sentinels match only themselves or wrappers
-  preserving their identity. The `internal/errs` shim exists only for
-  compatibility. Never match on error strings in library code. Wrap underlying
-  causes so `errors.Is`/`errors.As` traversal keeps working.
+  preserving their identity. Never match on error strings in library code. Wrap
+  underlying causes so `errors.Is`/`errors.As` traversal keeps working. The
+  former `internal/errs` compatibility shim was removed as dead code; an
+  `internal/` path is unreachable from outside the module, so it could never
+  have served that purpose.
 - **Options.** Follow the package's functional-option convention; new options
   get a `WithX` constructor with a GoDoc comment. Options are applied in order
   on top of that package's defaults. Constructors that return an error validate

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resilience_test
+package client_test
 
 import (
 	"context"
@@ -27,10 +27,14 @@ import (
 	"github.com/shing1211/webullapi4go/client"
 )
 
-// newClient builds a client pointed at baseURL. It lives here rather than in
-// client's own tests so that the resilience integration can be exercised
-// without modifying the client package's test files.
-func newClient(t *testing.T, baseURL string, opts ...client.Option) *client.Client {
+// These tests exercise the retry, circuit-breaker, and rate-limiter wiring that
+// client.Client applies around the request pipeline. They previously lived in
+// internal/resilience/integration_test.go, alongside a deprecated alias shim
+// they never referenced; that package was removed as dead code and the tests
+// moved here, where the behavior they cover actually lives.
+
+// newResilienceClient builds a client pointed at baseURL.
+func newResilienceClient(t *testing.T, baseURL string, opts ...client.Option) *client.Client {
 	t.Helper()
 	base := []client.Option{
 		client.WithAppKey("test-app-key"),
@@ -59,7 +63,7 @@ func TestDefaultRetryRetriesTransientGET(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl := newClient(t, srv.URL, client.WithRetry(client.RetryConfig{
+	cl := newResilienceClient(t, srv.URL, client.WithRetry(client.RetryConfig{
 		BaseDelay: time.Millisecond,
 		Jitter:    false,
 	}))
@@ -87,7 +91,7 @@ func TestNonIdempotentNotRetriedByDefault(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl := newClient(t, srv.URL, client.WithRetry(client.RetryConfig{
+	cl := newResilienceClient(t, srv.URL, client.WithRetry(client.RetryConfig{
 		BaseDelay: time.Millisecond,
 		Jitter:    false,
 	}))
@@ -111,7 +115,7 @@ func TestWithoutRetryAttemptsOnce(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl := newClient(t, srv.URL, client.WithoutRetry())
+	cl := newResilienceClient(t, srv.URL, client.WithoutRetry())
 	if err := cl.Do(context.Background(), http.MethodGet, "/openapi/x", nil, nil); err == nil {
 		t.Fatal("Do() error = nil, want server error")
 	}
@@ -131,7 +135,7 @@ func TestBreakerRejectsWhenOpen(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl := newClient(t, srv.URL,
+	cl := newResilienceClient(t, srv.URL,
 		client.WithoutRetry(),
 		client.WithBreaker(client.NewBreaker(1, time.Hour)),
 	)
@@ -171,7 +175,7 @@ func TestRateLimiterSeesRequestPath(t *testing.T) {
 	defer srv.Close()
 
 	lim := &countingLimiter{}
-	cl := newClient(t, srv.URL, client.WithRateLimiter(lim))
+	cl := newResilienceClient(t, srv.URL, client.WithRateLimiter(lim))
 
 	if err := cl.Do(context.Background(), http.MethodGet, "/openapi/account/list", nil, nil); err != nil {
 		t.Fatalf("Do() error = %v", err)
@@ -195,7 +199,7 @@ func TestRateLimiterErrorStopsRequest(t *testing.T) {
 	defer srv.Close()
 
 	lim := &countingLimiter{err: context.DeadlineExceeded}
-	cl := newClient(t, srv.URL, client.WithoutRetry(), client.WithRateLimiter(lim))
+	cl := newResilienceClient(t, srv.URL, client.WithoutRetry(), client.WithRateLimiter(lim))
 
 	err := cl.Do(context.Background(), http.MethodGet, "/openapi/x", nil, nil)
 	if err == nil {
