@@ -13,6 +13,55 @@ newest installable version.
 
 No changes yet.
 
+## [2.1.5] - 2026-09-26
+
+Repository patch release closing three roadmap items that did not require live
+access: Broker FD event metadata delivery, the first stream dispatch benchmarks,
+and the classification of every non-exact endpoint reconciliation state.
+`v2.1.5` is a repository Git tag, not a published Go-semver v2 module; the module
+stays on the v1 import path by decision, so `v1.1.1` remains the newest
+installable version. Not newly live-verified.
+
+### Added
+
+- `brokerfd/events.Client.OnDataEvent`, which delivers the whole `DataEvent`
+  including the server-assigned `RequestId` and `Timestamp`. Those fields were
+  already modelled and populated by `SubscribeResponse.ToDataEvent`, but
+  `OnData`'s three-argument callback could not carry them, so they were discarded
+  on delivery. The addition is purely additive: `OnData` keeps its exact
+  signature and behavior, and the two registrations are independent.
+- Stream dispatch benchmarks covering callback fan-out at 0 to 64 handlers,
+  per-policy channel dispatch, subscriber-count scaling, subscription release, a
+  mixed 8-handler and 32-subscriber case, and the head-of-line measurement. The
+  repository previously contained no benchmarks at all.
+
+### Changed
+
+- `docs/broker-fd-us.md` no longer describes the missing request ID and timestamp
+  as a current API limitation and instead documents both registrations, their
+  independence, and the fact that `RequestId` is empty and `Timestamp` zero when
+  the server does not supply them.
+- The 29 non-exact endpoint reconciliation states are classified. Seven are gRPC
+  pages carrying no OpenAPI schema, 13 are docgen manifest entries deliberately
+  mapped to `-`, 5 name an SDK symbol whose path could not be resolved, and 4 are
+  upstream disagreements between the OpenAPI JSON and the llms.txt summary path.
+  24 of the 29 therefore need no SDK change, which the previous "25 unresolved"
+  headline overstated. The generator status labels are identified as the real
+  defect and are recorded for a separate change.
+
+### Measured
+
+Stream dispatch on 2026-09-26, windows/amd64, i7-13700, at `benchtime 1000x`.
+These are measurements rather than thresholds; no latency objective has been
+agreed, so the retain-or-change decision for synchronous dispatch is still open.
+
+- With a subscriber registered first that is never read, a later ready subscriber
+  is delayed until the blocked one is cancelled: 2396494 blocked-ns/op under
+  `DropBlock`, against 0 blocked-ns/op for the identical shape under
+  `DropOldest`.
+- Channel fan-out is superlinear in subscriber count: 249 ns/op at one
+  subscriber rising to 14860 ns/op at 64.
+
 ## [2.1.4] - 2026-09-26
 
 Repository patch release covering nested CI gates and documentation accuracy.

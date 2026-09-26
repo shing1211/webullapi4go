@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest repository tag is `v2.1.4` (2026-09-26). It carries the current
+The latest repository tag is `v2.1.5` (2026-09-26). It carries the current
 request, OMS, streaming, telemetry, and documentation hardening introduced in
 `v2.1.1`, but this is a repository Git patch release, not a
 Go-semver-compatible v2 module. The root module path remains
@@ -29,7 +29,8 @@ change requiring the `/v2` module path and explicit maintainer approval.
 | Version or state | Supported |
 |---|---|
 | `v1.1.1` | Yes — newest version installable via `go get`; predates the tagged hardening |
-| `v2.1.4` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.5` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.4` | Repository tag only; not installable |
 | `v2.1.3` | Repository tag only; not installable |
 | `v2.1.2` | Repository tag only; not installable |
 | `v2.1.1` | Repository tag only; not installable |
