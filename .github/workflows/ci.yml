@@ -164,21 +164,29 @@ jobs:
 
   # Nested coverage: measure every nested module and gate only the one that has
   # library code to cover. The four example modules are single-file
-  # `package main` programs with no test files, so their coverage is structurally
-  # 0.0% and a threshold there would be meaningless; they are measured and
-  # uploaded as artifacts for visibility but not gated.
+  # `package main` programs with no test files, so `go test -coverprofile` writes
+  # no profile for them at all and their coverage is structurally 0.0%. A
+  # threshold there would be meaningless, so they are attempted for visibility but
+  # never gated, and a missing profile is not treated as a failure.
   nested-coverage:
     name: nested coverage (${{ matrix.module }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        module:
-          - broker
-          - examples/watchlist-cmd
-          - examples/broker-probe
-          - examples/futures-probe
-          - examples/options-multi-leg
+        # Artifact names may not contain "/", so each module carries an
+        # artifact-safe label alongside its path.
+        include:
+          - module: broker
+            artifact: broker
+          - module: examples/watchlist-cmd
+            artifact: examples-watchlist-cmd
+          - module: examples/broker-probe
+            artifact: examples-broker-probe
+          - module: examples/futures-probe
+            artifact: examples-futures-probe
+          - module: examples/options-multi-leg
+            artifact: examples-options-multi-leg
     defaults:
       run:
         working-directory: ${{ matrix.module }}
@@ -196,7 +204,10 @@ jobs:
       - name: Test with coverage
         run: go test -mod=readonly ./... -cover -coverprofile=coverage.out
 
+      # Skipped when the module has no test files and therefore produced no
+      # profile; `go tool cover` would otherwise fail on the missing file.
       - name: Report coverage
+        if: hashFiles(format('{0}/coverage.out', matrix.module)) != ''
         run: go tool cover -func=coverage.out
 
       # Only broker is gated. Its measured coverage is 80.8% on 2026-09-26, and the
@@ -211,8 +222,11 @@ jobs:
       - name: Upload nested coverage artifact
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ matrix.artifact }}
           path: ${{ matrix.module }}/coverage.out
+          # A module with no test files produces no profile, so an absent file is
+          # expected rather than an error.
+          if-no-files-found: ignore
 
   # Strict docs gate: build the MkDocs site on every push and pull request.
   # The Docs workflow already builds the site on push to main, but it is a deploy
