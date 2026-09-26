@@ -21,4 +21,4 @@
 | 2026-09-22 | hk-sandbox-probe | BUILD | done (released v1.0.1) | fabd98b |
 | 2026-09-21 | lint-ci | BUILD | done (no-op — already configured) | 1617d1f |
 | 2026-09-22 | sandbox-integration-tests | TEST | 20/20 pass (18 pass + 2 skip) | (post-v1.1.0) |
-| 2026-09-25 | quality-docs-orchestration | BUILD | done; released v2.1.1, then v2.1.2 (deps/CI/docs policy) and v2.1.3 (CI signal, dead-code removal, coverage) | v2.1.4 |
+| 2026-09-25 | quality-docs-orchestration | BUILD | done; released v2.1.1 through v2.1.5 (deps/CI/docs policy, CI signal, dead code, coverage, nested CI gates, Broker FD metadata, dispatch benchmarks, reconciliation classification) | v2.1.5 |
