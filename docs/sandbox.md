@@ -29,14 +29,21 @@ Use them to try the API without applying for access.
 
 ### Shared HK sandbox accounts
 
-Webull publishes these shared accounts for immediate use — no application
-required. They are public and shared across all developers.
+Webull publishes shared HK sandbox test accounts for immediate use — no
+application required. Each entry provides an account ID, an app key, and an app
+secret:
 
-| # | Account ID | App Key | App Secret |
-|---|-----------|---------|------------|
-| 1 | `V4H6R3L4VRI33UQ4TGR2NM1VI9` | `4b2b7acd2bf0d30d8aea173fceefa238` | `840b4353a6a31ce3ab91e2f99a510272` |
-| 2 | `OGG4RRLC6EDE98HI920KRBVSKB` | `42bd186fb65ea76de309d69cf12f024e` | `29feb64b59d6b1b6b2d2aa8cea8a1b8d` |
-| 3 | `2DHSQ9B1DMPBFPMPFU2R5SDPB8` | `64fc722617af8b5ebb746f50a910e91f` | `a268416fc681d438533f9e9316bab576` |
+- **Hong Kong:** <https://developer.webull.hk/apis/docs/sdk#test-accounts>
+- **US / International:** <https://developer.webull.com/apis/docs/sdk#test-accounts>
+
+Read the current values from that page rather than copying them into this
+repository. Webull can rotate or retire shared accounts at any time, and a copy
+pasted here would silently go stale; fetching the values at run time keeps the
+procedure below correct without a repository change.
+
+The account table also appears in [Master Guides](webull-api/master-guides.md),
+which is a verbatim snapshot of Webull's own published documentation and is not
+maintained by this project. Values are not inlined in the hand-written pages.
 
 !!! caution
     These are shared public accounts. Other users may place orders on them

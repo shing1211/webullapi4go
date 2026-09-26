@@ -173,9 +173,15 @@ make generate
 - Credentials are never committed. Read them from the environment:
   `WEBULL_APP_KEY`, `WEBULL_APP_SECRET`, `WEBULL_REGION`,
   `WEBULL_ENVIRONMENT`, `WEBULL_BASE_URL`, `WEBULL_MQTT_URL`.
-  **Exception:** Shared public test accounts published by Webull on their
-  official docs (<https://developer.webull.hk/apis/docs/sdk#test-accounts>)
-  may appear in documentation and test fixtures.
+  **Exception:** the shared public test accounts published by Webull may be
+  *linked* from documentation
+  (<https://developer.webull.hk/apis/docs/sdk#test-accounts> for HK,
+  <https://developer.webull.com/apis/docs/sdk#test-accounts> for US), but their
+  account IDs, app keys, and app secrets must not be inlined into hand-written
+  files. Webull can rotate or retire them, so a committed copy goes stale
+  silently. The generated pages under `docs/webull-api/**` are exempt because
+  they are a verbatim snapshot of Webull's own published material; do not edit
+  them by hand to remove it.
 - The only sandbox host that may appear in committed material is
   `api.sandbox.webull.hk` (and the corresponding `data-api.sandbox.webull.hk`
   MQTT hosts). App keys, app secrets, and access tokens are per-account secrets.

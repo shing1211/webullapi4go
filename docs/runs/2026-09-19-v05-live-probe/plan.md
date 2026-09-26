@@ -4,9 +4,9 @@
 Confirm (or correct) endpoint paths and response schemas for all v0.5 best-effort stubs by making authenticated real API calls against the Webull HK sandbox using shared public test accounts.
 
 ## Shared HK Test Accounts
-| Account ID | App Key | App Secret |
-|---|---|---|
-| `V4H6R3L4VRI33UQ4TGR2NM1VI9` | `4b2b7acd2bf0d30d8aea173fceefa238` | `840b4353a6a31ce3ab91e2f99a510272` |
+Webull publishes shared HK sandbox test accounts (account ID, app key, app
+secret) at <https://developer.webull.hk/apis/docs/sdk#test-accounts>. Read the
+current values from that page at run time; do not copy them into this repository.
 
 ## Approach
 Single Python script using standard library only (no dependencies). Why Python: no compilation → no AV false positives, user can audit signing logic.
