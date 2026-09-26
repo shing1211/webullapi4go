@@ -13,6 +13,59 @@ newest installable version.
 
 No changes yet.
 
+## [2.1.4] - 2026-09-26
+
+Repository patch release covering nested CI gates and documentation accuracy.
+`v2.1.4` is a repository Git tag, not a published Go-semver v2 module; the module
+stays on the v1 import path by decision, so `v1.1.1` remains the newest
+installable version. Not newly live-verified.
+
+### Added
+
+- A nested-module coverage job. Only `broker` is gated, at a 75.0% floor against
+  its measured 80.8%, because it is the only nested module with library code to
+  cover. The four example modules are single-file `package main` programs with no
+  test files, so their coverage is structurally 0.0%; they are measured and
+  uploaded as artifacts for visibility but not gated.
+- `govulncheck` now runs as a matrix across all six modules instead of the root
+  only, using the already-pinned `v1.8.0` so results stay reproducible. The
+  vulnerability database is still fetched live from vuln.go.dev, so pinning the
+  tool does not stale findings.
+- A strict documentation gate that runs `mkdocs build --strict` on every push and
+  pull request. The Docs workflow already built the site on push to `main`, but as
+  a deploy job rather than a gate, and not on pull requests, so a broken link or
+  nav entry previously could only be found after merge.
+
+### Fixed
+
+- `SECURITY.md` reported `v2.1.2` as the latest repository tag and its
+  supported-versions table had no `v2.1.3` row, because the `v2.1.3` release
+  updated the status files but not the security policy. A reader checking whether
+  a version was supported would have been given a stale answer. Both the tag
+  reference and the missing rows are corrected.
+- The run index reported `v2.1.1` with post-release commits through `7d1489d`,
+  which stopped being accurate once `v2.1.2` and `v2.1.3` were tagged.
+- The install guidance described a pinned commit as "the current tree", which
+  goes stale on every release. It now states that any commit at or after the
+  desired tag can be pinned and marks the existing commit as a dated example.
+
+### Changed
+
+- The internal roadmap was corrected to the current release: the review range
+  moved from `b3c647b..0ec3105` to `0e6f978..v2.1.4`, the pre-P1 uncommitted-tree
+  risk is marked resolved, the coverage candidate is marked completed, and the
+  root coverage figure moved from 71.6% to 73.6%.
+- Two findings are recorded rather than acted on. The repository contains no
+  `func Benchmark` at all, so the stream head-of-line candidate is greenfield.
+  And the Broker FD `subscribeType` the SDK transmits contradicts Webull's
+  published value: the documentation states that only `1` is supported, while the
+  unexported config field is never assigned and so sends `0`, with no public
+  option to correct it. That is documented as a risk and deliberately left
+  unchanged, because the endpoint is US-only and has never been exercised live.
+- Maintainer question 9 is resolved: the OpenTelemetry SDK modules stay direct
+  `go.mod` requirements, and the decision is parked rather than reopened because
+  no module publication is planned.
+
 ## [2.1.3] - 2026-09-26
 
 Repository patch release covering CI signal honesty, dead-code removal, and

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest repository tag is `v2.1.2` (2026-09-26). It carries the current
+The latest repository tag is `v2.1.4` (2026-09-26). It carries the current
 request, OMS, streaming, telemetry, and documentation hardening introduced in
 `v2.1.1`, but this is a repository Git patch release, not a
 Go-semver-compatible v2 module. The root module path remains
@@ -11,11 +11,15 @@ Go-semver-compatible v2 module. The root module path remains
 no major-version suffix, the Go module proxy serves only the `v1.x` line, and
 `v2.x` tags cannot be installed with `go get`. `v1.1.1` (2026-09-23) is
 therefore the newest installable version and predates the tagged hardening;
-consumers who need that work pin a commit:
+consumers who need that work pin a commit at or after the tag they want:
 
 ```sh
 go get github.com/shing1211/webullapi4go@78c164c
 ```
+
+The commit above is a dated example that resolves to a pseudo-version. It is not
+maintained as "the newest commit"; substitute any commit at or after the tag you
+want.
 
 The tagged hardening was not newly live-verified. Security fixes for that work
 are prepared on `main`; the repository tag is not a published v2 module
@@ -25,7 +29,9 @@ change requiring the `/v2` module path and explicit maintainer approval.
 | Version or state | Supported |
 |---|---|
 | `v1.1.1` | Yes — newest version installable via `go get`; predates the tagged hardening |
-| `v2.1.2` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.4` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.3` | Repository tag only; not installable |
+| `v2.1.2` | Repository tag only; not installable |
 | `v2.1.1` | Repository tag only; not installable |
 | `v2.1.0` and earlier `v2.x` tags | No — repository Git tags only; the module stays on the v1 import path |
 | `v2.0.x` and earlier | No |

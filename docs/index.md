@@ -4,9 +4,9 @@
 [Webull OpenAPI](https://developer.webull.hk/apis/docs/). It wraps Webull's HTTP,
 MQTT, and gRPC services in typed Go clients.
 
-The latest repository tag is **`v2.1.3`** (2026-09-26). Current
+The latest repository tag is **`v2.1.4`** (2026-09-26). Current
 request-pipeline, OMS, streaming, event-telemetry, and documentation hardening
-is tagged in repository `v2.1.3`, implemented, and offline-tested; it is not
+is tagged in repository `v2.1.4`, implemented, and offline-tested; it is not
 presented as live-verified. This is a repository patch release, not a
 Go-semver-compatible v2 module: the module path stays on the v1 import path by
 decision, so `v2.x` tags are repository-only. See the
@@ -59,11 +59,11 @@ superseded and closed. Public financial DTOs use `money.Money` or
 
 ## Install
 
-The current hardening is recorded in repository tag `v2.1.3`. The repository's
+The current hardening is recorded in repository tag `v2.1.4`. The repository's
 module path remains `github.com/shing1211/webullapi4go` and stays on the v1
 import path **by decision**; no `/v2` migration is planned. The module proxy
 serves only the `v1.x` line, so an unqualified `go get` installs `v1.1.1` and
-the `v2.1.3` tag is not a published module version. To install the current tree,
+the `v2.1.4` tag is not a published module version. To install the current tree,
 pin a commit:
 
 ```sh
