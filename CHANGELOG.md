@@ -13,6 +13,30 @@ newest installable version.
 
 No changes yet.
 
+## [2.1.6] - 2026-09-26
+
+Repository patch release fixing the nested coverage CI job. `v2.1.6` is a
+repository Git tag, not a published Go-semver v2 module; the module stays on the
+v1 import path by decision, so `v1.1.1` remains the newest installable version.
+
+### Fixed
+
+- The `nested-coverage` job introduced in `v2.1.4` failed for all four example
+  modules because of two independent defects. GitHub artifact names may not
+  contain `/`, so `coverage-${{ matrix.module }}` produced
+  `coverage-examples/broker-probe` and the upload was rejected as an invalid
+  name. Separately, `go test -coverprofile` writes no profile at all for a
+  module with no test files, and the four example modules are single-file
+  `package main` programs, so the upload then found no files. Each matrix entry
+  now carries an artifact-safe label, the upload sets `if-no-files-found: ignore`,
+  and the coverage report step is guarded on the profile existing so
+  `go tool cover` is not run against a missing file. The `broker` coverage floor
+  is unchanged and still gated at 75.0 percent, and it passed throughout.
+
+Both `v2.1.4` and `v2.1.5` are tagged with a red CI run because of this defect.
+Those tags are immutable and are left as an honest record; `v2.1.6` is the first
+tag whose CI is fully green.
+
 ## [2.1.5] - 2026-09-26
 
 Repository patch release closing three roadmap items that did not require live

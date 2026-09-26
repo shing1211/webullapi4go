@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-26
 
-- Latest repository tag: **`v2.1.5`** (2026-09-26)
+- Latest repository tag: **`v2.1.6`** (2026-09-26)
 - Current hardening: **tagged in repository `v2.1.4`**; introduced in `v2.1.1`
 - Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
   **by decision**; no `/v2` migration is planned
@@ -103,7 +103,7 @@ live-verified.
 ## Version history
 
 The `v2.x` rows below are repository-tag records, not published Go-semver v2
-modules; `v2.1.5` is the current authorized repository tag and earlier rows are
+modules; `v2.1.6` is the current authorized repository tag and earlier rows are
 historical. The root module path remains `github.com/shing1211/webullapi4go` and
 stays on the v1 import path by decision.
 
@@ -146,7 +146,8 @@ stays on the v1 import path by decision.
 | v2.1.2 | 2026-09-26 | OpenTelemetry v1.46.0 across all modules, GitHub Actions bumps, pinned `govulncheck`, Dependabot grouping, and documentation policy updates | Historical tag; not a published v2 module |
 | v2.1.3 | 2026-09-26 | Honest nightly live-verification signal, removal of the dead `internal/` shims and duplicate resilience tree, and direct tests for the order reconciliation, MQTT, money, error, and region surfaces | Historical tag; not a published v2 module |
 | v2.1.4 | 2026-09-26 | Nested module coverage gate for `broker`, per-module `govulncheck`, a strict MkDocs gate, and run-index and roadmap corrections | Historical tag; not a published v2 module |
-| v2.1.5 | 2026-09-26 | Additive Broker FD event metadata delivery, the first stream dispatch benchmarks with recorded head-of-line measurements, and classification of every non-exact reconciliation state | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
+| v2.1.5 | 2026-09-26 | Additive Broker FD event metadata delivery, the first stream dispatch benchmarks with recorded head-of-line measurements, and classification of every non-exact reconciliation state | Historical tag; not a published v2 module; tagged with a red CI run |
+| v2.1.6 | 2026-09-26 | Correction of the nested coverage CI job: artifact-safe matrix labels, tolerant artifact upload, and a guarded coverage report step | Repository tag; not a published v2 module; first tag with fully green CI |
 
 ## Previously exercised HK surface
 
