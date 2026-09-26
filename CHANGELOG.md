@@ -11,6 +11,17 @@ newest installable version.
 
 ## [Unreleased]
 
+No changes yet.
+
+## [2.1.2] - 2026-09-26
+
+Repository patch release covering dependency, CI, and documentation maintenance
+after `v2.1.1`. `v2.1.2` is a repository Git tag, not a published Go-semver v2
+module; the root module path remains `github.com/shing1211/webullapi4go` and
+stays on the v1 import path by decision, so the module proxy serves only the
+`v1.x` line and `v1.1.1` remains the newest installable version. Consumers reach
+this work by pinning a commit. This release was not newly live-verified.
+
 ### Changed
 
 - Bumped the OpenTelemetry Go modules to v1.46.0 across the root module and every
@@ -19,6 +30,35 @@ newest installable version.
   `otel/sdk/metric` — are kept on the same version because they are released in
   lockstep and a mixed set is untested. `github.com/go-logr/logr` moves to
   v1.4.4 as a transitive requirement.
+- Bumped GitHub Actions: `upload-artifact` v4 to v7 and `golangci-lint-action`
+  v8 to v9 in CI, and `deploy-pages` v4 to v5, `setup-python` v5 to v7, and
+  `upload-pages-artifact` v4 to v5 in the docs workflow. `upload-artifact` v4
+  is being retired by GitHub. Versions v6 and later of the affected actions run
+  on Node.js 24 and require runner v2.327.1 or newer; every job uses a
+  GitHub-hosted runner.
+- Pinned `govulncheck` to v1.8.0 in the CI workflow and the `make vuln` target,
+  which previously resolved `@latest` and made scan results non-reproducible.
+  The vulnerability database is still fetched live from vuln.go.dev, so pinning
+  the tool does not stale reported findings.
+- Grouped OpenTelemetry updates in `.github/dependabot.yml` so the lockstep
+  modules arrive in a single pull request. The previous configuration produced
+  three byte-identical pull requests, each bumping the core modules while
+  leaving the SDK modules behind.
+
+### Documentation
+
+- Sandbox test credentials are no longer inlined in hand-written documentation.
+  `docs/sandbox.md` and `AGENTS.md` now link the published Webull test-accounts
+  page instead, so a rotated or retired shared account cannot leave a stale copy
+  behind. The generated pages under `docs/webull-api/**` are unchanged and still
+  mirror Webull's published material verbatim.
+- Recorded the module-path decision. Documentation previously described v2 module
+  publication as deferred, which implied a pending choice; it is declined. The
+  documentation now states the consequence, that `v2.x` tags are repository-only
+  and `v1.1.1` is the newest installable version, and gives the working install
+  recipe that pins a commit.
+- `SECURITY.md` now lists `v1.1.1` as the supported installable line and
+  reclassifies the `v2.x` tags as repository-only.
 
 ## [2.1.1] - 2026-09-25
 

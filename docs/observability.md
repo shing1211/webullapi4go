@@ -7,8 +7,8 @@ default to no-op providers or no logging.
 !!! note "Status"
     REST and core stream telemetry has a historical baseline. Trading/Broker FD
     event attempt telemetry and the current request/OMS/stream hardening are
-    tagged in repository `v2.1.1`, implemented, and offline-tested; they were
-    not newly live-verified. `v2.1.1` is a repository patch release, not a
+    tagged in repository `v2.1.2`, implemented, and offline-tested; they were
+    not newly live-verified. `v2.1.2` is a repository patch release, not a
     published Go-semver v2 module; the module stays on the v1 import path by
     decision, so `v2.x` tags are repository-only.
 

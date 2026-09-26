@@ -1,9 +1,9 @@
 # Implementation Status
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
-- Latest repository tag: **`v2.1.1`** (2026-09-25)
-- Current hardening: **tagged in repository `v2.1.1`**
+- Latest repository tag: **`v2.1.2`** (2026-09-26)
+- Current hardening: **tagged in repository `v2.1.2`**; introduced in `v2.1.1`
 - Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
   **by decision**; no `/v2` migration is planned
 - Installable version: **`v1.1.1`** — the module proxy serves only the `v1.x`
@@ -102,7 +102,7 @@ live-verified.
 ## Milestones and historical tags
 
 The `v2.x` rows below are repository-tag records, not published Go-semver v2
-modules; `v2.1.1` is the current authorized repository tag and earlier rows are
+modules; `v2.1.2` is the current authorized repository tag and earlier rows are
 historical. The root module path remains `github.com/shing1211/webullapi4go` and
 stays on the v1 import path by decision.
 
@@ -117,6 +117,7 @@ stays on the v1 import path by decision.
 | v2.0.8–v2.0.9 | Context hygiene and structured public errors |
 | v2.1.0 | `go vet` mutex-copy fixes |
 | v2.1.1 | Current hardening, including error contracts, request/OMS reconciliation, stream/MQTT lifecycle, event telemetry, cancellation/leak coverage, and documentation reconciliation; repository tag, not a published v2 module |
+| v2.1.2 | OpenTelemetry v1.46.0 across all modules, GitHub Actions bumps, pinned `govulncheck`, Dependabot grouping, and documentation policy updates; repository tag, not a published v2 module |
 
 Earlier v0.x and v1.0 milestones remain recorded in the root `IMPLEMENTATION_STATUS.md`.
 

@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-The latest repository tag is `v2.1.1` (2026-09-25). Current request, OMS,
-streaming, telemetry, and documentation hardening is tagged in repository
+The latest repository tag is `v2.1.2` (2026-09-26). It carries the current
+request, OMS, streaming, telemetry, and documentation hardening introduced in
 `v2.1.1`, but this is a repository Git patch release, not a
 Go-semver-compatible v2 module. The root module path remains
 `github.com/shing1211/webullapi4go`, and the module stays on the v1 import path
@@ -25,7 +25,8 @@ change requiring the `/v2` module path and explicit maintainer approval.
 | Version or state | Supported |
 |---|---|
 | `v1.1.1` | Yes — newest version installable via `go get`; predates the tagged hardening |
-| `v2.1.1` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.2` | Repository tag only; not installable; fixes are tracked on `main` and in the repository |
+| `v2.1.1` | Repository tag only; not installable |
 | `v2.1.0` and earlier `v2.x` tags | No — repository Git tags only; the module stays on the v1 import path |
 | `v2.0.x` and earlier | No |
 
