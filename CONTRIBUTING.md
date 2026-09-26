@@ -68,8 +68,8 @@ For a root-module-only package check, `go test ./...` and
 `go test -race -count=1 ./...` are valid, but they do not traverse nested
 modules.
 
-Coverage is a measurement, not a behavior guarantee. The 2026-09-25 offline
-run recorded 71.6% aggregate coverage for the root module and 80.8% for the
+Coverage is a measurement, not a behavior guarantee. The 2026-09-26 offline
+run recorded 73.6% aggregate coverage for the root module and 80.8% for the
 nested `broker/` module; use the reproducible command and date rather than
 quoting an aggregate as proof.
 

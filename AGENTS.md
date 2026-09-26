@@ -204,7 +204,7 @@ make generate
 ## Known constraints
 
 - **Release status:** current request, OMS, streaming, event-telemetry, and
-  documentation hardening is tagged in repository `v2.1.2` (2026-09-26), an
+  documentation hardening is tagged in repository `v2.1.3` (2026-09-26), an
   authorized repository Git patch release; the hardening itself was introduced
   in `v2.1.1` (2026-09-25). The root module path remains
   `github.com/shing1211/webullapi4go`; the module stays on the v1 import path

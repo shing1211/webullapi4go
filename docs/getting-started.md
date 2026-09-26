@@ -5,12 +5,12 @@ first call.
 
 ## Install
 
-The current hardening is recorded in repository tag `v2.1.2`. The module path
+The current hardening is recorded in repository tag `v2.1.3`. The module path
 remains `github.com/shing1211/webullapi4go` and stays on the v1 import path **by
 decision**; no `/v2` migration is planned. Because the import path carries no
 major-version suffix, the module proxy serves only the `v1.x` line, so an
 unqualified `go get` installs `v1.1.1` — which predates the tagged hardening —
-and the `v2.1.2` tag is not a published module version. To install the current
+and the `v2.1.3` tag is not a published module version. To install the current
 tree, pin a commit:
 
 ```sh

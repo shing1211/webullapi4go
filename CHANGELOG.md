@@ -13,6 +13,66 @@ newest installable version.
 
 No changes yet.
 
+## [2.1.3] - 2026-09-26
+
+Repository patch release covering CI signal honesty, dead-code removal, and
+targeted coverage. `v2.1.3` is a repository Git tag, not a published Go-semver
+v2 module; the module stays on the v1 import path by decision, so `v1.1.1`
+remains the newest installable version. Not newly live-verified.
+
+### Fixed
+
+- The nightly live-sandbox workflow reported `success` while verifying nothing.
+  When the required repository secrets were absent the guard set a skip flag,
+  every live test step was skipped, and skipped steps still count as success, so
+  "not verified" was indistinguishable from "verification passed". The guard now
+  distinguishes three states: all secrets present runs the tests, none present
+  skips and stays green so forks still succeed, and a partial configuration now
+  fails. Each run publishes a job summary naming every secret and an explicit
+  `RAN`, `SKIPPED`, or `MISCONFIGURED` verdict, and a new `require_secrets`
+  input on `workflow_dispatch` turns an unconfigured clone into a hard failure so
+  the pipeline can be proven to execute.
+
+### Removed
+
+- Deleted `internal/errs`, `internal/mqtt`, `internal/transport`, and the whole
+  `internal/resilience` tree, together with `internal/resilience/breaker`,
+  `ratelimit`, `retry`, and `clock`. All had zero importers, and the resilience
+  packages were legacy duplicates of the better-covered `pkg/resilience`
+  packages. About 1119 lines of duplicate production code are gone. This is safe
+  because an `internal/` path cannot be imported outside this module.
+- The `AGENTS.md` claim that `internal/errs` existed for backward compatibility
+  is withdrawn; an `internal/` path is unreachable from outside the module, so it
+  could never have served that purpose.
+- The six client resilience tests that happened to live in
+  `internal/resilience/integration_test.go` are relocated to
+  `client/resilience_integration_test.go` rather than deleted. They are the only
+  end-to-end coverage of the retry, circuit-breaker, and rate-limiter wiring
+  around the request pipeline.
+
+### Added
+
+- Direct tests for the order reconciliation surface, which
+  `trade.Client.ReconcileOrderStatus` and `ReconcileOrderState` call: the
+  multi-step event paths, the deliberate no-op shapes, the authoritative terminal
+  snapshot, invalid regressions, and concurrent reconciliation.
+- Direct tests for the MQTT paho callback adapters and connect error paths,
+  using in-package fakes so no broker is required.
+- Direct tests for the `money.Money` comparison, rounding, shifting, and
+  accessor surface.
+- Direct tests for the `pkg/errors` rendering, identity-marker, and
+  API-message-extraction behaviour, and for the `internal/region` accessors and
+  domain table.
+
+### Changed
+
+- Aggregate root coverage measured 73.6% on 2026-09-26, up from 71.6%. The
+  per-package work moved `pkg/domain/order` from 53.4% to 98.9%,
+  `pkg/transport/mqtt` from 71.8% to 90.1%, `pkg/domain/money` from 71.0% to
+  98.4%, `pkg/errors` from 79.2% to 97.4%, and `internal/region` from 75.0% to
+  100%. Nested `broker` remains 80.8%. These are dated measurements, not
+  behavior guarantees.
+
 ## [2.1.2] - 2026-09-26
 
 Repository patch release covering dependency, CI, and documentation maintenance

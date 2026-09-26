@@ -3,7 +3,7 @@
 Last updated: 2026-09-25
 
 Status: **Current request, OMS, streaming, event-telemetry, and documentation
-hardening is tagged in repository `v2.1.2` (2026-09-26) and offline-tested. It
+hardening is tagged in repository `v2.1.3` (2026-09-26) and offline-tested. It
 is a repository patch release, not a published Go-semver v2 module, and was
 not newly live-verified.** The root module path is unchanged and stays on the v1
 import path by decision, with no `/v2` migration planned.
@@ -65,7 +65,7 @@ An implemented endpoint is not automatically live-verified. Offline tests do not
 
 | Workstream | Published/historical baseline | v2.1.1 repository-tagged follow-up | Verification |
 |---|---|---|---|
-| DevOps and tests | Build/test/lint targets, security checks, multi-OS CI, dependabot, leak and fuzz tests | Direct public-primitive tests, deterministic cancellation/leak coverage, and reproducible per-module coverage measurement | Module-aware race/vet evidence recorded 2026-09-25; root 71.6% and broker 80.8% measurements are not guarantees |
+| DevOps and tests | Build/test/lint targets, security checks, multi-OS CI, dependabot, leak and fuzz tests | Direct public-primitive tests, deterministic cancellation/leak coverage, and reproducible per-module coverage measurement | Module-aware race/vet evidence recorded 2026-09-26; root 73.6% and broker 80.8% measurements are not guarantees |
 | Error contracts | Public typed categories and compatibility sentinels | Category matching remains stable; `NewSentinel` provides identity-specific semantics; HTTP 417, MQTT, and event terminal mappings are tested | Offline-tested |
 | Shared foundations | Public errors, transport, resilience, observability, `money.Money`, and order domain packages | Provider-order-independent metrics, safe error text, cancellation-safe rate limiting, and direct public-package tests | Offline-tested |
 | REST pipeline | Interceptors, hooks, resilience, clock correction, tracing, metrics, and logging | `Do`, `DoBroker`, and `DoStream` share one attempt pipeline; one-based attempt telemetry; stable correlation IDs; W3C propagation; response status and clock-offset parity | Offline-tested; not newly live-verified |
@@ -151,7 +151,7 @@ build. The local Makefile gates remain the release verification source.
   unresolved SDK paths despite zero documented-only endpoint gaps.
 - CI does not enforce nested coverage or a strict docs build; root aggregate
   coverage percentages are measurements, not correctness guarantees.
-- The repository patch release is recorded as `v2.1.2`; the root module remains
+- The repository patch release is recorded as `v2.1.3`; the root module remains
   on `github.com/shing1211/webullapi4go` and stays on the v1 import path by
   decision, so `v2.x` tags are not installable Go-semver v2 modules and
   `v1.1.1` is the newest installable version. A `/v2` migration is declined

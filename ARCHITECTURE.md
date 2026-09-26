@@ -80,8 +80,8 @@ implemented and offline-tested, but were not newly live-verified:
 | Telemetry verification | REST/MQTT/gRPC spans, W3C propagation, exact metric values/attributes, structured logs, failure redaction, and cancellation outcomes use real OTel or local protocol servers. |
 | Test surface | Public resilience, transport, shared type, and `webull` packages have direct tests; cancellation checks cover client, data, stream, and event boundaries, with strict leak checks in data and both event packages. |
 
-The root and nested `broker` coverage measurements (71.6% and 80.8% on
-2026-09-25) are dated measurements, not architecture or correctness guarantees.
+The root and nested `broker` coverage measurements (73.6% and 80.8% on
+2026-09-26) are dated measurements, not architecture or correctness guarantees.
 
 ## Functional areas
 
@@ -349,7 +349,7 @@ flowchart TB
 - The Makefile traverses every module in `MODULES`; CI separately runs root
   race tests on three operating systems and nested build/vet/race checks. CI's
   coverage gate is root-only, and strict docs are not a CI gate.
-- The dated 71.6% root and 80.8% nested `broker` coverage measurements are not
+- The dated 73.6% root and 80.8% nested `broker` coverage measurements are not
   correctness guarantees and must not be combined into an aggregate.
 - Stream callbacks and channels are synchronous, so full `DropBlock` channels
   intentionally impose head-of-line latency until cancellation or close.

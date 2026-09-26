@@ -2,9 +2,9 @@
 
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
 It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
-repository tag is **`v2.1.2`** (2026-09-26); the current request, OMS,
+repository tag is **`v2.1.3`** (2026-09-26); the current request, OMS,
 streaming, telemetry, and documentation hardening is tagged in repository
-`v2.1.2` and was introduced in `v2.1.1`. This is a repository patch release, not a published Go-semver v2
+`v2.1.3` and was introduced in `v2.1.1`. This is a repository patch release, not a published Go-semver v2
 module: the root module path remains `github.com/shing1211/webullapi4go` and
 stays on the v1 import path **by decision**, with no `/v2` migration planned.
 The tagged tree is therefore not an installable published v2 module.
@@ -38,7 +38,7 @@ not mean every endpoint is live-verified; see the
 The module path is `github.com/shing1211/webullapi4go` and does not include the
 `/v2` suffix required by Go's semantic import versioning; it stays that way by
 decision, and no `/v2` migration is planned. The module proxy therefore serves
-only the `v1.x` line. The `v2.1.2` repository tag does not make the tagged tree
+only the `v1.x` line. The `v2.1.3` repository tag does not make the tagged tree
 installable, and an unqualified `go get` installs `v1.1.1`, which predates it.
 
 To install the current tree, pin a commit:
@@ -384,7 +384,7 @@ it as a token failure.
 | v2.1.1 | Error matching specificity, request-pipeline parity, OMS reconciliation, stream/MQTT lifecycle hardening, gRPC event telemetry, cancellation/leak coverage, and documentation reconciliation | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
 
 The next version number is intentionally unassigned for future work. The
-current hardening is represented by repository tag `v2.1.2`. The module-path
+current hardening is represented by repository tag `v2.1.3`. The module-path
 decision is settled (stay on the v1 import path, no `/v2` migration); live
 verification remains a separate follow-up decision. See
 [CHANGELOG.md](CHANGELOG.md) and [PLAN.md](PLAN.md) for the decision record.
@@ -419,8 +419,8 @@ verification remains a separate follow-up decision. See
 | `make docs` | build the MkDocs site (`mkdocs build --strict`) |
 
 Root `go build ./...` and `go test ./...` cover only the root module; use the
-Makefile targets for module-aware verification. The 2026-09-25 offline run
-measured 71.6% aggregate coverage in the root module and 80.8% in the nested
+Makefile targets for module-aware verification. The 2026-09-26 offline run
+measured 73.6% aggregate coverage in the root module and 80.8% in the nested
 `broker/` module. These are reproducible measurements, not behavior or release
 guarantees; CI's 60% gate is root-only.
 
