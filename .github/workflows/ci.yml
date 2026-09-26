@@ -162,18 +162,109 @@ jobs:
           name: coverage
           path: coverage.out
 
-  # govulncheck: scan dependencies for known vulnerabilities.
-  govulncheck:
-    name: govulncheck
+  # Nested coverage: measure every nested module and gate only the one that has
+  # library code to cover. The four example modules are single-file
+  # `package main` programs with no test files, so their coverage is structurally
+  # 0.0% and a threshold there would be meaningless; they are measured and
+  # uploaded as artifacts for visibility but not gated.
+  nested-coverage:
+    name: nested coverage (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - broker
+          - examples/watchlist-cmd
+          - examples/broker-probe
+          - examples/futures-probe
+          - examples/options-multi-leg
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go (version from module go.mod)
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          check-latest: true
+          cache: true
+
+      - name: Test with coverage
+        run: go test -mod=readonly ./... -cover -coverprofile=coverage.out
+
+      - name: Report coverage
+        run: go tool cover -func=coverage.out
+
+      # Only broker is gated. Its measured coverage is 80.8% on 2026-09-26, and the
+      # 75.0% floor leaves headroom so ordinary churn does not break the build
+      # while a real regression still does.
+      - name: Enforce broker coverage floor
+        if: matrix.module == 'broker'
+        run: |
+          TOTAL=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub("%", "", $3); print $3}')
+          awk -v total="$TOTAL" 'BEGIN { if (total + 0 < 75.0) { printf "broker coverage %.1f%% is below the 75.0%% floor\n", total; exit 1 } }'
+
+      - name: Upload nested coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.module }}
+          path: ${{ matrix.module }}/coverage.out
+
+  # Strict docs gate: build the MkDocs site on every push and pull request.
+  # The Docs workflow already builds the site on push to main, but it is a deploy
+  # job rather than a gate and does not run on pull requests, so a broken link or
+  # nav entry could only be discovered after merge. This job fails the build
+  # instead. docs/runs/** is excluded from the site, so internal run artifacts
+  # cannot break this gate.
+  docs:
+    name: docs (strict)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up Go (version from go.mod)
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-docs.txt
+
+      - name: Install docs dependencies
+        run: pip install -r requirements-docs.txt
+
+      - name: Build site (strict)
+        run: mkdocs build --strict
+
+  # govulncheck: scan every Go module for known vulnerabilities.
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - .
+          - broker
+          - examples/watchlist-cmd
+          - examples/broker-probe
+          - examples/futures-probe
+          - examples/options-multi-leg
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go (version from module go.mod)
         uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version-file: ${{ matrix.module }}/go.mod
           check-latest: true
           cache: true
 
