@@ -66,8 +66,9 @@ defer func() { _ = ec.Close() }()
 ec.OnConnect(func() { log.Println("connected") })
 ec.OnPing(func() { log.Println("ping") })
 ec.OnError(func(err error) { log.Printf("error: %v", err) })
-ec.OnData(func(subscribeType uint32, contentType string, payload []byte) {
-    log.Printf("event type=%d content=%s bytes=%d", subscribeType, contentType, len(payload))
+ec.OnDataEvent(func(de *events.DataEvent) {
+    log.Printf("event type=%d content=%s bytes=%d requestId=%s ts=%d",
+        de.SubscribeType, de.ContentType, len(de.Payload), de.RequestId, de.Timestamp)
 })
 
 if err := ec.Run(ctx); err != nil {
@@ -78,13 +79,32 @@ if err := ec.Run(ctx); err != nil {
 `SubscribeSuccess` and `Ping` invoke `OnConnect` and `OnPing`.
 `AuthError`, `NumOfConnExceed`, and `SubscribeExpired` end `Run` with the same
 typed categories and semantic identities used by Trading Events; see
-[Errors](errors.md#mqtt-and-event-terminal-mappings). Other responses are
-delivered to `OnData` with three values: the raw category value, MIME content
-type, and payload bytes. The callback does not currently receive the response
-request ID or timestamp. Although `DataEvent` and `SubscribeResponse.ToDataEvent`
-model those fields, the client does not expose the received response object to
-`OnData`; decode the available raw payload and treat those fields as a current
-API limitation.
+[Errors](errors.md#mqtt-and-event-terminal-mappings).
+
+### Receiving data events
+
+Two independent registrations receive data events, and they may be combined.
+
+`OnDataEvent` delivers the whole `DataEvent`, including the server-assigned
+request ID and timestamp:
+
+```go
+ec.OnDataEvent(func(de *events.DataEvent) { /* de.RequestId, de.Timestamp */ })
+```
+
+`OnData` takes three positional values and is unchanged:
+
+```go
+ec.OnData(func(subscribeType uint32, contentType string, payload []byte) { /* ... */ })
+```
+
+`OnData` cannot receive the request ID or timestamp because its signature does
+not carry them. Prefer `OnDataEvent` when that metadata matters. Each event is
+delivered to every `OnData` handler and then to every `OnDataEvent` handler, in
+registration order within each group.
+
+`RequestId` is empty and `Timestamp` is zero when the server does not supply
+them, so treat both as optional.
 
 Handlers run synchronously in registration order on the stream receive loop.
 Keep them short so one handler does not delay later Broker FD events.

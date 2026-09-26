@@ -53,11 +53,12 @@ type Client struct {
 
 	closeOnce sync.Once
 
-	mu        sync.RWMutex
-	onConnect []func()
-	onPing    []func()
-	onError   []func(error)
-	onData    []func(subscribeType uint32, contentType string, payload []byte)
+	mu          sync.RWMutex
+	onConnect   []func()
+	onPing      []func()
+	onError     []func(error)
+	onData      []func(subscribeType uint32, contentType string, payload []byte)
+	onDataEvent []func(*DataEvent)
 
 	runMu     sync.Mutex
 	runCancel context.CancelFunc
@@ -164,6 +165,26 @@ func (c *Client) OnData(fn func(subscribeType uint32, contentType string, payloa
 	}
 	c.mu.Lock()
 	c.onData = append(c.onData, fn)
+	c.mu.Unlock()
+}
+
+// OnDataEvent registers fn to be called for each data event received from the
+// server, delivering the whole [DataEvent] including the server-assigned
+// RequestId and Timestamp. Use this instead of [Client.OnData] when the event
+// metadata matters; OnData discards those two fields because its callback
+// signature predates them.
+//
+// The two registrations are independent and may be combined: each event is
+// delivered to every OnData handler and then to every OnDataEvent handler, in
+// registration order within each group. Callbacks are invoked synchronously
+// inside the stream receive loop, so a slow handler delays later delivery, the
+// other handler group, and the receive path until it returns.
+func (c *Client) OnDataEvent(fn func(*DataEvent)) {
+	if fn == nil {
+		return
+	}
+	c.mu.Lock()
+	c.onDataEvent = append(c.onDataEvent, fn)
 	c.mu.Unlock()
 }
 
@@ -463,9 +484,15 @@ func (c *Client) emitData(resp *SubscribeResponse) {
 	c.mu.RLock()
 	handlers := make([]func(uint32, string, []byte), len(c.onData))
 	copy(handlers, c.onData)
+	eventHandlers := make([]func(*DataEvent), len(c.onDataEvent))
+	copy(eventHandlers, c.onDataEvent)
 	c.mu.RUnlock()
+
 	de := resp.ToDataEvent()
 	for _, h := range handlers {
 		h(de.SubscribeType, de.ContentType, de.Payload)
+	}
+	for _, h := range eventHandlers {
+		h(de)
 	}
 }

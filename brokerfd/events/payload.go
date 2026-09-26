@@ -26,10 +26,17 @@ import (
 type SubscribeType uint32
 
 // DataEvent is the raw form of a data event delivered by the Broker FD event
-// stream. It carries the subscribe type, content type, and raw payload bytes.
-// Callers use [Client.OnData] to receive these; once the JSON schema for each
-// event category is confirmed via live probe, typed structs (analogous to
-// [OrderEvent] in the trade events package) will be added.
+// stream. It carries the subscribe type, content type, raw payload bytes, and
+// the server-assigned request identifier and timestamp.
+//
+// Receive one with [Client.OnDataEvent], which delivers this whole struct.
+// [Client.OnData] is also supported and is simpler, but its callback signature
+// carries only the subscribe type, content type, and payload, so RequestId and
+// Timestamp are dropped there.
+//
+// Once the JSON schema for each event category is confirmed via live probe,
+// typed structs (analogous to [OrderEvent] in the trade events package) will be
+// added.
 type DataEvent struct {
 	// SubscribeType is the event category that generated this data event.
 	SubscribeType uint32
@@ -37,9 +44,11 @@ type DataEvent struct {
 	ContentType string
 	// Payload is the raw event data. Decode it according to ContentType.
 	Payload []byte
-	// RequestId is the server-assigned request identifier for this event.
+	// RequestId is the server-assigned request identifier for this event. It is
+	// empty when the server does not supply one.
 	RequestId string
-	// Timestamp is the server timestamp in milliseconds.
+	// Timestamp is the server timestamp in milliseconds. It is zero when the
+	// server does not supply one.
 	Timestamp int64
 }
 
