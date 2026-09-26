@@ -10,7 +10,14 @@ published Go-semver v2 modules.
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+
+- Bumped the OpenTelemetry Go modules to v1.46.0 across the root module and every
+  nested module (`broker/` and the four example modules). All five modules —
+  `go.opentelemetry.io/otel`, `otel/metric`, `otel/trace`, `otel/sdk`, and
+  `otel/sdk/metric` — are kept on the same version because they are released in
+  lockstep and a mixed set is untested. `github.com/go-logr/logr` moves to
+  v1.4.4 as a transitive requirement.
 
 ## [2.1.1] - 2026-09-25
 
