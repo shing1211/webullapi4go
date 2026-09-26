@@ -9,9 +9,78 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
-## [Unreleased]
+## [2.1.7] - 2026-09-26
 
-No changes yet.
+### Fixed
+
+- The doc generator mislabelled two categories of reconciliation row, which
+  inflated the "unresolved SDK path" headline. A gRPC reference page that embeds
+  no OpenAPI schema is not a REST endpoint, and a manifest entry deliberately
+  mapped to `-` is not a missing symbol, but both were reported as unresolved
+  SDK paths. The generator status labels were corrected in
+  `tools/webull-docgen/`, not in the generated output, and four false-positive
+  unresolved flags were removed as a result.
+- The hand-written documentation still quoted the superseded "180 exact, 4
+  summary-only, 0 differing, 25 unresolved" figures. `AGENTS.md`,
+  `IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md`, `docs/index.md`,
+  `docs/webull-api.md`, `ARCHITECTURE.md`, and `PLAN.md` now carry the
+  2026-09-26 figures, and the two status docs record the four live-blocked SDK
+  defects below.
+
+### Changed
+
+- Regenerated the 2026-09-26 reconciliation snapshot. Its partition is 209
+  implemented endpoints and 0 documented-only gaps, of which 184 exact OpenAPI
+  JSON path matches, 4 summary-only matches, 1 path differing from both
+  sources, 0 unresolved SDK paths, 3 rows labelled `no OpenAPI schema on page`,
+  and 17 manifest entries deliberately mapped to no SDK symbol. The 189 rows
+  with a verified path plus those 3 and 17 account for all 209, so the two
+  non-defect categories are why no endpoint is missing rather than a gap. The
+  snapshot is still not a zero-discrepancy report: 4 summary-only and 1
+  differing remain. Of the 25 rows the previous snapshot reported as
+  unresolved, 20 were generator artifacts; the remaining 5 were investigated
+  individually, and 4 were correct SDK code the generator could not statically
+  follow while 1 is the real path mismatch now reported as ⚠️.
+- That `no OpenAPI schema on page` count is a label count, not a page count, and
+  quoting it as pages is corrected here. 7 gRPC reference pages embed no OpenAPI
+  schema, but only 3 rows carry the label: the generator evaluates the unmapped
+  status first, so the 4 pages that the manifest also maps to no SDK symbol are
+  counted as unmapped instead, which is what keeps the status table a partition
+  of the 209 rows. A further 3 rows have a JSON block that yields no `path` and
+  are also labelled unmapped, so 10 rows in total have no usable official path.
+  This restores the reading the `2.1.5` entry below already gave ("Seven are
+  gRPC pages carrying no OpenAPI schema").
+- `CHANGELOG.md`'s `2.1.5` entry already recorded that 24 of the 29 non-exact
+  states needed no SDK change; this entry is the status-label fix that
+  `2.1.5` deferred.
+
+### Noted
+
+- Four live-blocked SDK defects found by static analysis on 2026-09-26 are now
+  recorded with `file:line`, impact, minimal fix, and unblock requirement in
+  `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`. None is
+  live-verified; nothing in that pass touched the network.
+  - `brokerfd/client.go:43` routes the whole `brokerfd` package to the core host
+    through `c.core.Do` instead of the documented Broker host
+    (`internal/region/region.go:191`); the HK `broker` package routes correctly
+    through `DoBroker` at `broker/client.go:63`. Unblocked by US sandbox
+    credentials.
+  - `brokerfd` retains 14 undocumented `/broker-fd/*` path literals while every
+    other cached `broker-fd-api` page uses `/broker/...`;
+    `brokerfd/assets.go:25` sends `/broker-fd/assets/summary` against a
+    documented `GET /broker/assets/summaries/get` and is the single ⚠️ row in
+    the snapshot. Unblocked by US sandbox credentials.
+  - `broker.UpdateVirtualAccount` (`broker/accounts.go:66-68`) issues PUT with
+    `account_id` as a query parameter and an undocumented `account_name` body
+    field, while the documented endpoint is POST requiring `account_id` and
+    `client_request_id` in the JSON body;
+    `broker/accounts_test.go:151-160` currently certifies the wrong contract.
+    Unblocked by a production or US-scoped Broker credential.
+  - `data.GetDisplaySnapshot` (`data/display_quotes.go:28`, `:52`) uses GET
+    `/openapi/market-data/stock/snapshot` where both official sources say POST
+    `/market-data/stocks/snapshots/list`; the four sibling Display paths were
+    aligned in `2b29c88`, the same commit that removed the unverified marker
+    covering it. Unblocked by a paid Display Solution entitlement.
 
 ## [2.1.6] - 2026-09-26
 

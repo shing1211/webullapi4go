@@ -16,10 +16,17 @@ decision, so `v2.x` tags are repository-only. See the
 ## Coverage
 
 The generated [SDK ↔ API Reconciliation](reconciliation.md) reports 209
-implemented endpoints, 0 documented-only gaps, 180 exact OpenAPI JSON path
-matches, 4 summary-only matches, 0 paths differing from both sources, and 25
-unresolved SDK paths in its 2026-09-22 snapshot. Coverage does not mean every
-endpoint has been live-verified.
+implemented endpoints, 0 documented-only gaps, and the partition 184 exact
+OpenAPI JSON path matches, 4 summary-only matches, 1 path differing from both
+sources, 0 unresolved SDK paths, 3 rows carrying the `no OpenAPI schema on
+page` label, and 17 manifest entries deliberately mapped to no SDK symbol in its
+2026-09-26 snapshot. The 189 rows with a verified path plus those 3 and 17
+account for all 209, so no endpoint is missing, and the snapshot is not a
+zero-discrepancy report. That 3 is a label count, not a page count: 7 gRPC
+reference pages embed no OpenAPI schema, and 4 of them are recorded as
+intentionally unmapped instead because the generator evaluates that status
+first, which keeps the status table a partition of the 209 rows. Coverage does
+not mean every endpoint has been live-verified.
 
 ## Feature status
 

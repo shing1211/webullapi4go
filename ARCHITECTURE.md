@@ -359,8 +359,23 @@ flowchart TB
   planned. `v2.x` Git tags are repository-only and are not installable Go
   modules, so the module proxy serves only the `v1.x` line and `v1.1.1` is the
   newest installable version. Consume newer work by pinning a commit.
-- Four summary-only and 25 unresolved generated path states remain; zero
-  documented-only endpoint gaps is not a zero-discrepancy claim.
+- The 2026-09-26 generated reconciliation has four summary-only matches and one
+  path differing from both sources, with `0` unresolved SDK paths; zero
+  documented-only endpoint gaps is not a zero-discrepancy claim. The 20
+  non-exact rows that are neither of those are 3 rows carrying the
+  `no OpenAPI schema on page` label and 17 manifest entries deliberately
+  unmapped, which is why they account for the remainder of the 209 without
+  representing a gap. The 3 is a label count, not a page count: 7 gRPC pages
+  embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol
+  are labelled unmapped because that status is evaluated first, which keeps the
+  status table a partition.
+- Four live-blocked SDK defects found by static analysis on 2026-09-26 are
+  recorded in `IMPLEMENTATION_STATUS.md`: `brokerfd/client.go:43` routes the
+  whole package to the core host instead of the Broker host, `brokerfd` uses 14
+  undocumented `/broker-fd/*` paths, `broker.UpdateVirtualAccount`
+  (`broker/accounts.go:66-68`) sends the wrong verb and body, and
+  `data.GetDisplaySnapshot` (`data/display_quotes.go:28`, `:52`) diverges from
+  both official sources. None is live-verified.
 
 ## Graph coverage notes
 

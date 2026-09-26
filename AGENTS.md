@@ -220,11 +220,37 @@ make generate
   implicitly; it requires explicit maintainer approval and a documented
   migration. The current hardening was not newly live-verified.
 - **v1.1.0 brought full documented-endpoint coverage**: every documented
-  endpoint is implemented. The generated 2026-09-22 reconciliation snapshot
-  reports 209 implemented endpoints, 0 documented-only gaps, 180 exact
-  OpenAPI JSON path matches, 4 summary-only matches, 0 paths differing from
-  both sources, and 25 unresolved SDK paths. Do not describe that snapshot as
-  a zero-discrepancy report. Earlier version history lives in `CHANGELOG.md`.
+  endpoint is implemented. The generated 2026-09-26 reconciliation snapshot
+  reports 209 implemented endpoints, 0 documented-only gaps, and the partition
+  184 exact OpenAPI JSON path matches, 4 summary-only matches, 1 path differing
+  from both sources, 0 unresolved SDK paths, 3 rows carrying the
+  `no OpenAPI schema on page` label, and 17 manifest entries deliberately
+  mapped to no SDK symbol. The 189 rows with a verified path plus those 3 and 17
+  account for all 209, so no endpoint is missing; the previously quoted "25
+  unresolved" was 20 generator artifacts and 5 individually investigated
+  entries. Do not describe that snapshot as a zero-discrepancy report: 4
+  summary-only and 1 differing remain. Earlier version history lives in
+  `CHANGELOG.md`.
+- **That label count is not a page count.** 7 gRPC reference pages embed no
+  OpenAPI schema at all, but only 3 rows carry the `no OpenAPI schema on page`
+  label. `_reconcile_data()` in `tools/webull-docgen/docgen.py` tests the
+  `unmapped` branch before the `no-openapi` branch, so a page that is both
+  schema-less and unmapped — 4 of the 7 are — is counted only as unmapped;
+  that precedence is deliberate, because the status table partitions the 209
+  rows and must not double-count. A further 3 rows have a JSON block that yields
+  no `path`, and all 3 are labelled unmapped, so 10 rows in total have no
+  usable official path. Quote 3 as a label count and 7 as the page count.
+- Four live-blocked SDK defects found by static analysis on 2026-09-26 are
+  recorded with `file:line`, impact, minimal fix, and unblock requirement in
+  `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`:
+  `brokerfd/client.go:43` routes the whole package to the core host instead of
+  the Broker host, `brokerfd` still uses 14 undocumented `/broker-fd/*` path
+  literals (`brokerfd/assets.go:25` is the one the generated report flags),
+  `broker.UpdateVirtualAccount` sends the wrong verb and body
+  (`broker/accounts.go:66-68`), and `data.GetDisplaySnapshot` differs from both
+  official sources (`data/display_quotes.go:28`, `:52`). None is live-verified
+  and none may be changed without the credentials or entitlement each entry
+  names.
 - US-only surfaces are blocked in this environment: the HK sandbox returns `404`
   (fund data, crypto data, screener v2, broker FD, instrument v3/logos) or `417`
   (crypto category), and no US sandbox credentials are available. Those items stay

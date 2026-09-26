@@ -61,18 +61,23 @@ The full-service relocation to `pkg/`, root-service deprecation shims, and raw `
 
 ## Endpoint coverage
 
-The generated [SDK ↔ API reconciliation](docs/reconciliation.md) is authoritative. Its 2026-09-22 snapshot reports:
+The generated [SDK ↔ API reconciliation](docs/reconciliation.md) is authoritative. Its 2026-09-26 snapshot reports:
 
 | Measure | Count |
 |---|---:|
 | Implemented endpoints | 209 |
 | Documented-only gaps | 0 |
-| Exact OpenAPI JSON path matches | 180 |
-| Matches the docs summary only | 4 |
-| Differs from both sources | 0 |
-| Unresolved SDK path | 25 |
+| ✅ Exact OpenAPI JSON path match | 184 |
+| 🟡 Matches the docs summary only | 4 |
+| ⚠️ Path differs from both sources | 1 |
+| ❓ Unresolved SDK path | 0 |
+| 📄 No OpenAPI schema on page (gRPC page, not a REST endpoint) | 3 |
+| ➖ No SDK symbol (manifest entry unmapped) | 17 |
+| ℹ️ Intentionally not implemented | 0 |
 
-The SDK therefore has no documented-only endpoint gaps, but it is inaccurate to call the snapshot a zero-discrepancy report. Do not hand-edit generated pages under `docs/webull-api/`; regenerate derived documentation with the doc generator when its inputs or the SDK change.
+The states partition the 209 implemented endpoints: 184 + 4 + 1 = 189 rows carry a verified path, and the remaining 20 are the 3 rows labelled `📄 No OpenAPI schema on page` plus 17 manifest entries deliberately mapped to no SDK symbol. 189 + 3 + 17 = 209, so no endpoint is missing. **The 3 is a label count, not a page count**: 7 gRPC reference pages embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol are labelled `➖ No SDK symbol` instead, because `_reconcile_data()` in `tools/webull-docgen/docgen.py` evaluates the unmapped branch before the no-openapi branch and the status table must partition the 209 rows. A further 3 rows have a JSON block that yields no `path` and are likewise labelled unmapped, so 10 rows in total have no usable official path. The two non-defect categories are why the previously quoted "25 unresolved" was wrong: 20 of those 25 entries were generator artifacts, and the remaining 5 were investigated individually — 4 were correct SDK code the generator could not statically follow, and 1 is the real path mismatch now reported as ⚠️.
+
+The SDK therefore has no documented-only endpoint gaps, but it is inaccurate to call the snapshot a zero-discrepancy report: 4 summary-only and 1 differing remain. Do not hand-edit generated pages under `docs/webull-api/`; regenerate derived documentation with the doc generator when its inputs or the SDK change. The label correction that produced this partition lives in `tools/webull-docgen/`, not in the generated output.
 
 ## v2.1.1 repository-tagged work
 
@@ -207,16 +212,38 @@ Earlier sandbox runs exercised the core token flow, selected AAPL market-data an
 9. **Order-book depth:** may be empty outside regular trading hours.
 10. **Plain MQTT:** port `1883` may be blocked; prefer the configured MQTT-over-WebSocket endpoint.
 11. **SSE news:** the HK upstream currently returns `504`.
-12. **Generated path status:** four paths match only the docs summary and 25 are unresolved; see the generated reconciliation rather than claiming zero discrepancies.
+12. **Generated path status:** four paths match only the docs summary and one differs from both; unresolved SDK paths are now `0`. See the generated reconciliation rather than claiming zero discrepancies.
 13. **Broker FD event API:** data remains raw, `OnData` omits response request ID/timestamp, only one active `Run` is supported, and no public option injects a non-zero raw subscribe bitmask.
 14. **Stream backpressure:** callbacks and channel dispatch are synchronous; a slow handler or full `DropBlock` subscriber causes head-of-line delay until cancellation or terminal close.
 15. **CI gaps:** nested coverage and strict documentation builds are Makefile/release gates, not CI gates; measured percentages are not behavior guarantees.
 
+### Live-blocked SDK defects
+
+The following four were found by static analysis on 2026-09-26. None is live-verified — nothing in that pass touched the network — and each may only be changed once the credential or entitlement it names is available, because the fix cannot be confirmed without it.
+
+16. **`brokerfd` sends every request to the core host.** `brokerfd/client.go:43` calls `c.core.Do(ctx, method, path, body, out)`, sending all Broker FD traffic to the Trading/Market Data host. The Broker FD reference pages document `https://broker-api.sandbox.webull.com`, which is the `BrokerHTTP` host in `internal/region/region.go:191`; the HK `broker` package routes correctly through `DoBroker` at `broker/client.go:63`.
+    - Impact: every method in the `brokerfd` package. This is the highest-impact item of the four.
+    - Minimal fix: route `brokerfd`'s shared `do` helper through the Broker host.
+    - Unblock: US sandbox credentials. The HK host does not serve the FD surface (`404`), so HK cannot distinguish "wrong host" from "wrong region".
+17. **`brokerfd` uses undocumented `/broker-fd/*` paths.** 14 non-test literals matching `/broker-fd/` remain in the package (`brokerfd/accounts.go:29-31`, `assets.go:25`, `brokerfd.go:58,68`, `documents.go:23-24`, `funding.go:26,30`, `instruments.go:27,29,31`, `journals.go:25`), while every other cached `broker-fd-api` page uses the `/broker/...` namespace. Concretely `brokerfd/assets.go:25` sends `/broker-fd/assets/summary` against a documented `GET /broker/assets/summaries/get`; that is the single ⚠️ path-differs-from-both row in the current snapshot. `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented page, and the manifest entry at `tools/webull-docgen/_common.py:298` names two SDK symbols for that one page — `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`, path `/broker-fd/accounts`) has no page of its own, and `brokerfd.GetFDAssetsSummary`'s response DTO (`brokerfd/assets.go:32-41`) does not match the documented `balance`/`positions` envelope.
+    - Impact: the affected `brokerfd` endpoints, including the assets summary.
+    - Minimal fix: align each literal with the documented `/broker/...` path and reconcile the duplicate symbol pair in the docgen manifest.
+    - Unblock: US sandbox credentials; probe `/broker/assets/summaries/get` and `/broker-fd/assets/summary` side by side.
+18. **`broker.UpdateVirtualAccount` sends the wrong verb and body shape.** `broker/accounts.go:66-68` builds `pathVirtualAccountsUpdate + "?account_id=" + accountID` and issues `c.put`. The documented endpoint is POST and requires `account_id` AND `client_request_id` in the JSON body, with no `account_name` field at all; `UpdateVirtualAccountRequest.AccountName` (`broker/accounts.go:54`) is undocumented. `GetVirtualAccount` does document `account_id` as a query parameter, so the POST appears to have copied the GET's convention. The path string itself is correct, which is why reconciliation reports it as a match — the generator compares paths, not verbs or bodies. The existing test `broker/accounts_test.go:151-160` currently certifies the wrong contract.
+    - Impact: `broker.UpdateVirtualAccount`.
+    - Minimal fix: issue POST with the documented body fields and update the test alongside it.
+    - Unblock: a production or US-scoped Broker credential; the HK sandbox returns `401 ROUTE_NOT_PERMITTED` for the whole Broker API.
+19. **`data.GetDisplaySnapshot` differs from both official sources.** `data/display_quotes.go:28` sets `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:52` sends it with GET. Both official sources say `POST /market-data/stocks/snapshots/list`. It is the only `/openapi/…` holdout in a const block whose four siblings (`pathDSBars`, `pathDSBarsSingle`, `pathDSTick`, `pathDSDepth`, lines 30-36) were aligned to `/market-data/stocks/…` in commit `2b29c88`, and the `TODO(ds): Confirm exact paths against US sandbox` marker that covered it was deleted in that same commit. The reference page is self-contradictory — its `operationId` is `snapshotUsingGET` while its `method` is `post` — so this is genuinely ambiguous rather than settled.
+    - Impact: `data.GetDisplaySnapshot` only; the four sibling Display endpoints are aligned.
+    - Minimal fix: align the path and switch to the documented POST body, but only with a probe. Interim recommendation: restore an explicit unverified marker instead of leaving the divergence silent.
+    - Unblock: a paid Display Solution entitlement; the host returns `403` without one.
+
 ## Next steps
 
 1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event-telemetry changes when suitable credentials and non-production test access are available.
-2. Supply US sandbox credentials for the US-only surfaces.
-3. Resolve the 25 generated unresolved paths and the four summary-only matches through the doc generator and official OpenAPI sources.
-4. Decide whether Broker FD needs a public raw-subscribe option, richer `OnData` metadata, and all-runs lifecycle parity before any future release tag.
-5. Benchmark a separately approved asynchronous stream-dispatch design only if synchronous head-of-line latency is unacceptable.
-6. Run the full race, vet, formatting, lint, and strict documentation gates before any future release tag.
+2. Supply US sandbox credentials for the US-only surfaces, which is also what unblocks items 16 and 17 above.
+3. Resolve the four summary-only matches and the one differing path through the doc generator and official OpenAPI sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
+4. Correct `broker.UpdateVirtualAccount` and `data.GetDisplaySnapshot` (items 18 and 19) only against the credentials each entry names, and correct their tests in the same change.
+5. Decide whether Broker FD needs a public raw-subscribe option, richer `OnData` metadata, and all-runs lifecycle parity before any future release tag.
+6. Benchmark a separately approved asynchronous stream-dispatch design only if synchronous head-of-line latency is unacceptable.
+7. Run the full race, vet, formatting, lint, and strict documentation gates before any future release tag.

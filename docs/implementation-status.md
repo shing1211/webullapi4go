@@ -61,18 +61,23 @@ The proposed full relocation of service packages under `pkg/`, root-service depr
 
 ## Endpoint reconciliation
 
-The generated [SDK ↔ API Reconciliation](reconciliation.md) is authoritative. Its 2026-09-22 snapshot reports:
+The generated [SDK ↔ API Reconciliation](reconciliation.md) is authoritative. Its 2026-09-26 snapshot reports:
 
 | Measure | Count |
 |---|---:|
 | Implemented endpoints | 209 |
 | Documented-only gaps | 0 |
-| Exact OpenAPI JSON path matches | 180 |
-| Matches docs summary only | 4 |
-| Differs from both sources | 0 |
-| Unresolved SDK path | 25 |
+| ✅ Exact OpenAPI JSON path match | 184 |
+| 🟡 Matches the docs summary only | 4 |
+| ⚠️ Path differs from both sources | 1 |
+| ❓ Unresolved SDK path | 0 |
+| 📄 No OpenAPI schema on page (gRPC page, not a REST endpoint) | 3 |
+| ➖ No SDK symbol (manifest entry unmapped) | 17 |
+| ℹ️ Intentionally not implemented | 0 |
 
-There are no documented-only endpoint gaps, but the snapshot is not a zero-discrepancy report. Generated pages under `webull-api/` are not hand-edited.
+The states partition the 209 implemented endpoints: 184 + 4 + 1 = 189 rows carry a verified path, and the remaining 20 are the 3 rows labelled `📄 No OpenAPI schema on page` plus 17 manifest entries deliberately mapped to no SDK symbol. 189 + 3 + 17 = 209, so no endpoint is missing. **The 3 is a label count, not a page count**: 7 gRPC reference pages embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol are labelled `➖ No SDK symbol` instead, because `_reconcile_data()` in `tools/webull-docgen/docgen.py` evaluates the unmapped branch before the no-openapi branch and the status table must partition the 209 rows. A further 3 rows have a JSON block that yields no `path` and are likewise labelled unmapped, so 10 rows in total have no usable official path. Those two categories are why the previously quoted "25 unresolved" was wrong: 20 of those 25 entries were generator artifacts, and the remaining 5 were investigated individually — 4 were correct SDK code the generator could not statically follow, and 1 is the real path mismatch now reported as ⚠️.
+
+There are no documented-only endpoint gaps, but the snapshot is not a zero-discrepancy report: 4 summary-only and 1 differing remain. Generated pages under `webull-api/` are not hand-edited; the label correction that produced this partition lives in `tools/webull-docgen/`.
 
 ## v2.1.1 repository-tagged hardening
 
@@ -154,7 +159,72 @@ Blocked or unverified areas:
 - Options/multi-leg: limited sandbox contracts and non-`SINGLE` strategies rejected with `417`. The SDK's `INVALID_TOKEN` category is a compatibility mapping for every HTTP 417 and does not prove a token failure.
 - Futures and event-contract trading: validation is offline-tested; live product behavior is unverified.
 - SSE news: upstream `504`.
-- Generated paths: four summary-only matches and 25 unresolved paths remain.
+- Generated paths: four summary-only matches, one path differing from both, and
+  `0` unresolved SDK paths. The previously quoted 25 unresolved paths were 20
+  generator artifacts plus 5 individually investigated entries.
+
+### Live-blocked SDK defects
+
+Found by static analysis on 2026-09-26. None is live-verified — nothing in that
+pass touched the network — and each may only be changed once the credential or
+entitlement it names is available, because the fix cannot be confirmed without
+it.
+
+- **`brokerfd` sends every request to the core host.** `brokerfd/client.go:43`
+  calls `c.core.Do(...)`, so all Broker FD traffic goes to the Trading/Market
+  Data host instead of the documented `https://broker-api.sandbox.webull.com`
+  (`BrokerHTTP` in `internal/region/region.go:191`); the HK `broker` package
+  routes correctly through `DoBroker` at `broker/client.go:63`. Impact: every
+  method in the package, and the highest-impact item of the four. Minimal fix:
+  route the shared `do` helper through the Broker host. Unblock: US sandbox
+  credentials — the HK host does not serve the FD surface (`404`), so HK cannot
+  distinguish "wrong host" from "wrong region".
+- **`brokerfd` uses undocumented `/broker-fd/*` paths.** 14 non-test literals
+  remain (`brokerfd/accounts.go:29-31`, `assets.go:25`, `brokerfd.go:58,68`,
+  `documents.go:23-24`, `funding.go:26,30`, `instruments.go:27,29,31`,
+  `journals.go:25`) while every other cached `broker-fd-api` page uses the
+  `/broker/...` namespace. `brokerfd/assets.go:25` sends
+  `/broker-fd/assets/summary` against a documented
+  `GET /broker/assets/summaries/get` — the single ⚠️ row in the snapshot.
+  `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented
+  page, and `tools/webull-docgen/_common.py:298` names two symbols for that one
+  page: `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page
+  of its own and `brokerfd.GetFDAssetsSummary`'s DTO
+  (`brokerfd/assets.go:32-41`) does not match the documented
+  `balance`/`positions` envelope. Impact: the affected `brokerfd` endpoints.
+  Minimal fix: align each literal with the documented path and reconcile the
+  duplicate symbol pair. Unblock: US sandbox credentials; probe
+  `/broker/assets/summaries/get` and `/broker-fd/assets/summary` side by side.
+- **`broker.UpdateVirtualAccount` sends the wrong verb and body shape.**
+  `broker/accounts.go:66-68` builds
+  `pathVirtualAccountsUpdate + "?account_id=" + accountID` and issues
+  `c.put`, while the documented endpoint is POST and requires `account_id` AND
+  `client_request_id` in the JSON body with no `account_name` field;
+  `UpdateVirtualAccountRequest.AccountName` (`broker/accounts.go:54`) is
+  undocumented. `GetVirtualAccount` does document `account_id` as a query
+  parameter, so the POST appears to have copied the GET's convention. The path
+  is correct, which is why reconciliation reports a match — the generator
+  compares paths, not verbs or bodies — and
+  `broker/accounts_test.go:151-160` currently certifies the wrong contract.
+  Impact: `broker.UpdateVirtualAccount`. Minimal fix: issue POST with the
+  documented body fields and update the test in the same change. Unblock: a
+  production or US-scoped Broker credential; the HK sandbox returns
+  `401 ROUTE_NOT_PERMITTED` for the whole Broker API.
+- **`data.GetDisplaySnapshot` differs from both official sources.**
+  `data/display_quotes.go:28` sets
+  `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:52` sends it
+  with GET, while both official sources say
+  `POST /market-data/stocks/snapshots/list`. It is the only `/openapi/…`
+  holdout in a const block whose four siblings (`pathDSBars`,
+  `pathDSBarsSingle`, `pathDSTick`, `pathDSDepth`, lines 30-36) were aligned in
+  commit `2b29c88`, the same commit that deleted the
+  `TODO(ds): Confirm exact paths against US sandbox` marker covering it. The
+  reference page is self-contradictory — `operationId` `snapshotUsingGET` against
+  `method` `post` — so this is genuinely ambiguous. Impact:
+  `data.GetDisplaySnapshot` only. Minimal fix: align the path and switch to the
+  documented POST body, but only with a probe; interim, restore an explicit
+  unverified marker. Unblock: a paid Display Solution entitlement; the host
+  returns `403` without one.
 
 ## Remaining risks
 
@@ -166,14 +236,20 @@ Blocked or unverified areas:
   bitmask.
 - Stream callbacks/channels are synchronous; a slow handler or full
   `DropBlock` subscriber causes head-of-line delay until cancellation or close.
-- Four summary-only and 25 unresolved generated paths remain.
+- Four summary-only matches and one differing path remain; unresolved SDK paths
+  are `0`.
+- Four live-blocked SDK defects are recorded above, none live-verified; the two
+  `brokerfd` items need US sandbox credentials, `broker.UpdateVirtualAccount`
+  needs a production or US-scoped Broker credential, and
+  `data.GetDisplaySnapshot` needs a paid Display Solution entitlement.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
   not behavior guarantees.
 
 ## Next steps
 
 1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event telemetry with suitable non-production access.
-2. Add US sandbox verification for US-only surfaces.
-3. Resolve generated path states through the doc generator and official sources.
-4. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
-5. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.
+2. Add US sandbox verification for US-only surfaces; this also unblocks the two `brokerfd` defects above.
+3. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
+4. Correct `broker.UpdateVirtualAccount` and `data.GetDisplaySnapshot` only against the credentials each entry names, and update their tests in the same change.
+5. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
+6. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.

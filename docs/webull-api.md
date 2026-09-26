@@ -11,7 +11,9 @@ documented endpoint to its Go method, request fields and response fields.
 - Every page below links back to the official reference for that endpoint.
 - The official `path` is authoritative; the generated [SDK ↔ API
   Reconciliation](reconciliation.md) tracks exact matches, summary-only
-  matches, differing paths, and unresolved SDK paths.
+  matches, differing paths, and the two non-defect states (rows labelled as
+  embedding no OpenAPI schema, and manifest entries deliberately mapped to no
+  SDK symbol).
 
 Go type references live on pkg.go.dev:
 [`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) ·
@@ -115,10 +117,18 @@ example, unsupported categories and `Invalid Symbol` can also return 417. See
 
 Since v1.1.0 every documented endpoint has an SDK implementation. The generated
 [SDK ↔ API Reconciliation](reconciliation.md) snapshot reports **209 implemented
-endpoints, 0 documented-only gaps, 180 exact OpenAPI JSON path matches, 4
-summary-only matches, 0 paths differing from both sources, and 25 unresolved SDK
-paths**. This is not a zero-discrepancy report. What remains unverified is live
-behaviour in environments the HK sandbox cannot exercise:
+endpoints, 0 documented-only gaps, and the partition 184 exact OpenAPI JSON path
+matches, 4 summary-only matches, 1 path differing from both sources, 0
+unresolved SDK paths, 3 rows carrying the `no OpenAPI schema on page` label, and
+17 manifest entries deliberately mapped to no SDK symbol**. The 189 rows with a
+verified path plus those 3 and 17 account for all 209, so the two non-defect
+categories are why nothing is missing rather than a gap. The 3 is a label count
+rather than a page count: 7 gRPC reference pages embed no OpenAPI schema, and 4 of
+them are recorded as intentionally unmapped instead because the generator
+evaluates that status first, so every one of the 209 rows is counted exactly
+once. This is not a zero-discrepancy report: 4 summary-only and 1 differing
+remain. What remains unverified is live behaviour in environments the HK sandbox
+cannot exercise:
 
 | Area | Status |
 |------|--------|
@@ -126,6 +136,7 @@ behaviour in environments the HK sandbox cannot exercise:
 | Broker API HK | Implemented; HK sandbox returns `401 ROUTE_NOT_PERMITTED` (app scope missing). |
 | Broker FD US, crypto, option-chain, some futures and event-contract data | Implemented; US-only — HK sandbox returns `404` / `417`. Verify with US sandbox credentials. |
 | Auth and instrument paths | Webull's `llms.txt` summary and its own OpenAPI JSON disagree for a few endpoints; the SDK follows the summary path. `examples/path-probe` can confirm both against a live sandbox. |
+| Live-blocked SDK defects | Four static findings from 2026-09-26 are not live-verified: the `brokerfd` transport host, the undocumented `brokerfd` `/broker-fd/*` paths, `broker.UpdateVirtualAccount`'s verb and body, and `data.GetDisplaySnapshot`'s path and verb. Each is recorded with its `file:line`, impact, minimal fix, and unblock requirement in [Implementation Status](implementation-status.md). |
 
 Multi-leg option strategies, futures order validation and option-chain
 discovery are fully implemented; the HK sandbox accepts only `SINGLE` orders

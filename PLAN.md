@@ -107,7 +107,7 @@ because it is included in the repository tag.
 | Display Solution | Implemented and offline-tested; HK host returns `403` before endpoint-specific behavior can be verified |
 | SSE news | Implemented; HK upstream currently returns `504` |
 
-The generated [SDK ↔ API reconciliation](docs/reconciliation.md) remains authoritative for endpoint counts and path states. Its 2026-09-22 snapshot reports 209 implemented endpoints and 0 documented-only gaps, while also reporting summary-only and unresolved paths; do not summarize that report as zero discrepancies.
+The generated [SDK ↔ API reconciliation](docs/reconciliation.md) remains authoritative for endpoint counts and path states. Its 2026-09-26 snapshot reports 209 implemented endpoints and 0 documented-only gaps, with four summary-only matches and one path differing from both sources; do not summarize that report as zero discrepancies.
 
 ## Verification gates
 
@@ -147,8 +147,20 @@ build. The local Makefile gates remain the release verification source.
 - Broker FD events remain raw-only, do not expose response request ID/timestamp
   through `OnData`, support one active `Run`, and have no public option that
   injects a non-zero raw subscribe bitmask.
-- The 2026-09-22 generated reconciliation still has four summary-only and 25
-  unresolved SDK paths despite zero documented-only endpoint gaps.
+- The 2026-09-26 generated reconciliation has four summary-only matches and one
+  path differing from both sources despite zero documented-only endpoint gaps.
+  Unresolved SDK paths are now `0`: the 20 rows that are neither of those are 3
+  rows carrying the `no OpenAPI schema on page` label and 17 manifest entries
+  deliberately unmapped, and they account for the remainder of the 209. The 3 is
+  a label count, not a page count: 7 gRPC pages embed no OpenAPI schema, and the
+  4 that are also mapped to no SDK symbol are labelled unmapped instead because
+  that status is evaluated first, so each row is counted once.
+- Four live-blocked SDK defects are recorded in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md` with their `file:line`, impact, minimal fix,
+  and unblock requirement: the `brokerfd` transport host, the undocumented
+  `brokerfd` `/broker-fd/*` paths, `broker.UpdateVirtualAccount`, and
+  `data.GetDisplaySnapshot`. None is live-verified, and none may be changed
+  without the credentials or entitlement each entry names.
 - CI does not enforce nested coverage or a strict docs build; root aggregate
   coverage percentages are measurements, not correctness guarantees.
 - The repository patch release is recorded as `v2.1.4`; the root module remains
