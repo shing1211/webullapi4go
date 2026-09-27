@@ -9,6 +9,143 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.15] - 2026-09-27
+
+Tooling release. A wire-conformance harness is added: it compares every SDK
+response type against the shape Webull documents for the call that decodes it,
+and records 180 divergences across 54 symbols. It measures; it repairs nothing.
+No production `.go` file was edited and no SDK behaviour changed.
+
+### Added
+
+- `tools/conformance/gen_fixtures.py` emits a committed fixture per documented
+  endpoint — 193 fixtures totalling 19,192 bytes (mean 99 B, median 5 B, max
+  1,293 B) plus a 285,507-byte `manifest.json` carrying per-fixture provenance
+  — and passes 12 emitter self-checks before it writes anything. It is Python 3
+  standard library only and imports `tools/webull-docgen/_common.py` for the
+  cache format without modifying it. No fixture byte comes from Go: the SDK
+  contributes path constants only, so a fixture cannot drift toward the code it
+  exists to contradict.
+- `conformance/` holds the comparison and its gate. Four checks run in priority
+  order: required-name coverage (122 rows), top-level shape (26 plus one
+  element-type row), leaf type (2), and a decode-without-error check (29) that
+  is reported last and is called weak, because a decode which succeeds is
+  consistent with a type that ignores every documented name.
+  `TestObservedDivergenceReport` prints the whole observed set grouped by check,
+  which is what a baseline edit has to be made against.
+- **180 divergences are recorded across 54 symbols** in the embedded
+  `conformance/known-divergences.json`: `brokerfd` 113, `data` 63, `trade` 4.
+  The gate is green because the observed set is exactly the recorded set, and it
+  fails in both directions because both need a person: a divergence absent from
+  the file is a new finding, and a recorded entry that stops reproducing is
+  either a fix or a check that changed meaning.
+- Four Makefile targets: `conformance-fixtures` (`--check --self-test`),
+  `conformance-fixtures-update` (`--write --self-test`), `conformance-gate` and
+  `conformance-report`. `--check` regenerates in memory and fails on any
+  difference, so drift from the documentation is a signal and a stale fixture
+  cannot quietly become a fresh one; adopting new output is deliberately a
+  separate verb. Both skip with exit 0 when the gitignored docgen cache is
+  absent, since a fresh checkout cannot judge drift either way.
+- **The motivating weakness is in `brokerfd`'s own tests.**
+  `TestGetFDPositions` serves `json.NewEncoder(w).Encode([]FDPosition{...})` —
+  the SDK's own struct — and then asserts the SDK decodes it, which proves the
+  type is self-consistent and not that it matches the endpoint. The root
+  module's tests serve 85 response bodies from a local server this way, 50 of
+  them in `brokerfd`, and 49 of those 50 encode an SDK struct type.
+
+### Fixed
+
+- These are corrections to the instrument, and an independent review ran before
+  any finding from it reached a status document. It found the harness
+  misreporting, which is the reason to trust the numbers above rather than a
+  reason to discount them.
+- **Six symbol-table entries named the public projection a method returns rather
+  than the envelope it actually decodes.** Those six envelopes are unexported
+  and cannot be named in a `reflect.TypeOf` call at all. Comparing a tagless
+  struct against a page reports a missing name for every documented property,
+  which produced 12 rows the SDK does not have. The types are now read from the
+  SDK sources with `go/parser` and rebuilt with `reflect.StructOf`, failing
+  closed on any field it cannot represent, and each rebuilt type is compared
+  field by field against the declaration on every run.
+- **A reasoned waiver was suppressing a live defect, and was removed.**
+  `data.Quote.QuoteTime` is `int64` where the page the method cites requires a
+  `string`. The waiver argued that the sandbox sends a number, so retyping the
+  field would be a regression; that reasoning fails twice over. The method
+  cites the very page the harness read, so the SDK contradicts a contract it
+  names, and one environment's observation does not stop a published type
+  applying. On the Display Depth row there was no evidence at all, that host
+  returning 403 here. Both rows are now ordinary open defects, and
+  `pkg/domain/money` already accepts a JSON string or a number, so a
+  two-way-tolerant type satisfies both sources.
+- **`tagSite.Depth` was written and never read** while the comment claimed depth
+  scoping, so the required-name count was a floor presented as a count. Depth is
+  now read, and the report names what it costs: 19 rows on which 41 of 90
+  required names reach a tag only from below the level the page declares them
+  at. They stay uncounted, because `encoding/json` flattens a body into one
+  name space and a top-level name reached one level down still decodes.
+- **One false reason had been copied 88 times** — that a DTO is named after the
+  undocumented `/broker-fd/*` payloads — and it was false for 86 of them,
+  because those methods send the path the page documents. Every entry now
+  carries a reason true of that entry. A required non-empty reason is not a
+  required true one, and these two rows are the case that proved it: the guard
+  was satisfied perfectly by a false sentence, identically on both entries.
+- Also corrected: two latent `encoding/json` embedding bugs, now covered by a
+  regression test; an over-permissive `money.Money` leaf exemption; a stray `%s`
+  in two provenance strings; and a note claiming one waiver where there were two.
+- The fixing pass then corrected the review itself on six points, among them
+  that the review's 170/14/16 split does not decompose.
+
+### Noted
+
+- **The status documents materially under-report, and this release does not fix
+  that.** Only 5 of the 180 recorded rows are already written up in
+  `IMPLEMENTATION_STATUS.md`: three `GetFDPositions` rows and two
+  `GetFDAssetsDetail` rows, all under live-blocked defect item 20. The other 175
+  state in their own `recordedIn` field that no status-document entry exists for
+  them. A reader who takes the five live-blocked SDK defects as the complete
+  list of known problems is wrong by 175 rows, and this release is not evidence
+  against that reading — it is the measurement that establishes it. Writing the
+  ~170 genuine rows up is deliberate follow-up work, deferred until the
+  instrument has run in CI, so that no claim is made with a tool CI has never
+  executed.
+- **180 is a row count, not 180 defects.** 16 of the 27 shape rows are pages
+  that document a bare object on an endpoint whose page name ends in `-list`
+  while the SDK decodes an array. The harness cannot tell whether the page
+  omitted the array wrapper or the type is wrong, and records each as an open
+  defect because it has no basis to prefer the page over the type. One live
+  probe against any of them would settle it.
+- **What the harness proves is narrow, and the narrowness is the point.** It
+  shows that a documented response shape is or is not representable in the SDK's
+  types. It does not show the SDK is correct where the harness is green, and it
+  cannot: `data.GetDisplaySnapshot` reconciles as a clean path match and is
+  still defective, so a green row in `docs/reconciliation.md` remains a path
+  comparison rather than a correctness verdict.
+- **The instrument's limits, which a green run does not lift.** A required name
+  reachable only through a nested object is not reported, so 122 is a floor and
+  not a total. The decode-only check is the weakest of the four and its 29 rows
+  mostly duplicate a shape or name row for the same symbol. 5 compared rows are
+  marked not comparable, because the SDK method sends a different path than the
+  page documents and the page is therefore not that call's contract; those rows
+  claim nothing either way. 29 of the 193 endpoints are out of scope entirely,
+  because `broker/` is a separate Go module whose types are not importable from
+  the root module without a `go.mod` change, so no `broker/` row is covered
+  here. 154 of 193 endpoints are actually compared.
+- **No divergence is fixed and none is claimed to be.** The 175 unwritten rows
+  are open defects. The five live-blocked SDK defects recorded through `2.1.11`
+  remain blocked and unchanged; this release describes them and fixes none.
+- Nothing here is live-verified. No Webull host was called and no credential was
+  used. The five live-blocked defects are still credential-gated, and the Broker
+  FD, Display Solution, US-only and footprint surfaces remain exactly as blocked
+  as `2.1.11` recorded them.
+
+No SDK endpoint was live-verified by this release, no Webull host was called,
+and none is claimed to be. No existing `.go` file was modified; no SDK code,
+generator or generated documentation was changed. The files edited are
+`CHANGELOG.md`, `AGENTS.md` and `docs/runs/index.md`.
+`IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md` are deliberately
+untouched, because the under-report above is a finding to be written up, not one
+to be papered over in the release that measured it.
+
 ## [2.1.14] - 2026-09-27
 
 Repository documentation patch release. The `[2.1.13]` citation gate resolves a

@@ -25,9 +25,11 @@ pkg/types/                      Shared public market and instrument types
 pkg/domain/money/               Public money.Money decimal type
 pkg/domain/order/               Public order state machine and reconciliation model
 internal/...                    Authentication and region implementation details
+conformance/                    Wire-conformance harness: documented wire shape vs SDK response types
 proto/, buf.gen.yaml, buf.yaml  Protobuf sources and codegen configuration
 examples/                       Runnable main programs and nested example modules
 tools/webull-docgen/            Doc generator for docs/webull-api/** and docs/reconciliation.md
+tools/conformance/              Fixture generator for conformance/testdata, from the docgen cache
 docs/                           Documentation site sources (MkDocs Material)
 docs/adr/                       Architecture Decision Records
 docs/runs/                      Internal run artifacts; excluded from the built site
@@ -93,6 +95,8 @@ make lint
 gofmt -l .                 # must print nothing
 make docs
 make citations
+make conformance-fixtures
+make conformance-gate
 ```
 
 - `make build`, `make vet`, and `make test` must pass without credentials.
@@ -118,8 +122,41 @@ make citations
   it read and every same-named candidate as `ambiguous-basename` — a warning, so
   the run still exits zero; `--verbose` prints the resolution of every citation.
   The check does not verify that the cited line says what the prose claims, so a
-  green run is not evidence that a citation is correct, and 23 of the 86 full
-  citations in these three documents currently resolve ambiguously.
+  green run is not evidence that a citation is correct. Every full citation in
+  these three documents names its own path, so the tool resolves none by inference
+  and finds nothing ambiguous; the hazard is a bare filename, which the tool would
+  resolve by inference again, and a guess is only a warning that leaves the gate
+  green.
+- `make conformance-gate` compares each SDK response type against the documented
+  wire shape in `conformance/testdata`; `make conformance-report` prints the
+  observed divergence set. That tree is a committed, reviewable snapshot of
+  Webull's published response schemas, derived from the same docgen cache
+  `tools/webull-docgen` uses, so read a fixture change rather than regenerating
+  past it. `make conformance-fixtures` regenerates in memory and fails on any
+  difference, which makes drift from the documentation a signal instead of a
+  silent refresh; `make conformance-fixtures-update` is the only way to adopt
+  new output. Both skip with exit 0 when the cache is absent, so a fresh
+  checkout cannot judge drift either way.
+- Every entry in `conformance/known-divergences.json` carries a reason and the
+  loader refuses one that is empty, so a finding cannot be dropped by blanking a
+  field. A reason explains why a divergence is recorded rather than fixed; a
+  reasoned waiver is an ordinary entry, not a suppression list. A required
+  reason is not a required true reason: a false one once satisfied that guard
+  across dozens of entries before it was caught.
+- The gate shows that a documented response shape is or is not representable in
+  the SDK's types. It does not show the SDK is correct where it is green, so
+  treat a green run as no evidence of correctness. The required-name count is a
+  floor, not a total: a documented name the SDK carries only inside a nested
+  object counts as covered, because `encoding/json` flattens a body into one
+  name space, and the report prints the rows that rest on that. Rows where the
+  SDK method sends a different path than the page documents are reported as not
+  comparable and claim nothing either way. `broker/` is out of scope entirely,
+  being a separate Go module, so no `broker/` row is covered.
+- The recorded divergences are not yet written into
+  `IMPLEMENTATION_STATUS.md` or `docs/implementation-status.md`, which
+  therefore under-report. Do not read those documents as a complete list of
+  known divergences, and do not add a summary count there that implies
+  otherwise.
 - Unit tests are offline and credential-free. They must not require network
   access.
 - On Windows, if a Go build fails with a file-lock error on `a.out.exe`, set
