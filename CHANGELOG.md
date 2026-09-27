@@ -9,6 +9,42 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.18] - 2026-09-27
+
+Corrective documentation release. `2.1.17` documented a `trade` split whose
+denominator and two counts derived from it were one too low, in three files. The
+argument those numbers supported was correct and is unchanged; only the numbers
+are. No `.go` file, no fixture, no generator and no baseline entry was touched, no
+SDK behaviour changed, and nothing is live-verified.
+
+### Fixed
+
+- **The `trade` split's denominator was one low, and the two counts derived from
+  it followed.** `IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md` and
+  the `[2.1.17]` entry itself each restate the same split of the compared trading
+  rows, and each carried the wrong figures in 6 places across the 3 files: 13
+  trading endpoints are compared rather than 12, 8 publish no `required` list
+  rather than 7, and 12 record no divergence rather than 11. The error was a row
+  excluded from the denominator, not a count of divergences: the
+  `trading/GET-trading-instruments-stocks-profiles-list` row is one the harness
+  reports as not comparable, because `data.GetStockInstruments` sends a path other
+  than the one the page documents, and a not-comparable row is still a compared
+  row — it is the fifth of the five such rows item 22 already accounts for. Every
+  figure is recounted from `conformance/testdata/manifest.json` joined to
+  `conformance/known-divergences.json` on `entries[].fixture` → `fixtures[].id`,
+  which matches all 180 entries; joining `fixtures[].fixture` instead matches none,
+  because the entries carry the bare id and the manifest appends `.json`. The two
+  halves that were already right are unchanged: 5 endpoints publish a `required`
+  list, and 4 of those 5 are among the clean ones, all 4 `trade` divergence rows
+  sitting on the fifth. The 7 attached to "of the clean, are not name-checkable"
+  was a derived count of the same split and corrects to 8 with it.
+- **No gate found this, and that is worth recording plainly.** A path comparison
+  and a fixture byte check cannot observe how a number in a status document was
+  arrived at, so the defect survived the release that shipped it. It was found by
+  a post-release check of the approved content, not by the conformance gate, the
+  citation checker, or CI. Nothing here is a claim that a green run would have
+  caught it.
+
 ## [2.1.17] - 2026-09-27
 
 Repository documentation release. `2.1.15` measured the wire-conformance
@@ -69,7 +105,7 @@ is newly live-verified.
   so the count stays stable and no separate work is attached to them. The total
   therefore overstates the work, and the 151 rows that remain are not a defect
   count either, because 19 of them are the indeterminate container-kind rows.
-- **`trade` carries 4 rows, all on `trade.BatchPlaceOrder`**, and 11 of the 12
+- **`trade` carries 4 rows, all on `trade.BatchPlaceOrder`**, and 12 of the 13
   compared trading endpoints record none. That is a statement about what the
   instrument did not find, on the 5 trading pages that publish a `required` list
   and give it something to check — not a correctness verdict.

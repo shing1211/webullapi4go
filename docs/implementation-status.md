@@ -401,7 +401,7 @@ none; 5 of those 100 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 95 comparable rows
 record no divergence. All 180 divergences fall on 54 symbols, in three packages:
 `brokerfd` 113, `data` 63, `trade` 4. The 4 `trade` rows are all on
-`trade.BatchPlaceOrder`; 11 of the 12 trading endpoints the harness compared record
+`trade.BatchPlaceOrder`; 12 of the 13 trading endpoints the harness compared record
 no divergence, and 4 of the 5 that publish a `required` list are among them, so the
 trading API's response types are the most conformant part of the surface measured.
 That is a statement about what the harness did not find, on the 5 trading pages that
@@ -574,11 +574,11 @@ existed — the three `brokerfd.GetFDPositions` missing-name rows and the two
     is the standing counter-example in the other direction: a clean path match
     that is still defective. A green row is a statement about the harness, not
     about the endpoint.
-  - **The `trade` split, so the 90 is not read as the whole surface.** 12 trading
-    endpoints are compared; 5 publish a `required` list and 7 do not, 11 of the 12
+  - **The `trade` split, so the 90 is not read as the whole surface.** 13 trading
+    endpoints are compared; 5 publish a `required` list and 8 do not, 12 of the 13
     record no divergence, and all 4 `trade` divergence rows sit on the single one
-    that does publish a list (`trade.BatchPlaceOrder`). Of the 11 clean, 4 are
-    name-checkable and 7 are not. The trading API is the part of the surface where
+    that does publish a list (`trade.BatchPlaceOrder`). Of the 12 clean, 4 are
+    name-checkable and 8 are not. The trading API is the part of the surface where
     the instrument both ran and had documented names to check, and it found almost
     nothing — which is a statement about what the harness did not find on 5 pages,
     not a correctness verdict.
@@ -636,8 +636,8 @@ existed — the three `brokerfd.GetFDPositions` missing-name rows and the two
   base, not 90 defects, and not a claim the SDK is right on those rows. Only the
   container-shape check carried information there, and it did find something:
   23 of the 90 diverge on shape and the other 67 record no divergence at all. The
-  `trade` surface splits — 5 of its 12 compared endpoints publish a `required`
-  list and 7 do not — so the 90 does not describe the whole surface. Separately,
+  `trade` surface splits — 5 of its 13 compared endpoints publish a `required`
+  list and 8 do not — so the 90 does not describe the whole surface. Separately,
   the 29 `broker/` endpoints are unexamined altogether, for the different reason
   item 21 records.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
