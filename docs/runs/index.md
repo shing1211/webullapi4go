@@ -28,3 +28,4 @@
 | 2026-09-27 | docgen-cache-safety | BUILD | released v2.1.10 (unverified marker on GetDisplaySnapshot, safe cache refresh, degraded-report guard, dual-symbol manifest notes) | v2.1.10 |
 | 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.11 (corrected two stale manifest citations, recorded a silent response-schema defect in brokerfd.GetFDPositions) | v2.1.11 |
 | 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.12 (recorded two self-corrections from v2.1.11) | v2.1.12 |
+| 2026-09-27 | citations-gate | BUILD | released v2.1.13 (file:line citation validator with a Makefile target and CI job) | v2.1.13 |

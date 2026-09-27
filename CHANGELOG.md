@@ -9,6 +9,174 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.13] - 2026-09-27
+
+Repository documentation-and-tooling patch release. A `file:line` citation
+validator is added, after five consecutive releases shipped stale citations and
+nothing mechanical checked any of them, and a third self-correction is recorded
+from the `v2.1.12` release record. No SDK behaviour changed and no `.go` file was
+edited.
+
+### Added
+
+- `tools/citations/check.py` validates the `file:line` citations in the status
+  documents. It is Python 3 standard library only: no dependency, no
+  `pip install`, and no module's `go.mod` touched. The trigger is a documented
+  requirement rather than bad luck — `AGENTS.md` requires live-blocked defects to
+  be recorded with `file:line` citations, and across five consecutive releases
+  those citations went stale and shipped. A comment inserted above one const
+  block invalidated nine references across three documents, one manifest citation
+  was transposed at birth, another pointed at a blank line, and a human reviewer
+  caught some of them.
+- A `make citations` target runs it from the repository root, and a `citations`
+  job runs it in CI. The target reports only; a non-zero exit fails the build.
+  The CI job invokes the checker directly rather than through the target, which
+  matches every other gate in that workflow. The edit to
+  `.github/workflows/ci.yml`, a protected file, was explicitly approved on
+  2026-09-27.
+- Checked by default: `IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md`,
+  and `AGENTS.md`. `CHANGELOG.md` is an explicit waived constant,
+  `WAIVED_DOCUMENTS` in the tool, because it holds released history whose seven
+  known-stale citations must stay byte-unchanged. The waiver is a named constant
+  so that it is greppable rather than an omission, and the document list can be
+  overridden on the command line for testing while the defaults stay those three.
+- Five failure conditions: `missing-file`, `line-out-of-range`, `blank-line`,
+  `comment-line`, a pure comment being `//` in Go, `#` in Python, and `<!--` in
+  Markdown, and `empty-waiver`, a `# citation-waiver:` marker carrying no reason.
+  Plus `unresolved-continuation`: the bare `:NN` form the status documents use
+  heavily, when it has no earlier full citation to resolve against. A bare `:NN`
+  is resolved against the most recent full citation in the same document rather
+  than skipped, because a checker that ignored the form would check far less than
+  it appears to. `missing-file` is reachable only by a path carrying its own
+  directory: a mistyped bare filename names no file at all, so it is reported as
+  `guessed-basename` or `unresolved-basename`, both warnings, and the gate stays
+  green. A typo in a fully qualified path fails; a typo in a bare one does not.
+- A bare filename is resolved against the document's own citation history, so the
+  tool, not the document, decides which file it reads — and 41 Go basenames here
+  name more than one file. Every such resolution is reported as
+  `ambiguous-basename`, naming the file actually checked and every candidate, and
+  `--verbose` prints the resolution of every citation whether it was inferred or
+  named outright. The exit status stays zero: on the three default documents this
+  reports 23 ambiguous resolutions over 86 full citations and still exits green,
+  which is the honest state of those documents rather than a green light on their
+  correctness.
+- A range is held to a weaker rule on purpose, and the difference is a real
+  limitation rather than a convenience: a range fails only when *no* line in it is
+  code, so a range starting on a GoDoc comment, or spanning a struct whose
+  interior is field comments, still passes. The count of the passing ranges that
+  exercise the weakening is reported in the summary so it stays visible, and a
+  range that failed is not counted among them. The weakening is not theoretical:
+  `data/display_quotes.go:41-49` is a range that drifted onto a const, and this
+  tool does not report it.
+- A `# citation-waiver: <reason>` marker on the citing line skips that citation
+  and counts it, and the marker must sit outside every code span, because one
+  inside a span documents the syntax rather than waiving anything. The reason is
+  enforced, not decorative: a marker with nothing after the colon is not a
+  waiver, so the citation is checked and `empty-waiver` fails the gate.
+  `AGENTS.md` records the escape hatch, because a maintainer whose build just
+  failed on the new job needs to know it exists.
+
+### Noted
+
+- **The gate does not prevent citation errors.** It detects one specific
+  mechanical subset: a cited file that is missing, a line that is out of range,
+  blank, or a pure comment, a continuation that cannot be resolved, and a waiver
+  that does not say why. It does not check that the cited line contains what the
+  prose claims, so it cannot detect a label/number transposition, where the
+  number is a valid line of the right file but the wrong line. Nor can it see a
+  stale citation that drifted onto a line which still reads as code: of the seven
+  historical misses the release record names, it reports the four now reading as
+  a blank or comment line and cannot see the three now reading as code, which are
+  `tools/webull-docgen/_common.py:298`, `data/display_quotes.go:52`, and the
+  `data/display_quotes.go:41-49` range. Measured on 2026-09-27 against a copy of
+  `CHANGELOG.md`, the four are reported as 5 `comment-line` and 2 `blank-line`
+  findings over 4 distinct targets. The `duplicate-label` warning is a partial
+  mitigation for the transposition class, not a fix, and fires far too rarely to
+  be trusted. A green run is evidence that the citations resolve to existing,
+  non-blank, non-comment lines inside the cited file, and nothing more.
+  Overstating what the gate does would repeat the exact error this entry records
+  below.
+- The tool never rewrites, repairs, or auto-fixes a citation, and it writes to no
+  file, including the documents it reads. There is no `--fix` and there will not
+  be one. An auto-rewritten citation is a wrong citation that looks verified,
+  which is worse than a red gate.
+- Neither status document's recorded defect analysis is touched by this release.
+  The five live-blocked defects recorded through `2.1.11` remain blocked and
+  unchanged, and a green citation run says nothing about whether any of them has
+  been fixed.
+
+### Fixed
+
+- Three defects in the citation checker itself, found by review of the unreleased
+  tool and corrected before the tag rather than after it, because a gate that
+  validates the wrong file is worse than no gate. Each shipped a claim in this
+  entry that was the opposite of what the code did.
+- **A bare basename could bind to the wrong package and the run stayed green.**
+  The checker resolved a bare `accounts.go` plus a line number by recalling the
+  most recent full citation of that name, and 41 Go basenames here name more than
+  one file, so it could read `broker/accounts.go` where the prose meant
+  `brokerfd/accounts.go` — two files that share a name and nothing else. On the
+  three default documents 35 of 86 full citations have their file inferred rather
+  than named, 23 of them against a name the repository holds more than once, and CI
+  runs without `--verbose`, so nothing identified which file each one landed on.
+  Every such resolution is now reported as `ambiguous-basename` with the file
+  checked and every candidate named, and `--verbose` prints the resolution of
+  every citation. The requirement that every citation be fully qualified was
+  deliberately *not* imposed: that would mean rewriting 35 citations in the same
+  change that checks them, and each rewrite is a chance to introduce a fresh
+  error.
+- **The "the reason is required" control did not exist.** The checker matched the
+  `# citation-waiver:` marker and never read the text after it, so a waiver with
+  an empty reason waived silently — while this entry, the tool's `--help`, its
+  module docstring, and `AGENTS.md` all asserted that it could not. Enforced now:
+  an unexplained marker is not a waiver, the citation is checked, and
+  `empty-waiver` fails the gate.
+- **"Catches two cleanly of seven real historical misses" was false.** Measured
+  against `CHANGELOG.md`, the only document still holding the historical misses,
+  the checker reports 4 distinct stale targets, not 2, as 5 `comment-line` and 2
+  `blank-line` findings — 7 findings, which is where the number collision in the
+  prose came from. The adjacent claim that both historical misses were
+  single-line citations was false too, since one of the three it cannot see is
+  the `data/display_quotes.go:41-49` range. The limits text in all three places
+  now states the measurement and names what is being counted.
+- Smaller corrections in the same pass: `Makefile` told the reader to run from
+  the repository root so cited paths would resolve, when the root is derived from
+  the tool's own location and the target works from any directory; the failure
+  list read as if a mistyped bare filename failed the gate, when only a path
+  carrying its own directory can; the footer's range counters were incremented
+  before the range was checked, so a range that *failed* was counted under the
+  heading "not failures"; and the comment claiming the tool never opens
+  `CHANGELOG.md` was true only because the file is waived, not because the tool
+  declines to.
+- The `[2.1.12]` entry's first bullet claims that the `AGENTS.md` edit "is
+  described correctly in the `[2.1.11]` body". That is false: the `[2.1.11]`
+  section contains no occurrence of `AGENTS` at all, and the edit is described
+  only in the `59f7859` commit message. Only the location claim was wrong. The
+  rest of the clause is true and stands — the `AGENTS.md` edit is real, its
+  content is accurate, and the omission that bullet reports is a file-list
+  omission — so nothing else in it needs correcting. The error was caught by the
+  release agent reviewing its own output after `v2.1.12` had been pushed, and was
+  deliberately left uncorrected at the time because the release had already
+  shipped.
+- `[2.1.12]` is itself **left byte-unchanged**, on the same principle that left
+  `[2.1.11]`, `[2.1.6]`, and `[2.1.8]` byte-unchanged, so this correction is
+  recorded here instead. Amending a tagged entry would be the first exception in
+  six corrections and would contradict the invariant this same release installs
+  as a waived constant: the `[2.1.12]` entry states that rule about itself in the
+  very sentence that carries the error, so an amendment would leave the entry
+  citing a rule it violates. The error is also inert — it concerns where a
+  description of a documentation edit lives, not SDK behaviour, an API, a defect,
+  or any verification claim, so no reader acts differently because of it.
+- This correction is folded into the new work rather than released on its own. A
+  docs-only release per typo has negative expected value: each new entry is
+  another chance to introduce a fresh error while the underlying problem goes
+  unaddressed.
+
+No SDK endpoint was live-verified by this release, no Webull host was called, and
+none is claimed to be. No SDK code was changed. The files edited are
+`tools/citations/check.py`, `Makefile`, `.github/workflows/ci.yml`, `AGENTS.md`,
+`CHANGELOG.md`, and `docs/runs/index.md`.
+
 ## [2.1.12] - 2026-09-27
 
 Repository documentation-only patch release recording two textual errors found in

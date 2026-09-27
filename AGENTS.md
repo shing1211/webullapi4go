@@ -92,6 +92,7 @@ make cover
 make lint
 gofmt -l .                 # must print nothing
 make docs
+make citations
 ```
 
 - `make build`, `make vet`, and `make test` must pass without credentials.
@@ -104,6 +105,21 @@ make docs
   local/release verification source.
 - `gofmt -l .` must be empty. Generated code under `gen/` is excluded from the CI
   gofmt check and from golangci-lint (see `.golangci.yml`).
+- `make citations` validates the `file:line` citations in `IMPLEMENTATION_STATUS.md`,
+  `docs/implementation-status.md`, and `AGENTS.md`; `CHANGELOG.md` is a waived
+  constant in the tool, because it holds released history that must stay
+  byte-unchanged. A citation on a line carrying `# citation-waiver: <reason>` is
+  skipped, so an intentional exception is one marker rather than a suppressed
+  gate; a marker with nothing after the colon is not a waiver, and the tool
+  reports `empty-waiver` for it and checks the citation anyway. A marker inside a
+  code span documents the syntax rather than waiving anything, so this sentence
+  waives nothing. A bare filename
+  is resolved from the document's own citation history, so the tool names the file
+  it read and every same-named candidate as `ambiguous-basename` — a warning, so
+  the run still exits zero; `--verbose` prints the resolution of every citation.
+  The check does not verify that the cited line says what the prose claims, so a
+  green run is not evidence that a citation is correct, and 23 of the 86 full
+  citations in these three documents currently resolve ambiguously.
 - Unit tests are offline and credential-free. They must not require network
   access.
 - On Windows, if a Go build fails with a file-lock error on `a.out.exe`, set
