@@ -26,3 +26,4 @@
 | 2026-09-26 | recon-docgen-truth-followup | BUILD | released v2.1.8 (corrected severity of two live-blocked defects; reconciler path-only caveat) | v2.1.8 |
 | 2026-09-26 | recon-docgen-truth-closeout | BUILD | released v2.1.9 (repaired the stale AGENTS.md release-status paragraph) | v2.1.9 |
 | 2026-09-27 | docgen-cache-safety | BUILD | released v2.1.10 (unverified marker on GetDisplaySnapshot, safe cache refresh, degraded-report guard, dual-symbol manifest notes) | v2.1.10 |
+| 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.11 (corrected two stale manifest citations, recorded a silent response-schema defect in brokerfd.GetFDPositions) | v2.1.11 |

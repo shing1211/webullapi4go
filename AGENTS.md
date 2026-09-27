@@ -244,24 +244,28 @@ make generate
   usable official path. Quote 3 as a label count and 7 as the page count.
 - **A `✅ match` row is a path comparison, not a correctness verdict.** The
   reconciler compares path strings only and cannot observe HTTP verbs, request
-  bodies, or transport-host routing, so a green row in `docs/reconciliation.md`
-  is not evidence that an endpoint is correct: it reports
-  `broker.UpdateVirtualAccount` as a clean match although the request behind that
-  path is defective, and it is structurally blind to the `brokerfd` host-routing
-  and `data.GetDisplaySnapshot` defects recorded below. This limit of a path
-  comparison, not a defect in the generator, is recorded in
+  bodies, host routing, or response schemas, so a green row in
+  `docs/reconciliation.md` is not evidence that an endpoint is correct: it
+  reports the defective `broker.UpdateVirtualAccount` as a clean match, and it
+  is blind to the `brokerfd` host-routing and `data.GetDisplaySnapshot` defects
+  recorded below. Sharpest is `brokerfd.GetFDPositions`: a clean match whose
+  response DTO silently zeroes three required values. This limit of a path
+  comparison, not a generator defect, is recorded in
   `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`.
-- Four live-blocked SDK defects found by static analysis on 2026-09-26 are
-  recorded with `file:line`, impact, minimal fix, and unblock requirement in
-  `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`:
-  `brokerfd/client.go:43` routes the whole package to the core host instead of
-  the Broker host, `brokerfd` still uses 14 undocumented `/broker-fd/*` path
-  literals (`brokerfd/assets.go:25` is the one the generated report flags),
-  `broker.UpdateVirtualAccount` sends the wrong verb and body
-  (`broker/accounts.go:66-68`), and `data.GetDisplaySnapshot` differs from both
-  official sources (`data/display_quotes.go:33`, `:63`). None is live-verified
-  and none may be changed without the credentials or entitlement each entry
-  names.
+- Five live-blocked SDK defects are recorded with `file:line`, impact, minimal
+  fix, and unblock requirement in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md`. Four were found by static analysis on
+  2026-09-26: `brokerfd/client.go:43` routes the whole package to the core host
+  instead of the Broker host, `brokerfd` still uses 14 undocumented
+  `/broker-fd/*` path literals (`brokerfd/assets.go:25` is the one the generated
+  report flags), `broker.UpdateVirtualAccount` sends the wrong verb and body,
+  and `data.GetDisplaySnapshot` differs from both official sources. The fifth,
+  `brokerfd.GetFDPositions`, was found on 2026-09-27, also statically: it sends
+  the documented path and reconciles as a clean match, yet three of the eight
+  required response properties have no matching json tag and decode as silent
+  zeroes, and its entry records why a retag is not automatically the fix. None
+  is live-verified and none may be changed without the credentials or
+  entitlement each entry names.
 - US-only surfaces are blocked in this environment: the HK sandbox returns `404`
   (fund data, crypto data, screener v2, broker FD, instrument v3/logos) or `417`
   (crypto category), and no US sandbox credentials are available. Those items stay

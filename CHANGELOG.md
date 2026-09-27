@@ -9,6 +9,99 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.11] - 2026-09-27
+
+Repository documentation-only patch release: two stale citations are corrected, a
+newly-found silent data-loss defect is recorded, and a citation-sweep finds the
+correction in `2.1.10` itself was incomplete. No SDK behaviour changed and no
+`.go` file was edited.
+
+### Fixed
+
+- Two stale `file:line` citations in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md` are corrected. Both pointed one line above the
+  thing they name. The assets-summary manifest entry was cited as
+  `tools/webull-docgen/_common.py:313`, where `:313` is the last line of a
+  4-line comment inserted in `2.1.10` and the "Assets Summary" tuple is at
+  `:314`; the List Accounts manifest entry was cited as
+  `tools/webull-docgen/_common.py:298`, where `:298` is the `[` that opens the
+  endpoint list and the "List Accounts" tuple is at `:299`. Both are now `:314`
+  and `:299`.
+  The `2.1.10` correction pass did not land: it moved the assets-summary
+  citation from `:298` to `:313` while the tuple had already moved to `:314`, so
+  it was still one line short when shipped, and it never re-examined the
+  List Accounts citation. The latter is worse than a shift — at `5dcb008`, when
+  it was added, `:298` was the *assets-summary* tuple, not the List Accounts one,
+  which by then was at `:287`; the label and the number were transposed, and
+  `2.1.10` renamed the entry to "List Accounts" without correcting the number.
+  The citation-scope note in both status documents is widened accordingly: it
+  now covers `tools/webull-docgen/_common.py` and
+  `tools/webull-docgen/docgen.py` line numbers as well as
+  `data/display_quotes.go`, states that a `file:line` is valid only for the
+  commit that fixed it, and records that a second pass over one file missed
+  another.
+- Every `file:line` citation in the four documentation files was swept against
+  the current source, not only the two named above: all 45 citations across
+  `IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md`, `CHANGELOG.md`,
+  and `docs/runs/index.md`, covering `brokerfd/client.go`,
+  `internal/region/region.go`, `broker/client.go`, seven `brokerfd` path-literal
+  sites, `broker/accounts.go`, `broker/accounts_test.go`,
+  `data/display_quotes.go`, `data/snapshot.go`, and
+  `tools/webull-docgen/_common.py`. The citations in both status documents all
+  resolve to the declarations they name. Five further stale citations were found
+  in `CHANGELOG.md` and are **left unchanged**, because they sit in the
+  `[2.1.6]` and `[2.1.8]` sections, which are historical records and must stay
+  byte-unchanged. The stale numbers are recorded here in words rather than in
+  `file:line` form, so this entry adds no citation of its own that fails to
+  resolve. In the `[2.1.6]` `data.GetDisplaySnapshot` bullet, the snapshot
+  constant and the `Get` call site are cited at lines 28 and 52, now 33 and 63
+  after the `2.1.10` comment insertion; in the `[2.1.8]` bullet, the query
+  construction and `GetDisplaySnapshot` are cited at lines 41-49 and 40, now
+  52-60 and 51; and `examples/options-multi-leg/main.go:193` points at a blank
+  line, while the `client_order_id` change it describes is at line 199.
+
+### Noted
+
+- A fifth live-blocked SDK defect is recorded in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md`: `brokerfd.GetFDPositions` silently zeroes
+  three of the eight required response properties. The request is correct —
+  `GetFDPositions` (`brokerfd/assets.go:92-100`) requests
+  `pathFDAssetsPositions` (`brokerfd/assets.go:27`), exactly the documented
+  `GET /broker/assets/positions/list` — so the reconciliation row is a clean
+  `✅ match` and the report gives no signal, the same path-only limitation already
+  recorded as a caveat. The defect is on the response side: the documented `200`
+  is a `type: array` whose `items` require `cost_price`, `currency`,
+  `instrument_type`, `last_price`, `position_id`, `quantity`, `symbol`, and
+  `unrealized_profit_loss`, while `FDPosition` (`brokerfd/assets.go:79-90`)
+  declares tags for `position_id`, `account_id`, `symbol`, `quantity`,
+  `average_cost`, `market_value`, `unrealized_pl`, `realized_pl`,
+  `instrument_type`, and `currency`. **`cost_price`, `last_price`, and
+  `unrealized_profit_loss` have no matching tag.** All three corresponding fields
+  are `money.Money`, so a missing key leaves them at zero and `encoding/json`
+  returns no error, which makes this the most dangerous of the five: the path
+  defects fail loudly with a `404`, while this one hands the caller a successful
+  call and three wrong zeroes indistinguishable from a genuinely zero position.
+  A bare retag is not recorded as the fix, because the two shapes diverge in both
+  directions and the documentation cannot say which the server honours; the
+  recommendation is conditional on a probe. Unblocked by the same US-sandbox
+  credential as the two `brokerfd` path defects, plus one question added to the
+  Webull enquiry that item already needs, so no new round trip. A cross-reference
+  is added from the `/broker-fd/*` path defect, but the two stay separate
+  entries, because a response-schema defect and a request-path defect warrant
+  different urgency. The adjacent `GetFDAssetsDetail` container-type mismatch is
+  recorded in the same entry and explicitly marked as failing loudly, not
+  silently.
+- The static tag-versus-required-name mismatch is certain: the struct tags and the
+  cached reference page's `required` list were compared directly, with no
+  interpretation involved. Which side the live server honours is unverified.
+
+No SDK endpoint was live-verified by this release, no Webull host was called, and
+none is claimed to be. No SDK code was changed: the only files edited are
+`IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md`, `CHANGELOG.md`, and
+`docs/runs/index.md`, and the retag in the new defect entry is a recommendation
+recorded in the status documents, not an edit. The four defects recorded in
+`2.1.7` remain blocked and unchanged.
+
 ## [2.1.10] - 2026-09-27
 
 Repository patch release of three honesty fixes that need no credential, one

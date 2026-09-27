@@ -79,7 +79,7 @@ The states partition the 209 implemented endpoints: 184 + 4 + 1 = 189 rows carry
 
 There are no documented-only endpoint gaps, but the snapshot is not a zero-discrepancy report: 4 summary-only and 1 differing remain. Generated pages under `webull-api/` are not hand-edited; the label correction that produced this partition lives in `tools/webull-docgen/`.
 
-A `✅ match` row is a path comparison, not a correctness verdict. The reconciler compares path strings only: it reports `broker.UpdateVirtualAccount` as a clean `✅ match` although the request behind that path is defective, and it cannot observe HTTP verbs, request bodies, or transport-host routing at all, so it is blind to the `brokerfd` host-routing and `data.GetDisplaySnapshot` defects recorded below as well. That is a limit of what a path comparison can show rather than a defect in the generator, which is doing its stated job of comparing documented paths against SDK paths. A green row in `reconciliation.md` is not evidence that an endpoint is correct.
+A `✅ match` row is a path comparison, not a correctness verdict. The reconciler compares path strings only: it reports `broker.UpdateVirtualAccount` as a clean `✅ match` although the request behind that path is defective, and it cannot observe HTTP verbs, request bodies, transport-host routing, or response schemas at all, so it is blind to the `brokerfd` host-routing and `data.GetDisplaySnapshot` defects recorded below as well, and to the `brokerfd.GetFDPositions` response-schema defect, which is its sharpest case: a correct path, a clean `✅ match`, and a response DTO that cannot receive three of the eight properties the endpoint requires, so three values are silently zeroed. That is a limit of what a path comparison can show rather than a defect in the generator, which is doing its stated job of comparing documented paths against SDK paths. A green row in `reconciliation.md` is not evidence that an endpoint is correct.
 
 ## v2.1.1 repository-tagged hardening
 
@@ -167,10 +167,11 @@ Blocked or unverified areas:
 
 ### Live-blocked SDK defects
 
-Found by static analysis on 2026-09-26. None is live-verified — nothing in that
-pass touched the network — and each may only be changed once the credential or
-entitlement it names is available, because the fix cannot be confirmed without
-it.
+Found by static analysis on 2026-09-26, with the `brokerfd.GetFDPositions`
+response-schema defect added on 2026-09-27, also statically. None is
+live-verified — no pass touched the network — and each may only be changed once
+the credential or entitlement it names is available, because the fix cannot be
+confirmed without it.
 
 - **`brokerfd` sends every request to the core host.** `brokerfd/client.go:43`
   calls `c.core.Do(...)`, so all Broker FD traffic goes to the Trading/Market
@@ -190,11 +191,15 @@ it.
   `GET /broker/assets/summaries/get` — the single ⚠️ row in the snapshot.
   `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented
   page, and the assets-summary manifest entry at
-  `tools/webull-docgen/_common.py:313` names two symbols for that page:
+  `tools/webull-docgen/_common.py:314` names two symbols for that page:
   `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page
   of its own and `brokerfd.GetFDAssetsSummary`'s DTO
   (`brokerfd/assets.go:32-41`) does not match the documented
-  `balance`/`positions` envelope. Impact: the affected `brokerfd` endpoints.
+  `balance`/`positions` envelope. A separate defect on the same Broker FD
+  surface is the `brokerfd.GetFDPositions` response-schema mismatch below; it is
+  recorded separately rather than merged here because it is the one defect on
+  this surface that fails silently, where every literal in this bullet fails
+  loudly. Impact: the affected `brokerfd` endpoints.
   The size is larger than the literal count suggests, because only a minority of
   the 14 have an unambiguous documented counterpart. 4 align mechanically —
   `assets.go:25` → `/broker/assets/summaries/get`, `brokerfd.go:68` →
@@ -272,9 +277,82 @@ it.
   itself and a second cached page for the same path, `reference/snapshot.md`,
   documents it as `method: get` with flat `symbols` and `category` query
   parameters; which contract applies to a Display client is a question for
-  Webull. The `data/display_quotes.go` line numbers in this bullet are anchored
-  to that file as it stood on 2026-09-27, so re-check them if a comment is added
-  to it.
+  Webull. Every `file:line` in this list is anchored to the cited file as it
+  stood on 2026-09-27 — the `data/display_quotes.go` numbers in this bullet, the
+  `tools/webull-docgen/_common.py` numbers in the bullet above, and any
+  `tools/webull-docgen/docgen.py` numbers — because a comment insertion shifts
+  every line below it. A single 4-line comment added above the `broker-fd-us`
+  manifest entries in one release invalidated both `_common.py` citations in that
+  bullet, and a second pass that corrected one of them left it one line short, so
+  re-check these against the file after any edit to it rather than assuming they
+  still hold.
+- **`brokerfd.GetFDPositions` cannot receive three required response properties,
+  so three values are silently zeroed.** The request is correct:
+  `GetFDPositions` (`brokerfd/assets.go:92-100`) requests
+  `pathFDAssetsPositions` (`brokerfd/assets.go:27`), exactly the documented
+  `GET /broker/assets/positions/list`, so the reconciliation row renders as a
+  clean `✅ match` and emits no signal — the same path-only limitation recorded
+  above, which compares path strings and cannot observe a response schema at all.
+  The defect is entirely on the response side. The documented `200` for that path
+  is a `type: array` whose `items` require eight properties — `cost_price`,
+  `currency`, `instrument_type`, `last_price`, `position_id`, `quantity`,
+  `symbol`, `unrealized_profit_loss` — while `FDPosition`
+  (`brokerfd/assets.go:79-90`) declares tags for `position_id`, `account_id`,
+  `symbol`, `quantity`, `average_cost`, `market_value`, `unrealized_pl`,
+  `realized_pl`, `instrument_type`, `currency`. **Three of the eight required
+  names have no matching tag**: `cost_price` (the struct has `average_cost`),
+  `last_price` (the struct has `market_value`), and `unrealized_profit_loss`
+  (the struct has `unrealized_pl`).
+  - Impact: the failure is **silent**, and that is what makes it the most
+    dangerous of the five. All three fields are `money.Money`, so a missing JSON
+    key leaves the value at its zero value and `encoding/json` reports no error:
+    the caller gets a successful call, a non-nil slice, and three wrong zeroes
+    where position cost basis, last price, and open P&L belong. Nothing in the
+    return path distinguishes that from a genuinely zero position, so the defect
+    is undetectable without a second source of truth. This is the opposite of the
+    path defects above, which fail loudly with a `404` or a wrong-host error a
+    caller cannot miss, and the reconciler cannot detect it either.
+  - Size, restated: a retag is not automatically the fix, and the direction of
+    the retag is the open question. The two shapes diverge in both directions,
+    which is why a bare retag cannot be assumed correct: the struct also declares
+    `account_id` and `realized_pl`, which the documented properties do not
+    include at all, while the documented properties include `event_outcome`,
+    which the struct omits. If the server sends the published names, the fix is
+    to retag the three fields to `cost_price`, `last_price`, and
+    `unrealized_profit_loss`; if the server actually sends the SDK's names, the
+    documentation is describing a different payload, the struct is right, and
+    retagging would break a call that currently works. The probe below has to
+    establish which before anything is applied.
+  - Adjacent finding, loud rather than silent: `GetFDAssetsDetail`
+    (`brokerfd/assets.go:65-75`), bound to
+    `pathFDAssetsDetail = "/broker/assets/balances/get"` (`brokerfd/assets.go:26`),
+    requests that documented path, whose documented `200` is a single
+    `type: object` (`AssetsBalanceResult`, requiring `account_currency_assets`,
+    `total_asset_currency`, and `total_cash_balance`), but the method decodes into
+    `[]FDAssetDetail` (`brokerfd/assets.go:70`), a slice. A JSON object cannot be
+    decoded into a Go slice, so this one fails loudly at decode time with an
+    `encoding/json` type error instead of returning zeroes; it is recorded here
+    so the two are not mistaken for the same severity, and not as an addition to
+    their count. The container-type mismatch is certain from the source and the
+    cached page; the behaviour is not live-verified.
+  - Minimal fix: retag the three fields to the documented names, or add the
+    documented names alongside the existing ones, **only after** the probe below
+    establishes which set the server sends. Do not retag speculatively.
+  - Unblock: a US sandbox credential — the same Broker FD grant that unblocks
+    the first two `brokerfd` bullets — and, because whether the server sends the
+    published names or the SDK's cannot be resolved from the documentation, one
+    probe question added to the existing Webull enquiry: *for
+    `GET /broker/assets/positions/list`, is the response the documented
+    `AssetsPositionResult` carrying `cost_price`, `last_price`, and
+    `unrealized_profit_loss`, or a payload carrying `average_cost`,
+    `market_value`, and `unrealized_pl`?* That is a single addition to the
+    enquiry the second bullet already requires for its three undocumented paths,
+    so it needs no new round trip.
+  - Verification status: the static mismatch is **certain** — the struct tags
+    and the cached page's `required` list were compared directly and no
+    interpretation is involved. Which side the live server honours is
+    **unverified**: no endpoint was called, no US credential was available, and
+    nothing in this bullet is live-verified.
 
 ## Remaining risks
 
@@ -288,9 +366,10 @@ it.
   `DropBlock` subscriber causes head-of-line delay until cancellation or close.
 - Four summary-only matches and one differing path remain; unresolved SDK paths
   are `0`.
-- Four live-blocked SDK defects are recorded above, none live-verified; the two
+- Five live-blocked SDK defects are recorded above, none live-verified; the
   `brokerfd` items need US sandbox credentials, and three of the second item's
-  undocumented paths additionally need a written answer from Webull,
+  undocumented paths additionally need a written answer from Webull, which the
+  silent response-schema defect extends with one further question;
   `broker.UpdateVirtualAccount` needs a production or US-scoped Broker credential,
   and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
   maintainer decision on versioning a breaking public API change.
@@ -300,7 +379,7 @@ it.
 ## Next steps
 
 1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event telemetry with suitable non-production access.
-2. Add US sandbox verification for US-only surfaces; this also unblocks most of the second `brokerfd` defect, and the three paths with no documented counterpart need a written answer from Webull.
+2. Add US sandbox verification for US-only surfaces; this also unblocks most of the second `brokerfd` defect and the `brokerfd.GetFDPositions` response-schema defect. The three paths with no documented counterpart need a written answer from Webull, and that enquiry should also ask whether `GET /broker/assets/positions/list` returns the documented `AssetsPositionResult` names or the SDK's own, which the documentation cannot settle.
 3. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
 4. Correct `broker.UpdateVirtualAccount` only against the credential it names, and update its test in the same change. Treat `data.GetDisplaySnapshot` as a breaking-API decision rather than a patch: obtain the maintainer decision on versioning a public `data.SnapshotQuery` change first, then probe before touching the path.
 5. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
