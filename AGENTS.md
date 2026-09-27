@@ -259,7 +259,7 @@ make generate
   literals (`brokerfd/assets.go:25` is the one the generated report flags),
   `broker.UpdateVirtualAccount` sends the wrong verb and body
   (`broker/accounts.go:66-68`), and `data.GetDisplaySnapshot` differs from both
-  official sources (`data/display_quotes.go:28`, `:52`). None is live-verified
+  official sources (`data/display_quotes.go:33`, `:63`). None is live-verified
   and none may be changed without the credentials or entitlement each entry
   names.
 - US-only surfaces are blocked in this environment: the HK sandbox returns `404`

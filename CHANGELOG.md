@@ -9,6 +9,108 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.10] - 2026-09-27
+
+Repository patch release of three honesty fixes that need no credential, one
+regression guard against a new failure mode, and a read-only diagnostic cache
+refresh. No SDK behaviour changed: the only `.go` edit is comments, in
+`data/display_quotes.go`, and no `.go` statement was altered.
+
+### Fixed
+
+- The unverified marker on `data.GetDisplaySnapshot` was missing. Commit
+  `2b29c88` aligned four sibling Display constants from `/openapi/...` to
+  `/market-data/stocks/...` in the same const block, left `pathDSSnapshot` as
+  the sole `/openapi/...` holdout, and deleted the
+  `TODO(ds): Confirm exact paths against US sandbox` comment that had flagged
+  it, so nothing in the source signalled that one constant of five is
+  unverified and it read as already confirmed. The const comment and the method
+  GoDoc now state it, name the two things that make it unresolvable from the
+  docs alone (the reference page contradicts itself, with `operationId`
+  `snapshotUsingGET` against `method` `post`, and the Display host answers `403`
+  without a paid entitlement), and warn that aligning it by analogy to the
+  aligned siblings is the mistake the deleted marker existed to prevent. The
+  constant's value, the method's signature, the query construction and the call
+  site are byte-unchanged. The defect recorded in `2.1.7` is unchanged and still
+  blocked; this entry restores the warning, it does not resolve the path.
+- The docgen page cache could not be safely refreshed. `CACHE` was a hard-coded
+  module constant, so a refresh could not be redirected away from the committed
+  cache, and `fetch()` called `urllib.request.urlopen` unwrapped, so one timeout
+  aborted a whole run partway. The cache-hit test is `getsize > 0`, so such a
+  partially refreshed directory was then reused indefinitely and silently.
+  `tools/webull-docgen/_common.py` now resolves the directory per call through
+  `cache_dir()` with a `WEBULL_DOCGEN_CACHE` override, blank or unset still
+  meaning `.cache/`; `fetch()` retries up to `FETCH_ATTEMPTS = 3` with `1.0` and
+  `2.0` backoff and the existing 0.2s politeness pause now applied after every
+  attempt, successful or not; and a page that fails every attempt is recorded and
+  skipped rather than aborting the run. A skip is surfaced four ways: on stdout,
+  in `changes.json` beside the cache directory it was rendered from, as the
+  absence of a file, and as an in-page `*Unavailable*` marker. Nothing is written
+  on failure, because a zero-byte file fails the cache-hit test and is re-fetched
+  while a truncated one passes it, which would turn a transient outage into a
+  permanent, invisible hole in the evidence base.
+- The skip-don't-abort behaviour above introduced a regression, and it is
+  guarded. A missing cached page could flip a row's status and still produce a
+  full-length report that passed `mkdocs --strict`, and a missing `llms.txt`
+  index could collapse the status partition from `summary=4 differs=1` to
+  `summary=0 differs=5` with the row count, the totals and the strict build all
+  unchanged, so nothing downstream would reveal the loss.
+  `generate_reconciliation()` now refuses to write when a manifest-mapped page
+  or an `llms.txt` index is missing, or when any page failed for a reason other
+  than a permanent `404`/`410`, naming the URLs on stderr. The permanent-404
+  exemption is required rather than cosmetic: 8 URLs that Webull's own `llms.txt`
+  indexes advertise return a permanent `404` for their `.md` variant, so a broad
+  "any skip is fatal" rule made the report unproducible. The other two
+  generation targets keep marking the loss in the page itself, where a lost page
+  thins documentation instead of changing a verdict.
+- Nine stale `file:line` citations in `IMPLEMENTATION_STATUS.md`,
+  `docs/implementation-status.md` and `AGENTS.md` were invalidated by the
+  comment insertion above and are corrected. Both status documents also gained a
+  citation-scope note recording that those line numbers are anchored to the
+  2026-09-27 state of the files and must be re-checked after an edit.
+
+### Changed
+
+- The two `broker-fd-us` manifest entries that map two SDK symbols onto one
+  documented page, "Assets Summary" and "Positions", carried an empty note, so a
+  reader could not tell which symbol the reported path belonged to. The notes in
+  `tools/webull-docgen/_common.py` now name it, because a row renders a single
+  SDK path. "Positions" is the case that carried information:
+  `brokerfd.GetFDPositions` sends the documented
+  `GET /broker/assets/positions/list` exactly and so is a `✅ match`, and the
+  uncovered gap was that the green row silently stood for a second symbol,
+  `brokerfd.GetPositions`, which sends the undocumented `/broker-fd/positions`
+  with no `account_id`. "Assets Summary" additionally records that the documented
+  `GET /broker/assets/summaries/get` is sent by neither mapped symbol and that
+  the response DTO is a flat struct rather than the documented `balance` and
+  `positions` envelope. Both notes state that no fix was applied and point at
+  `IMPLEMENTATION_STATUS.md`; the 14 `brokerfd` `/broker-fd/*` literals are
+  unchanged.
+- `docs/reconciliation.md` is re-rendered with the two notes above and a
+  `2026-09-27` snapshot date. Its partition is unmoved at 184 exact OpenAPI JSON
+  path matches, 4 summary-only, 1 differing, 0 unresolved SDK paths, 3 rows
+  labelled `no OpenAPI schema on page` and 17 manifest entries deliberately
+  mapped to no SDK symbol, summing to 209 implemented endpoints and 0
+  documented-only gaps. It remains a path comparison, not a correctness verdict.
+
+### Noted
+
+- A diagnostic cache refresh was run read-only and deliberately not adopted. 317
+  pages were fetched into a scratch directory through `WEBULL_DOCGEN_CACHE`; 306
+  of the 309 pages comparable with the 2026-09-22 cache were byte-identical, and
+  the 3 that differed were host-table and prose edits changing no `path`, method
+  or required-body property. The four live-blocked defects recorded in `2.1.7`
+  were re-checked against their full OpenAPI specs and are unchanged, so the
+  refreshed cache was not adopted and the committed report remains a render of
+  the 2026-09-22 evidence.
+
+No SDK endpoint was live-verified by this release, and none is claimed to be.
+The only network traffic was the read-only scratch refresh above, which observed
+that 8 `llms.txt`-indexed URLs permanently `404` their `.md` variant and read
+host-table text; it authenticated to no Webull host and called no SDK endpoint.
+The four live-blocked defects from `2.1.7` remain blocked and unchanged, still
+waiting on credentials or entitlement this environment does not have.
+
 ## [2.1.9] - 2026-09-26
 
 ### Fixed

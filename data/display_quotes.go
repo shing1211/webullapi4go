@@ -24,7 +24,12 @@ import (
 
 // Display Solution quote endpoints.
 const (
-	// pathDSSnapshot is the Display Solution snapshot endpoint.
+	// pathDSSnapshot is the Display Solution snapshot path, and the one
+	// unverified constant in this block: the sole /openapi/... holdout, left
+	// behind when 2b29c88 aligned the four siblings below and also deleted the
+	// TODO(ds) marker that had flagged it. Aligning it by analogy to them is
+	// the mistake that marker existed to prevent; only a probe against the
+	// Display host can settle it.
 	pathDSSnapshot = "/openapi/market-data/stock/snapshot"
 	// pathDSBars is the Display Solution batch-bars endpoint (POST).
 	pathDSBars = "/market-data/stocks/bars/list"
@@ -37,6 +42,12 @@ const (
 )
 
 // GetDisplaySnapshot retrieves real-time market snapshots via Display Solution.
+// Its verb and request shape are unverified too: the documented contract is a
+// POST carrying a required category_symbols array in a JSON body, not the flat
+// single-category query parameters sent here, so a fix is a breaking change to
+// SnapshotQuery, which GetSnapshot also takes. The host answers 403 without a
+// paid entitlement, and the reference page snapshot-using-get contradicts
+// itself (operationId snapshotUsingGET, method post), so only a probe settles it.
 func (c *Client) GetDisplaySnapshot(ctx context.Context, q SnapshotQuery) ([]Snapshot, error) {
 	query := url.Values{}
 	if len(q.Symbols) > 0 {

@@ -189,8 +189,9 @@ it.
   `/broker-fd/assets/summary` against a documented
   `GET /broker/assets/summaries/get` — the single ⚠️ row in the snapshot.
   `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented
-  page, and `tools/webull-docgen/_common.py:298` names two symbols for that one
-  page: `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page
+  page, and the assets-summary manifest entry at
+  `tools/webull-docgen/_common.py:313` names two symbols for that page:
+  `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page
   of its own and `brokerfd.GetFDAssetsSummary`'s DTO
   (`brokerfd/assets.go:32-41`) does not match the documented
   `balance`/`positions` envelope. Impact: the affected `brokerfd` endpoints.
@@ -232,12 +233,12 @@ it.
   production or US-scoped Broker credential; the HK sandbox returns
   `401 ROUTE_NOT_PERMITTED` for the whole Broker API.
 - **`data.GetDisplaySnapshot` differs from both official sources.**
-  `data/display_quotes.go:28` sets
-  `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:52` sends it
+  `data/display_quotes.go:33` sets
+  `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:63` sends it
   with GET, while both official sources say
   `POST /market-data/stocks/snapshots/list`. It is the only `/openapi/…`
   holdout in a const block whose four siblings (`pathDSBars`,
-  `pathDSBarsSingle`, `pathDSTick`, `pathDSDepth`, lines 30-36) were aligned in
+  `pathDSBarsSingle`, `pathDSTick`, `pathDSDepth`, lines 35-41) were aligned in
   commit `2b29c88`, the same commit that deleted the
   `TODO(ds): Confirm exact paths against US sandbox` marker covering it. The
   reference page is self-contradictory — `operationId` `snapshotUsingGET` against
@@ -250,15 +251,15 @@ it.
   symbols per query, with `extend_hour_required` and `overnight_required`
   documented as **strings** defaulting to `"false"`. The SDK models one category
   with one flat symbol list (`data/snapshot.go:35-47`) and encodes it as query
-  parameters (`data/display_quotes.go:41-49`): `:43` comma-joins `Symbols` into a
-  single string, `:46` sends one flat `category` instead of a list of
-  `{category, symbols}` objects, and `:52` sends a GET instead of the documented
+  parameters (`data/display_quotes.go:52-60`): `:54` comma-joins `Symbols` into a
+  single string, `:57` sends one flat `category` instead of a list of
+  `{category, symbols}` objects, and `:63` sends a GET instead of the documented
   POST. The array-versus-scalar and GET-versus-POST mismatches are the real work;
   the path is the smallest part of it. The two flags are already
-  type-compatible, since `strconv.FormatBool` at `data/display_quotes.go:48-49`
+  type-compatible, since `strconv.FormatBool` at `data/display_quotes.go:59-60`
   emits `"true"`/`"false"`, matching the documented string type. The breaking
   element is `data.SnapshotQuery` itself: it is the public parameter type of both
-  `GetDisplaySnapshot` (`data/display_quotes.go:40`) and `GetSnapshot`
+  `GetDisplaySnapshot` (`data/display_quotes.go:51`) and `GetSnapshot`
   (`data/snapshot.go:142`), so moving it to the documented array breaks every
   consumer of either method. Minimal fix: not a patch — it needs a new public
   request shape, and therefore a maintainer decision on how to version a
@@ -271,7 +272,9 @@ it.
   itself and a second cached page for the same path, `reference/snapshot.md`,
   documents it as `method: get` with flat `symbols` and `category` query
   parameters; which contract applies to a Display client is a question for
-  Webull.
+  Webull. The `data/display_quotes.go` line numbers in this bullet are anchored
+  to that file as it stood on 2026-09-27, so re-check them if a comment is added
+  to it.
 
 ## Remaining risks
 
