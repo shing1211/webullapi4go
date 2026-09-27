@@ -59,6 +59,7 @@ def generate_reference():
         with open(os.path.join(c.REFERENCE_OUT, area + ".md"), "w", encoding="utf-8") as fh:
             fh.write("\n".join(parts) + "\n")
     print("\nwrote reference pages (%d areas)" % len(c.AREAS))
+    c.report_fetch_failures()
 
 
 # --------------------------------------------------------------------------
@@ -95,6 +96,8 @@ def generate_master():
                 body = c.render_verbatim_page(url)
             except Exception as exc:  # noqa: BLE001
                 body = "*Unavailable: %s*" % exc
+            if not body:
+                body = c.fetch_failure_note(url)
             guides.append("### %s" % label)
             guides.append("")
             guides.append("> Source: <%s>" % url)
@@ -156,6 +159,8 @@ def generate_master():
                 body = c.render_verbatim_page(url)
             except Exception as exc:  # noqa: BLE001
                 body = "*Unavailable: %s*" % exc
+            if not body:
+                body = c.fetch_failure_note(url)
             parts.append("## %s" % label)
             parts.append("")
             parts.append("> Source: <%s>" % url)
@@ -165,6 +170,7 @@ def generate_master():
         with open(os.path.join(refdir, area + ".md"), "w", encoding="utf-8") as fh:
             fh.write("\n".join(parts) + "\n")
     print("wrote reference/*.md (%d files)" % len(c.AREAS))
+    c.report_fetch_failures()
 
 
 # --------------------------------------------------------------------------
@@ -345,15 +351,77 @@ def generate_changes():
             "official_path": opath,
             "reference": url,
         })
-    os.makedirs(c.CACHE, exist_ok=True)
-    out = os.path.join(c.CACHE, "changes.json")
+    cache = c.cache_dir()
+    os.makedirs(cache, exist_ok=True)
+    out = os.path.join(cache, "changes.json")
+    # cache_dir and the skipped pages travel with the change list: the file records
+    # which evidence the run actually saw, so a report rendered from a partial or
+    # unexpected cache is identifiable after the fact.
     with open(out, "w", encoding="utf-8") as fh:
-        json.dump({"count": len(changes), "changes": changes}, fh, indent=2)
+        json.dump({"count": len(changes), "changes": changes,
+                   "cache_dir": cache,
+                   "fetch_failures": [{"reference": url, "attempts": attempts,
+                                       "error": "%s: %s" % (type(exc).__name__, exc)}
+                                      for url, attempts, exc in c.fetch_failures()]},
+                  fh, indent=2)
     print("wrote %s (%d changes)" % (out, len(changes)))
+    c.report_fetch_failures()
+
+
+_MANIFEST_URLS = {url
+                  for area, (title, blurb, eps) in c.AREAS.items()
+                  for (label, url, sdk, note) in eps}
+_INDEX_URLS = (HK_LLMS, US_LLMS)
+
+
+def _abort_on_incomplete_evidence():
+    """Refuse to render a verdict from evidence this run failed to read.
+
+    Two classes of skipped page change what the report claims, so both abort the
+    write rather than producing an artifact that still looks complete:
+
+    * a page the manifest maps, or either ``llms.txt`` index. A manifest page
+      supplies its own row, so losing it rewrites that row's status; an index
+      supplies every summary path and the whole reference-page set, so losing one
+      collapses the status partition — ``summary=4 differs=1`` degrades to
+      ``summary=0 differs=5`` with the row count, the totals and the strict
+      build all unchanged, so nothing downstream reveals the loss.
+    * any other page that failed for a reason that could be an outage, since it
+      would understate the ``gaps`` total.
+
+    A permanent ``404`` on a non-manifest page is deliberately not fatal: those
+    are the pages Webull's indexes list without publishing a ``.md`` variant, so
+    every run loses them identically and the report is as complete as the source
+    allows. Exempting them is what keeps this target producible at all.
+
+    Refusing to write is the proportionate answer because the file is a coverage
+    claim: a partial run would assert less coverage than it checked and still
+    pass every gate. The other targets mark the gap in the page instead, because
+    there a lost page thins documentation rather than changing a verdict.
+    """
+    fatal = []
+    for url, attempts, exc in c.fetch_failures():
+        if url in _MANIFEST_URLS or url in _INDEX_URLS or not c.is_permanent_absence(exc):
+            fatal.append((url, attempts, exc))
+    if not fatal:
+        return
+    detail = "\n".join("  %s (%d attempts): %s: %s"
+                       % (url, attempts, type(exc).__name__, exc)
+                       for url, attempts, exc in fatal)
+    c.report_fetch_failures()
+    raise SystemExit(
+        "reconciliation: not writing %s. %d page(s) could not be read after %d "
+        "attempts each, and this report has no degraded mode:\n%s\n"
+        "A manifest page or an llms.txt index changes a status, and any other "
+        "read failure may still be an outage, so a partial run would assert less "
+        "coverage than it checked and still pass every gate. Re-run when the "
+        "pages are reachable, and confirm the status partition before "
+        "committing." % (c.RECON_OUT, len(fatal), c.FETCH_ATTEMPTS, detail))
 
 
 def generate_reconciliation():
     rows, gaps_by_cat, counts = _reconcile_data()
+    _abort_on_incomplete_evidence()
     gaps_total = sum(len(v) for v in gaps_by_cat.values())
 
     # Fail loudly rather than emit a summary that silently drops a status: the
@@ -451,6 +519,7 @@ def generate_reconciliation():
     print("wrote %s (implemented=%d gaps=%d %s)"
           % (c.RECON_OUT, len(rows), gaps_total,
              " ".join("%s=%d" % (key, counts.get(key, 0)) for key, _, _ in _STATUSES)))
+    c.report_fetch_failures()
 
 
 def main():

@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **Snapshot** | 2026-09-26 |
+| **Snapshot** | 2026-09-27 |
 | **Sources** | [HK llms.txt](https://developer.webull.hk/apis/llms.txt), [US llms.txt](https://developer.webull.com/apis/llms.txt) |
 | **Implemented endpoints** | 209 |
 | **Documented-only endpoints (gaps)** | 0 |
@@ -1673,6 +1673,7 @@ Reference: [document-download.md](https://developer.webull.com/apis/docs/referen
 | **Official (OpenAPI JSON)** | `GET /broker/assets/summaries/get` |
 | **SDK path** | `/broker-fd/assets/summary` (pathFDAssetsSummary) |
 | **Status** | ⚠️ path differs from both |
+| **Note** | Two SDK symbols map to this one page; the `SDK path` cell shows `GetFDAssetsSummary`, because `GetAccountsSummary` yields no path to the resolver, and the documented `GET /broker/assets/summaries/get` is sent by neither, while its response DTO is a flat struct rather than the documented `balance` and `positions` envelope. No fix applied; blocked on a US-sandbox probe, see IMPLEMENTATION_STATUS.md. |
 
 Reference: [summary.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/summary.md)
 
@@ -1695,6 +1696,7 @@ Reference: [account-balance.md](https://developer.webull.com/apis/docs/reference
 | **Official (OpenAPI JSON)** | `GET /broker/assets/positions/list` |
 | **SDK path** | `/broker/assets/positions/list` (pathFDAssetsPositions) |
 | **Status** | ✅ match |
+| **Note** | Two SDK symbols map to this one page; the `SDK path` cell shows `GetFDPositions`, the first candidate, an exact match for the documented `GET /broker/assets/positions/list`, while `brokerfd.GetPositions` sends the undocumented `/broker-fd/positions` with no `account_id`. No fix applied; blocked on a US-sandbox probe, see IMPLEMENTATION_STATUS.md. |
 
 Reference: [account-position.md](https://developer.webull.com/apis/docs/reference/broker-fd-api/account-position.md)
 

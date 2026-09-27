@@ -18,6 +18,13 @@ Fetches Webull's machine-readable ``.md`` documentation (which embeds the
 OpenAPI definition JSON), caches it locally, and renders the SDK-mapped
 reference pages, the verbatim master guides/reference, and the SDK-API
 reconciliation. No SDK-specific knowledge lives here beyond the area manifest.
+
+The cache directory is the evidence base for every rendered page, so it is
+redirectable: set ``WEBULL_DOCGEN_CACHE`` to a scratch directory and the whole
+run reads and writes there instead of ``.cache/``. A refresh can therefore be
+diffed against the current cache before being adopted, and a run that dies
+partway cannot damage the committed one. Unset (or blank) resolves to
+``.cache/`` exactly as before.
 """
 import datetime
 import json
@@ -25,6 +32,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from collections import OrderedDict
 
@@ -39,7 +47,11 @@ DOCS = os.path.join(ROOT, "docs")
 REFERENCE_OUT = os.path.join(DOCS, "webull-api")
 MASTER_OUT = os.path.join(DOCS, "webull-api")
 RECON_OUT = os.path.join(DOCS, "reconciliation.md")
-CACHE = os.path.join(_HERE, ".cache")
+
+# Default cache location, kept only as the fallback for cache_dir(). Reading it
+# directly pins the run to .cache/ and ignores WEBULL_DOCGEN_CACHE.
+DEFAULT_CACHE = os.path.join(_HERE, ".cache")
+CACHE_ENV = "WEBULL_DOCGEN_CACHE"
 
 UA = "Mozilla/5.0 (compatible; webullapi4go-docgen/1.0)"
 
@@ -295,9 +307,13 @@ AREAS["broker-fd-us"] = (
         ("Form Content", US + "broker-fd-api/get-form-content.md", "—", ""),
         ("Upload Document", US + "broker-fd-api/document-upload.md", "brokerfd.UploadDocument", ""),
         ("Download Document", US + "broker-fd-api/document-download.md", "brokerfd.DownloadDocument", ""),
-        ("Assets Summary", US + "broker-fd-api/summary.md", "brokerfd.GetAccountsSummary / GetFDAssetsSummary", ""),
+        # The assets-summary and positions rows each pair two SDK symbols onto one
+        # documented page, because a row renders a single SDK path. Their notes
+        # name the symbol that path belongs to: the other symbol sends a
+        # different, undocumented path the row therefore cannot show.
+        ("Assets Summary", US + "broker-fd-api/summary.md", "brokerfd.GetAccountsSummary / GetFDAssetsSummary", "Two SDK symbols map to this one page; the `SDK path` cell shows `GetFDAssetsSummary`, because `GetAccountsSummary` yields no path to the resolver, and the documented `GET /broker/assets/summaries/get` is sent by neither, while its response DTO is a flat struct rather than the documented `balance` and `positions` envelope. No fix applied; blocked on a US-sandbox probe, see IMPLEMENTATION_STATUS.md."),
         ("Assets Detail", US + "broker-fd-api/account-balance.md", "brokerfd.GetFDAssetsDetail", ""),
-        ("Positions", US + "broker-fd-api/account-position.md", "brokerfd.GetFDPositions / GetPositions", ""),
+        ("Positions", US + "broker-fd-api/account-position.md", "brokerfd.GetFDPositions / GetPositions", "Two SDK symbols map to this one page; the `SDK path` cell shows `GetFDPositions`, the first candidate, an exact match for the documented `GET /broker/assets/positions/list`, while `brokerfd.GetPositions` sends the undocumented `/broker-fd/positions` with no `account_id`. No fix applied; blocked on a US-sandbox probe, see IMPLEMENTATION_STATUS.md."),
         ("Cash Activities By Type", US + "broker-fd-api/broker-cash-activity-by-type.md", "brokerfd.GetFDActivities", ""),
         ("Create Bank Relationship", US + "broker-fd-api/create-bank-relationship.md", "brokerfd.AddFDBankAccount", ""),
         ("Delete Bank Relationship", US + "broker-fd-api/delete-bank-relationship.md", "brokerfd.RemoveFDBankAccount", ""),
@@ -460,19 +476,126 @@ GUIDE_SECTIONS = [
 # --------------------------------------------------------------------------
 # Fetch / cache
 # --------------------------------------------------------------------------
+# A page that cannot be fetched must not abort the run. The cache doubles as the
+# evidence base for the whole report, so aborting partway leaves a directory whose
+# files span several Webull vintages, and the cache-hit test below would then
+# reuse that mixture forever without any record of which pages are missing.
+FETCH_ATTEMPTS = 3
+# Applied in order, one per retry, so entry i is slept before attempt i+2; the
+# call site clamps to the last entry, which these constants never reach (two
+# entries, two retries). A page that is genuinely gone is still gone on the last
+# attempt, so the ceiling stays small.
+FETCH_BACKOFF = (1.0, 2.0)
+# Politeness delay after every network attempt, successful or not, so retries
+# cannot turn into a request storm against the docs host.
+FETCH_PAUSE = 0.2
+
+# url -> (attempts made, last error) for pages that failed every attempt, and the
+# subset already printed. Both are per-process: a run that skips a page must say
+# so, and a skipped page degrades its own row rather than the whole report.
+FETCH_FAILURES = OrderedDict()
+FETCH_REPORTED = set()
+
+
+def cache_dir():
+    """Return the cache directory for this call, honouring ``WEBULL_DOCGEN_CACHE``.
+
+    Resolved on every call rather than at import so a caller can redirect a run
+    after import time (tests, or a refresh aimed at a scratch directory). A
+    blank or whitespace-only value counts as unset, so an exported-but-empty
+    variable cannot silently repoint the run at the working directory.
+    """
+    override = os.environ.get(CACHE_ENV, "").strip()
+    return os.path.abspath(override) if override else DEFAULT_CACHE
+
+
+def fetch_failures():
+    """Return ``[(url, attempts, error), ...]`` for pages no attempt could fetch."""
+    return [(url, attempts, exc) for url, (attempts, exc) in FETCH_FAILURES.items()]
+
+
+def is_permanent_absence(exc):
+    """True when the publisher does not offer the ``.md`` variant of a page.
+
+    Webull's own ``llms.txt`` indexes advertise several reference pages whose
+    ``.md`` variant answers ``404`` permanently — the index lists the page, the
+    markdown does not exist. That is a stable fact about the source rather than
+    an outage, so it degrades no run more than the previous one, which is why a
+    caller can treat it differently from a timeout or a ``5xx``. Anything other
+    than ``404``/``410``, including a connection error, counts as a possible
+    outage, because it may yet succeed.
+    """
+    return (isinstance(exc, urllib.error.HTTPError)
+            and exc.code in (404, 410))
+
+
+def report_fetch_failures():
+    """Print the pages this run could not fetch, each one at most once per process.
+
+    A skipped page leaves the run's evidence incomplete, so the list goes to
+    stdout rather than being logged or counted: whoever reads the output needs
+    the page name beside the entry it thinned. Re-reporting an already-printed
+    page is suppressed so ``docgen.py all`` does not repeat the same list per
+    target.
+    """
+    fresh = [row for row in fetch_failures() if row[0] not in FETCH_REPORTED]
+    if not fresh:
+        return
+    print("SKIPPED %d page(s) after %d attempts each; the evidence this run saw "
+          "is incomplete, so do not read its output as a full snapshot:"
+          % (len(fresh), FETCH_ATTEMPTS))
+    for url, attempts, exc in fresh:
+        print("  %s (%d attempts): %s: %s" % (url, attempts, type(exc).__name__, exc))
+        FETCH_REPORTED.add(url)
+
+
+def fetch_failure_note(url):
+    """Return an in-page marker for a page this run could not fetch, else "".
+
+    A failed fetch returns an empty body, so both renderers would emit a
+    heading, a source link and nothing else, which reads as an empty page
+    rather than a failed run. The marker belongs in the page because a
+    degradation that is only announced on stdout cannot be seen in the diff
+    that would commit it.
+    """
+    if url not in FETCH_FAILURES:
+        return ""
+    attempts, exc = FETCH_FAILURES[url]
+    return "*Unavailable: %s (%d attempts)*" % (exc, attempts)
+
+
 def fetch(url):
-    os.makedirs(CACHE, exist_ok=True)
+    cache = cache_dir()
+    os.makedirs(cache, exist_ok=True)
     safe = re.sub(r"[^A-Za-z0-9]+", "_", url)[-120:]
-    path = os.path.join(CACHE, safe + ".md")
+    path = os.path.join(cache, safe + ".md")
     if os.path.exists(path) and os.path.getsize(path) > 0:
         with open(path, "r", encoding="utf-8") as fh:
             return fh.read()
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        data = resp.read().decode("utf-8", "replace")
+    last = None
+    for attempt in range(1, FETCH_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                data = resp.read().decode("utf-8", "replace")
+            break
+        except Exception as exc:  # noqa: BLE001
+            # urllib raises HTTPError, URLError and socket timeouts alike, and a
+            # 404 will not become a 200 on a retry, so retrying the category as a
+            # whole is the only handle the stdlib gives us here.
+            last = exc
+            time.sleep(FETCH_PAUSE)
+            if attempt < FETCH_ATTEMPTS:
+                time.sleep(FETCH_BACKOFF[min(attempt - 1, len(FETCH_BACKOFF) - 1)])
+    else:
+        # Nothing is written on failure: a zero-byte file fails the cache-hit test
+        # above and is re-fetched, but a truncated one passes it, and that would
+        # turn this transient outage into a permanent, invisible hole.
+        FETCH_FAILURES[url] = (FETCH_ATTEMPTS, last)
+        return ""
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(data)
-    time.sleep(0.2)
+    time.sleep(FETCH_PAUSE)
     return data
 
 
@@ -608,6 +731,8 @@ def render_endpoint(title, url, sdk, note):
             out.append("**Note:** %s" % note)
             out.append("")
         body = sanitize_mdx(re.sub(r"^#\s.*$", "", md, count=1, flags=re.M).strip())
+        if not body:
+            body = fetch_failure_note(url)
         if body:
             out.append(body)
             out.append("")
