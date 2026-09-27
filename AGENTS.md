@@ -203,18 +203,20 @@ make generate
 
 ## Known constraints
 
-- **Release status:** current request, OMS, streaming, event-telemetry, and
-  documentation hardening is tagged in repository `v2.1.4` (2026-09-26), an
-  authorized repository Git patch release; the hardening itself was introduced
-  in `v2.1.1` (2026-09-25). The root module path remains
+- **Release status:** `CHANGELOG.md` is the authority for the current release
+  tag; this file deliberately names no current tag, so a release does not
+  require editing it. The request, OMS, streaming, event-telemetry, and
+  documentation hardening was introduced in `v2.1.1` (2026-09-25) and has been
+  carried since by authorized repository Git patch releases, which are Git tags
+  and not published Go-semver v2 modules. The root module path remains
   `github.com/shing1211/webullapi4go`; the module stays on the v1 import path
   **by decision** and no `/v2` migration is planned. Go-semver-compatible v2
   module publication is therefore not pending: it is declined. Because the
   import path carries no major-version suffix, the module proxy serves only the
   `v1.x` line, `v2.x` Git tags are not installable with `go get`, and `v1.1.1`
   is the newest installable version. Work after that tag is consumed by pinning
-  a commit, for example `go get github.com/shing1211/webullapi4go@78c164c`.
-  Treat any future claim that a `v2.x` tag can be installed as inaccurate.
+  a commit, as in `go get github.com/shing1211/webullapi4go@<commit>`. Treat any
+  future claim that a `v2.x` tag can be installed as inaccurate.
 - A `/v2` migration is a breaking change that alters every consumer import path
   and the meaning of the historical tags. Do not migrate the module path
   implicitly; it requires explicit maintainer approval and a documented
@@ -240,6 +242,15 @@ make generate
   rows and must not double-count. A further 3 rows have a JSON block that yields
   no `path`, and all 3 are labelled unmapped, so 10 rows in total have no
   usable official path. Quote 3 as a label count and 7 as the page count.
+- **A `✅ match` row is a path comparison, not a correctness verdict.** The
+  reconciler compares path strings only and cannot observe HTTP verbs, request
+  bodies, or transport-host routing, so a green row in `docs/reconciliation.md`
+  is not evidence that an endpoint is correct: it reports
+  `broker.UpdateVirtualAccount` as a clean match although the request behind that
+  path is defective, and it is structurally blind to the `brokerfd` host-routing
+  and `data.GetDisplaySnapshot` defects recorded below. This limit of a path
+  comparison, not a defect in the generator, is recorded in
+  `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`.
 - Four live-blocked SDK defects found by static analysis on 2026-09-26 are
   recorded with `file:line`, impact, minimal fix, and unblock requirement in
   `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`:

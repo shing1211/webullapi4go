@@ -24,3 +24,4 @@
 | 2026-09-25 | quality-docs-orchestration | BUILD | done; released v2.1.1 through v2.1.6 (deps/CI/docs policy, CI signal, dead code, coverage, nested CI gates, Broker FD metadata, dispatch benchmarks, reconciliation classification, nested-coverage CI fix) | v2.1.5 |
 | 2026-09-26 | recon-docgen-truth | BUILD | released v2.1.7 (docgen status labels, resolver false positives, regenerated reconciliation snapshot, 4 live-blocked defects documented) | v2.1.7 |
 | 2026-09-26 | recon-docgen-truth-followup | BUILD | released v2.1.8 (corrected severity of two live-blocked defects; reconciler path-only caveat) | v2.1.8 |
+| 2026-09-26 | recon-docgen-truth-closeout | BUILD | released v2.1.9 (repaired the stale AGENTS.md release-status paragraph) | v2.1.9 |

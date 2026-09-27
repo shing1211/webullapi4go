@@ -9,6 +9,19 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.9] - 2026-09-26
+
+### Fixed
+
+- The `AGENTS.md` release-status paragraph hardcoded the current repository tag,
+  so it went stale on every release and was four tags behind by this one. It now
+  states only the durable facts and points at `CHANGELOG.md` for the current
+  release, so a future release does not require editing it again, and it gains
+  the reconciler's path-only caveat as a cross-reference: a `✅ match` row in
+  `docs/reconciliation.md` is a path comparison, not a correctness verdict.
+
+Nothing in this entry is live-verified; no network call was made.
+
 ## [2.1.8] - 2026-09-26
 
 ### Fixed
