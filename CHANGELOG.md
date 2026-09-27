@@ -9,6 +9,45 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.12] - 2026-09-27
+
+Repository documentation-only patch release recording two textual errors found in
+the `v2.1.11` release record after it was pushed. Both are prose errors, not
+code errors, and both are recorded here rather than silently amended, because
+`59f7859` is already on two remotes and correcting either would mean rewriting
+pushed history. No SDK behaviour changed and no `.go` file was edited.
+
+### Fixed
+
+- The `[2.1.11]` entry's closing file list omits `AGENTS.md`. That release edited
+  five files — `AGENTS.md`, `CHANGELOG.md`, `IMPLEMENTATION_STATUS.md`,
+  `docs/implementation-status.md`, and `docs/runs/index.md` — and `git show --stat
+  59f7859` names all five. The omission is in the file list only: the `AGENTS.md`
+  edit itself is real, is described correctly in the `[2.1.11]` body, and its
+  content is accurate. The shipped entry is **left byte-unchanged**, on the same
+  principle that kept the five stale citations in `[2.1.6]` and `[2.1.8]`
+  unchanged, so this correction is recorded here instead.
+- The `v2.1.11` commit message contains a wrong clause: it says `FDPosition`
+  "declares tags for none of the first, second, and last of those" required
+  properties. The correct three are the **first, fourth, and last**:
+  `cost_price` (the struct has `average_cost`), `last_price` (the struct has
+  `market_value`), and `unrealized_profit_loss` (the struct has
+  `unrealized_pl`). The second, `currency`, **is** declared, at
+  `brokerfd/assets.go:89`, so the clause both omits the real fourth and
+  misidentifies `currency`. Only the enumeration is wrong: the immediately
+  following sentence in the same commit body names the three properties
+  correctly, so the substantive claim that three required properties cannot be
+  received and decode as silent zeroes stands. The `[2.1.11]` entry here and the
+  defect entry in both status documents also name the correct three, so the error
+  is confined to the commit message. The commit is left as pushed rather than
+  force-pushed.
+
+No SDK endpoint was live-verified by this release, no Webull host was called, and
+none is claimed to be. No SDK code was changed: the only files edited are
+`CHANGELOG.md` and `docs/runs/index.md`. Neither correction affects the code or
+the defect analysis; both are errors in the prose of a release record. The five
+live-blocked defects recorded through `2.1.11` remain blocked and unchanged.
+
 ## [2.1.11] - 2026-09-27
 
 Repository documentation-only patch release: two stale citations are corrected, a
