@@ -10,12 +10,13 @@
 #   make fuzz       fuzz the data package deserializers
 #   make vuln       run govulncheck in every Go module (pinned tool version)
 #   make docs       build the MkDocs site (strict)
+#   make citations  validate the file:line citations in the status documents
 #   make generate   regenerate protobuf code
 #   make proto-tools install protobuf codegen tools
 
 MODULES := . broker examples/watchlist-cmd examples/broker-probe examples/futures-probe examples/options-multi-leg
 
-.PHONY: build vet test test-race cover lint fuzz vuln docs generate proto-tools
+.PHONY: build vet test test-race cover lint fuzz vuln docs citations generate proto-tools
 
 build:
 	@set -e; for module in $(MODULES); do go -C "$$module" build -mod=readonly ./...; done
@@ -50,6 +51,12 @@ vuln:
 
 docs:
 	mkdocs build --strict
+
+# Reports only; a non-zero exit fails the build. Cited paths resolve against the
+# repository root derived from the tool's own location, not the current
+# directory, so `make -C <repo> citations` works from anywhere.
+citations:
+	python tools/citations/check.py
 
 generate:
 	buf generate

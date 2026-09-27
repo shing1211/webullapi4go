@@ -287,3 +287,28 @@ jobs:
         # database is still fetched live from vuln.go.dev, so pinning the tool
         # does not freeze or stale the reported findings.
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  # Citation gate: validate the file:line citations in the status documents.
+  # AGENTS.md requires live-blocked defects to be recorded with file:line
+  # citations, and those citations have gone stale across several releases with
+  # nothing mechanical checking them. The checker is Python 3 standard library
+  # only, so this job needs no pip install, no virtualenv, and no secret, and
+  # the pip cache the docs job enables is deliberately absent. It runs the
+  # checker directly rather than through `make citations`, matching every other
+  # job here: the build, coverage, docs, and govulncheck jobs all invoke their
+  # tool directly too, so this workflow depends on no local toolchain beyond the
+  # tool it runs. A non-zero exit fails the job, and nothing is piped away.
+  citations:
+    name: citations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check citations
+        run: python tools/citations/check.py
