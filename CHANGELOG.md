@@ -9,6 +9,85 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.14] - 2026-09-27
+
+Repository documentation patch release. The `[2.1.13]` citation gate resolves a
+fully qualified `file.go:25` directly but has to *infer* the file behind a bare
+`assets.go:25`, and this release makes every citation in the three authority
+documents name its own file, so those inference rules now resolve nothing. No
+line number changed and no citation target moved. No SDK behaviour changed and
+no `.go` file was edited.
+
+### Changed
+
+- 35 bare-filename citation spans in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md` are now fully qualified, so all 86 full
+  citation spans name their own file; `AGENTS.md` already named every file it
+  cites and is unchanged. The gate's four bare-filename rules — recall an
+  earlier citation of that name, a sibling of the most recent citation, a file
+  at the repository root, then a guess — now match nothing. The run reports 0
+  recalled, 0 sibling, 0 root and 0 guessed where the previous release shipped
+  23 recalled and 12 sibling, and the gate moves from 0 errors with 23
+  `ambiguous-basename` warnings to 0 errors and 0 warnings.
+- **The line numbers are untouched; only the path was spelled out.** Resolving
+  both versions of all three documents through the checker itself and comparing
+  them row by row, all 104 resolved citations — the 86 full spans, the 8 bare
+  `:NN` continuations, and the further items that comma lists and ranges expand
+  to — resolve to the same file, the same line spec and the same adjacent label
+  as before, and 0 moved. The line-number multiset is identical at 132
+  occurrences per version with 0 disagreements. 45 of those 104 items were
+  resolved by inference before and are resolved literally now; the 51 that
+  already named their own file and the 8 continuations are untouched. A word
+  diff over both documents confirms the stronger form: every prose token
+  outside a code span is identical, 4837 and 3874 of them, so no prose word was
+  removed or altered and the only changes are 35 code spans gaining a
+  directory.
+- **This is a spelling fix, not a change of meaning, and the file was settled
+  independently of the tool.** An analysis pass established, for all 45
+  inferred targets, that the file the prose intends is the file the tool chose:
+  zero disagreements. The decisive evidence is a 1:1 correspondence rather than
+  an argument — the 14 undocumented `/broker-fd/*` literals these citations
+  point at all live in `brokerfd/`, and there are exactly 14, so the file
+  follows from the enumeration the prose already gives rather than from the
+  tool's guess. The only other `/broker-fd/` literals in `brokerfd/` are four in
+  `brokerfd/brokerfd_test.go`, which nothing cites.
+- Two working assumptions were wrong and are recorded here rather than left
+  implicit. First, the two status documents do not share a wrap style: the two
+  affected list items in `IMPLEMENTATION_STATUS.md` are single lines of 1375
+  and 1654 characters and 83 of its 262 lines exceed 100 columns, so its
+  citations were qualified in place, preserving that file's style; only
+  `docs/implementation-status.md` is hand-wrapped, and its bullets have no
+  single wrap width, since no width from 70 to 94 reproduces the affected
+  bullet's own line breaks, so that one bullet was re-wrapped by hand to an
+  80-column budget, which is its new maximum. Second, the unit was first
+  miscounted as "45 citations" when 45 is the number of resolved *items*: there
+  are 35 bare *spans*, and a span such as `instruments.go:27,29,31` expands to
+  three items. Both numbers are correct for what they measure and this entry
+  does not conflate them.
+
+### Noted
+
+- **The gate is not more correct now, only less dependent on a heuristic.** It
+  verifies that a cited line exists, is in range, is not blank, and is not a
+  pure comment. A citation pointing at a wrong but real line of the right file
+  is still invisible to it, so the boundary `[2.1.13]` states is unchanged: a
+  green run is evidence that the citations resolve to existing, non-blank,
+  non-comment lines inside the cited file, and nothing more. This release is
+  not a claim that any citation is correct, only that the file each one was read
+  from is now written down instead of recalled.
+- The five live-blocked SDK defects recorded through `2.1.11` remain blocked
+  and unchanged. This release documents citations about them; it fixes,
+  verifies and unblocks none of them, and a 0-warning run says nothing about
+  whether any of them has been fixed.
+
+No SDK endpoint was live-verified by this release, no Webull host was called,
+and none is claimed to be. No SDK code, no generator and no generated
+documentation was changed, and neither was the gate itself:
+`tools/citations/check.py` is byte-unchanged, so the checker that produced the
+measurements above is the one `[2.1.13]` shipped. The files edited are
+`IMPLEMENTATION_STATUS.md`, `docs/implementation-status.md`, `CHANGELOG.md`,
+and `docs/runs/index.md`.
+
 ## [2.1.13] - 2026-09-27
 
 Repository documentation-and-tooling patch release. A `file:line` citation

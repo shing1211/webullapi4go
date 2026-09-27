@@ -29,3 +29,4 @@
 | 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.11 (corrected two stale manifest citations, recorded a silent response-schema defect in brokerfd.GetFDPositions) | v2.1.11 |
 | 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.12 (recorded two self-corrections from v2.1.11) | v2.1.12 |
 | 2026-09-27 | citations-gate | BUILD | released v2.1.13 (file:line citation validator with a Makefile target and CI job) | v2.1.13 |
+| 2026-09-27 | citation-qualification | BUILD | released v2.1.14 (qualified 35 bare-filename citations; the gate's inference now resolves nothing) | v2.1.14 |

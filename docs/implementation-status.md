@@ -183,34 +183,36 @@ confirmed without it.
   credentials — the HK host does not serve the FD surface (`404`), so HK cannot
   distinguish "wrong host" from "wrong region".
 - **`brokerfd` uses undocumented `/broker-fd/*` paths.** 14 non-test literals
-  remain (`brokerfd/accounts.go:29-31`, `assets.go:25`, `brokerfd.go:58,68`,
-  `documents.go:23-24`, `funding.go:26,30`, `instruments.go:27,29,31`,
-  `journals.go:25`) while every other cached `broker-fd-api` page uses the
-  `/broker/...` namespace. `brokerfd/assets.go:25` sends
+  remain (`brokerfd/accounts.go:29-31`, `brokerfd/assets.go:25`,
+  `brokerfd/brokerfd.go:58,68`, `brokerfd/documents.go:23-24`,
+  `brokerfd/funding.go:26,30`, `brokerfd/instruments.go:27,29,31`,
+  `brokerfd/journals.go:25`) while every other cached `broker-fd-api` page uses
+  the `/broker/...` namespace. `brokerfd/assets.go:25` sends
   `/broker-fd/assets/summary` against a documented
   `GET /broker/assets/summaries/get` — the single ⚠️ row in the snapshot.
   `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented
   page, and the assets-summary manifest entry at
   `tools/webull-docgen/_common.py:314` names two symbols for that page:
-  `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page
-  of its own and `brokerfd.GetFDAssetsSummary`'s DTO
-  (`brokerfd/assets.go:32-41`) does not match the documented
-  `balance`/`positions` envelope. A separate defect on the same Broker FD
-  surface is the `brokerfd.GetFDPositions` response-schema mismatch below; it is
-  recorded separately rather than merged here because it is the one defect on
-  this surface that fails silently, where every literal in this bullet fails
-  loudly. Impact: the affected `brokerfd` endpoints.
-  The size is larger than the literal count suggests, because only a minority of
-  the 14 have an unambiguous documented counterpart. 4 align mechanically —
-  `assets.go:25` → `/broker/assets/summaries/get`, `brokerfd.go:68` →
-  `/broker/assets/positions/list`, `instruments.go:29` →
-  `/broker/instruments/stocks/corporate-actions/get`, and `journals.go:25` →
-  `/broker/journals/cash-journals/get` — while 1 (`brokerfd.go:58`) is a probable
-  duplicate, 6 are plausibly ambiguous (`accounts.go:29-31`, `funding.go:26,30`,
-  `instruments.go:31`, where a documented page exists in the same area but not
-  for the same operation), and 3 have no documented counterpart at all
-  (`instruments.go:27` stock-locate, `documents.go:23` documents,
-  `documents.go:24` documents/detail; the cache holds only
+  `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page of
+  its own and `brokerfd.GetFDAssetsSummary`'s DTO (`brokerfd/assets.go:32-41`)
+  does not match the documented `balance`/`positions` envelope. A separate
+  defect on the same Broker FD surface is the `brokerfd.GetFDPositions`
+  response-schema mismatch below; it is recorded separately rather than merged
+  here because it is the one defect on this surface that fails silently, where
+  every literal in this bullet fails loudly. Impact: the affected `brokerfd`
+  endpoints. The size is larger than the literal count suggests, because only a
+  minority of the 14 have an unambiguous documented counterpart. 4 align
+  mechanically — `brokerfd/assets.go:25` → `/broker/assets/summaries/get`,
+  `brokerfd/brokerfd.go:68` → `/broker/assets/positions/list`,
+  `brokerfd/instruments.go:29` →
+  `/broker/instruments/stocks/corporate-actions/get`, and
+  `brokerfd/journals.go:25` → `/broker/journals/cash-journals/get` — while 1
+  (`brokerfd/brokerfd.go:58`) is a probable duplicate, 6 are plausibly ambiguous
+  (`brokerfd/accounts.go:29-31`, `brokerfd/funding.go:26,30`,
+  `brokerfd/instruments.go:31`, where a documented page exists in the same area
+  but not for the same operation), and 3 have no documented counterpart at all
+  (`brokerfd/instruments.go:27` stock-locate, `brokerfd/documents.go:23`
+  documents, `brokerfd/documents.go:24` documents/detail; the cache holds only
   `/broker/documents/download` and `/broker/documents/upload` in the documents
   namespace, and no stock-locate page). Those buckets are a plausibility
   assessment summing to the 14 literals, not settled mappings. Minimal fix:
