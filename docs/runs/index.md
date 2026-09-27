@@ -31,3 +31,4 @@
 | 2026-09-27 | citations-gate | BUILD | released v2.1.13 (file:line citation validator with a Makefile target and CI job) | v2.1.13 |
 | 2026-09-27 | citation-qualification | BUILD | released v2.1.14 (qualified 35 bare-filename citations; the gate's inference now resolves nothing) | v2.1.14 |
 | 2026-09-27 | wire-conformance | BUILD | released v2.1.15 (wire-conformance harness: 193 documented-shape fixtures, 180 recorded divergences across 54 symbols) | v2.1.15 |
+| 2026-09-27 | conformance-writeup | BUILD | released v2.1.17 (wrote up the 180 recorded response-contract divergences as item 21) | v2.1.17 |

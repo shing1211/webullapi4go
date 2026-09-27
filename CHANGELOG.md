@@ -9,6 +9,216 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.17] - 2026-09-27
+
+Repository documentation release. `2.1.15` measured the wire-conformance
+divergence set and deliberately left it unwritten; this release writes it up. Both
+status documents now carry the recorded divergences as a class rather than
+leaving a reader to infer from five live-blocked defects that the response
+contracts are conformant. Documentation only: no `.go` file, no fixture, no
+baseline entry and no generator was touched, no SDK behaviour changed, and nothing
+is newly live-verified.
+
+### Added
+
+- **Live-blocked SDK defect item 21 and a preceding subsection now record the
+  measured response-contract class in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md`.** Item 21 states the class; the subsection
+  before it carries the detail, so a reader is no longer invited to read the five
+  items above it as the complete list of known divergences. Items 16 to 19 are
+  request defects and item 20 is a single response DTO; the class is what item 20
+  belongs to, taken across the surface.
+- The class table, by check:
+
+  | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
+  |---|---:|---:|---:|---:|---:|---|
+  | `missing-required-name` | 122 | 29 | 89 | 29 | 4 | **Silently** — the documented value decodes to its zero value, no error reported |
+  | Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
+  | `decode-failure` | 29 | 29 | 12 | 17 | 0 | Restates a container-kind or leaf-type row for the same symbol |
+  | `leaf-type-mismatch` | 2 | 2 | 0 | 2 | 0 | Loudly — a JSON type error on the documented value |
+  | **Total** | **180** | **54** | **113** | **63** | **4** | |
+
+- **The silent class is the one that matters, and it is named as such.** The 122
+  `missing-required-name` rows leave the documented value at its zero value with no
+  error reported, so nothing in the return path distinguishes a zeroed field from a
+  genuine zero. The container-kind and leaf-type classes fail loudly at decode
+  time, and the two severities are not merged into one number.
+
+### Noted
+
+- **Two caveats travel with those counts, and they are what make them honest.**
+  **122 is a floor, not a total**: the name check takes the union of json tags at
+  every depth, because `encoding/json` flattens a response body into one name
+  space, so 19 rows carry 41 of their 90 required names only through a nested
+  object and count as covered. **19 of the 27 container-kind rows are
+  indeterminate**: they sit on pages whose name ends `-list`, of which 12 document
+  a `{data, pagination_key}` pagination envelope the SDK does not unwrap and 4
+  document a single item where the path says list (`data.GetDSLatestNews`,
+  `data.GetDSMarketNews`, `data.GetDSSymbolNews`, `data.GetLogos`) — the strongest
+  documentation-error candidates in the set. The harness has no basis to prefer
+  the page over the type, so it records all 27 as open; **do not read all 27 as
+  SDK defects**, and one live body per pattern would settle them.
+- **"Green is not correct" is given its denominator.** Of 154 compared rows, **90
+  come from pages publishing no `required` list at all** — 101 of the 193 fixtures
+  are in that state — so a clean row there is closer to unexamined than to
+  correct. The name check could bite on only the other 64 rows, and it fired on 29
+  of them.
+- **180 is not 180 independent problems.** The 29 `decode-failure` rows are the
+  weakest of the four checks and every one restates a row for the same symbol —
+  27 duplicate a container-kind row and 2 a leaf-type row — so they are recorded
+  so the count stays stable and no separate work is attached to them. The total
+  therefore overstates the work, and the 151 rows that remain are not a defect
+  count either, because 19 of them are the indeterminate container-kind rows.
+- **`trade` carries 4 rows, all on `trade.BatchPlaceOrder`**, and 11 of the 12
+  compared trading endpoints record none. That is a statement about what the
+  instrument did not find, on the 5 trading pages that publish a `required` list
+  and give it something to check — not a correctness verdict.
+- **No fix is applied and nothing is live-verified.** The five live-blocked SDK
+  defects are unchanged and still credential-gated; Broker FD, Display Solution,
+  the US-only surfaces and footprint remain exactly as blocked. The 29 `broker/`
+  endpoints are still out of scope, being a separate Go module.
+
+### Changed
+
+- `conformance/known-divergences.json`: the `notInStatus` note no longer claims
+  the status documents under-report the divergence set by 175 rows, which stopped
+  being true when item 21 and its subsection were written. It now records that the
+  write-up is class-level while the 175 rows' own `recordedIn` strings are
+  unchanged, and that a row in a documented class is not a row that has been
+  individually triaged. No `entries` element was altered: the `recordedIn` values
+  are this file's own data, each verified non-empty and meaningful, and rewriting
+  175 of them to claim a row-level record that does not exist would be the less
+  accurate option. The `entries` array hashes identically before and after.
+- `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`: the
+  `Latest repository tag` header now reads `v2.1.17` (2026-09-27) instead of the
+  stale `v2.1.8`, the `Last updated` date is 2026-09-27, and the version-history
+  preamble no longer names `v2.1.6` as the current authorized repository tag. The
+  historical rows of both version tables are untouched.
+- **The `[2.1.16]` gap is filled, from the tag and the commit record.** That
+  release's instruction listed the six files to commit and omitted this one, so
+  the omission was a defect in the instruction rather than an unrecorded
+  release, and the section below is written from the annotated tag and
+  `cd9dd4e` — its file set, its diff and its own commit message — rather than
+  invented; `[2.1.15]` and above stay byte-unchanged.
+
+The files edited are `CHANGELOG.md`, `IMPLEMENTATION_STATUS.md`,
+`docs/implementation-status.md`, `conformance/known-divergences.json` (the
+`notInStatus` note only) and `docs/runs/index.md`. No SDK endpoint was
+live-verified by this release, no Webull host was called, and none is claimed to
+be.
+
+## [2.1.16] - 2026-09-27
+
+Corrective tooling release. `2.1.15` shipped red — 4 of its 26 CI jobs failed,
+all four on `TestKnownDivergenceBaseline` and `TestFixtureMatchesItsRecord` in
+the conformance package — and this release fixes the two portability defects
+those failures named while changing no finding. Six files, every one of them
+inside the conformance instrument or its generator: no production `.go` file was
+edited, no SDK behaviour changed, and nothing is live-verified. The `v2.1.15`
+tag is not amended and was never intended to be: it stays the record of the red
+run, and rewriting pushed history to erase that record was not an acceptable
+alternative.
+
+### Fixed
+
+- **The recorded baseline was keyed on `encoding/json`'s error text, which moves
+  with the toolchain.** All 29 `decode-failure` details carried the standard
+  library's message verbatim — `json: cannot unmarshal string into Go value of
+  type brokerfd.AccountForm` — and a Go release that rephrases the same failure
+  as `... into .0 of type brokerfd.AccountForm` makes every one of those entries
+  read twice over: as a new divergence, and as a recorded entry that has stopped
+  reproducing, which is the one thing the gate cannot tell apart from a fix.
+  `Detail` is part of a baseline entry's identity, so a string the standard
+  library owns cannot be part of it. Each detail is now composed from the
+  check's own inputs — the recorded documented top-level kind, the compared
+  type's shape by reflection, and the kind and name of each sharper finding — so
+  it states what disagrees instead of how the decoder phrased it, and a reader
+  meets one account of a defect in two entries rather than two accounts of it.
+  `TestDecodeFailureDetailsSurviveTheDecoder` proves it in both directions: no
+  recorded detail may contain a fragment of a decoder message, and each row is
+  re-derived against a body that fails for a demonstrably different reason — a
+  top-level JSON number, which the diagnosis never reads — and must come out
+  byte-identical. 27 rows are re-proved that way and 2 leaf-only rows by
+  inspection, because moving those would mean inventing a second real
+  disagreement.
+- **The fixture byte comparison was exact while the checkout it ran against was
+  not.** The manifest records the length the generator wrote, and the generator
+  opens every file with `newline="\n"`, so it records an LF count; but the tree
+  is embedded and embedding reads the working tree, so a checkout applying a
+  line-ending policy embeds a longer file than the manifest describes. This
+  repository's `.gitattributes` is `* text=auto` with no `eol` rule for
+  `conformance/testdata`, so nothing pins the fixtures to LF, and
+  `windows-latest` checks out with `core.autocrlf=true` — CRLF is that runner's
+  default, not a choice. All 193 fixtures hold at least one LF, so all 193 were
+  affected, for a difference carrying no JSON meaning: CRLF is legal
+  inter-token whitespace to `encoding/json`, which is why only the byte counts
+  disagreed. The comparison is now exact after CRLF is collapsed to LF, and a
+  second check refuses any carriage return that is not half of a CRLF, so the
+  embedded bytes must equal the committed bytes plus one CR before each LF and
+  line-ending policy is the only free parameter. The mismatch reproduces from a
+  checkout: `authentication/POST-auth-tokens-create` is 91 bytes as committed
+  and 92 as CRLF, which is the `fixture is 92 bytes, manifest says 91` the run
+  named. What the tolerance gives up is exactly one thing — a fixture differing
+  from the manifest only in line terminators.
+- Two smaller defects in the same files, both the same shape of mistake: an
+  instrument asserting less than it appeared to.
+  `TestManifestTotalsAgreeWithRecords` summed the manifest's *recorded* byte
+  counts rather than the tree's, so it compared the manifest against itself and
+  could not fail on a real disagreement; it now reads every fixture and sums
+  that. And `gen_fixtures.py` printed a hardcoded `12` while `self_test()` held
+  13 checks, so the one line a reader looks at under-reported the tool's own
+  coverage; it now counts what ran, and its failure line reports how many of how
+  many.
+
+### Noted
+
+- **The same keying was in the two `unreadable` paths, and there it was an OS
+  message rather than a Go one.** `conformance/shapes.go` built a
+  `Divergence.Detail` by concatenating `err.Error()` — for an embed miss and for
+  an unparseable instance — and an embed miss reads `no such file or directory`
+  on one operating system and `The system cannot find the file specified` on
+  another, so the identity carried the host as well as the toolchain.
+  `unreadable` now takes the reason and the underlying cause apart: the detail
+  is written from the fixture's own identity, and the OS message reaches
+  `SkippedCheck.Reason`, which nothing compares. A sweep of all 180 recorded
+  `detail` strings now finds no standard-library fragment and no OS message,
+  where `v2.1.15` had 29 of the former. Its `reason` strings find none of
+  either — but 3 of them do cite an SDK source file, on purpose, as the pointer
+  to where the defect is written down, and those citations are byte-identical
+  to `v2.1.15`. "No path fragment" is true of a host path and false of a source
+  citation, so it is worth not resting on the phrase.
+- **No finding changed.** Still 180 divergences across 54 symbols; every
+  `reason` and every `recordedIn` is byte-identical to `v2.1.15`, and so are
+  `coverage`, `policy` and `baselineCommit`. The per-kind distribution is the
+  one `[2.1.17]` tabulates and is not restated here, so the two sections cannot
+  drift apart. Only the 29 `decode-failure` detail strings were reworded. The
+  class that most needs writing up — the rows that leave a documented value
+  silently zeroed — is untouched, so this release makes the instrument reliable
+  and fixes nothing it measures.
+- **The job-level attribution is the CI run's, not the repository's.** Which 4
+  of the 26 jobs failed, the Docs and citations jobs passing, and the pattern
+  that localised the two defects — Go-stable matrix jobs failing where the
+  pinned-toolchain macOS and Ubuntu jobs passed, both Windows jobs failing
+  either way — are read from a run log that is not in this repository and cannot
+  be re-derived from a checkout. The two mechanisms are each reproducible on
+  their own: the toolchain wording against the 29 recorded details, and the CRLF
+  mismatch against the manifest's byte counts.
+- **A length is not a digest, and this release does not make it one.** The byte
+  count is a tripwire against a reshaped or truncated artifact, and a content
+  edit that preserves the length stays invisible to it, before and after. What
+  catches a real change is the structural set around it: valid JSON, the
+  documented top-level kind, every documented required name present at the level
+  the page declares it, and the recorded distinct-property-name count.
+- Nothing here is live-verified. No Webull host was called and no credential was
+  used. The five live-blocked SDK defects are unchanged and still
+  credential-gated, and the Broker FD, Display Solution, US-only and footprint
+  surfaces remain exactly as blocked.
+
+The files edited are `conformance/divergence_test.go`, `conformance/doc.go`,
+`conformance/fixtures_test.go`, `conformance/shapes.go` and
+`tools/conformance/gen_fixtures.py`, plus `conformance/known-divergences.json`
+for the 29 reworded details and no other field.
+
 ## [2.1.15] - 2026-09-27
 
 Tooling release. A wire-conformance harness is added: it compares every SDK
