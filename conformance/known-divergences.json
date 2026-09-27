@@ -5,7 +5,7 @@
     "scope": "193 documented endpoints carry a committed fixture. 154 are resolved to a Go type here and 39 are accounted for, not skipped: 29 name a broker/ symbol, which is a separate Go module and therefore not importable from the root module without a go.mod change, and 10 are the docgen manifest's em dash, an endpoint deliberately mapped to no SDK symbol. Of the 154 resolved rows, 5 are reported not comparable; see the notComparable note. Every broker/ row is therefore NOT covered by this instrument.",
     "notComparable": "5 of the 154 resolved rows claim nothing at all, because the SDK method sends a path other than the one the page documents and the page is therefore not that call's contract. A schema difference between a page and a call that is not the one the page documents is not a defect claim about this SDK, so folding it into either conforming or divergent would misreport it. They are counted in coverage.notComparable and printed with both paths by TestObservedDivergenceReport. The rows are: brokerfd.GetAccountsSummary on broker-fd-us/GET-broker-assets-summaries-get, data.GetStockInstruments on trading/GET-trading-instruments-stocks-profiles-list, data.GetDisplaySnapshot on display-solution/POST-market-data-stocks-snapshots-list, and client.CreateToken and client.CheckToken on the two authentication pages. The first three had 8 recorded rows between them, which this change removes; the two authentication rows had none. The path defects themselves are unaffected and stay recorded elsewhere: TestDefectivePathRowsAreDocumented lists all 5, and the GetDisplaySnapshot path defect is live-blocked SDK defect item 19.",
     "nameCoverageIsAFloor": "The 122 missing-required-name rows are a floor, not a total. The name check considers the union of json tags at every depth of the compared type, because encoding/json flattens a response body into one name space, so a documented name the SDK carries only inside a nested object counts as covered. Nothing here records which names that applies to. It is now printed: the required-name-depth skip in TestObservedDivergenceReport names every required name that reached a tag only from below the level the page declares it at, per row. Depth scoping is deliberately not enforced, because a documented top-level name the SDK reaches one level down still decodes and reporting it would trade a floor for a class of false positives.",
-    "check4": "decodes-without-error is the weakest check: a decode that succeeds is consistent with a type that ignores every documented name, and a decode that fails is usually the same defect check 1 or check 2 already named. Its 29 entries are recorded so the count is stable, not because they are 29 new defects; most duplicate a shape or name entry for the same symbol.",
+    "check4": "decodes-without-error is the weakest check: a decode that succeeds is consistent with a type that ignores every documented name, and a decode that fails is usually the same defect check 1 or check 2 already named. Its 29 entries are recorded so the count is stable, not because they are 29 new defects; most duplicate a shape or name entry for the same symbol. Each of those 29 details is written from what the harness already knows -- the compared Go type, and the documented top-level kind or element type or leaf type it could not accept -- and not from encoding/json's error message, because detail is part of an entry's identity and the decoder's wording is not stable across Go releases. An earlier version of this file quoted that message verbatim, and a later Go release rephrasing it turned all 29 entries at once into a new divergence and an entry that no longer reproduces. Nothing in any detail or reason here may quote a toolchain- or platform-dependent string: an OS message, a filesystem path and a decoder's phrasing are all diagnostics, and a diagnostic belongs in the report, not in an identity.",
     "waivers": "No entry is waived. An earlier version of this file waived the two quote_time leaf-type rows on the reasoning that data/quotes.go:81-84 records the sandbox sending a JSON number, so retyping the field to string would be a regression. That reasoning was wrong on both rows. On data.GetQuotes the method cites at data/quotes.go:93 the very page the harness read, which declares quote_time as type string and requires it, so the SDK contradicts a contract it names; and the sandbox observation is scoped to one environment, where a published type does not stop applying. On data.GetDisplayDepth there was no evidence at all: that is the Display Solution host, which returns 403 at host level here, and an observation about the HK sandbox says nothing about it. Both are now recorded as ordinary open defects. The reason remains required and non-empty so that a finding can never be dropped by leaving the field blank -- but a required reason is not a true one, and these two rows are the case that proved it: a false reason satisfied the guard perfectly, repeated identically across both entries.",
     "notInStatus": "Only 5 of these 180 divergences are written up in IMPLEMENTATION_STATUS.md, and all 5 are the one finding the file already names: the three brokerfd.GetFDPositions missing-required-name rows and the two brokerfd.GetFDAssetsDetail rows, each with a recordedIn naming live-blocked SDK defect item 20. The data.GetDisplaySnapshot defect is item 19, but it is a path defect rather than a row in this file, so it contributes no entry here and the notComparable note is where it lives. Each of the remaining 175 rows states in its own recordedIn that no status-document entry exists for it, so 180 - 5 = 175 and the status documents under-report the current divergence set by 175 rows. That is a finding about the status documents as much as about the SDK.",
     "tableIsManual": "The symbol-to-type table in conformance/symbols.go is hand written and is the instrument's weakest point. It is asserted against the manifest in both directions by TestSymbolTableCoversTheManifest, so a table hole fails the build rather than quietly reducing coverage, and every entry is resolved and checked by TestSymbolTableResolvesItsDecodeTargets. Six of its entries name a response envelope the SDK package does not export, which cannot be written as a reflect.TypeOf call at all; those are read from the SDK sources by conformance/envelopes.go, which fails closed on a field it cannot represent and whose rebuilt type is compared field by field against the declaration on every run. An earlier version of the table named the public projection several of those methods return instead, which compared a tagless struct against the page and reported 12 rows the SDK does not have."
@@ -261,7 +261,7 @@
       "symbol": "brokerfd.GetAgreementDetail",
       "fixture": "broker-fd-us/GET-broker-agreements-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal array into Go value of type brokerfd.Agreement",
+      "detail": "the documented instance does not unmarshal into brokerfd.Agreement: the documented top level is array and brokerfd.Agreement decodes it as object",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -304,7 +304,7 @@
       "symbol": "brokerfd.GetFDActivities",
       "fixture": "broker-fd-us/GET-broker-activities-cash-activities-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDActivity",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDActivity: the documented top level is object and []brokerfd.FDActivity decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -320,7 +320,7 @@
       "symbol": "brokerfd.GetFDAssetsDetail",
       "fixture": "broker-fd-us/GET-broker-assets-balances-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDAssetDetail",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDAssetDetail: the documented top level is object and []brokerfd.FDAssetDetail decodes it as array",
       "reason": "Recorded inside live-blocked SDK defect item 20 as the adjacent loud finding: the page documents a single object requiring account_currency_assets, total_asset_currency and total_cash_balance, and the method decodes []FDAssetDetail, so the body cannot be decoded at all. Loud rather than silent, which is why it is a decode error and not three zeroed money.Money values. Not live-verified.",
       "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Live-blocked SDK defects\" item 20 (\"Adjacent finding, loud rather than silent\")"
     },
@@ -399,7 +399,7 @@
       "symbol": "brokerfd.GetFDCorporateActions",
       "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDCorporateAction",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDCorporateAction: the documented top level is object and []brokerfd.FDCorporateAction decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -505,7 +505,7 @@
       "symbol": "brokerfd.GetFDECInstruments",
       "fixture": "broker-fd-us/GET-broker-instruments-event-contracts-markets-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDECInstrument",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDECInstrument: the documented top level is object and []brokerfd.FDECInstrument decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -566,7 +566,7 @@
       "symbol": "brokerfd.GetFDOpenOrders",
       "fixture": "broker-fd-us/GET-broker-orders-open-orders-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDOrder",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDOrder: the documented top level is object and []brokerfd.FDOrder decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -600,7 +600,7 @@
       "symbol": "brokerfd.GetFDOrderHistory",
       "fixture": "broker-fd-us/GET-broker-orders-historical-orders-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDOrder",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDOrder: the documented top level is object and []brokerfd.FDOrder decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -643,7 +643,7 @@
       "symbol": "brokerfd.GetFDStockInstruments",
       "fixture": "broker-fd-us/GET-broker-instruments-stocks-profiles-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDStockInstrument",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDStockInstrument: the documented top level is object and []brokerfd.FDStockInstrument decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -713,7 +713,7 @@
       "symbol": "brokerfd.GetFDTransferFees",
       "fixture": "broker-fd-us/GET-broker-fees-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.TransferFee",
+      "detail": "the documented instance does not unmarshal into []brokerfd.TransferFee: the documented top level is object and []brokerfd.TransferFee decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -828,7 +828,7 @@
       "symbol": "brokerfd.ListAccountForms",
       "fixture": "broker-fd-us/GET-broker-forms-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal string into Go value of type brokerfd.AccountForm",
+      "detail": "the documented instance does not unmarshal into []brokerfd.AccountForm: the documented element type is string and the []brokerfd.AccountForm element is object",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -862,7 +862,7 @@
       "symbol": "brokerfd.ListFDAccounts",
       "fixture": "broker-fd-us/GET-broker-accounts-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.FDAccount",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDAccount: the documented top level is object and []brokerfd.FDAccount decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1004,7 +1004,7 @@
       "symbol": "brokerfd.ListFDTransfers",
       "fixture": "broker-fd-us/GET-broker-funding-transfers-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []brokerfd.Transfer",
+      "detail": "the documented instance does not unmarshal into []brokerfd.Transfer: the documented top level is object and []brokerfd.Transfer decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1047,7 +1047,7 @@
       "symbol": "data.GetCapitalFlow",
       "fixture": "fundamentals/GET-market-data-fundamentals-capital-flows-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.CapitalFlowEntry",
+      "detail": "the documented instance does not unmarshal into []data.CapitalFlowEntry: the documented top level is object and []data.CapitalFlowEntry decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1063,7 +1063,7 @@
       "symbol": "data.GetDSLatestNews",
       "fixture": "display-solution/GET-market-data-news-latest-news-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.DSNewsSummaryItem",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1079,7 +1079,7 @@
       "symbol": "data.GetDSMarketNews",
       "fixture": "display-solution/GET-market-data-news-market-news-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.DSNewsSummaryItem",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1095,7 +1095,7 @@
       "symbol": "data.GetDSNewsSummary",
       "fixture": "display-solution/POST-market-data-news-summaries-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.DSNewsSummaryItem",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1111,7 +1111,7 @@
       "symbol": "data.GetDSSymbolNews",
       "fixture": "display-solution/GET-market-data-news-symbol-news-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.DSNewsSummaryItem",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1163,7 +1163,7 @@
       "symbol": "data.GetDisplayDepth",
       "fixture": "display-solution/GET-market-data-stocks-depths-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal string into Go struct field Quote.quote_time of type int64",
+      "detail": "the documented instance does not unmarshal into data.Quote: quote_time: documented string, SDK field int64.QuoteTime is number",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1180,7 +1180,7 @@
       "symbol": "data.GetDisplayGainersLosers",
       "fixture": "display-solution/GET-market-data-screeners-gainers-losers-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.ScreenerStock",
+      "detail": "the documented instance does not unmarshal into []data.ScreenerStock: the documented top level is object and []data.ScreenerStock decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1196,7 +1196,7 @@
       "symbol": "data.GetDisplayTopActive",
       "fixture": "display-solution/GET-market-data-screeners-top-actives-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.ScreenerStock",
+      "detail": "the documented instance does not unmarshal into []data.ScreenerStock: the documented top level is object and []data.ScreenerStock decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1293,7 +1293,7 @@
       "symbol": "data.GetEventContractMarkets",
       "fixture": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.EventContractMarket",
+      "detail": "the documented instance does not unmarshal into []data.EventContractMarket: the documented top level is object and []data.EventContractMarket decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1309,7 +1309,7 @@
       "symbol": "data.GetEventContractSeries",
       "fixture": "event-contracts/GET-trading-instruments-event-contracts-series-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.EventContractSeries",
+      "detail": "the documented instance does not unmarshal into []data.EventContractSeries: the documented top level is object and []data.EventContractSeries decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1325,7 +1325,7 @@
       "symbol": "data.GetEventDepth",
       "fixture": "event-contracts/GET-market-data-event-contracts-depths-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal array into Go value of type data.EventDepth",
+      "detail": "the documented instance does not unmarshal into data.EventDepth: the documented top level is array and data.EventDepth decodes it as object",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1485,7 +1485,7 @@
       "symbol": "data.GetFundDividends",
       "fixture": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.FundDividend",
+      "detail": "the documented instance does not unmarshal into []data.FundDividend: the documented top level is object and []data.FundDividend decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1501,7 +1501,7 @@
       "symbol": "data.GetLogos",
       "fixture": "display-solution/POST-market-data-fundamentals-logos-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.Logo",
+      "detail": "the documented instance does not unmarshal into []data.Logo: the documented top level is object and []data.Logo decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1517,7 +1517,7 @@
       "symbol": "data.GetMarketSectorDetail",
       "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.ScreenerStock",
+      "detail": "the documented instance does not unmarshal into []data.ScreenerStock: the documented top level is object and []data.ScreenerStock decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1533,7 +1533,7 @@
       "symbol": "data.GetMarketSectors",
       "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal object into Go value of type []data.MarketSector",
+      "detail": "the documented instance does not unmarshal into []data.MarketSector: the documented top level is object and []data.MarketSector decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1549,7 +1549,7 @@
       "symbol": "data.GetQuotes",
       "fixture": "market-data-stock/GET-market-data-stocks-depths-list",
       "kind": "decode-failure",
-      "detail": "json: cannot unmarshal string into Go struct field Quote.quote_time of type int64",
+      "detail": "the documented instance does not unmarshal into data.Quote: quote_time: documented string, SDK field int64.QuoteTime is number",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
@@ -1567,7 +1567,7 @@
       "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
       "kind": "decode-failure",
       "name": "",
-      "detail": "json: cannot unmarshal array into Go value of type data.instrumentProfilesV3Resp",
+      "detail": "the documented instance does not unmarshal into data.instrumentProfilesV3Resp: the documented top level is array and data.instrumentProfilesV3Resp decodes it as object",
       "reason": "The decode failure is the same disagreement the shape check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "the same two sources as the shape row for this symbol: data/instrument_v3.go:28 and data/instrument_v3.go:42 against the page the manifest names; no IMPLEMENTATION_STATUS.md entry yet"
     },

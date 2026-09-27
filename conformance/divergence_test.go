@@ -776,6 +776,161 @@ func TestComparisonBites(t *testing.T) {
 	})
 }
 
+// TestDecodeFailureDetailsSurviveTheDecoder proves the decode-failure Detail is
+// written from the check's own inputs, so a Go release that rewords
+// encoding/json's message cannot turn every recorded decode failure into a new
+// divergence and an entry that stopped reproducing at the same time.
+//
+// That is not hypothetical: v2.1.15 shipped 29 details quoted from the decoder
+// verbatim, and the next Go release rephrasing "cannot unmarshal string into Go
+// value of type brokerfd.AccountForm" to "cannot unmarshal string into .0 of
+// type brokerfd.AccountForm" turned the two Go-stable matrix jobs red, on a tree
+// that passed on the pinned toolchain.
+//
+// Two directions, because a detail can be wrong in two ways. First, no committed
+// detail may contain a fragment of a decoder message, and every one must name the
+// type it failed on: a detail that quotes the decoder is one release away from
+// breaking the gate, and a detail that names nothing is indistinguishable from an
+// emptied one. Second, and empirically: for every row whose diagnosis is a shape,
+// the same comparison is re-run against a body that also fails to decode while
+// every check's verdict is held fixed -- a top-level JSON number, which the
+// diagnosis never reads -- and the Detail must come out byte-identical even though
+// the decoder's message is demonstrably different. The two leaf-only rows have no
+// such body: for them the decoder's message already names the leaf the harness
+// names, so changing the wording means inventing a second real disagreement. They
+// are held to the first direction plus an exact restatement of the leaf verdicts.
+func TestDecodeFailureDetailsSurviveTheDecoder(t *testing.T) {
+	m := loadManifest(t)
+	observed, _, err := CompareAll(m)
+	if err != nil {
+		t.Fatalf("CompareAll: %v", err)
+	}
+	committed, err := LoadBaseline()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Fragments of an encoding/json message, across the wordings seen so far.
+	fragments := []string{
+		"json:", "cannot unmarshal", "Go value of type", "Go struct field",
+		"of type", "invalid character", "unexpected end of JSON",
+		"into .0 of type", "into Go value",
+	}
+
+	var recorded, bySecondBody, byInspection int
+	for _, e := range committed.Entries {
+		if e.Kind != DecodeFailure {
+			continue
+		}
+		recorded++
+		for _, frag := range fragments {
+			if strings.Contains(e.Detail, frag) {
+				t.Errorf("%s: the recorded detail quotes the decoder (%q): %q",
+					e.Symbol, frag, e.Detail)
+			}
+		}
+		want := "the documented instance does not unmarshal into " +
+			typeName(mustType(t, e.Symbol)) + ": "
+		if !strings.HasPrefix(e.Detail, want) {
+			t.Errorf("%s: the recorded detail does not name the type it failed on, "+
+				"so it is either quoting the decoder or saying nothing; want a %q "+
+				"prefix, got %q", e.Symbol, want, e.Detail)
+		}
+	}
+	t.Logf("recorded decode-failure entries: %d, none quoting the decoder", recorded)
+
+	for _, o := range observed {
+		detail, ok := detailOf(o, DecodeFailure)
+		if !ok {
+			continue
+		}
+		target, err := SDKTypes[o.Symbol].DecodeTarget()
+		if err != nil {
+			t.Fatalf("%s: %v", o.Symbol, err)
+		}
+		f, ok := m.ByID(o.Fixture)
+		if !ok {
+			t.Fatalf("no fixture %q", o.Fixture)
+		}
+		body, err := f.Read()
+		if err != nil {
+			t.Fatal(err)
+		}
+		first := decodeErrorText(body, target)
+
+		if !hasKind(o, TopLevelMismatch) && !hasKind(o, ElementTypeMismatch) {
+			// Leaf-only: the detail must be exactly the leaf verdicts, and the
+			// decoder's message must contribute nothing to it.
+			for _, d := range o.Divergences {
+				if d.Kind != LeafTypeMismatch {
+					continue
+				}
+				if clause := d.Name + ": " + d.Detail; !strings.Contains(detail, clause) {
+					t.Errorf("%s: the detail does not carry the leaf verdict %q: %q",
+						o.Symbol, clause, detail)
+				}
+			}
+			for _, frag := range fragments {
+				if strings.Contains(detail, frag) {
+					t.Errorf("%s: the detail quotes the decoder (%q): %q", o.Symbol, frag, detail)
+				}
+			}
+			byInspection++
+			t.Logf("%s: leaf-only, decoder said %q, detail is %q", o.Symbol, first, detail)
+			continue
+		}
+
+		// A top-level JSON number is rejected by every SDK response type, and the
+		// diagnosis reads the fixture's recorded top-level kind and the type's
+		// shape, neither of which the body carries.
+		second := decodeErrorText([]byte("42"), target)
+		if first == second {
+			t.Errorf("%s: both bodies draw the same message from the decoder, so "+
+				"this row proves nothing either way: %q", o.Symbol, first)
+			continue
+		}
+		alt := CompareBody(f, o.Symbol, target, []byte("42"))
+		got, ok := detailOf(alt, DecodeFailure)
+		if !ok {
+			t.Errorf("%s: a top-level number decoded, so the row cannot be "+
+				"re-proved here", o.Symbol)
+			continue
+		}
+		if got != detail {
+			t.Errorf("%s: the detail moved when only the decoder's wording could "+
+				"have changed.\n  committed body: %q\n  number body:    %q",
+				o.Symbol, detail, got)
+			continue
+		}
+		bySecondBody++
+		t.Logf("%s: decoder said %q then %q, detail stayed %q", o.Symbol, first, second, detail)
+	}
+	t.Logf("rows re-proved with a second body: %d, rows proved by inspection: %d",
+		bySecondBody, byInspection)
+	if bySecondBody+byInspection == 0 {
+		t.Log("no decode failure is observed on this tree, so there is nothing to re-prove")
+	}
+}
+
+// detailOf returns the Detail of the outcome's first divergence of that kind.
+func detailOf(o Outcome, kind DivergenceKind) (string, bool) {
+	for _, d := range o.Divergences {
+		if d.Kind == kind {
+			return d.Detail, true
+		}
+	}
+	return "", false
+}
+
+// decodeErrorText is what a caller would see from unmarshalling body into t.
+func decodeErrorText(body []byte, t reflect.Type) string {
+	err := json.Unmarshal(body, reflect.New(t).Interface())
+	if err == nil {
+		return "<no error>"
+	}
+	return err.Error()
+}
+
 func mustFixture(t *testing.T, m *Manifest, id string) Fixture {
 	t.Helper()
 	f, ok := m.ByID(id)

@@ -561,7 +561,10 @@ func Compare(f Fixture, symbol string, t reflect.Type) Outcome {
 	}
 	body, err := f.Read()
 	if err != nil {
-		return unreadable(f, symbol, t, "the committed fixture is not readable: "+err.Error())
+		return unreadable(f, symbol, t,
+			"the committed fixture "+f.Path()+" is not readable from the embedded tree, "+
+				"so no check could run",
+			err.Error())
 	}
 	return CompareBody(f, symbol, t, body)
 }
@@ -625,7 +628,9 @@ func CompareBody(f Fixture, symbol string, t reflect.Type, body []byte) Outcome 
 
 	var instance any
 	if err := json.Unmarshal(body, &instance); err != nil {
-		return unreadable(f, symbol, t, "the instance does not parse: "+err.Error())
+		return unreadable(f, symbol, t,
+			"the committed instance "+f.Path()+" is not parseable JSON, so no check could run",
+			err.Error())
 	}
 
 	documented := documentedNames(f, instance)
@@ -633,13 +638,28 @@ func CompareBody(f Fixture, symbol string, t reflect.Type, body []byte) Outcome 
 
 	// One pass per check, in the harness's priority order, so a report reads in
 	// the same sequence the checks are documented in.
-	for _, c := range []func() ([]Divergence, []SkippedCheck){
-		func() ([]Divergence, []SkippedCheck) { return checkNames(symbol, f, o.Shape, tags, documented) },
-		func() ([]Divergence, []SkippedCheck) { return checkShape(symbol, f, o.Shape) },
-		func() ([]Divergence, []SkippedCheck) { return checkLeaves(symbol, f, tags, documented) },
-		func() ([]Divergence, []SkippedCheck) { return checkDecode(symbol, f, t, body) },
+	//
+	// Each pass is also handed the divergences the earlier ones recorded. The
+	// decode check cannot localise a rejection by itself -- it only learns that
+	// one happened -- so it is told which sharper finding already named the
+	// disagreement, and restates that finding's own facts rather than quoting the
+	// decoder's wording. See decodeCauses for why the wording is not quotable.
+	for _, c := range []func(prior []Divergence) ([]Divergence, []SkippedCheck){
+		func([]Divergence) ([]Divergence, []SkippedCheck) {
+			return checkNames(symbol, f, o.Shape, tags, documented)
+		},
+		func([]Divergence) ([]Divergence, []SkippedCheck) {
+			return checkShape(symbol, f, o.Shape)
+		},
+		func([]Divergence) ([]Divergence, []SkippedCheck) {
+			return checkLeaves(symbol, f, tags, documented)
+		},
+		func(prior []Divergence) ([]Divergence, []SkippedCheck) {
+			return checkDecode(symbol, f, t, body,
+				decodeCauses(f, o.Shape, tags, documented, prior))
+		},
 	} {
-		divergences, skipped := c()
+		divergences, skipped := c(o.Divergences)
 		o.Divergences = append(o.Divergences, divergences...)
 		o.Skipped = append(o.Skipped, skipped...)
 	}
@@ -651,13 +671,22 @@ func CompareBody(f Fixture, symbol string, t reflect.Type, body []byte) Outcome 
 // body is missing or unparseable. It is reported as a decode failure because
 // that is what a caller would see, and the other three checks are recorded as
 // not applicable with the cause named, so the outcome never reads as a pass.
-func unreadable(f Fixture, symbol string, t reflect.Type, why string) Outcome {
+//
+// why and cause are kept apart on purpose. why becomes a Divergence.Detail, and
+// Detail is part of a baseline entry's identity, so it is written from the
+// fixture's own identity and says nothing the decoder or the filesystem phrases.
+// cause is the underlying message, which is diagnostic and deliberately not
+// stable across operating systems or Go releases: an embed miss reads
+// "no such file or directory" on one and "The system cannot find the file
+// specified" on the other. It reaches SkippedCheck.Reason, which nothing
+// compares, and never the identity.
+func unreadable(f Fixture, symbol string, t reflect.Type, why, cause string) Outcome {
 	o := Outcome{Symbol: symbol, Fixture: f.ID, Shape: Describe(t), GoType: typeName(t)}
 	o.Divergences = append(o.Divergences, Divergence{
 		Symbol: symbol, Fixture: f.ID, Kind: DecodeFailure, Detail: why,
 	})
 	for _, c := range []Check{CheckRequiredNames, CheckShape, CheckLeafTypes} {
-		o.Skipped = append(o.Skipped, SkippedCheck{c, why})
+		o.Skipped = append(o.Skipped, SkippedCheck{c, cause})
 	}
 	sortDivergences(&o)
 	return o
@@ -912,30 +941,90 @@ func leafVerdict(field reflect.Type, want string) (ok bool, reason string) {
 // pass here carries little information. A failure, on the other hand, is
 // normally the same defect a sharper check already named, and both are kept
 // because the failure is what a caller actually sees.
-func checkDecode(symbol string, f Fixture, t reflect.Type, body []byte) ([]Divergence, []SkippedCheck) {
+//
+// causes is that sharper diagnosis, built by decodeCauses and not by this
+// function: a decode that fails says only that a failure happened, so the detail
+// this records is a restatement of what the harness already knows rather than of
+// what the decoder printed.
+func checkDecode(symbol string, f Fixture, t reflect.Type, body []byte, causes []string) ([]Divergence, []SkippedCheck) {
 	ptr := reflect.New(t)
 	if err := json.Unmarshal(body, ptr.Interface()); err != nil {
 		return []Divergence{{
 			Symbol: symbol, Fixture: f.ID, Kind: DecodeFailure,
-			Detail: renderDecodeError(t, err),
+			Detail: fmt.Sprintf("the documented instance does not unmarshal into %s: %s",
+				typeName(t), strings.Join(causes, "; ")),
 		}}, nil
 	}
 	return nil, nil
 }
 
-// renderDecodeError names the decode target the way a reader would.
+// decodeCauses names, from the harness's own inputs, why the documented instance
+// does not unmarshal into the compared type, so a decode-failure Detail is a
+// function of the SDK and the page rather than of the decoder's wording.
 //
-// encoding/json builds its message from reflect.Type.String(), and for a type
-// rebuilt from a source-declared envelope that is the whole anonymous struct with
-// its escaped tags. The substitution is exact -- it replaces the reflector's own
-// rendering of the compared type, and nothing else -- so the message stays what
-// the decoder said while the type in it is readable. Detail is part of a
-// baseline entry's identity, so a message that changed shape with the declaration
-// would make the entry stop reproducing for no reason a reader could see.
-func renderDecodeError(t reflect.Type, err error) string {
-	msg := err.Error()
-	if name, ok := declaredName(t); ok {
-		msg = strings.ReplaceAll(msg, t.String(), name)
+// The distinction is load-bearing, because Detail is part of a baseline entry's
+// identity (see Divergence). encoding/json's message is not a stable string. It
+// was quoted verbatim into 29 decode-failure details at v2.1.15, and the next Go
+// release reworded
+//
+//	json: cannot unmarshal string into Go value of type brokerfd.AccountForm
+//
+// to
+//
+//	json: cannot unmarshal string into .0 of type brokerfd.AccountForm
+//
+// which is what turned the two Go-stable matrix jobs red while the same tree
+// passed on the pinned toolchain. Each of the 29 entries then read as a new
+// divergence *and* as a baseline entry that had stopped reproducing. A string
+// that moves with the toolchain cannot be part of an identity meant to outlive
+// one, and re-recording the details against whatever wording the current host
+// produces would only move the breakage to the next release.
+//
+// What the stdlib message carries -- what was sent, and what was expected to take
+// it -- is available here without the decoder: the fixture's recorded top-level
+// kind and element type, and the compared type's shape by reflection. Each cause
+// below is therefore the same fact the corresponding sharper finding already
+// states, phrased the same way, so a reader meets one account of the defect in
+// two entries rather than two accounts of it.
+//
+// The clauses come out in the order the sharper checks ran, which is deterministic
+// without sorting: the name and leaf checks walk f.Checks.RequiredNames, which is
+// sorted and asserted to be sorted, and at most one shape finding exists per
+// outcome. They are built from each finding's Kind and Name, never from its
+// Detail, so rewording a sharper check does not silently reword this one.
+func decodeCauses(f Fixture, shape WireShape, tags map[string]tagSite, documented map[string]documentedName, prior []Divergence) []string {
+	var out []string
+	for _, d := range prior {
+		switch d.Kind {
+		case TopLevelMismatch:
+			out = append(out, fmt.Sprintf("the documented top level is %s and %s decodes it as %s",
+				f.Checks.TopLevel, typeName(shape.Go), shape.TopLevel))
+		case ElementTypeMismatch:
+			out = append(out, fmt.Sprintf("the documented element type is %s and the %s element is %s",
+				f.Checks.ElementType, typeName(shape.Go), shape.ElementKind))
+		case LeafTypeMismatch:
+			doc, ok := documented[d.Name]
+			if !ok {
+				continue
+			}
+			site, ok := lookupTag(tags, d.Name)
+			if !ok {
+				continue
+			}
+			out = append(out, fmt.Sprintf("%s: documented %s, SDK field %s.%s is %s",
+				d.Name, jsonKind(doc.Value), typeName(site.Field.Type), site.Field.Name,
+				jsonKindOf(site.Type)))
+		}
 	}
-	return msg
+	if len(out) == 0 {
+		// Reachable in principle and unreachable on the committed tree: a rejection
+		// none of the three sharper checks names, such as a type disagreement on a
+		// name the page does not require. It is stated rather than left blank,
+		// because a Detail that says nothing is the case this function exists to
+		// prevent, and a blanket clause would read as a claim the harness checked
+		// for a cause and did not find.
+		out = append(out, "no name, shape or leaf check disagrees, so the rejection is at "+
+			"a name or a type that none of the three checks compares")
+	}
+	return out
 }

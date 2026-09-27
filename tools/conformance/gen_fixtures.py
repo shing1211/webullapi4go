@@ -890,8 +890,10 @@ def self_test():
     names.
     """
     failures = []
+    ran = []
 
     def check(label, got, want):
+        ran.append(label)
         if got != want:
             failures.append("%s\n    got  %r\n    want %r" % (label, got, want))
 
@@ -979,11 +981,15 @@ def self_test():
           "/responses/200/content/application~1json")
 
     if failures:
-        print("self-test FAILED (%d):" % len(failures))
+        print("self-test FAILED (%d of %d checks):" % (len(failures), len(ran)))
         for f in failures:
             print("  " + f)
         return 1
-    print("self-test: all %d emitter checks passed" % 12)
+    # Counted from what actually ran, not written out by hand. A hardcoded total
+    # is a claim about this function that no run verifies, and it was wrong once:
+    # it said 12 while self_test held 13 checks, so the tool under-reported its
+    # own coverage in the one line a reader looks at.
+    print("self-test: all %d emitter checks passed" % len(ran))
     return 0
 
 

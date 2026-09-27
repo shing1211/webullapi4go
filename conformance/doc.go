@@ -76,6 +76,25 @@
 // name repeats the documented method and path, which makes a fixture
 // identifiable from a terminal prompt without opening the manifest.
 //
+// # What "the committed bytes" means on a given checkout
+//
+// The tree is embedded, and embedding reads the working tree, so the bytes a run
+// compares are the bytes the checkout materialised -- which are not always the
+// bytes that were committed. The manifest records byte counts, and the generator
+// writes LF, so a checkout that applies a line-ending policy embeds a longer
+// file than the manifest describes: this repository's .gitattributes is
+// `* text=auto` and windows-latest ships core.autocrlf=true, so CRLF is that
+// runner's default rather than a choice. The fixture assertions therefore
+// compare byte counts with CRLF collapsed to LF, and separately refuse a
+// carriage return that is not part of a CRLF, so the tolerated set is exactly
+// "a CRLF checkout" and not "whatever the checkout did". Everything structural --
+// valid JSON, the documented top-level kind, the required names, the distinct
+// property-name count -- is line-ending policy independent already, and one
+// basis of a fixture's meaning. See committedLength in fixtures_test.go, which
+// also records what the tolerance gives up: a length is not a digest, so a
+// length-preserving content edit was never detectable by the byte count, before
+// this or after it.
+//
 // # What is compared against what
 //
 // divergence_test.go resolves each manifest row to a Go type through the

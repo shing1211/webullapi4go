@@ -15,6 +15,7 @@
 package conformance
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -42,6 +43,70 @@ func load(t *testing.T) *Manifest {
 		t.Fatal("manifest declares no fixtures")
 	}
 	return m
+}
+
+// committedLength is the length of a committed fixture as the manifest records
+// it, which is what every byte-count assertion in this file must compare against.
+//
+// # Why the line-ending normalisation exists
+//
+// Manifest.Fixture.Bytes and Totals.FixtureBytes are the length of the file
+// tools/conformance/gen_fixtures.py wrote, and that tool opens every file with
+// newline="\n" (gen_fixtures.py, write), so both record an LF count. The
+// comparison here used to be byte-exact against the *embedded* bytes, and
+// embedding reads the working tree, not the object store. A checkout whose
+// line-ending policy differs therefore embedded a longer file than the manifest
+// describes: the repository's .gitattributes is `* text=auto`, and
+// windows-latest ships core.autocrlf=true, so the CRLF materialisation is
+// upstream's default behaviour on that runner and not something anyone chose.
+// That is what turned both Windows matrix jobs red at v2.1.15, on all 193
+// fixtures, for a difference that carries no JSON meaning. CRLF is legal
+// inter-token whitespace to the JSON grammar and to encoding/json, so the rest
+// of this file -- json.Valid, the top-level kind, the required names, the
+// distinct-name count -- already reads a CRLF checkout exactly as it reads an LF
+// one, and only the byte counts disagreed.
+//
+// # What it gives up
+//
+// Exactly one thing: a committed fixture whose bytes differ from the manifest's
+// only in line terminators is no longer reported. That is the whole class being
+// tolerated, and there is no way to tolerate it and still count bytes.
+//
+// It is worth being explicit about what it does NOT give up, because the check
+// looks stronger than it is. The manifest records a length, not a digest, so a
+// content edit that preserves the byte count -- a price changed from "12.34" to
+// "12.35" -- is invisible to this assertion. That was true before this change
+// too, and is not made worse by it. What catches a real content change is the
+// structural set below it: valid JSON, the documented top-level kind, every
+// documented required name present at the level the page declares it, and the
+// recorded distinct-property-name count. A byte count is a tripwire against a
+// silently reshaped or truncated artifact, not a checksum, and calling it one
+// would be the overclaim.
+//
+// The normalisation is deliberately CRLF -> LF and nothing else. It is the only
+// transformation a line-ending policy performs, and checkNoStrayCarriageReturn
+// below refuses a lone CR so the tolerated set cannot widen into "any byte the
+// checkout likes to add". A bare CR inside a JSON string is invalid JSON
+// whichever way it is written, so json.Valid rejects the case the tolerance
+// might otherwise have opened.
+func committedLength(data []byte) int {
+	return len(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
+}
+
+// checkNoStrayCarriageReturn holds the normalisation to the one transformation it
+// claims: every CR in a committed fixture must be half of a CRLF. Together with
+// committedLength matching the manifest exactly, that pins the embedded bytes to
+// the committed bytes plus a CR before each LF -- a byte-exact comparison whose
+// only free parameter is the checkout's line-ending policy.
+func checkNoStrayCarriageReturn(t *testing.T, f Fixture, data []byte) {
+	t.Helper()
+	cr := bytes.Count(data, []byte("\r"))
+	if crlf := bytes.Count(data, []byte("\r\n")); cr != crlf {
+		t.Errorf("fixture holds %d CR bytes but only %d CRLF terminators, so %d "+
+			"carriage return(s) are not line terminators; only CRLF is a "+
+			"line-ending policy, anything else is a content change",
+			cr, crlf, cr-crlf)
+	}
 }
 
 // TestEveryManifestFixtureIsEmbedded checks the reverse of the stray-file test:
@@ -99,11 +164,19 @@ func TestManifestTotalsAgreeWithRecords(t *testing.T) {
 	if m.Totals.Fixtures != len(m.Fixtures) {
 		t.Errorf("totals.fixtures = %d, records = %d", m.Totals.Fixtures, len(m.Fixtures))
 	}
-	var bytes int
+	var total int
 	var noRequired []string
 	var oneOf, addlProps int
 	for _, f := range m.Fixtures {
-		bytes += f.Bytes
+		data, err := f.Read()
+		if err != nil {
+			t.Errorf("%s: %v", f.ID, err)
+			continue
+		}
+		// The total is the generator's, so it is summed the generator's way;
+		// see committedLength. On a CRLF checkout the raw sum is larger by one
+		// byte per line and this total would read as drift.
+		total += committedLength(data)
 		if !f.Checks.DeclaresRequired {
 			noRequired = append(noRequired, f.ID)
 		}
@@ -114,8 +187,8 @@ func TestManifestTotalsAgreeWithRecords(t *testing.T) {
 			addlProps++
 		}
 	}
-	if m.Totals.FixtureBytes != bytes {
-		t.Errorf("totals.fixtureBytes = %d, sum of records = %d", m.Totals.FixtureBytes, bytes)
+	if m.Totals.FixtureBytes != total {
+		t.Errorf("totals.fixtureBytes = %d, sum of records = %d", m.Totals.FixtureBytes, total)
 	}
 	if m.Totals.PagesWithoutRequired != len(noRequired) {
 		t.Errorf("totals.pagesWithoutRequired = %d, records = %d",
@@ -144,6 +217,10 @@ func TestManifestTotalsAgreeWithRecords(t *testing.T) {
 // TestFixtureMatchesItsRecord is the core invariant: the committed bytes are the
 // shape the manifest says, and they are the size the manifest says. A fixture
 // edited by hand, or a manifest regenerated against a stale tree, fails here.
+//
+// The size comparison is exact after CRLF is collapsed to LF, for the reason
+// committedLength gives. The structural assertions around it are what catch a
+// content change, and they are unaffected by a checkout's line-ending policy.
 func TestFixtureMatchesItsRecord(t *testing.T) {
 	m := load(t)
 	for _, f := range m.Fixtures {
@@ -152,12 +229,14 @@ func TestFixtureMatchesItsRecord(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(data) != f.Bytes {
-				t.Errorf("fixture is %d bytes, manifest says %d", len(data), f.Bytes)
+			checkNoStrayCarriageReturn(t, f, data)
+			if got := committedLength(data); got != f.Bytes {
+				t.Errorf("fixture is %d bytes with CRLF collapsed to LF (%d bytes as "+
+					"checked out), manifest says %d", got, len(data), f.Bytes)
 			}
-			if m.SizeTripwire.FailAboveBytes > 0 && len(data) > m.SizeTripwire.FailAboveBytes {
+			if m.SizeTripwire.FailAboveBytes > 0 && committedLength(data) > m.SizeTripwire.FailAboveBytes {
 				t.Errorf("fixture is %d bytes, above the %d byte ceiling: %s",
-					len(data), m.SizeTripwire.FailAboveBytes, m.SizeTripwire.Reason)
+					committedLength(data), m.SizeTripwire.FailAboveBytes, m.SizeTripwire.Reason)
 			}
 			if !json.Valid(data) {
 				t.Fatalf("fixture is not valid JSON")
