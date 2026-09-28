@@ -44,16 +44,15 @@ type FundNavQuery struct {
 
 // FundNav represents fund NAV (Net Asset Value) history data.
 type FundNav struct {
-	Symbol         string            `json:"symbol"`
-	Name           string            `json:"name"`
-	Currency       string            `json:"currency"`
-	Exchange       string            `json:"exchange"`
-	Nav            money.Money       `json:"nav"`
-	NavDate        string            `json:"nav_date"`
-	PrevNav        money.Money       `json:"prev_nav"`
-	NavChange      money.Money       `json:"nav_change"`
-	NavChangeRatio string            `json:"nav_change_ratio"`
-	Extra          map[string]string `json:"-"`
+	Symbol         string      `json:"symbol"`
+	Name           string      `json:"name"`
+	Currency       string      `json:"currency"`
+	Exchange       string      `json:"exchange"`
+	Nav            money.Money `json:"nav"`
+	NavDate        string      `json:"nav_date"`
+	PrevNav        money.Money `json:"prev_nav"`
+	NavChange      money.Money `json:"nav_change"`
+	NavChangeRatio string      `json:"nav_change_ratio"`
 }
 
 // GetFundNav retrieves NAV history for a fund or ETF.
@@ -86,17 +85,16 @@ type FundInfoQuery struct {
 
 // FundInfo represents basic information for a fund or ETF.
 type FundInfo struct {
-	Symbol        string            `json:"symbol"`
-	Name          string            `json:"name"`
-	Currency      string            `json:"currency"`
-	Exchange      string            `json:"exchange"`
-	Aum           money.Money       `json:"aum"`
-	ExpenseRatio  string            `json:"expense_ratio"`
-	DividendYield string            `json:"dividend_yield"`
-	InceptionDate string            `json:"inception_date"`
-	FundType      string            `json:"fund_type"`
-	Category      string            `json:"category"`
-	Extra         map[string]string `json:"-"`
+	Symbol        string      `json:"symbol"`
+	Name          string      `json:"name"`
+	Currency      string      `json:"currency"`
+	Exchange      string      `json:"exchange"`
+	Aum           money.Money `json:"aum"`
+	ExpenseRatio  string      `json:"expense_ratio"`
+	DividendYield string      `json:"dividend_yield"`
+	InceptionDate string      `json:"inception_date"`
+	FundType      string      `json:"fund_type"`
+	Category      string      `json:"category"`
 }
 
 // GetFundInfo retrieves basic information for a fund or ETF.
@@ -122,16 +120,15 @@ type FundDividendsQuery struct {
 
 // FundDividend represents a fund or ETF dividend event.
 type FundDividend struct {
-	Symbol     string            `json:"symbol"`
-	Name       string            `json:"name"`
-	Currency   string            `json:"currency"`
-	Exchange   string            `json:"exchange"`
-	Amount     money.Money       `json:"amount"`
-	ExDate     string            `json:"ex_date"`
-	PayDate    string            `json:"pay_date"`
-	RecordDate string            `json:"record_date"`
-	Frequency  string            `json:"frequency"`
-	Extra      map[string]string `json:"-"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Currency   string      `json:"currency"`
+	Exchange   string      `json:"exchange"`
+	Amount     money.Money `json:"amount"`
+	ExDate     string      `json:"ex_date"`
+	PayDate    string      `json:"pay_date"`
+	RecordDate string      `json:"record_date"`
+	Frequency  string      `json:"frequency"`
 }
 
 // GetFundDividends retrieves dividend history for a fund or ETF.
@@ -167,14 +164,13 @@ type FundListQuery struct {
 
 // FundListItem represents a fund or ETF in a list response.
 type FundListItem struct {
-	Symbol        string            `json:"symbol"`
-	Name          string            `json:"name"`
-	Currency      string            `json:"currency"`
-	Exchange      string            `json:"exchange"`
-	FundType      string            `json:"fund_type"`
-	Category      string            `json:"category"`
-	DividendYield string            `json:"dividend_yield"`
-	Extra         map[string]string `json:"-"`
+	Symbol        string `json:"symbol"`
+	Name          string `json:"name"`
+	Currency      string `json:"currency"`
+	Exchange      string `json:"exchange"`
+	FundType      string `json:"fund_type"`
+	Category      string `json:"category"`
+	DividendYield string `json:"dividend_yield"`
 }
 
 // GetFundList retrieves a list of funds or ETFs by market and category.

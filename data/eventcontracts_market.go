@@ -56,8 +56,6 @@ type EventSnapshot struct {
 	OpenInterest string `json:"open_interest"`
 	// Timestamp is the snapshot time, as a string.
 	Timestamp string `json:"timestamp"`
-	// Extra holds additional fields not mapped to the struct.
-	Extra map[string]string `json:"-"`
 }
 
 // GetEventSnapshot retrieves real-time market snapshots for one or more event

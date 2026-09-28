@@ -13,6 +13,11 @@ name: CI
 on:
   push:
     branches: [main]
+    # A tag push produced no run until this was added, so a release could land
+    # on a commit nothing had ever built: v2.1.20 was tagged while its branch
+    # push was rejected, leaving the tag on a commit that was on no branch. The
+    # v prefix keeps a stray ref from triggering the 26-job matrix.
+    tags: ['v*']
   pull_request:
     branches: [main]
 

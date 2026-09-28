@@ -9,6 +9,80 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.22] - 2026-09-28
+
+Corrective release, and the first one whose purpose is to stop the same class of
+defect recurring. It closes the loop opened by `[2.1.21]`: the release record now
+has a gate, a tag push is verified, and a public API field that could never be
+populated is gone. The one source-level break is named below. No fixture, no
+baseline entry and no SDK behaviour outside the removed field has changed, and
+nothing is live-verified.
+
+### Added
+
+- **A release-record gate, so a tag can no longer ship with no record.**
+  `release_records_test.go` asserts that every annotated tag from `v2.1.10` onward
+  carries a `CHANGELOG.md` entry, a `docs/runs/index.md` row, and is named by both
+  status-document headers. This exists because the record fell behind three
+  releases running and nothing in the build could see it: a path comparison cannot
+  observe how a number in a document was arrived at, and a fixture byte check
+  cannot observe that a release has no record. Each gap was found by a person
+  checking after the fact, which is also how the wrong `trade` denominator in
+  `[2.1.18]` was found.
+- **The gate is bounded, and the bound is stated.** It applies from `v2.1.10`, the
+  earliest tag from which every release carries both records, because the
+  alternative is a gate that cannot pass: 24 earlier tags have no runs-index row
+  and `v0.8.0` has no changelog entry, and writing those now would be inventing
+  records for releases whose run artifacts were never kept. A gate that cannot
+  pass is worth less than a narrower one that does.
+- **It skips visibly rather than passing silently.** CI checks out with
+  `fetch-depth: 1` and fetches no tags, so the gate reports a skip with the reason
+  in the test log. A gate that treated "no tags" as "all recorded" would be green
+  in CI while never having looked at anything, which is the one failure mode the
+  file exists to remove. `TestReleaseRecordCutoffNamesATag` separately stops the
+  cutoff being raised past the newest tag to make the gate pass vacuously.
+- **It is known to bite.** `TestReleaseRecordGapsAreDetected` feeds the checker a
+  repository missing exactly one record in each of five ways and requires it to
+  notice, and each of the three repository-level arms — a missing index row, a
+  missing changelog entry, a stale header — was additionally confirmed to fail
+  end to end against the real tree before being restored. "The gate passes" and
+  "the gate works" are otherwise the same claim.
+
+### Fixed
+
+- **A tag push now runs CI.** `.github/workflows/ci.yml` triggers on
+  `push: branches: [main]` only, so no tag had ever been built, and `v2.1.20` was
+  tagged on a commit nothing had run: its branch push was rejected while its tag
+  push succeeded. The trigger now also carries `tags: ['v*']`. The `v` prefix keeps
+  a stray ref from triggering the 26-job matrix.
+- **Five public fields that could never hold a value are removed.** `data.FundNav`,
+  `data.FundInfo`, `data.FundDividend`, `data.FundListItem` and `data.EventSnapshot`
+  each carried an `Extra map[string]string` tagged `json:"-"`, which
+  `encoding/json` never populates. Four were silent; `data.EventSnapshot`'s was
+  documented with the comment "Extra holds additional fields not mapped to the
+  struct", which is false, so a caller reading it expected a populated map and
+  received nil. All five were unreferenced anywhere in the repository.
+
+  **This is a source-level break** for any caller naming the field, which is
+  deliberate: a field that is provably always nil is a silent runtime trap, and
+  removing it turns that into a compile error a caller notices immediately. The
+  wire contract is untouched — a tag-by-tag comparison of every `json` value in
+  both files shows the only difference is `-` disappearing 4 times in
+  `data/fund_data.go` and once in `data/eventcontracts_market.go`, with no other tag
+  added, removed or changed.
+
+### Noted
+
+- **The `Current hardening` header field is clarified, not renumbered.** It read
+  "tagged in repository `v2.1.4`; introduced in `v2.1.1`", which is easy to
+  misread as the newest tag carrying SDK code. It is not: git history shows it
+  tracked the release at which the hardening was last *re-declared*, moving from
+  `v2.1.1` to `v2.1.4`, and `v2.1.4` changed no `.go` file at all. No release has
+  re-declared the hardening since, so the value is current rather than stale and is
+  left alone. The wording now says so, and records the underlying facts: `v2.1.1`
+  and `v2.1.3` carry the hardening code, `v2.1.5` is the last tag to change any SDK
+  `.go` file, and nothing from `v2.1.6` onward has changed SDK code.
+
 ## [2.1.21] - 2026-09-28
 
 Release-records release. It exists to make this repository's own history legible,

@@ -2,8 +2,14 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.21`** (2026-09-28)
-- Current hardening: **tagged in repository `v2.1.4`**; introduced in `v2.1.1`
+- Latest repository tag: **`v2.1.22`** (2026-09-28)
+- Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
+  This is the release at which the hardening was last *re-declared*, not the newest
+  tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
+  all. No release since has re-declared it, so the field is current rather than
+  stale. For the record: `v2.1.1` and `v2.1.3` carry the hardening code, `v2.1.5`
+  is the last tag to change any SDK `.go` file, and nothing from `v2.1.6` onward has
+  changed SDK code — only the conformance harness, fixtures and documents.
 - Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
   **by decision**; no `/v2` migration is planned
 - Installable version: **`v1.1.1`** — the module proxy serves only the `v1.x`
