@@ -79,9 +79,15 @@ func TestGetEventSnapshot(t *testing.T) {
 func TestGetEventDepth(t *testing.T) {
 	t.Parallel()
 
-	const body = `{"symbol":"AAPL_250919C00240000","timestamp":"2025-09-19T10:00:00Z",` +
+	// The documented 200 body is an array of objects, each requiring
+	// instrument_id, symbol, quote_time, yes_bids, yes_asks, no_bids and
+	// no_asks. The no-side book is what this change makes readable.
+	const body = `[{"instrument_id":"504279491","symbol":"AAPL_250919C00240000",` +
+		`"quote_time":1768872168870,` +
 		`"yes_bids":[{"price":"3.45","size":"100"},{"price":"3.40","size":"200"}],` +
-		`"yes_asks":[{"price":"3.55","size":"150"},{"price":"3.60","size":"250"}]}`
+		`"yes_asks":[{"price":"3.55","size":"150"},{"price":"3.60","size":"250"}],` +
+		`"no_bids":[{"price":"0.10","size":"300"}],` +
+		`"no_asks":[{"price":"0.12","size":"400"}]}]`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -114,29 +120,49 @@ func TestGetEventDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventDepth() error = %v", err)
 	}
-	if got.Symbol != "AAPL_250919C00240000" {
-		t.Errorf("symbol = %q", got.Symbol)
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1 element per instrument", len(got))
 	}
-	if got.Timestamp != "2025-09-19T10:00:00Z" {
-		t.Errorf("timestamp = %q", got.Timestamp)
+	book := got[0]
+	if book.Symbol != "AAPL_250919C00240000" {
+		t.Errorf("symbol = %q", book.Symbol)
 	}
-	if len(got.YesBids) != 2 || len(got.YesAsks) != 2 {
-		t.Fatalf("bids/asks lengths = %d/%d, want 2/2", len(got.YesBids), len(got.YesAsks))
+	if book.InstrumentID != "504279491" {
+		t.Errorf("InstrumentID = %q, want 504279491", book.InstrumentID)
 	}
-	if got.YesBids[0].Price.Cmp(money.Must(money.NewFromString("3.45"))) != 0 || got.YesBids[0].Size != "100" {
-		t.Errorf("first bid = %+v", got.YesBids[0])
+	if book.QuoteTime != 1768872168870 {
+		t.Errorf("quote_time = %d, want 1768872168870", book.QuoteTime)
 	}
-	if got.YesAsks[0].Price.Cmp(money.Must(money.NewFromString("3.55"))) != 0 || got.YesAsks[0].Size != "150" {
-		t.Errorf("first ask = %+v", got.YesAsks[0])
+	if len(book.YesBids) != 2 || len(book.YesAsks) != 2 {
+		t.Fatalf("bids/asks lengths = %d/%d, want 2/2", len(book.YesBids), len(book.YesAsks))
+	}
+	// The no-side book is new: the SDK could not read the no side of an event
+	// contract's depth at all before this change.
+	if len(book.NoBids) != 1 || len(book.NoAsks) != 1 {
+		t.Fatalf("no-bids/no-asks lengths = %d/%d, want 1/1", len(book.NoBids), len(book.NoAsks))
+	}
+	if book.NoBids[0].Price.Cmp(money.Must(money.NewFromString("0.10"))) != 0 ||
+		book.NoBids[0].Size != "300" {
+		t.Errorf("first no bid = %+v", book.NoBids[0])
+	}
+	if book.YesBids[0].Price.Cmp(money.Must(money.NewFromString("3.45"))) != 0 || book.YesBids[0].Size != "100" {
+		t.Errorf("first bid = %+v", book.YesBids[0])
+	}
+	if book.YesAsks[0].Price.Cmp(money.Must(money.NewFromString("3.55"))) != 0 || book.YesAsks[0].Size != "150" {
+		t.Errorf("first ask = %+v", book.YesAsks[0])
 	}
 }
 
 func TestGetEventBars(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"symbol":"AAPL_250919C00240000","open":"3.40","high":"3.60",` +
-		`"low":"3.35","close":"3.50","volume":"5000",` +
-		`"timestamp":"2025-09-19T10:00:00Z","timespan":"M1"}]`
+	// The documented 200 body is an array of objects carrying instrument_id,
+	// symbol and result, where result is the bar array. The SDK used to
+	// decode the inner array and so could not read the grouping key.
+	const body = `[{"instrument_id":"504279491","symbol":"AAPL_250919C00240000",` +
+		`"result":[{"open":"3.40","high":"3.60","low":"3.35","close":"3.50",` +
+		`"volume":"5000","time":"2025-09-19T10:00:00Z",` +
+		`"timespan":"M1"}]}]`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -179,17 +205,31 @@ func TestGetEventBars(t *testing.T) {
 		t.Fatalf("GetEventBars() error = %v", err)
 	}
 	if len(got) != 1 {
-		t.Fatalf("got %d bars, want 1", len(got))
+		t.Fatalf("len = %d, want 1 element per instrument", len(got))
 	}
-	bar := got[0]
-	if bar.Symbol != "AAPL_250919C00240000" {
-		t.Errorf("symbol = %q", bar.Symbol)
+	if got[0].InstrumentID != "504279491" {
+		t.Errorf("InstrumentID = %q, want 504279491: the grouping key is the whole "+
+			"point of the documented shape", got[0].InstrumentID)
+	}
+	if got[0].Symbol != "AAPL_250919C00240000" {
+		t.Errorf("Symbol = %q", got[0].Symbol)
+	}
+	bars := got[0].Result
+	if len(bars) != 1 {
+		t.Fatalf("len(Result) = %d, want 1", len(bars))
+	}
+	bar := bars[0]
+	// Symbol is the SDK's own spelling and the page does not require it on the inner
+	// bar, so the documented body leaves it empty rather than borrowing the wrapper's.
+	if bar.Symbol != "" {
+		t.Errorf("bar.Symbol = %q, want empty: the inner bar carries no documented "+
+			"symbol, so a populated value could only have come from the wrapper", bar.Symbol)
 	}
 	if bar.Open.Cmp(money.Must(money.NewFromString("3.40"))) != 0 || bar.High.Cmp(money.Must(money.NewFromString("3.60"))) != 0 || bar.Low.Cmp(money.Must(money.NewFromString("3.35"))) != 0 || bar.Close.Cmp(money.Must(money.NewFromString("3.50"))) != 0 {
 		t.Errorf("OHLC = %s/%s/%s/%s", bar.Open, bar.High, bar.Low, bar.Close)
 	}
-	if bar.Volume != "5000" || bar.Timestamp != "2025-09-19T10:00:00Z" {
-		t.Errorf("volume/timestamp = %s/%s", bar.Volume, bar.Timestamp)
+	if bar.Volume != "5000" || bar.Time != "2025-09-19T10:00:00Z" {
+		t.Errorf("volume/time = %s/%s", bar.Volume, bar.Time)
 	}
 	if bar.Timespan != data.BarTimespanM1 {
 		t.Errorf("timespan = %q, want M1", bar.Timespan)
@@ -199,12 +239,13 @@ func TestGetEventBars(t *testing.T) {
 func TestGetEventTick(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"symbol":"AAPL_250919C00240000","yes_price":"3.50",` +
-		`"no_price":"0.50","side":"B","volume":"10",` +
-		`"trade_id":"T123","timestamp":"2025-09-19T10:00:00Z"},` +
-		`{"symbol":"AAPL_250919C00240000","yes_price":"3.48",` +
-		`"no_price":"0.52","side":"S","volume":"5",` +
-		`"trade_id":"T124","timestamp":"2025-09-19T10:00:01Z"}]`
+	// The documented 200 body wraps the tick series in an object carrying
+	// instrument_id, symbol and result, so the two ticks belong in one wrapper.
+	const body = `[{"instrument_id":"504279491","symbol":"AAPL_250919C00240000",` +
+		`"result":[{"yes_price":"3.50","no_price":"0.50","side":"B","volume":"10",` +
+		`"trade_id":"T123","time":"2025-09-19T10:00:00Z"},` +
+		`{"yes_price":"3.48","no_price":"0.52","side":"S","volume":"5",` +
+		`"trade_id":"T124","time":"2025-09-19T10:00:01Z"}]}]`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -237,24 +278,32 @@ func TestGetEventTick(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventTick() error = %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("got %d ticks, want 2", len(got))
+	if len(got) != 1 {
+		t.Fatalf("got %d elements, want 1 element per instrument", len(got))
 	}
-	tick := got[0]
-	if tick.Symbol != "AAPL_250919C00240000" {
-		t.Errorf("symbol = %q", tick.Symbol)
+	if got[0].InstrumentID != "504279491" {
+		t.Errorf("InstrumentID = %q, want 504279491: the grouping key is the whole "+
+			"point of the documented shape", got[0].InstrumentID)
 	}
+	if got[0].Symbol != "AAPL_250919C00240000" {
+		t.Errorf("Symbol = %q", got[0].Symbol)
+	}
+	ticks := got[0].Result
+	if len(ticks) != 2 {
+		t.Fatalf("got %d ticks, want 2", len(ticks))
+	}
+	tick := ticks[0]
 	if tick.YesPrice.Cmp(money.Must(money.NewFromString("3.50"))) != 0 || tick.NoPrice.Cmp(money.Must(money.NewFromString("0.50"))) != 0 {
 		t.Errorf("yes/no price = %s/%s", tick.YesPrice, tick.NoPrice)
 	}
 	if tick.Side != "B" || tick.Volume != "10" || tick.TradeID != "T123" {
 		t.Errorf("side/volume/trade_id = %s/%s/%s", tick.Side, tick.Volume, tick.TradeID)
 	}
-	if tick.Timestamp != "2025-09-19T10:00:00Z" {
-		t.Errorf("timestamp = %q", tick.Timestamp)
+	if tick.Time != "2025-09-19T10:00:00Z" {
+		t.Errorf("time = %q", tick.Time)
 	}
-	if got[1].Side != "S" {
-		t.Errorf("second tick side = %q, want S", got[1].Side)
+	if ticks[1].Side != "S" {
+		t.Errorf("second tick side = %q, want S", ticks[1].Side)
 	}
 }
 
@@ -298,7 +347,9 @@ func TestGetEventDepthOmitsOptionalParams(t *testing.T) {
 		if q.Get("depth") != "" {
 			t.Errorf("depth should be omitted, got %q", q.Get("depth"))
 		}
-		_, _ = w.Write([]byte(`{"symbol":"AAPL_250919C00240000","timestamp":"t","yes_bids":[],"yes_asks":[]}`))
+		_, _ = w.Write([]byte(`[{"instrument_id":"504279491",` +
+			`"symbol":"AAPL_250919C00240000","quote_time":1768872168870,` +
+			`"yes_bids":[],"yes_asks":[],"no_bids":[],"no_asks":[]}]`))
 	}))
 	defer srv.Close()
 

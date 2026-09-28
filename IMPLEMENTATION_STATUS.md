@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.31`** (2026-09-28)
+- Latest repository tag: **`v2.1.32`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -329,8 +329,8 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 239 divergences fall on 56 symbols, in three packages:
-`brokerfd` 114, `data` 125, `trade` 0. The `trade` column is now **empty**: the four
+record no divergence. All 219 divergences fall on 52 symbols, in three packages:
+`brokerfd` 114, `data` 105, `trade` 0. The `trade` column is now **empty**: the four
 rows it held were all `missing-required-name` on `trade.BatchPlaceOrder`, whose page
 documents `total`, `success`, `failed` and `batch_orders` where the SDK had a single
 `results` field appearing on no page. They are all carried now. The remaining `trade`
@@ -342,7 +342,7 @@ trading API's response types are the most conformant part of the surface measure
 That is a statement about what the harness did not find, on the 5 trading pages that
 give it something to check — not a correctness verdict.
 
-**`missing-required-name` — 80 rows across 24 symbols, the silent class.** A name
+**`missing-required-name` — 62 rows across 20 symbols, the silent class.** A name
 the page marks `required` has no matching json tag anywhere in the type the method
 decodes into, so the documented value decodes to the zero value and no error is
 reported. This is item 20's mechanism at scale, and it is the largest class. The
@@ -451,7 +451,7 @@ is why this check runs last. All 29 rows restate a row for the same symbol: 27
 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch` row. They are
 recorded so the count stays stable, not because they are 29 additional defects, and
 no separate work is attached to them. This is the arithmetic reason the class
-totals must not be read as 239 independent problems.
+totals must not be read as 219 independent problems.
 
 **`leaf-type-mismatch` — no rows.** The class had two, both
 `data.Quote.QuoteTime`, and both are fixed; see item 25. It is the only class in
@@ -480,17 +480,17 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     280 points at item 21, which records the class rather than the row, and says so
     in its own `recordedIn`.
 
-21. **The response contracts across the API surface are now measured, and they are largely divergent.** The five items above are one host, some path literals, a verb and body, a request shape, and one response DTO. This item is the class that last one belongs to, taken across the surface: 239 recorded divergences on 59 symbols, in `brokerfd` (114), `data` (132), and `trade` (4).
+21. **The response contracts across the API surface are now measured, and they are largely divergent.** The five items above are one host, some path literals, a verb and body, a request shape, and one response DTO. This item is the class that last one belongs to, taken across the surface: 219 recorded divergences on 59 symbols, in `brokerfd` (114), `data` (132), and `trade` (4).
 
     | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
     |---|---:|---:|---:|---:|---:|---|
-| `missing-required-name` | 80 | 24 | 58 | 22 | 0 | **Silently** - the documented value decodes to its zero value, no error reported |
+| `missing-required-name` | 62 | 20 | 58 | 4 | 0 | **Silently** - the documented value decodes to its zero value, no error reported |
 | `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
 | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
-| Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
-| `decode-failure` | 27 | 27 | 12 | 15 | 0 | Restates a container-kind or leaf-type row for the same symbol |
+| Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 26 | 26 | 12 | 14 | 0 | Loudly, at decode time |
+| `decode-failure` | 26 | 26 | 12 | 14 | 0 | Restates a container-kind or leaf-type row for the same symbol |
 | `leaf-type-mismatch` | 0 | 0 | 0 | 0 | 0 | **Empty.** Both rows were `data.Quote.QuoteTime`, fixed by a type that reads both shapes Webull publishes; see item 25 |
-| **Total** | **239** | **56** | **114** | **125** | **0** |
+| **Total** | **219** | **52** | **114** | **105** | **0** |
 
     Three caveats travel with those numbers. **119 and 104 are both floors, not
     totals**: the name checks consider the union of json tags at every depth, so 19
@@ -511,7 +511,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     - **No SDK fix is applied.** No `*.go` file under `data/`, `trade/`, `brokerfd/` or `broker/` was changed. The only code changed is the `conformance/` harness itself, and it changed behaviour only for the envelopes whose tags it could not previously read — see the envelope note below.
     - **One harness defect was fixed in the same release, and it changed the set.** `conformance/envelopes.go` stored a reconstructed envelope's struct tag as `go/ast` reports it, which is the source literal with its backticks, so `reflect.StructTag` could not read a single tag and `wireNameOf` fell back to the Go field name. That fallback agrees for camelCase and silently loses a snake_case name, so 4 rows were false positives — `data.GetCorporateActions`, `data.GetCorporateActionsByMarket`, `data.GetCryptoInstruments` and `data.GetOptionContracts`, each on `pagination_key`. The fault was latent because the test that round-trips an envelope compared the rebuilt tag against the tag the parser read, so both sides were wrong together. It is fixed, `TestEnvelopeTagsAreUsableAsStructTags` fails on the previous code, and 4 rows this class would have recorded are absent.
     - **Nothing here is live-verified.** No endpoint was called and no credential was used. The static comparison is certain; which side a live server honours is unverified for every row, exactly as for item 20.
-    - Not 239 defects: 27 rows are the `decode-failure` class restating another row for the same symbol, 68 are declared-name rows resting on a container-kind row for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an evidence-base hole.
+    - Not 219 defects: 26 rows are the `decode-failure` class restating another row for the same symbol, 68 are declared-name rows resting on a container-kind row for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an evidence-base hole.
     - Minimal fix direction: settle the direction per class before changing a tag, as the subsection above sets out. The order is the silent name class first, then the container-kind class once one live body establishes which shape the server sends, then the two leaf-type rows. The 104 declared-name rows come after the 119 rather than beside them, because a name the page does not require is also a name that may legitimately be absent.
     - Unblock: US sandbox credentials for the `brokerfd` rows and for the US-only `data` surfaces; HK sandbox credentials for the rest of `data` and for `trade`; a paid Display Solution entitlement for `data.GetDisplayDepth`; and a written answer from Webull on the 4 pages that document a single item where the path says list.
     - **The `broker/` module is now measured too, by the same code.** Its 29 documented endpoints were out of scope here until two releases ago, because the module is separate and no symbol in the root module can name a broker type. That is no longer the case: `broker/conformance_test.go` resolves all 29 rows from inside the module and runs the identical five checks, and `broker/conformance-divergences.json` records what it found — **59 further divergences over 28 compared rows, 1 row decoding no body and 0 not comparable**. The counts above remain the root module's own; this item's 282 does not include the 59, and the two sets are reported separately rather than merged, because merging them would lose the fact that one comes from a module the root cannot see. The three names `broker.GetPositions` shared with `brokerfd.GetFDPositions` — `cost_price`, `last_price` and `unrealized_profit_loss` — have since been fixed on both surfaces, so that row is down to the two names it was missing alone, `option_strategy` and `position_id`. `broker.UpdateVirtualAccount` is additionally missing `client_request_id`, which is the field item 18's verb-and-body defect is about. All 59 remain open and none is live-verified; Broker API HK returns `401 ROUTE_NOT_PERMITTED` in the HK sandbox, so the unblock is a production or US-scoped Broker credential.
@@ -628,7 +628,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 - **How the remaining 91 divide.** By recurrence, 26 distinct names account for 81 of the original 119 rows and 38 names are singletons; the field-level breakdown per symbol is in the table recomputation, which is now derived rather than typed. The safe next step is one symbol at a time, starting where the missing names are entity attributes rather than envelope names, and the class should not be worked in bulk.
 - **A second blind spot this exposed, and the guard against it.** The shape check compares container *kind*, so it cannot see a depth mismatch when both sides are objects. That is a real limit of the instrument and it is not yet recorded as one; the 4 correlated symbols above are the only place the committed baseline shows it, which is too few to size the class. Adding a depth-scoped check would mean reporting names the SDK does decode, which is why `CheckNameDepth` exists as a check that does not run.
 
-27. **Four event-contract and depth cases are decidable from the page schema, and item 26 was too cautious about them.** Item 26 recorded that a page wrapping its payload in an envelope presents object-against-object, which the shape check cannot see, and deferred those rows as needing a live probe. Reading the page schemas shows the opposite: the documented shape is unambiguous, so the mismatch is determinable offline and the only thing standing in the way is a public API break.
+27. **RESOLVED in v2.1.32: the four event-contract cases are fixed against the pages, and the decision is taken in favour of the documentation.** Item 27 first recorded them as decidable and awaiting a maintainer call; the call is made here. Item 26 recorded that a page wrapping its payload in an envelope presents object-against-object, which the shape check cannot see, and deferred those rows as needing a live probe. Reading the page schemas shows the opposite: the documented shape is unambiguous, so the mismatch is determinable offline and the only thing standing in the way is a public API break.
 - **`data.GetEventBars` and `data.GetEventTick` decode one nesting level too deep.** The pages document `200: array<{instrument_id, symbol, result: array<bar>}>` and `array<{instrument_id, symbol, result: array<tick>}>`, both requiring `instrument_id`, `result` and `symbol`. The SDK's methods return `[]EventBar` and `[]EventTick`, which are the **elements of the inner `result` array**. So the SDK drops a level: the documented grouping key, `instrument_id` and `symbol`, is discarded, and bars from different instruments arrive in one flat list. The missing `result` name is the symptom of that, not of an absent field - which is precisely the trap item 26 described, and here the schema settles it.
 - **`data.GetEventSnapshot` is a different shape, not a shallower one.** Its page documents `array<>` of an object with **15 required names** - `instrument_id`, `symbol`, `name`, `price`, `volume`, `last_trade_time`, `open_interest`, and `yes_bid`, `yes_ask`, `no_bid`, `no_ask` each with a `_size` companion. The SDK's `EventSnapshot` carries 7 fields under different names: `last_price` where the page says `price`, and no `*_size`, `name` or `last_trade_time`. Only `symbol`, `open_interest` and `timestamp` line up.
 - **`data.GetEventDepth` is both a level off and differently named.** Its page documents `array<{instrument_id, symbol, quote_time, yes_bids, yes_asks, no_bids, no_asks}>` all required, where each book entry is `{price, size}`. The SDK returns a single `*EventDepth` with `YesBids`/`YesAsks` and no `no_*` side.

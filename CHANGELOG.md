@@ -9,6 +9,62 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.32] - 2026-09-28
+
+**Breaking release.** Three event-contract endpoints decoded the wrong shape, and
+fixing them changes public return types. Item 27 recorded them as decidable and
+awaiting a decision; this is the decision, taken in favour of the documentation. The
+evidence is the pages themselves, which are unambiguous where item 19's page is not.
+Root baseline 239 to 219 rows over 52 symbols. No fixture changed. Nothing is
+live-verified.
+
+### Fixed - breaking
+
+- **`data.GetEventBars` and `data.GetEventTick` decoded one nesting level too deep.**
+  Both pages document the 200 body as an array of objects, each requiring
+  `instrument_id`, `result` and `symbol`, where `result` is itself an array of bars or
+  ticks. The SDK returned the elements of the inner array, so the grouping key was
+  discarded and bars or ticks from several instruments arrived in one flat list with
+  nothing to say which instrument each belonged to. They now return `[]EventBarsResult`
+  and `[]EventTickResult`, one entry per instrument. **A caller reading `out.Result[i]`
+  instead of `out[i]` adapts in one line; a caller that used `out[i]` as a bar must read
+  `out[i].Result`.**
+- **`data.GetEventDepth` returned one object where the page documents an array**, and
+  carried no no-side book at all - so a caller could not read the no side of an event
+  contract's depth, which is the side such an instrument is named for. It now returns
+  `[]EventDepth` with `InstrumentID`, `QuoteTime`, `NoBids` and `NoAsks`. This inverts
+  which shape fails to decode: previously a conforming response could not be read, and
+  now a single-object response cannot be. Neither shape is verified against a live host.
+- **The depth time and bar time were named `timestamp` where the pages require
+  `quote_time` and `time`.** Both SDK spellings are kept alongside the documented ones,
+  so a required name always reads whichever the server sends.
+- **The conformance symbol table was updated to match.** It is maintained by hand and
+  still pointed at the old decode targets, so the harness compared the bars and tick
+  endpoints against the inner element and reported no change - the first 14 rows dropped
+  and the bars and tick rows did not, which is what exposed it.
+
+### Fixed - not breaking
+
+- **`data.EventSnapshot` could not read 10 of the 15 names its page requires.** The type
+  had `last_price` where the page says `price`, and no size companion for any side, so a
+  caller could not read the depth a snapshot exists to report. The documented names are
+  carried alongside the existing seven.
+
+### Noted
+
+- **Why this is a decision taken rather than a defect merely recorded.** The four pages
+  are not self-contradictory - unlike the Display Solution page in item 19, whose
+  `operationId` says GET while its method says POST - so on the available evidence the
+  SDK is wrong in all three methods. Item 26 had deferred these as needing a live probe
+  on the grounds that an envelope presents object-against-object; reading the schemas
+  showed the documented shape is unambiguous and only the obstacle was the break.
+- **The break is larger than the two field-level ones in v2.1.28.** Those changed which
+  fields a type carried; this changes what a method returns. A caller following the
+  CHANGELOG's `out.Result[i]` note adapts without reading the method.
+- The `missing-required-name` class is now 62 rows over 20 symbols, down from 119 over
+  28 when the sizing work began. The `trade` column remains empty.
+- No fixture or manifest byte changed.
+
 ## [2.1.31] - 2026-09-28
 
 Corrective release. 11 more required-name rows are closed by additive fields on three
