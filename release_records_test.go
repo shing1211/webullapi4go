@@ -214,7 +214,7 @@ func TestReleaseRecordGapsAreDetected(t *testing.T) {
 func releaseRecordGaps(tags []string, changelog, index, headerTag string) []string {
 	var gaps []string
 	if len(tags) == 0 {
-		return []string{fmt.Sprintf("no tag at or after the cutoff, so nothing was checked")}
+		return []string{"no tag at or after the cutoff, so nothing was checked"}
 	}
 	for _, tag := range tags {
 		version := strings.TrimPrefix(tag, "v")
@@ -371,7 +371,10 @@ func compareVersions(a, b string) int {
 // directory, which is the root for this package.
 func readRepoFile(t *testing.T, path string) string {
 	t.Helper()
-	b, err := os.ReadFile(path)
+	// The path is a constant at every call site in this file, and the file is a
+	// repository document this test exists to read. There is no request-derived
+	// input, which is what G304 is guarding against.
+	b, err := os.ReadFile(path) //nolint:gosec // constant paths from this file, not request input
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}

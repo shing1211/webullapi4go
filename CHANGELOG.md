@@ -9,9 +9,36 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.24] - 2026-09-28
+
+Corrective release, lint only. `[2.1.23]` shipped with 26 of 27 jobs green and the
+`lint` job red; this is the release that clears it. The `v2.1.23` tag stays as the
+record. Both defects are in the test file added by `[2.1.22]`, so the three
+consecutive corrective releases share one origin: a check written without running
+the linter against it. No SDK behaviour, no fixture and no baseline entry changed,
+and nothing is live-verified.
+
+### Fixed
+
+- **`G304: Potential file inclusion via variable` in `readRepoFile`.** The helper
+  reads a repository document named by a variable, which is what gosec G304 guards
+  against. The paths are constants at every call site and none is
+  request-derived, which is the condition the rule exists for, so the read carries
+  `//nolint:gosec` with that reason rather than a blanket suppression.
+- **`S1039: unnecessary use of fmt.Sprintf`.** A single-argument `Sprintf` with no
+  format verb, now a plain string.
+
+Both were confirmed locally against `golangci-lint` v2.9.0, the version CI pins,
+which reports 0 issues across the module. The first release in this sequence to have
+its lint verified locally before tagging rather than by a red CI run afterwards.
+
 ## [2.1.23] - 2026-09-28
 
-Corrective release. `[2.1.22]` shipped red — 18 of 26 jobs passed, 8 failed — and this
+**The `lint` job is red; the other 26 are green**, including the `release records`
+job added below, which ran the gate for real over 13 tags. Cause and correction are
+in `[2.1.24]`. The tag stays as the record.
+
+Corrective release. `[2.1.22]` shipped red — 18 of 26 jobs passed — and this
 is the release that fixes it. The `v2.1.22` tag stays as the record of the red one,
 as `v2.1.15` does. The cause was in the release-record gate added by `[2.1.22]`
 itself, so the defect this repository has spent several releases chasing — a check
