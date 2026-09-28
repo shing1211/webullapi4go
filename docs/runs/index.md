@@ -40,3 +40,4 @@
 | 2026-09-28 | release-records | BUILD | released v2.1.22 (red: the new release-record gate could not answer its question in a shallow clone and failed 8 jobs) | v2.1.22 |
 | 2026-09-28 | release-records | BUILD | released v2.1.23 (lint job red: 2 issues in the new gate; 26 of 27 jobs green) | v2.1.23 |
 | 2026-09-28 | release-records | BUILD | released v2.1.24 (cleared G304 and S1039 in the gate; lint verified locally against the pinned v2.9.0 before tagging) | v2.1.24 |
+| 2026-09-28 | fixture-digest | BUILD | released v2.1.25 (per-fixture sha256 in the manifest; closes a length-preserving fixture edit that CI could not see) | v2.1.25 |

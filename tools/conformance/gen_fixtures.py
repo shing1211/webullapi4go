@@ -88,6 +88,7 @@ drift either way.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -569,6 +570,8 @@ def build_records(consts):
                 "additionalProperties": [n for n in notes
                                         if n["kind"] == "additionalProperties"],
                 "bytes": len(fixture.encode("utf-8")),
+                "sha256": hashlib.sha256(
+                    fixture.replace("\r\n", "\n").encode("utf-8")).hexdigest(),
                 # Private build input, popped before the manifest is rendered.
                 "_fixture": fixture,
             }

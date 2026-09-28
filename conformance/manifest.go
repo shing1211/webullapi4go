@@ -185,6 +185,16 @@ type Fixture struct {
 	AdditionalProperties []Choice `json:"additionalProperties"`
 	// Bytes is the committed instance's length in bytes.
 	Bytes int `json:"bytes"`
+	// SHA256 is the instance's digest, hex-encoded, over the bytes with CRLF
+	// collapsed to LF so it is the same on every checkout. It exists because
+	// Bytes alone cannot detect a length-preserving edit to a committed fixture,
+	// and nothing else in CI can: the generator's own --check compares against a
+	// docgen cache that is absent there and skips with exit 0 rather than
+	// running, so the length assertion in fixtures_test.go was the only fixture
+	// integrity check CI performed. Together with checkNoStrayCarriageReturn,
+	// which holds every CR to be half of a CRLF, this pins the bytes exactly:
+	// the digest fixes the content and the length reports the mismatch.
+	SHA256 string `json:"sha256"`
 }
 
 // Path returns the fixture's location inside the embedded tree, using the

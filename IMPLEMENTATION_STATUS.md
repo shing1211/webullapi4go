@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.24`** (2026-09-28)
+- Latest repository tag: **`v2.1.25`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at

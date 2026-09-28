@@ -16,6 +16,8 @@ package conformance
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -89,8 +91,88 @@ func load(t *testing.T) *Manifest {
 // checkout likes to add". A bare CR inside a JSON string is invalid JSON
 // whichever way it is written, so json.Valid rejects the case the tolerance
 // might otherwise have opened.
+// A byte count is a tripwire against a silently reshaped or truncated artifact.
+// It is not a checksum, and for a long time this package had no checksum either:
+// a length-preserving edit to a committed fixture kept every assertion here
+// green. committedDigest is that checksum.
+//
+// The reason it was absent for so long is the reason it cannot simply be assumed
+// unnecessary. The generator's own --check does compare the whole committed tree
+// against the documentation, so a fixture edit is caught by anyone who runs
+// make conformance-fixtures. But --check needs the docgen cache, and AGENTS.md
+// records that both fixture targets skip with exit 0 when the cache is absent --
+// which is the case in CI, so nothing in CI performed that comparison at all. The
+// length tripwire was therefore the only fixture integrity check CI ran, and it
+// cannot see an edit that preserves length. committedDigest needs no cache, no
+// network and no toolchain, so it runs everywhere the tests do.
+//
+// The normalisation is deliberately CRLF -> LF and nothing else. It is the only
+// transformation a line-ending policy performs, and checkNoStrayCarriageReturn
+// below refuses a lone CR so the tolerated set cannot widen into "any byte the
+// checkout likes to add". A bare CR inside a JSON string is invalid JSON
+// whichever way it is written, so json.Valid rejects the case the tolerance
+// might otherwise have opened. The digest normalises identically, so it is the
+// same value on a Windows checkout as on a Linux one.
 func committedLength(data []byte) int {
 	return len(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
+}
+
+// committedDigest is the fixture's sha256 over the CRLF-collapsed bytes, hex
+// encoded, which is the form the manifest records.
+func committedDigest(data []byte) string {
+	sum := sha256.Sum256(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
+	return hex.EncodeToString(sum[:])
+}
+
+// TestCommittedDigestProperties pins the two properties the digest depends on,
+// because a digest that held neither would be a worse check than none.
+//
+// The first is checkout independence: a Windows checkout delivers CRLF where a
+// Linux one delivers LF, and the manifest records one value, so the digest has to
+// be equal on both or the gate would fail on whichever platform it was not
+// recorded from. The second is sensitivity: a length-preserving edit must change
+// it, since that is the entire reason it exists and the length tripwire cannot
+// see such an edit.
+func TestCommittedDigestProperties(t *testing.T) {
+	const lf = "{\n  \"a\": 1\n}\n"
+	const crlf = "{\r\n  \"a\": 1\r\n}\r\n"
+
+	if got, want := committedDigest([]byte(crlf)), committedDigest([]byte(lf)); got != want {
+		t.Errorf("a CRLF checkout digests to %s and an LF checkout to %s; the manifest "+
+			"records one value, so one of the two platforms would fail the gate", got, want)
+	}
+	// The raw byte counts differ, which is why the normalisation exists, and the
+	// normalised ones match, which is why both platforms can be held to one
+	// recorded value.
+	if len(crlf) == len(lf) {
+		t.Error("the CRLF and LF probes are the same length, so this test cannot " +
+			"demonstrate that the normalisation is doing anything")
+	}
+	if committedLength([]byte(crlf)) != committedLength([]byte(lf)) {
+		t.Errorf("normalised lengths differ: CRLF gives %d and LF gives %d, so the "+
+			"length tripwire is not checkout-independent and the digest is not either",
+			committedLength([]byte(crlf)), committedLength([]byte(lf)))
+	}
+
+	// Same length, different content. Swapping a digit is the smallest possible
+	// change, and the one the length tripwire is blind to by construction.
+	const edited = "{\n  \"a\": 2\n}\n"
+	if len(edited) != len(lf) {
+		t.Fatalf("the probe must be length-preserving to mean anything: %d vs %d",
+			len(edited), len(lf))
+	}
+	if committedDigest([]byte(edited)) == committedDigest([]byte(lf)) {
+		t.Error("a length-preserving content change produced the same digest, so the " +
+			"check cannot see the edit it exists to catch")
+	}
+
+	// A lone CR must not be silently absorbed, matching the tripwire's tolerance.
+	// checkNoStrayCarriageReturn is what enforces this on a real fixture; here it
+	// is stated directly so the two cannot drift apart unnoticed.
+	if committedDigest([]byte("{\r  \"a\": 1\n}\n")) == committedDigest([]byte("{\n  \"a\": 1\n}\n")) {
+		t.Error("a lone CR produced the same digest as its absence, so a stray carriage " +
+			"return would be invisible to the digest as well as to the length tripwire")
+	}
 }
 
 // checkNoStrayCarriageReturn holds the normalisation to the one transformation it
@@ -219,7 +301,7 @@ func TestManifestTotalsAgreeWithRecords(t *testing.T) {
 // edited by hand, or a manifest regenerated against a stale tree, fails here.
 //
 // The size comparison is exact after CRLF is collapsed to LF, for the reason
-// committedLength gives. The structural assertions around it are what catch a
+// committedDigest gives. The structural assertions around it are what catch a
 // content change, and they are unaffected by a checkout's line-ending policy.
 func TestFixtureMatchesItsRecord(t *testing.T) {
 	m := load(t)
@@ -233,6 +315,11 @@ func TestFixtureMatchesItsRecord(t *testing.T) {
 			if got := committedLength(data); got != f.Bytes {
 				t.Errorf("fixture is %d bytes with CRLF collapsed to LF (%d bytes as "+
 					"checked out), manifest says %d", got, len(data), f.Bytes)
+			}
+			if got := committedDigest(data); got != f.SHA256 {
+				t.Errorf("fixture digest is %s, manifest says %s; the length check above "+
+					"cannot see this, because a length-preserving edit to a committed "+
+					"fixture would have kept it green", got, f.SHA256)
 			}
 			if m.SizeTripwire.FailAboveBytes > 0 && committedLength(data) > m.SizeTripwire.FailAboveBytes {
 				t.Errorf("fixture is %d bytes, above the %d byte ceiling: %s",

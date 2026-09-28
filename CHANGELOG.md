@@ -9,6 +9,56 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.25] - 2026-09-28
+
+Harness release. The committed wire-conformance fixtures gained a per-fixture
+checksum, closing the last hole in the integrity of the evidence the 285 recorded
+divergences rest on. No SDK `.go` file, no fixture **content**, and no baseline
+entry changed: the 193 fixture files are byte-identical and only the manifest
+gained a field. Nothing is live-verified.
+
+### Fixed
+
+- **A length-preserving edit to a committed fixture passed every check in CI.**
+  The manifest recorded each fixture's `bytes` and nothing else, so the assertion
+  in `TestFixtureMatchesItsRecord` could see a reshaped or truncated artifact but
+  not one whose length was preserved. A hand-edited token, a single substituted
+  hex digit, or any same-length reformat would have left the gate green while the
+  evidence base changed underneath the baseline that claims to describe it.
+- **Each fixture now records a sha256 over its CRLF-collapsed bytes.** The
+  normalisation is the same one the length tripwire already applied, so the digest
+  is the same value on a Windows checkout as on a Linux one, and the manifest
+  carries one number for both. The two together pin the bytes exactly: the digest
+  fixes the content, the length reports the mismatch, and
+  `checkNoStrayCarriageReturn` holds every CR to be half of a CRLF so the
+  tolerated set cannot widen.
+- **Why it was worth adding, since the generator already checks the whole tree.**
+  `gen_fixtures.py --check` does compare the committed tree against the
+  documentation, so a fixture edit is caught by anyone who runs
+  `make conformance-fixtures`. But `--check` needs the docgen cache, and
+  `AGENTS.md` records that both fixture targets **skip with exit 0 when the cache
+  is absent** — which is the case in CI. Nothing in CI performed that comparison.
+  The length tripwire was therefore the only fixture integrity check CI ran, and
+  it could not see a length-preserving edit. The digest needs no cache, no
+  network and no toolchain, so it runs everywhere the tests do.
+
+### Noted
+
+- **The gap was closed deliberately, and it was a deliberate absence rather than
+  an oversight.** The comment above the length tripwire said a byte count "is not
+  a checksum, and calling it one would be the overclaim." That was right about the
+  byte count, and wrong as a reason to have no checksum. Both the claim and the
+  reason are now corrected in place, and the reason it stayed absent for this long
+  is recorded: not an oversight but an unexamined gap between a check that runs
+  locally and a check that runs in CI.
+- **Proven to bite, on the real tree, not by inspection.** One fixture's token hex
+  was changed from `ccb071...` to `ccb072...`: 91 bytes before, 91 bytes after.
+  The length assertion passed and the digest failed, naming both values, and only
+  that row failed out of the authentication group. `TestCommittedDigestProperties`
+  additionally pins the two properties the design rests on, so neither can be
+  lost quietly: a CRLF input and an LF input must digest identically, and a
+  length-preserving content change must not.
+
 ## [2.1.24] - 2026-09-28
 
 Corrective release, lint only. `[2.1.23]` shipped with 26 of 27 jobs green and the

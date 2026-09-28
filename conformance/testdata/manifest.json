@@ -272,7 +272,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 91
+   "bytes": 91,
+   "sha256": "b540ca41e545896f23474907d38144a2ab2e8da66e6832f6d815159df2adb8ea"
   },
   {
    "id": "authentication/POST-auth-tokens-check",
@@ -316,7 +317,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 91
+   "bytes": 91,
+   "sha256": "b540ca41e545896f23474907d38144a2ab2e8da66e6832f6d815159df2adb8ea"
   },
   {
    "id": "authentication/POST-auth-client-tokens-create",
@@ -362,7 +364,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 192
+   "bytes": 192,
+   "sha256": "f18f4ebcda6cd5278840788ea99b40731c6318062cf65a6345cd058427efdd4f"
   },
   {
    "id": "authentication/POST-auth-client-tokens-refresh",
@@ -408,7 +411,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 192
+   "bytes": 192,
+   "sha256": "562cf86dbaab0d067b3f6ddd705e2f26bbd3f7c74087381458f472565131abd1"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-snapshots-list",
@@ -486,7 +490,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 20
+   "bytes": 20,
+   "sha256": "db0b57dc0e75bd4997eb8f85072d8e4a7e02fdef975d07134dae3e89c073d03b"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-ticks-list",
@@ -530,7 +535,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 122
+   "bytes": 122,
+   "sha256": "6e7a9d970ce4397fe1036cea3c7f6c034bf50a8930e12721e34dd808b3d0cfcb"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-depths-list",
@@ -578,7 +584,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 220
+   "bytes": 220,
+   "sha256": "d11087e020c2b65aeb5c5854f22e01eaf3c4f1e4689796ac564b663e2a5d4e36"
   },
   {
    "id": "market-data-stock/POST-market-data-stocks-bars-list",
@@ -618,7 +625,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 189
+   "bytes": 189,
+   "sha256": "b7091d863cacc0b19e073d2946d83f7bbaf70ce3b77df4f11056af32f5b54566"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-footprints-list",
@@ -673,7 +681,8 @@
      "syntheticKey": "example_key"
     }
    ],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-noii-bars-list",
@@ -717,7 +726,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-stock/GET-market-data-stocks-noii-snapshots-list",
@@ -765,7 +775,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-option/GET-market-data-options-ticks-list",
@@ -809,7 +820,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 137
+   "bytes": 137,
+   "sha256": "72e44d50cc9813610ee09b98d1b15258716e9dfa21ba72dcca9259af9cb001e9"
   },
   {
    "id": "market-data-option/GET-market-data-options-snapshots-list",
@@ -874,7 +886,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 35
+   "bytes": 35,
+   "sha256": "638caef893420ffc478f9fe40801b507ff41e8843f06f4c550937eb8c7f9fd87"
   },
   {
    "id": "market-data-option/GET-market-data-options-bars-list",
@@ -914,7 +927,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 203
+   "bytes": 203,
+   "sha256": "9d96be525e63c197c7a754832736c436d0601458def46db44e639d648efa0e9b"
   },
   {
    "id": "market-data-option/GET-trading-instruments-options-contracts-list",
@@ -953,7 +967,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-crypto/GET-market-data-crypto-snapshots-list",
@@ -1005,7 +1020,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-crypto/GET-market-data-crypto-bars-list",
@@ -1045,7 +1061,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-crypto/GET-trading-instruments-crypto-profiles-list",
@@ -1084,7 +1101,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-futures/GET-market-data-futures-ticks-list",
@@ -1128,7 +1146,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 123
+   "bytes": 123,
+   "sha256": "ff2011824033aa9ddc11f0bbaa5759f3ae6e44f581180569567dd697d4ecf79c"
   },
   {
    "id": "market-data-futures/GET-market-data-futures-snapshots-list",
@@ -1186,7 +1205,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 21
+   "bytes": 21,
+   "sha256": "f5cf587ac70a932fa02a02519313c903ad7318d6fd21639445713878f9268c4b"
   },
   {
    "id": "market-data-futures/GET-market-data-futures-footprints-list",
@@ -1243,7 +1263,8 @@
      "syntheticKey": "example_key"
     }
    ],
-   "bytes": 22
+   "bytes": 22,
+   "sha256": "550c75e2be8f836f3da4b7001369115dcde07748c1a1b23eaa524ccf59c54ec1"
   },
   {
    "id": "market-data-futures/GET-market-data-futures-depths-list",
@@ -1291,7 +1312,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 156
+   "bytes": 156,
+   "sha256": "907f43219f2823581622e7ba2a0bc2505f6ddf559795b68ad89674922a577421"
   },
   {
    "id": "market-data-futures/GET-market-data-futures-bars-list",
@@ -1331,7 +1353,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 189
+   "bytes": 189,
+   "sha256": "b7091d863cacc0b19e073d2946d83f7bbaf70ce3b77df4f11056af32f5b54566"
   },
   {
    "id": "market-data-futures/GET-trading-instruments-futures-contracts-list",
@@ -1388,7 +1411,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-futures/GET-trading-instruments-futures-product-codes-list",
@@ -1430,7 +1454,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-futures/GET-trading-instruments-futures-product-classes-list",
@@ -1469,7 +1494,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-gainers-losers-list",
@@ -1525,7 +1551,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-top-actives-list",
@@ -1581,7 +1608,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-market-sectors-list",
@@ -1620,7 +1648,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-market-sectors-get",
@@ -1665,7 +1694,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
@@ -1723,7 +1753,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
@@ -1781,7 +1812,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-watchlist/GET-market-data-watchlists-list",
@@ -1823,7 +1855,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-create",
@@ -1861,7 +1894,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-update",
@@ -1899,7 +1933,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-delete",
@@ -1937,7 +1972,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/GET-market-data-watchlists-instruments-list",
@@ -1976,7 +2012,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-instruments-add",
@@ -2014,7 +2051,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-instruments-remove",
@@ -2052,7 +2090,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "market-data-watchlist/POST-market-data-watchlists-instruments-update",
@@ -2090,7 +2129,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-company-profiles-get",
@@ -2137,7 +2177,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-analysis-target-prices-get",
@@ -2182,7 +2223,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-analysis-ratings-get",
@@ -2228,7 +2270,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-capital-flows-get",
@@ -2272,7 +2315,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-industry-comparisons-get",
@@ -2314,7 +2358,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-earnings-calendars-list",
@@ -2359,7 +2404,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-dividend-calendars-list",
@@ -2405,7 +2451,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-filings-list",
@@ -2445,7 +2492,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-income-statements-get",
@@ -2517,7 +2565,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-balance-sheets-get",
@@ -2602,7 +2651,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-cash-flows-get",
@@ -2661,7 +2711,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-indicators-get",
@@ -2708,7 +2759,8 @@
      "syntheticKey": "example_key"
     }
    ],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
@@ -2754,7 +2806,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-forecast-eps-get",
@@ -2796,7 +2849,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
@@ -2841,7 +2895,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-performances-get",
@@ -2888,7 +2943,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-net-values-get",
@@ -2928,7 +2984,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-holdings-get",
@@ -2971,7 +3028,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
@@ -3010,7 +3068,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-ratings-get",
@@ -3051,7 +3110,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-splits-get",
@@ -3093,7 +3153,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-files-get",
@@ -3134,7 +3195,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "fundamentals/GET-market-data-fundamentals-fund-allocations-get",
@@ -3179,7 +3241,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "event-contracts/GET-trading-instruments-event-contracts-categories-list",
@@ -3223,7 +3286,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 76
+   "bytes": 76,
+   "sha256": "20ab2309cc693933f81cbc1f116e90d706c57198ab052e73476dc06c5202572f"
   },
   {
    "id": "event-contracts/GET-trading-instruments-event-contracts-series-list",
@@ -3262,7 +3326,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "event-contracts/GET-trading-instruments-event-contracts-events-list",
@@ -3314,7 +3379,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 158
+   "bytes": 158,
+   "sha256": "a42c66ee73333318106a202ab78357938667c415e8240a753468f0a6c5a7eec1"
   },
   {
    "id": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
@@ -3353,7 +3419,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-snapshots-list",
@@ -3421,7 +3488,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 350
+   "bytes": 350,
+   "sha256": "ca63b3cc9a3c8556e4aac4d4ff1726ddb71e4badb6e26ce823d5fdb345448262"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-depths-list",
@@ -3473,7 +3541,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 257
+   "bytes": 257,
+   "sha256": "64a426fc3dc4107a83cf1aab4e322292b45bb7fb2b3fb4a103b8370eba80a863"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-bars-list",
@@ -3517,7 +3586,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 180
+   "bytes": 180,
+   "sha256": "7f0c7309aa07e44ef6ec3147ea11f149a3f44071803fb39ad9f4736d84542d42"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-ticks-list",
@@ -3561,7 +3631,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 210
+   "bytes": 210,
+   "sha256": "e40f285b178266ee4181c35699951ca33936b2f3d0dff9f6f8dfcee23496e57c"
   },
   {
    "id": "event-contracts/GET-market-data-instruments-event-contracts-categories-tags-list",
@@ -3602,7 +3673,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "event-contracts/GET-market-data-instruments-event-contracts-events-list",
@@ -3641,7 +3713,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "event-contracts/GET-market-data-instruments-event-contracts-milestones-list",
@@ -3701,7 +3774,8 @@
      "syntheticKey": "example_key"
     }
    ],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "event-contracts/GET-market-data-instruments-event-contracts-series-list",
@@ -3740,7 +3814,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "event-contracts/GET-market-data-instruments-event-contracts-sports-filters-list",
@@ -3780,7 +3855,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-game-stats-get",
@@ -3821,7 +3897,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 43
+   "bytes": 43,
+   "sha256": "0191dfbc5e06799fd16221abf86ef2731643973c405b987c1ab13b729f7ec340"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-live-data-get",
@@ -3882,7 +3959,8 @@
     }
    ],
    "additionalProperties": [],
-   "bytes": 90
+   "bytes": 90,
+   "sha256": "481218f6d5667f2cbcbf359571374c962ee25d1839386fe62b04817b42832859"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-markets-bars-list",
@@ -3928,7 +4006,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 70
+   "bytes": 70,
+   "sha256": "c09f74d2c6f5f86b77d741bf975314b74aed4e5c38b13e68ee17e2d5c9310458"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-markets-bars-list-by-event",
@@ -3974,7 +4053,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 70
+   "bytes": 70,
+   "sha256": "c09f74d2c6f5f86b77d741bf975314b74aed4e5c38b13e68ee17e2d5c9310458"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-markets-depths-list",
@@ -4024,7 +4104,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 267
+   "bytes": 267,
+   "sha256": "a3fac19267eff64616d4e8477dff4673f3ebac5d15953490f7aed30165345176"
   },
   {
    "id": "event-contracts/GET-market-data-event-contracts-markets-snapshots-list",
@@ -4078,7 +4159,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 64
+   "bytes": 64,
+   "sha256": "609711d93e0aeb999e2783903d5d5a7c20b154f443635eef22e0629611cf5df4"
   },
   {
    "id": "trading/GET-trading-instruments-stocks-profiles-list",
@@ -4117,7 +4199,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/GET-trading-accounts-list",
@@ -4158,7 +4241,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "trading/GET-trading-assets-balances-get",
@@ -4207,7 +4291,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 405
+   "bytes": 405,
+   "sha256": "44a67367ee841214a0d1639788db3e8b724b4ac98a20cc9d9df783a1081e3e3b"
   },
   {
    "id": "trading/GET-trading-assets-positions-list",
@@ -4264,7 +4349,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 222
+   "bytes": 222,
+   "sha256": "94b866c9d5c1b3ce5f2a8b9863e855a650c1061375b32dbb5b1a68fc2be9dcbd"
   },
   {
    "id": "trading/POST-trading-orders-preview",
@@ -4307,7 +4393,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 57
+   "bytes": 57,
+   "sha256": "ba7f9eba855cc721add268892de1bdd6ca728319d61dfed359b6bade6f8963f2"
   },
   {
    "id": "trading/POST-trading-orders-place",
@@ -4346,7 +4433,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/POST-trading-orders-batch-place",
@@ -4392,7 +4480,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 55
+   "bytes": 55,
+   "sha256": "47a1ada4f145e0f48c90043e1c037defa91abfbc385d56d52928cf3276bd048b"
   },
   {
    "id": "trading/POST-trading-orders-replace",
@@ -4431,7 +4520,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/POST-trading-orders-cancel",
@@ -4470,7 +4560,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/GET-trading-orders-open-orders-list",
@@ -4509,7 +4600,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/GET-trading-orders-historical-orders-list",
@@ -4548,7 +4640,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "trading/GET-trading-orders-get",
@@ -4592,7 +4685,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 329
+   "bytes": 329,
+   "sha256": "bd951fca161cea3ce01c4559971cd07242e334ff5ad3f7d7500551544bcc5ccd"
   },
   {
    "id": "trading/GET-trading-activities-cash-activities-list",
@@ -4631,7 +4725,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/POST-broker-accounts-virtual-accounts-create",
@@ -4677,7 +4772,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 157
+   "bytes": 157,
+   "sha256": "e6f73749e3ac69e47172443a879ee3c07be2b28065f971642f25ec5f21449cdb"
   },
   {
    "id": "broker-hk/POST-broker-accounts-virtual-accounts-update",
@@ -4723,7 +4819,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 157
+   "bytes": 157,
+   "sha256": "e6f73749e3ac69e47172443a879ee3c07be2b28065f971642f25ec5f21449cdb"
   },
   {
    "id": "broker-hk/GET-broker-accounts-virtual-accounts-get",
@@ -4779,7 +4876,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 359
+   "bytes": 359,
+   "sha256": "943b62c642972e03f90488a27c700b09946fff7c7b67cdc41ca51a42b7cd507d"
   },
   {
    "id": "broker-hk/GET-broker-accounts-virtual-accounts-list",
@@ -4818,7 +4916,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/GET-broker-instruments-stocks-profiles-list",
@@ -4857,7 +4956,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/GET-broker-instruments-stock-locates-get",
@@ -4899,7 +4999,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
@@ -4950,7 +5051,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/GET-broker-activities-cash-activities-list",
@@ -4989,7 +5091,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/GET-broker-assets-balances-get",
@@ -5038,7 +5141,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 405
+   "bytes": 405,
+   "sha256": "44a67367ee841214a0d1639788db3e8b724b4ac98a20cc9d9df783a1081e3e3b"
   },
   {
    "id": "broker-hk/GET-broker-assets-positions-list",
@@ -5095,7 +5199,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 220
+   "bytes": 220,
+   "sha256": "f698154f32f575a2bab098d21abbf53d86e7b79cc9a3fa6e61acca02b067239c"
   },
   {
    "id": "broker-hk/POST-broker-orders-preview",
@@ -5138,7 +5243,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 57
+   "bytes": 57,
+   "sha256": "ba7f9eba855cc721add268892de1bdd6ca728319d61dfed359b6bade6f8963f2"
   },
   {
    "id": "broker-hk/POST-broker-orders-place",
@@ -5177,7 +5283,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/POST-broker-orders-replace",
@@ -5216,7 +5323,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/POST-broker-orders-cancel",
@@ -5255,7 +5363,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-hk/GET-broker-orders-get",
@@ -5298,7 +5407,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 307
+   "bytes": 307,
+   "sha256": "1dff8cedaeeb40cf99c9043228baa604a5f381d8b07f071d7eb44744d0ed5cef"
   },
   {
    "id": "broker-hk/GET-broker-orders-historical-orders-list",
@@ -5341,7 +5451,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 307
+   "bytes": 307,
+   "sha256": "1dff8cedaeeb40cf99c9043228baa604a5f381d8b07f071d7eb44744d0ed5cef"
   },
   {
    "id": "broker-hk/GET-broker-orders-open-orders-list",
@@ -5384,7 +5495,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 307
+   "bytes": 307,
+   "sha256": "1dff8cedaeeb40cf99c9043228baa604a5f381d8b07f071d7eb44744d0ed5cef"
   },
   {
    "id": "broker-hk/GET-broker-funding-fx-rates-get",
@@ -5432,7 +5544,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 156
+   "bytes": 156,
+   "sha256": "54f5d900f6a8ce77f78df3749942d819040b9890f2d75d0408a360767ccf39ba"
   },
   {
    "id": "broker-hk/POST-broker-funding-fx-exchanges-create",
@@ -5484,7 +5597,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 209
+   "bytes": 209,
+   "sha256": "b2feae3874fad9ccd7e2a7682300f07f1bdf9d291b5f62aed4e7a95c44e93997"
   },
   {
    "id": "broker-hk/GET-broker-funding-fx-exchanges-get",
@@ -5538,7 +5652,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 189
+   "bytes": 189,
+   "sha256": "a65c2492a4efa33fa3e42a746f8199ccd2731661a66bf34fa9d980ff1c51535c"
   },
   {
    "id": "broker-hk/POST-broker-funding-instant-exchanges-create",
@@ -5593,7 +5708,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 241
+   "bytes": 241,
+   "sha256": "41462c96204fdd702044bc38a7fa4cea9c8b89981d8dec5e548636828c1f1e81"
   },
   {
    "id": "broker-hk/GET-broker-funding-instant-exchanges-get",
@@ -5648,7 +5764,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 241
+   "bytes": 241,
+   "sha256": "41462c96204fdd702044bc38a7fa4cea9c8b89981d8dec5e548636828c1f1e81"
   },
   {
    "id": "broker-hk/POST-broker-funding-instant-funding-create",
@@ -5701,7 +5818,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 209
+   "bytes": 209,
+   "sha256": "f90f648d03c64192cf74f889b8d50e44ddad3710f39e39526bffe4e803f4c641"
   },
   {
    "id": "broker-hk/GET-broker-funding-instant-funding-get",
@@ -5754,7 +5872,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 209
+   "bytes": 209,
+   "sha256": "f90f648d03c64192cf74f889b8d50e44ddad3710f39e39526bffe4e803f4c641"
   },
   {
    "id": "broker-hk/POST-broker-journals-cash-journals-create",
@@ -5807,7 +5926,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 228
+   "bytes": 228,
+   "sha256": "baec7eca1bf4ca95647235145c6fceb482ae54ff38b2d67377f6619a8f5223d9"
   },
   {
    "id": "broker-hk/GET-broker-journals-cash-journals-get",
@@ -5860,7 +5980,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 228
+   "bytes": 228,
+   "sha256": "baec7eca1bf4ca95647235145c6fceb482ae54ff38b2d67377f6619a8f5223d9"
   },
   {
    "id": "broker-hk/POST-broker-journals-position-journals-create",
@@ -5917,7 +6038,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 270
+   "bytes": 270,
+   "sha256": "7c4fe866515b0a25290c5e0f2b82bc66ee22559b7a8ed721b9a02522fc75be23"
   },
   {
    "id": "broker-hk/GET-broker-journals-position-journals-get",
@@ -5974,7 +6096,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 270
+   "bytes": 270,
+   "sha256": "7c4fe866515b0a25290c5e0f2b82bc66ee22559b7a8ed721b9a02522fc75be23"
   },
   {
    "id": "broker-hk/GET-broker-master-data-trading-calendars-list",
@@ -6020,7 +6143,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 71
+   "bytes": 71,
+   "sha256": "ffaac9bb37eb210587c6cae5f82cfd8c900924e7ba7d960d0bb72973622875c7"
   },
   {
    "id": "broker-fd-us/GET-broker-accounts-list",
@@ -6059,7 +6183,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-accounts-get",
@@ -6106,7 +6231,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 96
+   "bytes": 96,
+   "sha256": "8eaa88ac5d636b293adbaffacf40545c3ef6c357c3a7714a81d1e9bc06b147f2"
   },
   {
    "id": "broker-fd-us/POST-broker-accounts-create",
@@ -6148,7 +6274,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 109
+   "bytes": 109,
+   "sha256": "eb71da4e6bf184a02089adbd8faa1cb33fa6950a2208a9e48db04a74585ffd7f"
   },
   {
    "id": "broker-fd-us/POST-broker-accounts-update",
@@ -6190,7 +6317,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 105
+   "bytes": 105,
+   "sha256": "6709b2d29a8b65023174f5c59a0368e6695ae7d86c4c8b66691a298f9e493238"
   },
   {
    "id": "broker-fd-us/POST-broker-accounts-close",
@@ -6232,7 +6360,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 85
+   "bytes": 85,
+   "sha256": "42ffa887f5259e5e7122f4eb7216afef0147cfe19f52b142994db9c2333d55e6"
   },
   {
    "id": "broker-fd-us/GET-broker-accounts-applications-get",
@@ -6290,7 +6419,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 1293
+   "bytes": 1293,
+   "sha256": "dfe4f8194026dfafcd6e3afdb5035a0e0cfbe4ebcdb657b353cb7dcdb5e0d707"
   },
   {
    "id": "broker-fd-us/GET-broker-forms-list",
@@ -6326,7 +6456,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 27
+   "bytes": 27,
+   "sha256": "b6309d4f368b9272181e5592b7b6f8b063e652a71721f8f73a637cbbf36fb0e9"
   },
   {
    "id": "broker-fd-us/GET-broker-forms-versions-list",
@@ -6362,7 +6493,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 8
+   "bytes": 8,
+   "sha256": "61047c2ff1f3da68bec02ca3af69df70519622c12b24896049d3d89ce66e3ced"
   },
   {
    "id": "broker-fd-us/GET-broker-forms-get",
@@ -6413,7 +6545,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 55
+   "bytes": 55,
+   "sha256": "8510f50760549fdb8c5d0878a45ba088de86b4f43a2950f365c364f659375f26"
   },
   {
    "id": "broker-fd-us/POST-broker-documents-upload",
@@ -6451,7 +6584,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-documents-download",
@@ -6492,7 +6626,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-assets-summaries-get",
@@ -6534,7 +6669,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 356
+   "bytes": 356,
+   "sha256": "4ce39894ce2ab62b48370350c745c451d6422addbb930093bbb8f15e6b64f2c6"
   },
   {
    "id": "broker-fd-us/GET-broker-assets-balances-get",
@@ -6584,7 +6720,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 137
+   "bytes": 137,
+   "sha256": "1f1a3cdb38e9543f3a00ab4e06c2a4b1de8bf4b56a663c9dcca5b4752eaa4f06"
   },
   {
    "id": "broker-fd-us/GET-broker-assets-positions-list",
@@ -6639,7 +6776,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 195
+   "bytes": 195,
+   "sha256": "e5d678a2569f0ba661b31dd2ef2708a89e0c4dbaf802b9e0976e661fb60c5817"
   },
   {
    "id": "broker-fd-us/GET-broker-activities-cash-activities-list",
@@ -6678,7 +6816,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-bank-relationships-create",
@@ -6740,7 +6879,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 293
+   "bytes": 293,
+   "sha256": "9f081c928023af512afa645a91843125bce5bbc610d02052f5f0bec51f2c04bd"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-bank-relationships-delete",
@@ -6782,7 +6922,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 96
+   "bytes": 96,
+   "sha256": "d96033d3740c0c3f8f6ae8a16190bfae6585e96716d947249791a25f97454f80"
   },
   {
    "id": "broker-fd-us/GET-broker-funding-bank-relationships-list",
@@ -6842,7 +6983,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 247
+   "bytes": 247,
+   "sha256": "e9e91bfef739ff7c9fb96573676b1a74f0d5677c07807b9921545c3c26cfbfff"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-ach-relationships-create",
@@ -6900,7 +7042,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 359
+   "bytes": 359,
+   "sha256": "2aceffbf99d87dba284929176b1e41358bf278029eba675c803a01afb9913003"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-ach-relationships-delete",
@@ -6942,7 +7085,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 95
+   "bytes": 95,
+   "sha256": "6d8d96d8d93032de7970d9f3df77f58d8458e9916ebb3064ff2ca63ca1957ead"
   },
   {
    "id": "broker-fd-us/GET-broker-funding-ach-relationships-list",
@@ -6998,7 +7142,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 313
+   "bytes": 313,
+   "sha256": "bb37cb3cc17a4929447aa44db8fa78f113eef60c431444ade36694a9b7ea35b2"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-transfers-create",
@@ -7060,7 +7205,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 318
+   "bytes": 318,
+   "sha256": "7b91718397fa53a946dfb9fcd95fedc1e1ce017fd9f369de7c778c1f0fdba043"
   },
   {
    "id": "broker-fd-us/GET-broker-funding-transfers-list",
@@ -7099,7 +7245,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-funding-transfers-get",
@@ -7161,7 +7308,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 318
+   "bytes": 318,
+   "sha256": "7b91718397fa53a946dfb9fcd95fedc1e1ce017fd9f369de7c778c1f0fdba043"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-transfers-cancel",
@@ -7205,7 +7353,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 136
+   "bytes": 136,
+   "sha256": "5d6852bcaf98cd5f068373e0a944ec00845d72426617805f47189d29666ed947"
   },
   {
    "id": "broker-fd-us/POST-broker-funding-instant-funding-create",
@@ -7262,7 +7411,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 295
+   "bytes": 295,
+   "sha256": "4c0cf1d4961c68ddfbf0cc9b7cfa3e932c9ec2e1df6fa77dc06f1907f1046fff"
   },
   {
    "id": "broker-fd-us/GET-broker-funding-instant-funding-get",
@@ -7319,7 +7469,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 295
+   "bytes": 295,
+   "sha256": "4c0cf1d4961c68ddfbf0cc9b7cfa3e932c9ec2e1df6fa77dc06f1907f1046fff"
   },
   {
    "id": "broker-fd-us/POST-broker-fees-create",
@@ -7378,7 +7529,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 326
+   "bytes": 326,
+   "sha256": "700ceab3a0cc14d0fcc536fc8071f0daacea42ab83cfe7eedf63f0899788133f"
   },
   {
    "id": "broker-fd-us/GET-broker-fees-get",
@@ -7437,7 +7589,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 326
+   "bytes": 326,
+   "sha256": "700ceab3a0cc14d0fcc536fc8071f0daacea42ab83cfe7eedf63f0899788133f"
   },
   {
    "id": "broker-fd-us/POST-broker-credits-create",
@@ -7496,7 +7649,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 325
+   "bytes": 325,
+   "sha256": "8f95e4213f41bee034f2ea85d3533ca46889a65730a5b27b62500db6d13593b0"
   },
   {
    "id": "broker-fd-us/GET-broker-credits-get",
@@ -7555,7 +7709,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 325
+   "bytes": 325,
+   "sha256": "8f95e4213f41bee034f2ea85d3533ca46889a65730a5b27b62500db6d13593b0"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-stocks-profiles-list",
@@ -7594,7 +7749,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-event-contracts-categories-list",
@@ -7638,7 +7794,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 76
+   "bytes": 76,
+   "sha256": "20ab2309cc693933f81cbc1f116e90d706c57198ab052e73476dc06c5202572f"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-event-contracts-series-list",
@@ -7677,7 +7834,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-event-contracts-events-list",
@@ -7722,7 +7880,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-event-contracts-markets-list",
@@ -7761,7 +7920,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
@@ -7812,7 +7972,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/POST-broker-orders-preview",
@@ -7854,7 +8015,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 57
+   "bytes": 57,
+   "sha256": "ba7f9eba855cc721add268892de1bdd6ca728319d61dfed359b6bade6f8963f2"
   },
   {
    "id": "broker-fd-us/POST-broker-orders-place",
@@ -7893,7 +8055,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/POST-broker-orders-replace",
@@ -7932,7 +8095,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/POST-broker-orders-cancel",
@@ -7971,7 +8135,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-orders-open-orders-list",
@@ -8010,7 +8175,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/GET-broker-orders-get",
@@ -8053,7 +8219,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 303
+   "bytes": 303,
+   "sha256": "ad659a0f4edb00b1917910a35ec180570e73a5d25ed6bd472ee2ef912fae7a1e"
   },
   {
    "id": "broker-fd-us/GET-broker-orders-historical-orders-list",
@@ -8092,7 +8259,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "broker-fd-us/POST-broker-journals-cash-journals-create",
@@ -8149,7 +8317,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 310
+   "bytes": 310,
+   "sha256": "3bfbb8ad036df896f0adeaeec647a92d09e877c21ab27b7f5ef02062e01956fd"
   },
   {
    "id": "broker-fd-us/GET-broker-journals-cash-journals-get",
@@ -8206,7 +8375,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 310
+   "bytes": 310,
+   "sha256": "3bfbb8ad036df896f0adeaeec647a92d09e877c21ab27b7f5ef02062e01956fd"
   },
   {
    "id": "broker-fd-us/GET-broker-master-data-enums-list",
@@ -8246,7 +8416,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "broker-fd-us/GET-broker-master-data-trading-calendars-list",
@@ -8292,7 +8463,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 71
+   "bytes": 71,
+   "sha256": "ffaac9bb37eb210587c6cae5f82cfd8c900924e7ba7d960d0bb72973622875c7"
   },
   {
    "id": "broker-fd-us/GET-broker-agreements-list",
@@ -8336,7 +8508,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 84
+   "bytes": 84,
+   "sha256": "0d7074aeab5701c47be5c7f585c09841606cc69fc2dd36f19e25898ddd097339"
   },
   {
    "id": "broker-fd-us/GET-broker-agreements-get",
@@ -8383,7 +8556,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 142
+   "bytes": 142,
+   "sha256": "3af4b62d95052149b253d9678a42039bedaa3d722074de57ac18cfc10c44747c"
   },
   {
    "id": "display-solution/GET-market-data-screeners-gainers-losers-list",
@@ -8422,7 +8596,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-screeners-top-actives-list",
@@ -8461,7 +8636,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/POST-market-data-stocks-snapshots-list",
@@ -8543,7 +8719,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 18
+   "bytes": 18,
+   "sha256": "6ee81134a9e7239f36c54b7faaa1cfc122d19e86b3beb20202c8781cd0150ac8"
   },
   {
    "id": "display-solution/POST-market-data-stocks-bars-list",
@@ -8590,7 +8767,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 321
+   "bytes": 321,
+   "sha256": "8770ea7e2a5af4ec5c3f040aaffdddf25cd654dbfeb840f4808c26b06d6e7f32"
   },
   {
    "id": "display-solution/GET-market-data-stocks-bars-get",
@@ -8637,7 +8815,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 321
+   "bytes": 321,
+   "sha256": "8770ea7e2a5af4ec5c3f040aaffdddf25cd654dbfeb840f4808c26b06d6e7f32"
   },
   {
    "id": "display-solution/GET-market-data-stocks-ticks-list",
@@ -8679,7 +8858,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 120
+   "bytes": 120,
+   "sha256": "83b193c7b4fd3a9b75a4b5950235530dfc00e23fbc7223b0e0fe65e8c0d03e85"
   },
   {
    "id": "display-solution/GET-market-data-stocks-depths-list",
@@ -8725,7 +8905,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 192
+   "bytes": 192,
+   "sha256": "4e1686b9ee727fc635539ab71add4978c58f36b424556695f51d3adafce6230a"
   },
   {
    "id": "display-solution/POST-market-data-news-summaries-get",
@@ -8767,7 +8948,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-news-market-news-list",
@@ -8810,7 +8992,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-news-symbol-news-list",
@@ -8853,7 +9036,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-news-latest-news-list",
@@ -8896,7 +9080,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-instruments-stocks-corporate-actions-list",
@@ -8935,7 +9120,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-instruments-stocks-corporate-actions-list-by-market",
@@ -8974,7 +9160,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/POST-market-data-instruments-stocks-profiles-list",
@@ -9018,7 +9205,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 5
+   "bytes": 5,
+   "sha256": "501de836b88be0a82b9af264bee8fa768a66abb5ac670b802bf7f696171b0e96"
   },
   {
    "id": "display-solution/POST-market-data-fundamentals-logos-list",
@@ -9058,7 +9246,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-fundamentals-company-profiles-get",
@@ -9105,7 +9294,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-fundamentals-analysis-target-prices-get",
@@ -9150,7 +9340,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "display-solution/GET-market-data-fundamentals-analysis-ratings-get",
@@ -9196,7 +9387,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 3
+   "bytes": 3,
+   "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
   },
   {
    "id": "connect-api/POST-oauth2-tokens-create",
@@ -9248,7 +9440,8 @@
    },
    "oneOfChoices": [],
    "additionalProperties": [],
-   "bytes": 272
+   "bytes": 272,
+   "sha256": "ae7c3999f092fa6106e1cd065b7b92757d6de12aad1e0f5c8b8bfd83d8806b7f"
   }
  ]
 }
