@@ -44,6 +44,39 @@ const (
 	// and it never fires on a committed tree.
 	MissingRequiredName DivergenceKind = "missing-required-name"
 
+	// MissingDeclaredName means a name the page declares but does not mark
+	// required is not carried through to a value the caller can read.
+	//
+	// It is a distinct kind rather than an extension of MissingRequiredName
+	// because the evidence behind it is weaker, and collapsing the two would
+	// make the strength unrecoverable from a baseline entry. A required name is
+	// a promise: the page says the field is always sent. A declared name is a
+	// description of one response, so a name missing from it may be optional,
+	// conditionally present, or simply not sent in the example the page chose.
+	// The defect it reports is the same silent zero the required half reports,
+	// and it is recorded rather than assumed away, because 89 of the 90 pages
+	// carrying no required list do publish property names and nothing else
+	// examines them.
+	//
+	// On a row that also records TopLevelMismatch some of these names restate
+	// that finding rather than adding to it: when the page documents an
+	// envelope and the SDK decodes the bare payload, the envelope's own keys
+	// read as missing because the wrapper is absent. They are kept, because a
+	// name-level test that told the two apart could not be made mechanical. The
+	// manifest records no type per declared name and no property name at all in
+	// the committed instances, so nothing distinguishes a wrapper key from a
+	// payload field. Suppressing the whole row instead would have discarded
+	// real findings beside the restatements, so the overlap is documented here
+	// and counted where it is reported.
+	MissingDeclaredName DivergenceKind = "missing-declared-name"
+
+	// DeclaredInventoryEmpty means a page carries no required list and declares
+	// no property name either, so neither the required nor the declared name
+	// check has anything to look at. It is a gap in the evidence base rather
+	// than in the SDK, and it is recorded for that reason: filed as a pass, the
+	// row would read as examined when no name on the page could be compared.
+	DeclaredInventoryEmpty DivergenceKind = "declared-inventory-empty"
+
 	// TopLevelMismatch means the documented response is an array where the SDK
 	// decodes an object, or the reverse. One bit of shape decides whether the
 	// SDK can hold the documented body at all.
@@ -67,23 +100,27 @@ const (
 
 // checkOf is the harness's priority order. The two shape kinds share rank 1
 // because they are one check: the element type only exists once the top level
-// is known to be an array.
+// is known to be an array. The declared-name kind sits directly below the
+// required-name kind because it reports the same silent-zero defect on weaker
+// evidence, so a reader meets the promise-backed finding first.
 func checkOf(k DivergenceKind) int {
 	switch k {
 	case MissingRequiredName:
 		return 0
-	case TopLevelMismatch, ElementTypeMismatch:
+	case MissingDeclaredName, DeclaredInventoryEmpty:
 		return 1
-	case LeafTypeMismatch:
+	case TopLevelMismatch, ElementTypeMismatch:
 		return 2
-	case DecodeFailure:
+	case LeafTypeMismatch:
 		return 3
-	default:
+	case DecodeFailure:
 		return 4
+	default:
+		return 5
 	}
 }
 
-// Check is one of the four comparisons, named for reporting. It exists so an
+// Check is one of the five comparisons, named for reporting. It exists so an
 // Outcome can say a check did not apply and why, rather than leaving an absent
 // check indistinguishable from a passing one.
 type Check string
@@ -91,6 +128,12 @@ type Check string
 const (
 	// CheckRequiredNames is "does every documented required name reach a json tag".
 	CheckRequiredNames Check = "required-name-coverage"
+	// CheckDeclaredNames is the same question asked of the names a page declares
+	// without marking required, and only runs where the required list is absent.
+	// It is weaker evidence, which is why it is a separate check rather than a
+	// second arm of CheckRequiredNames: an Outcome has to be able to say that a
+	// row was examined against a description rather than against a promise.
+	CheckDeclaredNames Check = "declared-name-coverage"
 	// CheckShape is "does the documented top level and element type match what
 	// the SDK decodes into".
 	CheckShape Check = "top-level-shape"
@@ -107,13 +150,15 @@ const (
 )
 
 // checks is the report order, and the order the gate's summary groups by.
-var checks = []Check{CheckRequiredNames, CheckShape, CheckLeafTypes, CheckDecodes}
+var checks = []Check{CheckRequiredNames, CheckDeclaredNames, CheckShape, CheckLeafTypes, CheckDecodes}
 
 // checkForKind names the check a divergence belongs to.
 func checkForKind(k DivergenceKind) Check {
 	switch k {
 	case MissingRequiredName:
 		return CheckRequiredNames
+	case MissingDeclaredName, DeclaredInventoryEmpty:
+		return CheckDeclaredNames
 	case TopLevelMismatch, ElementTypeMismatch:
 		return CheckShape
 	case LeafTypeMismatch:
@@ -202,7 +247,7 @@ type Outcome struct {
 	Shape WireShape `json:"-"`
 	// NotComparable is set, and the row carries no divergences, when the page and
 	// the SDK call do not describe the same endpoint. Distinct from a conforming
-	// row, which reports four checks that found nothing.
+	// row, which reports five checks that found nothing.
 	NotComparable *NotComparable `json:"notComparable,omitempty"`
 	// Skipped lists the checks that did not apply.
 	Skipped []SkippedCheck `json:"skipped,omitempty"`
@@ -542,7 +587,7 @@ func typeName(t reflect.Type) string {
 	return t.String()
 }
 
-// Compare runs all four checks of one fixture against one Go type, using the
+// Compare runs all five checks of one fixture against one Go type, using the
 // committed bytes.
 //
 // It applies the comparability rule first. A fixture whose SDK method sends a
@@ -587,7 +632,7 @@ func compareability(f Fixture) *NotComparable {
 	}
 }
 
-// allChecksSkipped is the four-check skip list for a reason that applies to all
+// allChecksSkipped is the five-check skip list for a reason that applies to all
 // of them, so a not-comparable row never reads as a partial pass.
 func allChecksSkipped(reason string) []SkippedCheck {
 	out := make([]SkippedCheck, 0, len(checks))
@@ -619,6 +664,7 @@ func CompareBody(f Fixture, symbol string, t reflect.Type, body []byte) Outcome 
 		// be compared. Saying so beats emitting four vacuous passes.
 		o.Skipped = append(o.Skipped,
 			SkippedCheck{CheckRequiredNames, "the SDK method decodes no response body"},
+			SkippedCheck{CheckDeclaredNames, "the SDK method decodes no response body"},
 			SkippedCheck{CheckShape, "the SDK method decodes no response body"},
 			SkippedCheck{CheckLeafTypes, "the SDK method decodes no response body"},
 			SkippedCheck{CheckDecodes, "the SDK method decodes no response body"})
@@ -647,6 +693,9 @@ func CompareBody(f Fixture, symbol string, t reflect.Type, body []byte) Outcome 
 	for _, c := range []func(prior []Divergence) ([]Divergence, []SkippedCheck){
 		func([]Divergence) ([]Divergence, []SkippedCheck) {
 			return checkNames(symbol, f, o.Shape, tags, documented)
+		},
+		func([]Divergence) ([]Divergence, []SkippedCheck) {
+			return checkDeclaredNames(symbol, f, o.Shape, tags)
 		},
 		func([]Divergence) ([]Divergence, []SkippedCheck) {
 			return checkShape(symbol, f, o.Shape)
@@ -685,7 +734,7 @@ func unreadable(f Fixture, symbol string, t reflect.Type, why, cause string) Out
 	o.Divergences = append(o.Divergences, Divergence{
 		Symbol: symbol, Fixture: f.ID, Kind: DecodeFailure, Detail: why,
 	})
-	for _, c := range []Check{CheckRequiredNames, CheckShape, CheckLeafTypes} {
+	for _, c := range []Check{CheckRequiredNames, CheckDeclaredNames, CheckShape, CheckLeafTypes} {
 		o.Skipped = append(o.Skipped, SkippedCheck{c, cause})
 	}
 	sortDivergences(&o)
@@ -764,7 +813,8 @@ func checkNames(symbol string, f Fixture, shape WireShape, tags map[string]tagSi
 	switch {
 	case len(f.Checks.RequiredNames) == 0:
 		return nil, []SkippedCheck{{CheckRequiredNames,
-			"the page declares no required list at the top level or on the array element"}}
+			"the page declares no required list at the top level or on the array " +
+				"element, so " + string(CheckDeclaredNames) + " carries the weaker check instead"}}
 	case shape.Carrier == nil:
 		// A map decodes every documented name and declares none of them, so a
 		// missing tag is not a defect it could have. Calling that a pass would
@@ -812,7 +862,91 @@ func checkNames(symbol string, f Fixture, shape WireShape, tags map[string]tagSi
 	return out, nil
 }
 
-// checkShape is check 2: the documented response's JSON kind, and an array's
+// checkDeclaredNames asks the required-name question of the names a page declares
+// without promising, and runs only where that stronger check cannot.
+//
+// It is a separate check rather than a second arm of checkNames for two reasons.
+// One is evidential: a required name is a promise and a declared name is a
+// description, and an Outcome that conflated them could not say which it had
+// examined a row against. The other is coverage: 90 of the 154 compared rows come
+// from pages publishing no required list, so on those the strong check has nothing
+// to look at and this is the only name check the harness applies at all.
+//
+// It is tag-only. checkNames also reports a required name missing from the
+// committed instance, but the generator builds that instance from required names
+// alone, so every declared name would be absent from it and the half would report
+// 100% false positives. The depth accounting checkNames performs is not repeated
+// either: tagsOf is called with the slice type on an array row, so the element's
+// own fields land one level down and the Depth test would fire on nearly every
+// declared name of every array row as a false "reached from below". The count this
+// produces is a floor for the same reason the required count is, and that is
+// stated in MissingDeclaredName rather than worked around.
+func checkDeclaredNames(symbol string, f Fixture, shape WireShape, tags map[string]tagSite) ([]Divergence, []SkippedCheck) {
+	if len(f.Checks.RequiredNames) > 0 {
+		return nil, []SkippedCheck{{CheckDeclaredNames,
+			"the page publishes a required list, so the stronger required-name check applies"}}
+	}
+	switch {
+	case shape.Go == nil:
+		return nil, []SkippedCheck{{CheckDeclaredNames, "the SDK method decodes no response body"}}
+	case shape.Carrier == nil:
+		// A map decodes every documented name and declares none of them, so a
+		// missing tag is not a defect it could have, and reporting one would be
+		// the harness's own error rather than a finding. Three data.* rows decode
+		// into a free-form map and carry 105 declared names between them, so this
+		// guard is worth more rows than the one carrying it.
+		return nil, []SkippedCheck{{CheckDeclaredNames, fmt.Sprintf(
+			"%s carries no field tags, so no declared name can be missing from it",
+			typeName(shape.Go))}}
+	}
+
+	names := declaredNames(f)
+	if len(names) == 0 {
+		if f.Checks.DeclaredPropertyNameCount == 0 {
+			// The page offers nothing to check with, so this row is a hole in the
+			// evidence base rather than a pass. Filing it as one would make a page
+			// nobody can examine read as a page that examined clean.
+			return []Divergence{{
+				Symbol: symbol, Fixture: f.ID, Kind: DeclaredInventoryEmpty,
+				Detail: "the page publishes no required list and declares no property " +
+					"name, so no name on it could be compared against the SDK at all",
+			}}, nil
+		}
+		// The page does declare names, just not at the level this row is read at:
+		// an array of scalars has no element object to name. That is a shape fact
+		// for the shape check to carry, not a gap in the name inventory.
+		return nil, []SkippedCheck{{CheckDeclaredNames, fmt.Sprintf(
+			"the page declares %d property name(s) but none at the level this row reads",
+			f.Checks.DeclaredPropertyNameCount)}}
+	}
+
+	var out []Divergence
+	for _, name := range names {
+		if _, ok := lookupTag(tags, name); ok {
+			continue
+		}
+		out = append(out, Divergence{
+			Symbol: symbol, Fixture: f.ID, Kind: MissingDeclaredName, Name: name,
+			Detail: fmt.Sprintf("no json tag in %s, so the documented value decodes to the zero value",
+				typeName(shape.Carrier)),
+		})
+	}
+	return out, nil
+}
+
+// declaredNames returns the property names the page declares at the level the
+// generator reads for this row: the single array element when the page's top
+// level is an array, and the top-level object otherwise. It mirrors the choice
+// the generator makes between the two requiredNamesSource values, so the weaker
+// check looks where the stronger one would have looked.
+func declaredNames(f Fixture) []string {
+	if f.Checks.TopLevel == "array" {
+		return f.Checks.DeclaredElementNames
+	}
+	return f.Checks.DeclaredTopLevelNames
+}
+
+// checkShape is check 3: the documented response's JSON kind, and an array's
 // element kind, against what the SDK type accepts. Ten brokerfd rows and
 // GetAgreementDetail turn on this one bit.
 func checkShape(symbol string, f Fixture, shape WireShape) ([]Divergence, []SkippedCheck) {
@@ -843,7 +977,7 @@ func checkShape(symbol string, f Fixture, shape WireShape) ([]Divergence, []Skip
 	return out, nil
 }
 
-// checkLeaves is check 3: for every required name the SDK does tag, does the Go
+// checkLeaves is check 4: for every required name the SDK does tag, does the Go
 // field hold the JSON kind the documented value has.
 //
 // Only names the SDK tags are considered, because a name it does not tag is
@@ -935,7 +1069,7 @@ func leafVerdict(field reflect.Type, want string) (ok bool, reason string) {
 	return jsonKindOf(t) == want, ""
 }
 
-// checkDecode is check 4: the documented instance must unmarshal into the SDK
+// checkDecode is check 5: the documented instance must unmarshal into the SDK
 // type. It is the weakest check and is described as such in DivergenceKind: a
 // successful decode is consistent with a type that ignores every name, so a
 // pass here carries little information. A failure, on the other hand, is

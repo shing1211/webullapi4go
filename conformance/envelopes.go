@@ -141,7 +141,7 @@ func declaredName(t reflect.Type) (string, bool) {
 //
 // The returned type carries the source's field names and json tags and nothing
 // else: it has no methods, so it cannot stand in for the SDK type at run time.
-// That is the right trade for this use, because the four checks read field tags,
+// That is the right trade for this use, because the five checks read field tags,
 // field types and the top-level kind, and the decode check exercises exactly the
 // same encoding/json behaviour a tagless mirror of the SDK type would.
 func envelopeType(spelling string) (reflect.Type, error) {

@@ -580,6 +580,128 @@ func TestComparisonBites(t *testing.T) {
 			summary(afterCase))
 	})
 
+	t.Run("DeclaredNameCoverage", func(t *testing.T) {
+		// GetFDCorporateActions is one of the 34 rows the declared-name check
+		// fires on: the page declares 14 properties and FDCorporateAction carries
+		// 7, so 12 are missing and the two declared names it does carry are
+		// ex_date and record_date. This row is on a page with no required list, so
+		// the weaker check
+		// is the only name check that applies to it.
+		const sym = "brokerfd.GetFDCorporateActions"
+		f := mustFixture(t, m, "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get")
+		entry := mustType(t, sym)
+		before := Compare(f, sym, entry)
+		for _, name := range []string{"event_id", "payment_date", "final_pay_date", "event_type"} {
+			if !hasKind(before, MissingDeclaredName, name) {
+				t.Fatalf("the recorded defect on %s does not reproduce: %s",
+					name, summary(before))
+			}
+		}
+		// The row must not also report the required half: it is the stronger check
+		// that is not applicable here, and a page that publishes a required list
+		// is what the weaker check defers to.
+		if countKind(before, MissingRequiredName) != 0 {
+			t.Errorf("a page with no required list reported %d required-name rows: %s",
+				countKind(before, MissingRequiredName), summary(before))
+		}
+		t.Logf("unmodified fixture: %d divergences", len(before.Divergences))
+
+		// Tag side: drop a json tag the SDK does have, from a copy of the type.
+		// The check must then name it, which is what proves it reads tags rather
+		// than agreeing with whatever the page declares.
+		untagged := withField(t, entry, "ex_date", func(f reflect.StructField) reflect.StructField {
+			f.Tag = `json:"-"`
+			return f
+		})
+		afterTag := Compare(f, sym, untagged)
+		if !hasKind(afterTag, MissingDeclaredName, "ex_date") {
+			t.Fatalf("removing the ex_date tag did not make the declared-name check "+
+				"fail, so the check is not reading tags: %s", summary(afterTag))
+		}
+		if countKind(afterTag, MissingDeclaredName) != countKind(before, MissingDeclaredName)+1 {
+			t.Errorf("expected exactly one more declared name: before %d, after %d",
+				countKind(before, MissingDeclaredName), countKind(afterTag, MissingDeclaredName))
+		}
+		t.Logf("copy of the type with the ex_date tag removed: %s", summary(afterTag))
+
+		// Case side: encoding/json folds case on a tag miss, so a page spelling a
+		// carried name differently still decodes into it. Stripping the tag must
+		// therefore NOT report a covered name as missing.
+		// Name side: strip the tag entirely, so the field encodes under its Go name
+		// ExDate, and the check must still report ex_date missing. This is not the
+		// case-fold rescue the required-name subtest relies on, and the difference
+		// is worth pinning: strings.EqualFold folds case but not punctuation, so
+		// ex_date cannot match ExDate, and neither can encoding/json. Verified
+		// against the decoder: an untagged struct is filled from `symbol` and
+		// `success` but left empty by `ex_date`. Every declared name on this page
+		// is snake_case, so on this row the fallback can never apply, and a check
+		// that assumed it would have passed a type the decoder drops the value for.
+		folded := withField(t, entry, "ex_date", func(sf reflect.StructField) reflect.StructField {
+			sf.Tag = ``
+			return sf
+		})
+		afterCase := Compare(f, sym, folded)
+		if !hasKind(afterCase, MissingDeclaredName, "ex_date") {
+			t.Errorf("a copy whose ex_date tag was stripped does not report it missing, "+
+				"but the Go name ExDate cannot be filled from the wire key ex_date, so "+
+				"the value would be dropped: %s", summary(afterCase))
+		}
+		if got, want := countKind(afterCase, MissingDeclaredName), countKind(before, MissingDeclaredName)+1; got != want {
+			t.Errorf("expected exactly one more declared name: before %d, after %d",
+				want, got)
+		}
+		t.Logf("copy of the type with the ex_date tag stripped (Go name only): %s",
+			summary(afterCase))
+
+		// Guard side: a free-form map decodes every documented name and declares
+		// none of them, so a missing tag on one is the harness's own error. The
+		// three data.* rows below declare 105 names between them, so failing to
+		// guard this would have produced 105 false positives.
+		const mapSym = "data.GetBalanceSheet"
+		mapFixture := mustFixture(t, m, "fundamentals/GET-market-data-fundamentals-balance-sheets-get")
+		onMap := Compare(mapFixture, mapSym, mustType(t, mapSym))
+		if countKind(onMap, MissingDeclaredName) != 0 {
+			t.Errorf("a free-form map reported %d declared names missing, which is "+
+				"the harness's error rather than a finding: %s",
+				countKind(onMap, MissingDeclaredName), summary(onMap))
+		}
+		if !skippedCheck(onMap, CheckDeclaredNames) {
+			t.Errorf("the map row does not report the declared-name check as skipped: %s",
+				summary(onMap))
+		}
+		t.Logf("free-form map row, %d declared names, reported as skipped: %s",
+			mustFixture(t, m, "fundamentals/GET-market-data-fundamentals-balance-sheets-get").
+				Checks.DeclaredPropertyNameCount, summary(onMap))
+
+		// Inventory side: a page declaring no property at all is a hole in the
+		// evidence base, and has to be reported as one rather than as a pass.
+		const emptySym = "brokerfd.ListAccountForms"
+		emptyFixture := mustFixture(t, m, "broker-fd-us/GET-broker-forms-list")
+		onEmpty := Compare(emptyFixture, emptySym, mustType(t, emptySym))
+		if !hasKind(onEmpty, DeclaredInventoryEmpty) {
+			t.Fatalf("a page declaring no property name is not reported as an empty "+
+				"inventory: %s", summary(onEmpty))
+		}
+		if countKind(onEmpty, MissingDeclaredName) != 0 {
+			t.Errorf("an empty inventory also reported %d missing names",
+				countKind(onEmpty, MissingDeclaredName))
+		}
+		t.Logf("page with an empty declared inventory: %s", summary(onEmpty))
+
+		// Deference side: a page that does publish a required list is the
+		// stronger check's business, and this one must stand aside entirely.
+		required := Compare(mustFixture(t, m, "broker-fd-us/GET-broker-assets-positions-list"),
+			"brokerfd.GetFDPositions", mustType(t, "brokerfd.GetFDPositions"))
+		if countKind(required, MissingDeclaredName) != 0 {
+			t.Errorf("a page publishing a required list also reported %d declared-name rows",
+				countKind(required, MissingDeclaredName))
+		}
+		if !skippedCheck(required, CheckDeclaredNames) {
+			t.Errorf("a page publishing a required list does not report the " +
+				"declared-name check as skipped")
+		}
+	})
+
 	t.Run("TopLevelShape", func(t *testing.T) {
 		// GetFDAssetsDetail decodes a slice where the page documents an object.
 		const sym = "brokerfd.GetFDAssetsDetail"
@@ -1214,6 +1336,19 @@ func hasKind(o Outcome, kind DivergenceKind, name ...string) bool {
 			continue
 		}
 		if len(name) == 0 || d.Name == name[0] {
+			return true
+		}
+	}
+	return false
+}
+
+// skippedCheck reports whether an outcome records that a check could not run, so
+// a test can assert that a check stood aside rather than silently passing. The
+// failure mode this guards is the one the whole package exists to remove: a check
+// that quietly stops being looked for.
+func skippedCheck(o Outcome, c Check) bool {
+	for _, s := range o.Skipped {
+		if s.Check == c {
 			return true
 		}
 	}

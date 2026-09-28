@@ -69,7 +69,7 @@
 //	known-divergences.json                    the recorded divergence baseline
 //	symbols.go                                the symbol-to-type table
 //	envelopes.go                              unexported decode targets, read from source
-//	shapes.go                                 the four comparisons
+//	shapes.go                                 the five comparisons
 //
 // The <area> directory is the tools/webull-docgen AREAS manifest key, so a
 // fixture's directory says which part of the API surface it documents. The file
@@ -99,18 +99,23 @@
 //
 // divergence_test.go resolves each manifest row to a Go type through the
 // hand-written table in symbols.go, decodes the committed fixture into it, and
-// runs four checks in descending order of how much they prove:
+// runs five checks in descending order of how much they prove:
 //
 //  1. every name the page marks required reaches a json tag;
-//  2. the documented top level, and an array's element kind, match the type the
+//  2. every name the page declares without marking required reaches a json tag,
+//     which runs only where a page publishes no required list at all and on
+//     weaker evidence: a required name is a promise, a declared name is a
+//     description of one response, and a 2 is reported separately from a 1 so
+//     the strength stays readable off a baseline entry;
+//  3. the documented top level, and an array's element kind, match the type the
 //     method decodes into;
-//  3. each required name the SDK does tag has a compatible Go type;
-//  4. the documented instance unmarshals without error -- reported last,
+//  4. each required name the SDK does tag has a compatible Go type;
+//  5. the documented instance unmarshals without error -- reported last,
 //     because a decode that succeeds is consistent with a type that ignores
 //     every documented name and so proves very little.
 //
-// Two limits on those four are part of the design rather than oversights, and both
-// are stated here because a reader of the counts needs them.
+// Three limits on those five are part of the design rather than oversights, and
+// all three are stated here because a reader of the counts needs them.
 //
 // A row is compared only when its SDK method sends the path the page documents.
 // Five rows are not: the method sends some other path, so the page is not that
@@ -120,11 +125,21 @@
 // block rather than in prose here. The path defects themselves are unaffected --
 // TestDefectivePathRowsAreDocumented lists all five.
 //
-// Check 1 is a floor, not a total. It considers the union of json tags at every
-// depth of the compared type, because encoding/json flattens a response body into
-// one name space, so a documented name the SDK carries only inside a nested object
-// counts as covered. The names that reached a tag only from below are printed per
-// row by TestObservedDivergenceReport under the required-name-depth skip.
+// Checks 1 and 2 are floors, not totals. They consider the union of json tags at
+// every depth of the compared type, because encoding/json flattens a response
+// body into one name space, so a documented name the SDK carries only inside a
+// nested object counts as covered. The names that reached a tag only from below
+// are printed per row by TestObservedDivergenceReport under the
+// required-name-depth skip.
+//
+// Check 2 skips three data.* rows that decode into a free-form map, which carries
+// every documented name and declares none of them; between them the three pages
+// declare 105 names, so a missing name there would be the harness's error rather
+// than a finding. It also skips any row whose page declares names at a level other
+// than the one it reads, which is an array of scalars. One row is recorded as
+// declared-inventory-empty instead: its page declares no property name at all, so
+// nothing on it could be compared, and filing that as a pass would make a page
+// nobody can examine read as a page that examined clean.
 //
 // Six decode targets are response envelopes the SDK package does not export, so
 // they cannot be named in a reflect.TypeOf call from here. They are read from the

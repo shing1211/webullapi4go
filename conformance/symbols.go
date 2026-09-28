@@ -98,7 +98,7 @@ type SDKType struct {
 }
 
 // DecodeTarget is the reflect.Type the symbol's method hands its transport, which
-// is the type the four checks compare a documented body against.
+// is the type the five checks compare a documented body against.
 //
 // An error here is a defect in this table rather than in the SDK, and it is
 // deliberately an error and not a nil: a nil type would be reported by the

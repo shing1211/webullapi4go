@@ -1,13 +1,17 @@
 {
-  "baselineCommit": "6d23d88",
+  "baselineCommit": "8472236",
   "policy": "The per-DTO comparison in conformance/shapes.go reports every documented divergence it finds. This file records the ones the current tree has, each with a reason and a pointer to where the defect is written down. The gate in conformance/divergence_test.go passes when the observed set EXACTLY equals the set below, and fails in both directions: a divergence not listed here is a new defect and fails immediately, and a listed entry that no longer reproduces also fails, because a fixed defect and a check that changed meaning look identical from the gate and both need a person to look at the tree. Editing this file is the whole of the workflow for adopting a change, and it is a hand edit on purpose: nothing in a test run writes it. An entry with an empty reason is a suppressed finding and LoadBaseline refuses to accept one.",
   "notes": {
     "scope": "193 documented endpoints carry a committed fixture. 154 are resolved to a Go type here and 39 are accounted for, not skipped: 29 name a broker/ symbol, which is a separate Go module and therefore not importable from the root module without a go.mod change, and 10 are the docgen manifest's em dash, an endpoint deliberately mapped to no SDK symbol. Of the 154 resolved rows, 5 are reported not comparable; see the notComparable note. Every broker/ row is therefore NOT covered by this instrument.",
     "notComparable": "5 of the 154 resolved rows claim nothing at all, because the SDK method sends a path other than the one the page documents and the page is therefore not that call's contract. A schema difference between a page and a call that is not the one the page documents is not a defect claim about this SDK, so folding it into either conforming or divergent would misreport it. They are counted in coverage.notComparable and printed with both paths by TestObservedDivergenceReport. The rows are: brokerfd.GetAccountsSummary on broker-fd-us/GET-broker-assets-summaries-get, data.GetStockInstruments on trading/GET-trading-instruments-stocks-profiles-list, data.GetDisplaySnapshot on display-solution/POST-market-data-stocks-snapshots-list, and client.CreateToken and client.CheckToken on the two authentication pages. The first three had 8 recorded rows between them, which this change removes; the two authentication rows had none. The path defects themselves are unaffected and stay recorded elsewhere: TestDefectivePathRowsAreDocumented lists all 5, and the GetDisplaySnapshot path defect is live-blocked SDK defect item 19.",
-    "nameCoverageIsAFloor": "The 122 missing-required-name rows are a floor, not a total. The name check considers the union of json tags at every depth of the compared type, because encoding/json flattens a response body into one name space, so a documented name the SDK carries only inside a nested object counts as covered. Nothing here records which names that applies to. It is now printed: the required-name-depth skip in TestObservedDivergenceReport names every required name that reached a tag only from below the level the page declares it at, per row. Depth scoping is deliberately not enforced, because a documented top-level name the SDK reaches one level down still decodes and reporting it would trade a floor for a class of false positives.",
-    "check4": "decodes-without-error is the weakest check: a decode that succeeds is consistent with a type that ignores every documented name, and a decode that fails is usually the same defect check 1 or check 2 already named. Its 29 entries are recorded so the count is stable, not because they are 29 new defects; most duplicate a shape or name entry for the same symbol. Each of those 29 details is written from what the harness already knows -- the compared Go type, and the documented top-level kind or element type or leaf type it could not accept -- and not from encoding/json's error message, because detail is part of an entry's identity and the decoder's wording is not stable across Go releases. An earlier version of this file quoted that message verbatim, and a later Go release rephrasing it turned all 29 entries at once into a new divergence and an entry that no longer reproduces. Nothing in any detail or reason here may quote a toolchain- or platform-dependent string: an OS message, a filesystem path and a decoder's phrasing are all diagnostics, and a diagnostic belongs in the report, not in an identity.",
+    "nameCoverageIsAFloor": "The 122 missing-required-name rows and the 104 missing-declared-name rows are both floors, not totals. The name checks consider the union of json tags at every depth of the compared type, because encoding/json flattens a response body into one name space, so a documented name the SDK carries only inside a nested object counts as covered. Nothing here records which names that applies to. For the required half it is printed: the required-name-depth skip in TestObservedDivergenceReport names every required name that reached a tag only from below the level the page declares it at, per row. It is deliberately not printed for the declared half, because tagsOf is called with the slice type on an array row, so the element's own fields land one level down and the same test would fire on nearly every declared name of every array row as a false \"reached from below\". Depth scoping is deliberately not enforced on either check, because a documented name the SDK reaches one level down still decodes and reporting it would trade a floor for a class of false positives.",
+    "declaredNameEvidence": "The 104 missing-declared-name rows over 34 rows, and the single declared-inventory-empty row, come from a second name check that runs only where the page publishes no required list. It is a separate kind and a separate check rather than an extension of the required half because the evidence is weaker and a baseline entry has to keep that readable: a required name is a promise the page makes, and a declared name is a description of one response, so a name absent from a page that does not mark it required may be optional, conditionally sent, or simply absent from the example the page chose. Each such row is a real silent-zero defect of the same shape as the 122 required ones -- including names that cost a caller money, eps_est and net_value and pe_ttm and dividend among them -- but none is of the same certainty, and the reasons say so per entry.",
+    "declaredNameNotSuppressed": "68 of the 104 sit on rows that also record a top-level-shape-mismatch, and 26 of those are the data and pagination_key pair that a bare-array SDK cannot carry. They are recorded rather than suppressed, and the reason is a dead end worth recording. The obvious suppression would drop every declared name on a shape-mismatched row, but that row set is not homogeneous: brokerfd.ListFDAccounts declares 2 names against a page of 6, so its object is an envelope and its names are the wrapper, while data.GetDSLatestNews declares 6 against a page of 6, so its object is the payload and its 5 missing names are a second, independent defect -- one of the four pages that document a single item on a path ending -list. data.GetMarketSectorDetail is both at once, carrying 4 content names beside 2 wrapper keys. Suppressing per row discards the content names, and no per-name test exists: the manifest records no type per declared name, and propertyNameCountInFixture is 0 on these rows because the committed minimal instances are empty, so nothing distinguishes a wrapper key from a payload field. The overlap is counted here instead, which is the same treatment the 29 decode-failure entries already get.",
+    "declaredNameGuards": "Three checks guard the declared half, and each one is load-bearing rather than decorative. A map decodes every documented name and declares none of them, so a missing tag on one is the harness's error and not a finding: data.GetBalanceSheet, data.GetCashFlow and data.GetIncomeStatement decode into a free-form map and their pages declare 105 names between them, so without the guard 68% of the whole finding set would have been false positives. A page that declares names at a level other than the one the row is read at is a skip and not a finding, because an array of scalars has no element object to name. And the check is tag-only: the required half also reports a name missing from the committed instance, but the generator builds that instance from required names alone, so every declared name would be absent from it and that half would report 100% false positives.",
+    "declaredInventoryEmpty": "brokerfd.ListAccountForms on broker-fd-us/GET-broker-forms-list is recorded as declared-inventory-empty, one row and one entry. Its page declares no property name at all, so neither name check had anything to look at and it is not a page that examined clean, it is a page nobody can examine. Filing it as a pass would have made a hole in the evidence base read as coverage, which is the specific failure this instrument exists to remove. It is a documentation gap rather than an SDK defect, and resolving it needs a written answer from Webull or one captured body.",
+    "decodeIsWeakest": "decodes-without-error is the weakest check: a decode that succeeds is consistent with a type that ignores every documented name, and a decode that fails is usually the same defect a name or shape check already named. Its 29 entries are recorded so the count is stable, not because they are 29 new defects; most duplicate a shape or name entry for the same symbol. Each of those 29 details is written from what the harness already knows -- the compared Go type, and the documented top-level kind or element type or leaf type it could not accept -- and not from encoding/json's error message, because detail is part of an entry's identity and the decoder's wording is not stable across Go releases. An earlier version of this file quoted that message verbatim, and a later Go release rephrasing it turned all 29 entries at once into a new divergence and an entry that no longer reproduces. Nothing in any detail or reason here may quote a toolchain- or platform-dependent string: an OS message, a filesystem path and a decoder's phrasing are all diagnostics, and a diagnostic belongs in the report, not in an identity.",
     "waivers": "No entry is waived. An earlier version of this file waived the two quote_time leaf-type rows on the reasoning that data/quotes.go:81-84 records the sandbox sending a JSON number, so retyping the field to string would be a regression. That reasoning was wrong on both rows. On data.GetQuotes the method cites at data/quotes.go:93 the very page the harness read, which declares quote_time as type string and requires it, so the SDK contradicts a contract it names; and the sandbox observation is scoped to one environment, where a published type does not stop applying. On data.GetDisplayDepth there was no evidence at all: that is the Display Solution host, which returns 403 at host level here, and an observation about the HK sandbox says nothing about it. Both are now recorded as ordinary open defects. The reason remains required and non-empty so that a finding can never be dropped by leaving the field blank -- but a required reason is not a true one, and these two rows are the case that proved it: a false reason satisfied the guard perfectly, repeated identically across both entries.",
-    "notInStatus": "5 of these 180 divergences are written up row by row in IMPLEMENTATION_STATUS.md, and all 5 are the one finding that document already named: the three brokerfd.GetFDPositions missing-required-name rows and the two brokerfd.GetFDAssetsDetail rows, each with a recordedIn naming live-blocked SDK defect item 20. The data.GetDisplaySnapshot defect is item 19, but it is a path defect rather than a row in this file, so it contributes no entry here and the notComparable note is where it lives. The other 175 are now written up as a class, in item 21 of the same document and in the subsection that precedes it, so the status documents no longer under-report the divergence set: that write-up groups all 180 rows by check with row and symbol counts, names the worst-affected symbols, states the two caveats that keep those counts honest -- the missing-required-name count is a floor rather than a total, and 19 of the 27 container-kind rows are indeterminate -- and gives per-class unblock requirements. It replaces the earlier reading that the five live-blocked SDK defects are the complete list of known divergences, which was true only of the request side and of one response DTO. The write-up is class-level and deliberately not row-level: per-row detail stays in this file, and the recordedIn of those 175 rows is unchanged, so each of them still states that no status-document entry exists for it. That sentence is about a row-level record, which is not what the class write-up provides, so the two are not in conflict and a reader who searches the status document for one row's symbol will not find it. Belonging to a documented class is also not being individually triaged. No one has decided, for any of the 19 indeterminate container-kind rows, whether the page or the type is the wrong one; the class write-up records them as open rather than settling them, and one live body or one written answer from Webull would.",
+    "notInStatus": "5 of these 285 divergences are written up row by row in IMPLEMENTATION_STATUS.md, and all 5 are the one finding that document already named: the three brokerfd.GetFDPositions missing-required-name rows and the two brokerfd.GetFDAssetsDetail rows, each with a recordedIn naming live-blocked SDK defect item 20. The data.GetDisplaySnapshot defect is item 19, but it is a path defect rather than a row in this file, so it contributes no entry here and the notComparable note is where it lives. The other 280 are now written up as a class, in item 21 of the same document and in the subsection that precedes it, so the status documents no longer under-report the divergence set: that write-up groups all 285 rows by check with row and symbol counts, names the worst-affected symbols, states the two caveats that keep those counts honest -- the missing-required-name count is a floor rather than a total, and 19 of the 27 container-kind rows are indeterminate -- and gives per-class unblock requirements. It replaces the earlier reading that the five live-blocked SDK defects are the complete list of known divergences, which was true only of the request side and of one response DTO. The write-up is class-level and deliberately not row-level: per-row detail stays in this file, and the recordedIn of those 175 rows is unchanged, and the 105 rows added by the declared-name check carry their own recordedIn naming item 21 plus the weaker evidence, so each of them still states that no status-document entry exists for it. That sentence is about a row-level record, which is not what the class write-up provides, so the two are not in conflict and a reader who searches the status document for one row's symbol will not find it. Belonging to a documented class is also not being individually triaged. No one has decided, for any of the 19 indeterminate container-kind rows, whether the page or the type is the wrong one; the class write-up records them as open rather than settling them, and one live body or one written answer from Webull would.",
     "tableIsManual": "The symbol-to-type table in conformance/symbols.go is hand written and is the instrument's weakest point. It is asserted against the manifest in both directions by TestSymbolTableCoversTheManifest, so a table hole fails the build rather than quietly reducing coverage, and every entry is resolved and checked by TestSymbolTableResolvesItsDecodeTargets. Six of its entries name a response envelope the SDK package does not export, which cannot be written as a reflect.TypeOf call at all; those are read from the SDK sources by conformance/envelopes.go, which fails closed on a field it cannot represent and whose rebuilt type is compared field by field against the declaration on every run. An earlier version of the table named the public projection several of those methods return instead, which compared a tagless struct against the page and reported 12 rows the SDK does not have."
   },
   "coverage": {
@@ -46,8 +50,8 @@
       "broker.UpdateVirtualAccount"
     ],
     "noSymbolRows": 10,
-    "symbolsInTable": 156,
-    "notComparable": 5
+    "notComparable": 5,
+    "symbolsInTable": 156
   },
   "entries": [
     {
@@ -311,6 +315,24 @@
     {
       "symbol": "brokerfd.GetFDActivities",
       "fixture": "broker-fd-us/GET-broker-activities-cash-activities-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDActivity, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDActivity carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDActivity is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDActivities",
+      "fixture": "broker-fd-us/GET-broker-activities-cash-activities-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDActivity, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDActivity carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDActivity is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDActivities",
+      "fixture": "broker-fd-us/GET-broker-activities-cash-activities-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []brokerfd.FDActivity decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
@@ -402,6 +424,114 @@
       "detail": "the documented instance does not unmarshal into []brokerfd.FDCorporateAction: the documented top level is object and []brokerfd.FDCorporateAction decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "category",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares category but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "country_code",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares country_code but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_id",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares event_id but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_type",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares event_type but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_version",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares event_version but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "final_pay_date",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares final_pay_date but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "from",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares from but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "instrument_id",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares instrument_id but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "issuer_country_code",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares issuer_country_code but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "listing_country_of_code",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares listing_country_of_code but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "payment_date",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares payment_date but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "to",
+      "detail": "no json tag in brokerfd.FDCorporateAction, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares to but does not mark it required, and no json tag in brokerfd.FDCorporateAction carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDCorporateAction is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.GetFDCorporateActions",
@@ -512,10 +642,55 @@
     {
       "symbol": "brokerfd.GetFDECInstruments",
       "fixture": "broker-fd-us/GET-broker-instruments-event-contracts-markets-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDECInstrument, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDECInstrument carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDECInstrument is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDECInstruments",
+      "fixture": "broker-fd-us/GET-broker-instruments-event-contracts-markets-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDECInstrument, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDECInstrument carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDECInstrument is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDECInstruments",
+      "fixture": "broker-fd-us/GET-broker-instruments-event-contracts-markets-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []brokerfd.FDECInstrument decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDEnums",
+      "fixture": "broker-fd-us/GET-broker-master-data-enums-list",
+      "kind": "missing-declared-name",
+      "name": "code",
+      "detail": "no json tag in brokerfd.FDEnum, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares code but does not mark it required, and no json tag in brokerfd.FDEnum carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDEnum is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDEnums",
+      "fixture": "broker-fd-us/GET-broker-master-data-enums-list",
+      "kind": "missing-declared-name",
+      "name": "name",
+      "detail": "no json tag in brokerfd.FDEnum, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares name but does not mark it required, and no json tag in brokerfd.FDEnum carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDEnum is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDEnums",
+      "fixture": "broker-fd-us/GET-broker-master-data-enums-list",
+      "kind": "missing-declared-name",
+      "name": "parent_code",
+      "detail": "no json tag in brokerfd.FDEnum, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares parent_code but does not mark it required, and no json tag in brokerfd.FDEnum carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDEnum is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.GetFDInstantFundingDetail",
@@ -573,6 +748,24 @@
     {
       "symbol": "brokerfd.GetFDOpenOrders",
       "fixture": "broker-fd-us/GET-broker-orders-open-orders-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDOpenOrders",
+      "fixture": "broker-fd-us/GET-broker-orders-open-orders-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDOpenOrders",
+      "fixture": "broker-fd-us/GET-broker-orders-open-orders-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []brokerfd.FDOrder decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
@@ -603,6 +796,24 @@
       "detail": "the documented instance does not unmarshal into []brokerfd.FDOrder: the documented top level is object and []brokerfd.FDOrder decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDOrderHistory",
+      "fixture": "broker-fd-us/GET-broker-orders-historical-orders-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDOrderHistory",
+      "fixture": "broker-fd-us/GET-broker-orders-historical-orders-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.GetFDOrderHistory",
@@ -646,6 +857,24 @@
       "detail": "the documented instance does not unmarshal into []brokerfd.FDStockInstrument: the documented top level is object and []brokerfd.FDStockInstrument decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDStockInstruments",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDStockInstrument, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDStockInstrument carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDStockInstrument is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.GetFDStockInstruments",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDStockInstrument, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDStockInstrument carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDStockInstrument is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.GetFDStockInstruments",
@@ -827,6 +1056,14 @@
     {
       "symbol": "brokerfd.ListAccountForms",
       "fixture": "broker-fd-us/GET-broker-forms-list",
+      "kind": "declared-inventory-empty",
+      "detail": "the page publishes no required list and declares no property name, so no name on it could be compared against the SDK at all",
+      "reason": "Gap in the evidence base rather than a defect in the SDK. This page declares no property name at all, neither required nor otherwise, so no name on it could be compared against any SDK type and neither name check had anything to look at. Recorded so the row does not read as examined clean when it was not examined. Resolving it needs a written answer from Webull or one captured body, and not an SDK change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.ListAccountForms",
+      "fixture": "broker-fd-us/GET-broker-forms-list",
       "kind": "decode-failure",
       "detail": "the documented instance does not unmarshal into []brokerfd.AccountForm: the documented element type is string and the []brokerfd.AccountForm element is object",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
@@ -865,6 +1102,24 @@
       "detail": "the documented instance does not unmarshal into []brokerfd.FDAccount: the documented top level is object and []brokerfd.FDAccount decodes it as array",
       "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.ListFDAccounts",
+      "fixture": "broker-fd-us/GET-broker-accounts-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.FDAccount, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.FDAccount carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDAccount is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.ListFDAccounts",
+      "fixture": "broker-fd-us/GET-broker-accounts-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.FDAccount, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.FDAccount carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDAccount is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.ListFDAccounts",
@@ -1011,10 +1266,37 @@
     {
       "symbol": "brokerfd.ListFDTransfers",
       "fixture": "broker-fd-us/GET-broker-funding-transfers-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in brokerfd.Transfer carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.Transfer is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.ListFDTransfers",
+      "fixture": "broker-fd-us/GET-broker-funding-transfers-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in brokerfd.Transfer carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.Transfer is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.ListFDTransfers",
+      "fixture": "broker-fd-us/GET-broker-funding-transfers-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []brokerfd.Transfer decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.PlaceFDOrder",
+      "fixture": "broker-fd-us/POST-broker-orders-place",
+      "kind": "missing-declared-name",
+      "name": "client_order_id",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares client_order_id but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.PreviewFDOrder",
@@ -1033,6 +1315,15 @@
       "detail": "no json tag in brokerfd.FDOrderPreview, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires estimated_transaction_fee and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.ReplaceFDOrder",
+      "fixture": "broker-fd-us/POST-broker-orders-replace",
+      "kind": "missing-declared-name",
+      "name": "client_order_id",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares client_order_id but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "brokerfd.UpdateFDAccount",
@@ -1070,6 +1361,51 @@
     {
       "symbol": "data.GetDSLatestNews",
       "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "missing-declared-name",
+      "name": "id",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares id but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_time",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_time but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_url",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_url but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "missing-declared-name",
+      "name": "source_name",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares source_name but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "missing-declared-name",
+      "name": "thumbnail",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares thumbnail but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []data.DSNewsSummaryItem decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.DSNewsSummaryItem decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
@@ -1082,6 +1418,51 @@
       "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "missing-declared-name",
+      "name": "id",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares id but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_time",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_time but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_url",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_url but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "missing-declared-name",
+      "name": "source_name",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares source_name but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "missing-declared-name",
+      "name": "thumbnail",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares thumbnail but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetDSMarketNews",
@@ -1098,6 +1479,51 @@
       "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "missing-declared-name",
+      "name": "args",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares args but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "missing-declared-name",
+      "name": "headers",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares headers but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "missing-declared-name",
+      "name": "message",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares message but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "missing-declared-name",
+      "name": "rows",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares rows but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "missing-declared-name",
+      "name": "type",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares type but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetDSNewsSummary",
@@ -1114,6 +1540,51 @@
       "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "missing-declared-name",
+      "name": "id",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares id but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_time",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_time but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "missing-declared-name",
+      "name": "news_url",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares news_url but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "missing-declared-name",
+      "name": "source_name",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares source_name but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "missing-declared-name",
+      "name": "thumbnail",
+      "detail": "no json tag in data.DSNewsSummaryItem, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares thumbnail but does not mark it required, and no json tag in data.DSNewsSummaryItem carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.DSNewsSummaryItem is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetDSSymbolNews",
@@ -1187,6 +1658,24 @@
     {
       "symbol": "data.GetDisplayGainersLosers",
       "fixture": "display-solution/GET-market-data-screeners-gainers-losers-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDisplayGainersLosers",
+      "fixture": "display-solution/GET-market-data-screeners-gainers-losers-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDisplayGainersLosers",
+      "fixture": "display-solution/GET-market-data-screeners-gainers-losers-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []data.ScreenerStock decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.ScreenerStock decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
@@ -1199,6 +1688,24 @@
       "detail": "the documented instance does not unmarshal into []data.ScreenerStock: the documented top level is object and []data.ScreenerStock decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDisplayTopActive",
+      "fixture": "display-solution/GET-market-data-screeners-top-actives-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetDisplayTopActive",
+      "fixture": "display-solution/GET-market-data-screeners-top-actives-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetDisplayTopActive",
@@ -1300,6 +1807,24 @@
     {
       "symbol": "data.GetEventContractMarkets",
       "fixture": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.EventContractMarket, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.EventContractMarket carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.EventContractMarket is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetEventContractMarkets",
+      "fixture": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.EventContractMarket, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.EventContractMarket carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.EventContractMarket is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetEventContractMarkets",
+      "fixture": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []data.EventContractMarket decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.EventContractMarket decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
@@ -1312,6 +1837,24 @@
       "detail": "the documented instance does not unmarshal into []data.EventContractSeries: the documented top level is object and []data.EventContractSeries decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetEventContractSeries",
+      "fixture": "event-contracts/GET-trading-instruments-event-contracts-series-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.EventContractSeries, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.EventContractSeries carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.EventContractSeries is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetEventContractSeries",
+      "fixture": "event-contracts/GET-trading-instruments-event-contracts-series-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.EventContractSeries, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.EventContractSeries carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.EventContractSeries is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetEventContractSeries",
@@ -1482,6 +2025,105 @@
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
     {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "currency",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares currency but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "end_date",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares end_date but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "eps_est",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares eps_est but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "eps_ly",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares eps_ly but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "fiscal_period",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares fiscal_period but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "fiscal_year",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares fiscal_year but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "rev_est",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares rev_est but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "rev_ly",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares rev_ly but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialAlert",
+      "fixture": "fundamentals/GET-market-data-fundamentals-financial-alerts-get",
+      "kind": "missing-declared-name",
+      "name": "start_date",
+      "detail": "no json tag in data.FinancialAlert, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares start_date but does not mark it required, and no json tag in data.FinancialAlert carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialAlert is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialIndicators",
+      "fixture": "fundamentals/GET-market-data-fundamentals-indicators-get",
+      "kind": "missing-declared-name",
+      "name": "currency",
+      "detail": "no json tag in data.FinancialIndicator, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares currency but does not mark it required, and no json tag in data.FinancialIndicator carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialIndicator is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFinancialIndicators",
+      "fixture": "fundamentals/GET-market-data-fundamentals-indicators-get",
+      "kind": "missing-declared-name",
+      "name": "values",
+      "detail": "no json tag in data.FinancialIndicator, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares values but does not mark it required, and no json tag in data.FinancialIndicator carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FinancialIndicator is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
       "symbol": "data.GetFundDividends",
       "fixture": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
       "kind": "decode-failure",
@@ -1492,10 +2134,154 @@
     {
       "symbol": "data.GetFundDividends",
       "fixture": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.FundDividend, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.FundDividend carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundDividend is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundDividends",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.FundDividend, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.FundDividend carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundDividend is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundDividends",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-dividends-get",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []data.FundDividend decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.FundDividend decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "benchmark",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares benchmark but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "custodian",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares custodian but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "investment_objective",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares investment_objective but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "issuer",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares issuer but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "launch_date",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares launch_date but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundInfo",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-brief-get",
+      "kind": "missing-declared-name",
+      "name": "managers",
+      "detail": "no json tag in data.FundInfo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares managers but does not mark it required, and no json tag in data.FundInfo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundInfo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundNav",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-net-values-get",
+      "kind": "missing-declared-name",
+      "name": "date",
+      "detail": "no json tag in data.FundNav, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares date but does not mark it required, and no json tag in data.FundNav carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundNav is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetFundNav",
+      "fixture": "fundamentals/GET-market-data-fundamentals-fund-net-values-get",
+      "kind": "missing-declared-name",
+      "name": "net_value",
+      "detail": "no json tag in data.FundNav, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares net_value but does not mark it required, and no json tag in data.FundNav carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.FundNav is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "category",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares category but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "currency",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares currency but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "dividend",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares dividend but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "ex_date",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares ex_date but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "pe_ttm",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pe_ttm but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetHighDividendRank",
+      "fixture": "market-data-screener/GET-market-data-screeners-high-dividend-ranks-list",
+      "kind": "missing-declared-name",
+      "name": "yield",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares yield but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetLogos",
@@ -1504,6 +2290,24 @@
       "detail": "the documented instance does not unmarshal into []data.Logo: the documented top level is object and []data.Logo decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetLogos",
+      "fixture": "display-solution/POST-market-data-fundamentals-logos-list",
+      "kind": "missing-declared-name",
+      "name": "category",
+      "detail": "no json tag in data.Logo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares category but does not mark it required, and no json tag in data.Logo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.Logo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetLogos",
+      "fixture": "display-solution/POST-market-data-fundamentals-logos-list",
+      "kind": "missing-declared-name",
+      "name": "logo_url",
+      "detail": "no json tag in data.Logo, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares logo_url but does not mark it required, and no json tag in data.Logo carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.Logo is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetLogos",
@@ -1524,6 +2328,60 @@
     {
       "symbol": "data.GetMarketSectorDetail",
       "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "advanced",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares advanced but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "declined",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares declined but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "flat",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares flat but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "id",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares id but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectorDetail",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-get",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []data.ScreenerStock decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.ScreenerStock decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
@@ -1536,6 +2394,24 @@
       "detail": "the documented instance does not unmarshal into []data.MarketSector: the documented top level is object and []data.MarketSector decodes it as array",
       "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetMarketSectors",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in data.MarketSector, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares data but does not mark it required, and no json tag in data.MarketSector carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.MarketSector is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetMarketSectors",
+      "fixture": "market-data-screener/GET-market-data-screeners-market-sectors-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in data.MarketSector, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in data.MarketSector carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.MarketSector is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "data.GetMarketSectors",
@@ -1566,7 +2442,6 @@
       "symbol": "data.GetStockProfilesV3",
       "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
       "kind": "decode-failure",
-      "name": "",
       "detail": "the documented instance does not unmarshal into data.instrumentProfilesV3Resp: the documented top level is array and data.instrumentProfilesV3Resp decodes it as object",
       "reason": "The decode failure is the same disagreement the shape check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
       "recordedIn": "the same two sources as the shape row for this symbol: data/instrument_v3.go:28 and data/instrument_v3.go:42 against the page the manifest names; no IMPLEMENTATION_STATUS.md entry yet"
@@ -1574,11 +2449,82 @@
     {
       "symbol": "data.GetStockProfilesV3",
       "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "is_adr",
+      "detail": "no json tag in data.instrumentProfilesV3Resp, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares is_adr but does not mark it required, and no json tag in data.instrumentProfilesV3Resp carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.instrumentProfilesV3Resp is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetStockProfilesV3",
+      "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "subtype",
+      "detail": "no json tag in data.instrumentProfilesV3Resp, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares subtype but does not mark it required, and no json tag in data.instrumentProfilesV3Resp carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.instrumentProfilesV3Resp is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetStockProfilesV3",
+      "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
       "kind": "top-level-shape-mismatch",
-      "name": "",
       "detail": "documented top level is array, data.instrumentProfilesV3Resp decodes it as object",
       "reason": "Open defect, not waived, and the disagreement is the SDK's own rather than the harness's. The method's comment at data/instrument_v3.go:28 states that the v3 endpoint returns a {data, pagination_key} envelope, and data/instrument_v3.go:42 declares the envelope the method decodes, while the page the manifest names documents a bare array. One of the two sources is wrong about the wire; this entry records that it is not established which, which is not the same as recording that there is nothing to decide. A call to the endpoint returns a body one of these two shapes cannot decode. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
       "recordedIn": "data/instrument_v3.go:28 (the method's comment stating the endpoint returns a {data, pagination_key} envelope) and data/instrument_v3.go:42 (the envelope it decodes); the page the manifest names, developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-using-get.md, which documents a bare array; no IMPLEMENTATION_STATUS.md entry yet"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "category",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares category but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "change_ratio_52w",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares change_ratio_52w but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "currency",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares currency but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "pe_ttm",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares pe_ttm but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "price_1w",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares price_1w but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "data.GetWeek52HighLow",
+      "fixture": "market-data-screener/GET-market-data-screeners-week52-high-low-list",
+      "kind": "missing-declared-name",
+      "name": "price_52w",
+      "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares price_52w but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
     },
     {
       "symbol": "trade.BatchPlaceOrder",
