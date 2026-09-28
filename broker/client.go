@@ -78,11 +78,6 @@ func (c *Client) put(ctx context.Context, path string, query url.Values, body, o
 	return c.do(ctx, http.MethodPut, path, query, body, out)
 }
 
-// delete is a convenience wrapper around [Client.do] for DELETE requests.
-func (c *Client) delete(ctx context.Context, path string, query url.Values, body, out any) error {
-	return c.do(ctx, http.MethodDelete, path, query, body, out)
-}
-
 // Close releases resources held by the client. The underlying [client.Client]
 // is owned by the caller and is not closed here.
 func (c *Client) Close() error { return nil }

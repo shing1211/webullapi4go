@@ -9,6 +9,76 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.26] - 2026-09-28
+
+Harness and test release. The Broker API HK surface stops being the largest
+unexamined area in the repository: its 29 documented endpoints are now measured by
+the same five checks as the root module, and **62 further divergences are recorded
+for them**. One dead unexported method is removed. No fixture, no baseline entry in
+the root module, and no SDK response type changed, and nothing is live-verified.
+
+### Added
+
+- **The `broker/` module is inside the wire-conformance harness.** Its 29 rows were
+  out of scope because the module is separate and no symbol in the root module can
+  name a broker type — the same unexported-type problem the envelope machinery
+  exists to solve. `broker/conformance_test.go` resolves all 29 rows from inside the
+  module and runs the identical checks: **28 compared, 2 of them against an
+  unexported envelope read from source, 1 decoding no body, 0 not comparable, and 62
+  divergences recorded**. Every check runs the root module's code; nothing in the new
+  file reimplements one, so a change to a check reaches these rows as well as the
+  root module's 285. Only the symbol table is written twice, which is unavoidable
+  and is asserted in both directions so a hole fails the build rather than quietly
+  reducing what is measured.
+- **Two exports from the root module, both narrow.**
+  `RegisterEnvelopeNamedType` lets a module register a type the root cannot name,
+  and refuses a spelling already taken so it cannot redefine a root fact;
+  `EnvelopeType` exposes the resolver for the same reason. The registration map is
+  now read under the mutex that already guarded the envelope cache, and the
+  root module's 285 recorded divergences and its race-clean run are unchanged.
+- **The broker baseline carries a reason and a pointer per entry**, and the loader
+  refuses a file whose entries lack either, rejects a duplicate key, and rejects an
+  unsorted `entries` array — the same rules the root baseline holds itself to, for
+  the same reasons.
+
+### Fixed
+
+- **62 recorded divergences on the Broker API HK surface, 52 of them silent, over
+  20 symbols.** By kind: 29 `missing-required-name`, 23 `missing-declared-name`,
+  5 `top-level-shape-mismatch` and 5 `decode-failure`; the two name classes are the
+  silent ones, and the 5 decode failures restate a shape row on the same symbol.
+  The largest single finding is `broker.GetPositions`, missing `cost_price`,
+  `last_price` and `unrealized_profit_loss`: **the identical three names
+  `brokerfd.GetFDPositions` is missing**, so a caller reading a Broker HK position
+  gets the same three silently zeroed values it already got from Broker FD. The
+  defect is duplicated across two surfaces, which no amount of measurement of one of
+  them would have revealed; the row also misses `option_strategy` and `position_id`
+  of its own. `broker.UpdateVirtualAccount` is missing
+  `client_request_id`, the field item 18's verb-and-body defect is about, so the two
+  findings describe one problem from two directions.
+- **A dead unexported method removed from `broker/client.go`.** A three-line
+  "convenience wrapper" around `Client.do` for DELETE requests, with no caller
+  anywhere in the module. It survived because the root `lint` job cannot reach a
+  separate Go module: CI lints the root module only, so nothing had ever examined
+  this file. It is the third blind spot of one shape in this release — `broker/` was
+  outside the root's tests, then outside its lint, and now outside neither.
+
+### Noted
+
+- **The two divergence sets are reported separately and not merged.** The root
+  module's 285 and the broker module's 62 are two measurements of two modules, and
+  adding them would lose the fact that one comes from a place the other cannot see.
+  A limit that survives: the root module still cannot name a broker type, so a
+  *change* to a broker response type is visible only to the broker module's own CI
+  job, not to the root gate.
+- **Proven to bite, in three directions, on the real tree.** Removing one baseline
+  entry produces a stale-entry failure; blanking one reason is refused at load with
+  the entry named; and dropping one row from the symbol table produces
+  "manifest row ... names broker.GetFXRate, which no table here can resolve" rather
+  than a smaller coverage number reading as green. The first attempt at the third
+  proof passed spuriously because the removal string did not match after gofmt
+  realigned the map, so the proof was redone against the aligned text.
+
 ## [2.1.25] - 2026-09-28
 
 Harness release. The committed wire-conformance fixtures gained a per-fixture

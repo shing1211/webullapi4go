@@ -85,6 +85,49 @@ var envelopeNamedTypes = map[string]reflect.Type{
 	"data.StockInstrument":  reflect.TypeOf(data.StockInstrument{}),
 }
 
+// RegisterEnvelopeNamedType makes a type from outside the root module available to
+// the envelope resolver, under a "pkg.Type" spelling.
+//
+// It exists for the broker/ module, which is a separate Go module and therefore
+// cannot be named from here: the two broker envelopes whose `var out` is an
+// unexported type refer to broker.VirtualAccount and broker.Position, and neither
+// can appear in a map literal in this file for the same reason the symbol table
+// cannot name broker types. A test in broker/ registers them once and then reuses
+// this package's parser, rebuild and comparison unchanged, which is the point: the
+// second copy of the envelope mechanism this avoids is the failure mode.
+//
+// Registration refuses a spelling that is already taken, so a module cannot
+// silently redefine a type the root module resolved. It is safe to call from
+// TestMain, before any comparison, and is guarded so a concurrent call cannot race
+// a reader.
+func RegisterEnvelopeNamedType(spelling string, t reflect.Type) error {
+	pkg, name, ok := strings.Cut(spelling, ".")
+	if !ok || pkg == "" || name == "" {
+		return fmt.Errorf("spelling %q is not package.Type", spelling)
+	}
+	if t == nil {
+		return fmt.Errorf("spelling %q was given a nil type", spelling)
+	}
+	envelopeCacheMu.Lock()
+	defer envelopeCacheMu.Unlock()
+	if prev, taken := envelopeNamedTypes[spelling]; taken {
+		return fmt.Errorf("spelling %q is already registered as %s, so this module may "+
+			"not redefine it", spelling, prev)
+	}
+	envelopeNamedTypes[spelling] = t
+	// A type registered after a resolution was cached would leave the cache
+	// holding a type built without it, so the spelling is dropped rather than
+	// trusted to be absent.
+	delete(envelopeCache, spelling)
+	return nil
+}
+
+// EnvelopeType resolves a "pkg.Type" spelling to the struct type the SDK package
+// declares under that name, for a caller outside the root module that cannot
+// reach the unexported resolver. See RegisterEnvelopeNamedType for why such a
+// caller exists.
+func EnvelopeType(spelling string) (reflect.Type, error) { return envelopeType(spelling) }
+
 // envelopeBuiltins are the predeclared types a field may name. It is the same set
 // the harness would otherwise reach through reflect, listed so that a field
 // naming a type the parser does not understand produces one clear error.
@@ -324,7 +367,7 @@ func resolveFieldType(pkg string, f envelopeField) (reflect.Type, error) {
 	if t, ok := envelopeBuiltins[f.Type]; ok {
 		return t, nil
 	}
-	if registered, ok := envelopeNamedTypes[pkg+"."+f.Type]; ok {
+	if registered, ok := lookupEnvelopeNamedType(pkg + "." + f.Type); ok {
 		return registered, nil
 	}
 	for prefix, wrap := range map[string]func(reflect.Type) reflect.Type{
@@ -338,7 +381,7 @@ func resolveFieldType(pkg string, f envelopeField) (reflect.Type, error) {
 		if t, ok := envelopeBuiltins[elem]; ok {
 			return wrap(t), nil
 		}
-		if registered, ok := envelopeNamedTypes[pkg+"."+elem]; ok {
+		if registered, ok := lookupEnvelopeNamedType(pkg + "." + elem); ok {
 			return wrap(registered), nil
 		}
 	}
@@ -348,6 +391,16 @@ func resolveFieldType(pkg string, f envelopeField) (reflect.Type, error) {
 	}
 	return nil, fmt.Errorf("%q is not a builtin and not one of the registered SDK "+
 		"types this resolver knows, so the field type cannot be resolved", f.Type)
+}
+
+// lookupEnvelopeNamedType reads the registration map under the same lock
+// RegisterEnvelopeNamedType writes it with, so a module registering from another
+// package cannot race a reader here.
+func lookupEnvelopeNamedType(spelling string) (reflect.Type, bool) {
+	envelopeCacheMu.RLock()
+	defer envelopeCacheMu.RUnlock()
+	t, ok := envelopeNamedTypes[spelling]
+	return t, ok
 }
 
 // isExportedIdent reports whether name can begin an exported Go identifier, so a

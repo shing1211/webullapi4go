@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.25`** (2026-09-28)
+- Latest repository tag: **`v2.1.26`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -620,9 +620,31 @@ its own `recordedIn`.
     a paid Display Solution entitlement for `data.GetDisplayDepth`; and a written
     answer from Webull on the 4 pages that document a single item where the path
     says list.
-  - Scope limit: the 29 `broker/` endpoints are not covered at all, being a
-    separate Go module, so this entry is not a statement about them. Item 22 is
-    the limit underneath this entry's counts rather than beside them: it records
+  - **The `broker/` module is now measured too, by the same code.** Its 29
+    documented endpoints were out of scope here until this release, because the
+    module is separate and no symbol in the root module can name a broker type.
+    That is no longer the case: `broker/conformance_test.go` resolves all 29 rows
+    from inside the module and runs the identical five checks, and
+    `broker/conformance-divergences.json` records what it found — **62 further
+    divergences over 28 compared rows, 1 row decoding no body and 0 not
+    comparable**. The counts above remain the root module's own; this entry's 285
+    does not include the 62, and the two sets are reported separately rather than
+    merged, because merging them would lose the fact that one comes from a module
+    the root cannot see. Two findings are worth naming because they are not new
+    defects but the *same* defect on a second surface: `broker.GetPositions` is
+    missing `cost_price`, `last_price` and `unrealized_profit_loss`, the identical
+    three names `brokerfd.GetFDPositions` is missing, so a caller reading a Broker
+    HK position gets the same three silently zeroed values it already got from
+    Broker FD. `broker.UpdateVirtualAccount` is additionally missing
+    `client_request_id`, which is the field item 18's verb-and-body defect is
+    about. All 62 remain open and none is live-verified; Broker API HK returns
+    `401 ROUTE_NOT_PERMITTED` in the HK sandbox, so the unblock is a production or
+    US-scoped Broker credential.
+  - Scope limit: nothing in the 193-fixture manifest is now unexamined. The 29
+    `broker/` rows are covered as above. What remains out of reach is different:
+    the root module still cannot name a broker type, so a *change* to a broker type
+    is only visible to the broker module's own job, not to the root gate. Item 22
+    is the limit underneath this entry's counts rather than beside them: it records
     what a row with no recorded divergence does and does not establish.
 
 - **Item 22 — for most of the measured surface, a clean conformance row meant
@@ -737,8 +759,10 @@ its own `recordedIn`.
   unexamined. 6 rows remain unnameable for three different reasons, named in item
   22, which leaves 84 of the 90 checkable. The `trade` surface splits — 5 of its 13
   compared endpoints publish a `required` list and 8 do not — so the 90 does not
-  describe the whole surface. Separately, the 29 `broker/` endpoints are unexamined
-  altogether, for the different reason item 21 records.
+  describe the whole surface. Nothing in the 193-fixture manifest is now
+  unexamined: the 29 `broker/` endpoints, out of reach for want of a nameable
+  type until this release, are covered by `broker/conformance_test.go` under the
+  same checks and carry **62 further recorded divergences of their own**.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
   not behavior guarantees.
 
