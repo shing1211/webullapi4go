@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.29`** (2026-09-28)
+- Latest repository tag: **`v2.1.30`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -532,8 +532,8 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 278 divergences fall on 60 symbols, in three packages:
-`brokerfd` 142, `data` 132, `trade` 4. The 4 `trade` rows are all on
+record no divergence. All 250 divergences fall on 59 symbols, in three packages:
+`brokerfd` 114, `data` 132, `trade` 4. The 4 `trade` rows are all on
 `trade.BatchPlaceOrder`; 12 of the 13 trading endpoints the harness compared record
 no divergence, and 4 of the 5 that publish a `required` list are among them, so the
 trading API's response types are the most conformant part of the surface measured.
@@ -584,7 +584,7 @@ give it something to check — not a correctness verdict.
   be caught, naming both structs the one careless edit would have hit. The two
   per-type tests stay, because a per-type test pins the specific defect with its
   reasoning while the scan only says the class is empty.
-- **`missing-required-name` — 119 rows across 28 symbols, the silent class.** A
+- **`missing-required-name` — 91 rows across 27 symbols, the silent class.** A
   name the page marks `required` has no matching json tag anywhere in the type the
   method decodes into, so the documented value decodes to the zero value and no
   error is reported. This is the `brokerfd.GetFDPositions` mechanism at scale, and
@@ -691,7 +691,7 @@ give it something to check — not a correctness verdict.
   symbol: 27 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch`
   row. They are recorded so the count stays stable, not because they are 29
   additional defects, and no separate work is attached to them. This is the
-  arithmetic reason the class totals must not be read as 278 independent problems.
+  arithmetic reason the class totals must not be read as 250 independent problems.
 - **`leaf-type-mismatch` — no rows.** The class had two, both
 `data.Quote.QuoteTime`, and both are fixed; see item 25. It is the only class in
 this table that is now empty, which is worth stating plainly rather than leaving
@@ -722,18 +722,18 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 - **Item 21 — the response contracts across the API surface are now measured, and
   they are largely divergent.** The five bullets above are one host, some path
   literals, a verb and body, a request shape, and one response DTO. This entry is
-  the class that last one belongs to, taken across the surface: 278 recorded
-    divergences on 62 symbols, in `brokerfd` (142), `data` (136), and `trade` (4).
+  the class that last one belongs to, taken across the surface: 250 recorded
+    divergences on 59 symbols, in `brokerfd` (114), `data` (132), and `trade` (4).
 
   | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
   |---|---:|---:|---:|---:|---:|---|
-| `missing-required-name` | 119 | 28 | 86 | 29 | 4 | **Silently** - the documented value decodes to its zero value, no error reported |
+| `missing-required-name` | 91 | 27 | 58 | 29 | 4 | **Silently** - the documented value decodes to its zero value, no error reported |
 | `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
 | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
-  | Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
+| Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
 | `decode-failure` | 27 | 27 | 12 | 15 | 0 | Restates a container-kind or leaf-type row for the same symbol |
 | `leaf-type-mismatch` | 0 | 0 | 0 | 0 | 0 | **Empty.** Both rows were `data.Quote.QuoteTime`, fixed by a type that reads both shapes Webull publishes; see item 25 |
-| **Total** | **278** | **60** | **142** | **132** | **4** | |
+| **Total** | **250** | **59** | **114** | **132** | **4** |
 
   Three caveats travel with those numbers. **119 and 104 are both floors, not
   totals**: the name checks consider the union of json tags at every depth, so 19
@@ -776,7 +776,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
   - **Nothing here is live-verified.** No endpoint was called and no credential was
     used. The static comparison is certain; which side a live server honours is
     unverified for every row, exactly as for the `brokerfd.GetFDPositions` bullet.
-  - Not 278 defects: 27 rows are the `decode-failure` class restating another row
+  - Not 250 defects: 27 rows are the `decode-failure` class restating another row
     for the same symbol, 68 are declared-name rows resting on a container-kind row
     for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an
     evidence-base hole.
@@ -798,7 +798,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     from inside the module and runs the identical five checks, and
     `broker/conformance-divergences.json` records what it found — **59 further
     divergences over 28 compared rows, 1 row decoding no body and 0 not
-    comparable**. The counts above remain the root module's own; this entry's 278
+    comparable**. The counts above remain the root module's own; this entry's 250
     does not include the 59, and the two sets are reported separately rather than
     merged, because merging them would lose the fact that one comes from a module
     the root cannot see. Two findings are worth naming because they are not new
@@ -913,7 +913,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
   and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
   maintainer decision on versioning a breaking public API change.
 - **Those five are not the complete list.** Item 21 records a sixth entry covering
-  278 measured response-contract divergences on 60 symbols, of which 273 were
+  250 measured response-contract divergences on 59 symbols, of which 245 were
   previously unwritten. Most of that class fails silently, which is worse than
   failing loudly. It now spans two silent name classes on different evidence, 119
   resting on a `required` promise and 104 on a name the page merely describes, and

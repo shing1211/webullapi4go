@@ -9,6 +9,80 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.30] - 2026-09-28
+
+Corrective release, and a small one with a large lesson in it. 28 recorded
+divergences are fixed by 19 additive fields, and the largest remaining class is sized
+and split into work that is safe and work that would encode the wrong contract. It also
+adds the gate whose absence let three separate false premises accumulate in the status
+document, and finds that a fourth recorded item was already closed. Root baseline 278 to
+250 rows over 59 symbols. No fixture changed. Nothing is live-verified.
+
+### Fixed
+
+- **28 `missing-required-name` rows removed, by 19 fields, with no probe.** The three
+  names are `client_request_id` on 11 symbols, `update_time` on 11 and `create_time` on
+  6, across 8 Broker FD response types. A *required* name is one a conforming server
+  always sends, so adding a field cannot break a call that works today - the same
+  additive argument item 20 made, and the reason it needs no credential.
+  `client_request_id` already appears in the sibling `broker/` module in exactly this
+  role, so the spelling follows it rather than being invented. The exact-set gate
+  confirmed all 28 stopped reproducing and produced **no new divergence**, which is the
+  check that the chosen field types are compatible; a wrong type would have shown up as
+  a new leaf-type or decode row.
+- **Item 15's premise was false, and it had been closed since v2.1.4.** It recorded
+  nested coverage and a strict documentation build as Makefile/release gates rather
+  than CI gates. Both are CI jobs - `docs (strict)` runs `mkdocs build --strict`,
+  `nested coverage` runs `go test -cover` across the module matrix with a floor on
+  `broker/`, and `citations` is a third - all three verified passing on the v2.1.29
+  tag run, and the document's own version history recorded adding them in v2.1.4. What
+  survives is the half that was never a gap: a measured percentage is not a behaviour
+  guarantee, and a coverage floor is a floor rather than proof.
+
+### Added
+
+- **A gate on the status document's own numbers.** The class table is parsed out of
+  both status documents and compared against the committed baselines, so a count can
+  only change by changing the baseline and the table together. It exists because the
+  table had to be corrected by hand in v2.1.27 - a hand-counted figure said 29 symbols
+  where the baseline and the gate both said 28 - and because a hand-recomputed figure
+  is a figure that will be wrong again. The gate caught the same class of error
+  immediately on its first run: the 28-row fix left the table at 278 while the
+  baseline was 250. It is proven to bite on a single wrong cell, a wrong total, and the
+  mirror drifting from the root.
+
+### Noted
+
+- **The remaining 91 `missing-required-name` rows are not one kind of work, and 53 were
+  deliberately left alone.** A missing required name is not always a missing field: a
+  page that wraps its payload in `{"result": [...]}` against an SDK that decodes the
+  inner item presents object against object, which the container-kind check cannot
+  see, so every top-level required name reads as missing when the real defect is a
+  depth mismatch. `data.GetEventBars` and `GetEventTick` are missing `result` while
+  `data.StockBars` has one; `trade.BatchPlaceOrder` is missing `batch_orders`, `total`,
+  `success` and `failed`, which is a batch-result envelope rather than four attributes
+  of an order. Adding fields for those would encode a contract the page does not
+  describe.
+- **A measurable warning sign, which is the part worth keeping.** 4 of the 28 symbols
+  carrying required-name rows also record a container-kind mismatch -
+  `GetAgreementDetail`, `GetFDAssetsDetail`, `GetFDTransferFees` and
+  `data.GetEventDepth` - so their 17 rows are secondary symptoms and must not be fixed
+  by adding fields. The other 24 record no mismatch, which is necessary but **not
+  sufficient**: the envelope case is invisible to the shape check, so absence of a
+  mismatch is not evidence that a name belongs on the object. The class should be
+  worked one symbol at a time, not in bulk.
+- **A second blind spot this exposed.** The shape check compares container *kind*, so
+  it cannot see a depth mismatch when both sides are objects. That is a real limit of
+  the instrument. Only the 4 correlated symbols show it in the committed baseline,
+  which is too few to size the class, and a depth-scoped check would report names the
+  SDK does decode - which is why `CheckNameDepth` exists as a check that does not run.
+- **Three false premises in one document, in a row.** Item 12's counts, item 19's
+  "differs from both official sources", and now item 15's CI gaps were each wrong, and
+  each would have sent a reader down a path the evidence does not support. The table
+  gate covers the numbers; the prose claims are outside its scope and remain a manual
+  read, which is stated here so the gate is not mistaken for more than it is.
+- No fixture or manifest byte changed.
+
 ## [2.1.29] - 2026-09-28
 
 Documentation release. It changes no SDK request and no fixture. It completes the

@@ -100,33 +100,6 @@
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
-      "symbol": "brokerfd.AddFDAchAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-ach-relationships-create",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.ACHAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.AddFDAchAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-ach-relationships-create",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.ACHAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.AddFDAchAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-ach-relationships-create",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.ACHAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
       "symbol": "brokerfd.AddFDBankAccount",
       "fixture": "broker-fd-us/POST-broker-funding-bank-relationships-create",
       "kind": "missing-required-name",
@@ -172,57 +145,12 @@
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
-      "symbol": "brokerfd.AddFDBankAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-bank-relationships-create",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.AddFDBankAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-bank-relationships-create",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.AddFDBankAccount",
-      "fixture": "broker-fd-us/POST-broker-funding-bank-relationships-create",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
       "symbol": "brokerfd.CreateFDAccount",
       "fixture": "broker-fd-us/POST-broker-accounts-create",
       "kind": "missing-required-name",
       "name": "application_id",
       "detail": "no json tag in brokerfd.FDAccount, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires application_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.CreateFDAccount",
-      "fixture": "broker-fd-us/POST-broker-accounts-create",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.FDAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.CreateFDInstantFunding",
-      "fixture": "broker-fd-us/POST-broker-funding-instant-funding-create",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -250,15 +178,6 @@
       "name": "type",
       "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires type and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.CreateFDInstantFunding",
-      "fixture": "broker-fd-us/POST-broker-funding-instant-funding-create",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -385,15 +304,6 @@
       "symbol": "brokerfd.GetFDCashJournalDetail",
       "fixture": "broker-fd-us/GET-broker-journals-cash-journals-get",
       "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.FDCashJournal, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDCashJournalDetail",
-      "fixture": "broker-fd-us/GET-broker-journals-cash-journals-get",
-      "kind": "missing-required-name",
       "name": "from_account",
       "detail": "no json tag in brokerfd.FDCashJournal, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires from_account and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
@@ -406,15 +316,6 @@
       "name": "to_account",
       "detail": "no json tag in brokerfd.FDCashJournal, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires to_account and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDCashJournalDetail",
-      "fixture": "broker-fd-us/GET-broker-journals-cash-journals-get",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.FDCashJournal, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -563,27 +464,9 @@
       "symbol": "brokerfd.GetFDCreditInfo",
       "fixture": "broker-fd-us/GET-broker-credits-get",
       "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.CreditInfo, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDCreditInfo",
-      "fixture": "broker-fd-us/GET-broker-credits-get",
-      "kind": "missing-required-name",
       "name": "contra_account",
       "detail": "no json tag in brokerfd.CreditInfo, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires contra_account and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDCreditInfo",
-      "fixture": "broker-fd-us/GET-broker-credits-get",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.CreditInfo, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -620,15 +503,6 @@
       "name": "type",
       "detail": "no json tag in brokerfd.CreditInfo, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires type and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDCreditInfo",
-      "fixture": "broker-fd-us/GET-broker-credits-get",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.CreditInfo, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -696,15 +570,6 @@
       "symbol": "brokerfd.GetFDInstantFundingDetail",
       "fixture": "broker-fd-us/GET-broker-funding-instant-funding-get",
       "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDInstantFundingDetail",
-      "fixture": "broker-fd-us/GET-broker-funding-instant-funding-get",
-      "kind": "missing-required-name",
       "name": "currency",
       "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires currency and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
@@ -726,15 +591,6 @@
       "name": "type",
       "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires type and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDInstantFundingDetail",
-      "fixture": "broker-fd-us/GET-broker-funding-instant-funding-get",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.InstantFunding, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -879,15 +735,6 @@
       "symbol": "brokerfd.GetFDTransferDetail",
       "fixture": "broker-fd-us/GET-broker-funding-transfers-get",
       "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDTransferDetail",
-      "fixture": "broker-fd-us/GET-broker-funding-transfers-get",
-      "kind": "missing-required-name",
       "name": "direction",
       "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires direction and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
@@ -900,15 +747,6 @@
       "name": "transfer_type",
       "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires transfer_type and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDTransferDetail",
-      "fixture": "broker-fd-us/GET-broker-funding-transfers-get",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -932,27 +770,9 @@
       "symbol": "brokerfd.GetFDTransferFees",
       "fixture": "broker-fd-us/GET-broker-fees-get",
       "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.TransferFee, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDTransferFees",
-      "fixture": "broker-fd-us/GET-broker-fees-get",
-      "kind": "missing-required-name",
       "name": "contra_account",
       "detail": "no json tag in brokerfd.TransferFee, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires contra_account and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDTransferFees",
-      "fixture": "broker-fd-us/GET-broker-fees-get",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.TransferFee, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -976,28 +796,10 @@
     {
       "symbol": "brokerfd.GetFDTransferFees",
       "fixture": "broker-fd-us/GET-broker-fees-get",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.TransferFee, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.GetFDTransferFees",
-      "fixture": "broker-fd-us/GET-broker-fees-get",
       "kind": "top-level-shape-mismatch",
       "detail": "documented top level is object, []brokerfd.TransferFee decodes it as array",
       "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.InitiateFDTransfer",
-      "fixture": "broker-fd-us/POST-broker-funding-transfers-create",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
       "symbol": "brokerfd.InitiateFDTransfer",
@@ -1015,15 +817,6 @@
       "name": "transfer_type",
       "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires transfer_type and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.InitiateFDTransfer",
-      "fixture": "broker-fd-us/POST-broker-funding-transfers-create",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.Transfer, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -1148,24 +941,6 @@
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
-      "symbol": "brokerfd.ListFDAchAccounts",
-      "fixture": "broker-fd-us/GET-broker-funding-ach-relationships-list",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.ACHAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.ListFDAchAccounts",
-      "fixture": "broker-fd-us/GET-broker-funding-ach-relationships-list",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.ACHAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
       "symbol": "brokerfd.ListFDBankAccounts",
       "fixture": "broker-fd-us/GET-broker-funding-bank-relationships-list",
       "kind": "missing-required-name",
@@ -1208,24 +983,6 @@
       "name": "bank_relationship_id",
       "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, not waived. The page requires bank_relationship_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.ListFDBankAccounts",
-      "fixture": "broker-fd-us/GET-broker-funding-bank-relationships-list",
-      "kind": "missing-required-name",
-      "name": "create_time",
-      "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires create_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "brokerfd.ListFDBankAccounts",
-      "fixture": "broker-fd-us/GET-broker-funding-bank-relationships-list",
-      "kind": "missing-required-name",
-      "name": "update_time",
-      "detail": "no json tag in brokerfd.BankAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires update_time and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
       "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
@@ -1297,15 +1054,6 @@
       "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares client_order_id but does not mark it required, and no json tag in brokerfd.FDOrder carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. brokerfd.FDOrder is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
       "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
-    },
-    {
-      "symbol": "brokerfd.UpdateFDAccount",
-      "fixture": "broker-fd-us/POST-broker-accounts-update",
-      "kind": "missing-required-name",
-      "name": "client_request_id",
-      "detail": "no json tag in brokerfd.FDAccount, so the documented value decodes to the zero value",
-      "reason": "Open defect on the published schema, not waived. The page requires client_request_id and no json tag in the type this method decodes carries it, so the documented value decodes to the zero value and no error is reported. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. This is a per-DTO row and is not among live-blocked SDK defect items 16 and 17, which are the package's host routing and its undocumented /broker-fd/* path literals. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
-      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
       "symbol": "data.GetCapitalFlow",

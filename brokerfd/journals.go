@@ -36,6 +36,12 @@ type FDCashJournal struct {
 	Currency   string      `json:"currency"`
 	Status     string      `json:"status"`
 	CreateTime string      `json:"create_time"`
+
+	// ClientRequestID and UpdateTime are required by the page and are entity
+	// metadata on this object. The sibling broker/ module carries
+	// ClientRequestID in the same role.
+	ClientRequestID string `json:"client_request_id"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // ListFDCashJournals returns all cash journal entries for the specified broker-fd account.

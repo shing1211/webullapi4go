@@ -47,6 +47,13 @@ type BankAccount struct {
 	AccountNumber string `json:"account_number"`
 	RoutingNumber string `json:"routing_number"`
 	Status        string `json:"status"`
+
+	// The three fields below are required by the page and are entity metadata on this
+	// object rather than part of an envelope. The sibling broker/ module carries
+	// ClientRequestID in the same role, so the spelling follows it.
+	ClientRequestID string `json:"client_request_id"`
+	CreateTime      string `json:"create_time"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // ListFDBankAccounts retrieves all linked bank accounts for a broker FD account.
@@ -102,6 +109,13 @@ type ACHAccount struct {
 	BankName      string `json:"bank_name"`
 	AccountNumber string `json:"account_number"`
 	Status        string `json:"status"`
+
+	// The three fields below are required by the page and are entity metadata on this
+	// object rather than part of an envelope. The sibling broker/ module carries
+	// ClientRequestID in the same role, so the spelling follows it.
+	ClientRequestID string `json:"client_request_id"`
+	CreateTime      string `json:"create_time"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // ListFDAchAccounts retrieves all linked ACH accounts for a broker FD account.
@@ -158,6 +172,12 @@ type Transfer struct {
 	Currency   string      `json:"currency"`
 	Status     string      `json:"status"`
 	CreateTime string      `json:"create_time"`
+
+	// ClientRequestID and UpdateTime are required by the page and are entity
+	// metadata on this object. The sibling broker/ module carries
+	// ClientRequestID in the same role.
+	ClientRequestID string `json:"client_request_id"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // ListFDTransfers retrieves all fund transfers for a broker FD account.
@@ -206,6 +226,12 @@ type InstantFunding struct {
 	Amount     money.Money `json:"amount"`
 	Status     string      `json:"status"`
 	CreateTime string      `json:"create_time"`
+
+	// ClientRequestID and UpdateTime are required by the page and are entity
+	// metadata on this object. The sibling broker/ module carries
+	// ClientRequestID in the same role.
+	ClientRequestID string `json:"client_request_id"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // CreateFDInstantFunding creates an instant funding transaction for immediate funds.
@@ -236,6 +262,13 @@ type TransferFee struct {
 	Type     string      `json:"type"`
 	Amount   money.Money `json:"amount"`
 	Currency string      `json:"currency"`
+
+	// The three fields below are required by the page and are entity metadata on this
+	// object rather than part of an envelope. The sibling broker/ module carries
+	// ClientRequestID in the same role, so the spelling follows it.
+	ClientRequestID string `json:"client_request_id"`
+	CreateTime      string `json:"create_time"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // GetFDTransferFees retrieves all available transfer fees.
@@ -253,6 +286,13 @@ type CreditInfo struct {
 	CreditLimit     money.Money `json:"credit_limit"`
 	UsedCredit      money.Money `json:"used_credit"`
 	AvailableCredit money.Money `json:"available_credit"`
+
+	// The three fields below are required by the page and are entity metadata on this
+	// object rather than part of an envelope. The sibling broker/ module carries
+	// ClientRequestID in the same role, so the spelling follows it.
+	ClientRequestID string `json:"client_request_id"`
+	CreateTime      string `json:"create_time"`
+	UpdateTime      string `json:"update_time"`
 }
 
 // GetFDCreditInfo retrieves credit information for a broker FD account.

@@ -57,6 +57,10 @@ type FDAccount struct {
 	Status        string `json:"status"`
 	Currency      string `json:"currency"`
 	CreateTime    string `json:"create_time"`
+
+	// ClientRequestID is required by the page. The sibling broker/ module
+	// carries it in the same role.
+	ClientRequestID string `json:"client_request_id"`
 }
 
 // ListFDAccounts returns all Broker FD accounts associated with the authenticated user.
