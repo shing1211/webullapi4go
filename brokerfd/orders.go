@@ -65,6 +65,15 @@ type FDOrderPreview struct {
 	OrderID        string      `json:"order_id"`
 	EstimatedFee   money.Money `json:"estimated_fee"`
 	EstimatedTotal money.Money `json:"estimated_total"`
+
+	// The two fields below are required by the page and were absent here, so they
+	// decoded to zero with no error reported. The page splits the preview into a base
+	// cost and a separate transaction fee; this type merges both into EstimatedTotal
+	// and names only one of them EstimatedFee, so a caller cannot tell how much of the
+	// quoted total is brokerage and how much is the underlying purchase. Not
+	// live-verified, for the reason given on [TransferFee.FeeID].
+	EstimatedCost           money.Money `json:"estimated_cost"`
+	EstimatedTransactionFee money.Money `json:"estimated_transaction_fee"`
 }
 
 // PreviewFDOrder submits a fractional order for fee and cost estimation without execution.

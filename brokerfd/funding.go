@@ -54,6 +54,22 @@ type BankAccount struct {
 	ClientRequestID string `json:"client_request_id"`
 	CreateTime      string `json:"create_time"`
 	UpdateTime      string `json:"update_time"`
+
+	// The six fields below are also required by the page and were absent here, so they
+	// decoded to the zero value with no error reported. The type's own names for three
+	// of the same facts are BankID, AccountNumber and RoutingNumber, and the page's are
+	// BankRelationshipID, BankAccountNumber and BankRoutingNumber; which of the two a
+	// live server sends is unverified, because the Broker FD host returns 404 in the HK
+	// sandbox and no US credential was available here. Both sets are therefore carried
+	// side by side, and a response populates whichever it carries, so a caller reading
+	// either name reads a value when the server sends it. BankAccountName, BankCode and
+	// BankCodeType have no SDK-spelled counterpart and are new.
+	BankRelationshipID string `json:"bank_relationship_id"`
+	BankAccountName    string `json:"bank_account_name"`
+	BankAccountNumber  string `json:"bank_account_number"`
+	BankRoutingNumber  string `json:"bank_routing_number"`
+	BankCode           string `json:"bank_code"`
+	BankCodeType       string `json:"bank_code_type"`
 }
 
 // ListFDBankAccounts retrieves all linked bank accounts for a broker FD account.
@@ -116,6 +132,19 @@ type ACHAccount struct {
 	ClientRequestID string `json:"client_request_id"`
 	CreateTime      string `json:"create_time"`
 	UpdateTime      string `json:"update_time"`
+
+	// The five fields below are also required by the page and were absent here, so they
+	// decoded to the zero value with no error reported. The type's own names for two of
+	// the same facts are ACHID and AccountNumber, and the page's are
+	// ACHRelationshipID and BankAccountNumber; which of the two a live server sends is
+	// unverified, for the reason given on [BankAccount.BankRelationshipID]. Both sets
+	// are carried side by side. AccountOwnerName, BankAccountType and
+	// BankRoutingNumber have no SDK-spelled counterpart and are new.
+	ACHRelationshipID string `json:"ach_relationship_id"`
+	AccountOwnerName  string `json:"account_owner_name"`
+	BankAccountNumber string `json:"bank_account_number"`
+	BankAccountType   string `json:"bank_account_type"`
+	BankRoutingNumber string `json:"bank_routing_number"`
 }
 
 // ListFDAchAccounts retrieves all linked ACH accounts for a broker FD account.
@@ -178,6 +207,14 @@ type Transfer struct {
 	// ClientRequestID in the same role.
 	ClientRequestID string `json:"client_request_id"`
 	UpdateTime      string `json:"update_time"`
+
+	// The two fields below are also required by the page and were absent here, so they
+	// decoded to the zero value with no error reported. The page's TransferType is the
+	// same fact this type spells Type, and which of the two names a live server sends
+	// is unverified for the reason given on [BankAccount.BankRelationshipID], so both
+	// are carried. Direction has no SDK-spelled counterpart and is new.
+	TransferType string `json:"transfer_type"`
+	Direction    string `json:"direction"`
 }
 
 // ListFDTransfers retrieves all fund transfers for a broker FD account.
@@ -232,6 +269,16 @@ type InstantFunding struct {
 	// ClientRequestID in the same role.
 	ClientRequestID string `json:"client_request_id"`
 	UpdateTime      string `json:"update_time"`
+
+	// The three fields below are also required by the page and were absent here, so
+	// they decoded to the zero value with no error reported. The page's
+	// InstantFundingID is the same fact this type spells FundingID, and which of the
+	// two names a live server sends is unverified for the reason given on
+	// [BankAccount.BankRelationshipID], so both are carried. Currency and Type have no
+	// SDK-spelled counterpart and are new.
+	InstantFundingID string `json:"instant_funding_id"`
+	Currency         string `json:"currency"`
+	Type             string `json:"type"`
 }
 
 // CreateFDInstantFunding creates an instant funding transaction for immediate funds.
@@ -269,6 +316,20 @@ type TransferFee struct {
 	ClientRequestID string `json:"client_request_id"`
 	CreateTime      string `json:"create_time"`
 	UpdateTime      string `json:"update_time"`
+
+	// The four fields below are also required by the page and were absent here, so they
+	// decoded to the zero value with no error reported. Nothing here is
+	// live-verified: the Broker FD host returns 404 in the HK sandbox and no US
+	// credential was available here.
+	//
+	// GetFDTransferFees returns a slice of this type while the page documents a single
+	// object, so the array-against-object question is left recorded rather than decided
+	// here. These four names describe the fee entity itself, so they are readable
+	// whichever shape the server sends.
+	FeeID         string `json:"fee_id"`
+	Account       string `json:"account"`
+	ContraAccount string `json:"contra_account"`
+	Status        string `json:"status"`
 }
 
 // GetFDTransferFees retrieves all available transfer fees.
@@ -293,6 +354,19 @@ type CreditInfo struct {
 	ClientRequestID string `json:"client_request_id"`
 	CreateTime      string `json:"create_time"`
 	UpdateTime      string `json:"update_time"`
+
+	// The seven fields below are also required by the page and were absent here, so
+	// they decoded to the zero value with no error reported. This type's AccountID is
+	// the same fact the page spells Account, and its Amount and Currency have no
+	// SDK-spelled counterpart on a credit record. Nothing here is live-verified, for
+	// the reason given on [TransferFee.FeeID].
+	CreditID      string      `json:"credit_id"`
+	Account       string      `json:"account"`
+	ContraAccount string      `json:"contra_account"`
+	Type          string      `json:"type"`
+	Status        string      `json:"status"`
+	Amount        money.Money `json:"amount"`
+	Currency      string      `json:"currency"`
 }
 
 // GetFDCreditInfo retrieves credit information for a broker FD account.

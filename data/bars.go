@@ -87,6 +87,39 @@ type Bar struct {
 	TradingSession TradingSession `json:"trading_sessions,omitempty"`
 }
 
+// ExchangeTimes is one entry of a response's exchange trading hours, as documented by
+// the Display Solution bars pages.
+//
+// The two documented hours arrays are not the same schema, and this type exists because
+// of that: Times requires start and end as **strings** such as "09:30:00" and
+// EndTime/StartTime carry wall-clock times, whereas SpecialTimes documents the same
+// three names as an **integer** epoch. One shared element type cannot represent both
+// honestly, so the two are separate types rather than one with a widened field.
+type ExchangeTimes struct {
+	// Start is the exchange start time as a wall-clock string, for example "09:30:00".
+	Start string `json:"start"`
+	// End is the exchange end time as a wall-clock string, for example "16:00:00".
+	End string `json:"end"`
+	// TradingSession names the session, for example "RTH" or "PRE".
+	TradingSession string `json:"trading_session"`
+}
+
+// SpecialExchangeTimes is one entry of a response's special trading hours.
+//
+// The page documents start and end as int64 here while the ordinary [ExchangeTimes]
+// documents them as strings, so the numeric form is a separate type rather than a
+// widened field on the same one.
+type SpecialExchangeTimes struct {
+	// Start is the special session start as a Unix epoch millisecond timestamp. The
+	// page documents no unit and its example is 0, so the value is passed through
+	// unchanged rather than interpreted.
+	Start int64 `json:"start"`
+	// End is the special session end, in the same form as [SpecialExchangeTimes.Start].
+	End int64 `json:"end"`
+	// TradingSession names the session, for example "RTH" or "PRE".
+	TradingSession string `json:"trading_session"`
+}
+
 // StockBars is the historical-bars response for a single symbol.
 type StockBars struct {
 	// Symbol is the security symbol.
@@ -95,6 +128,17 @@ type StockBars struct {
 	InstrumentID string `json:"instrument_id"`
 	// Result is the list of bars.
 	Result []Bar `json:"result"`
+
+	// The two fields below are required by the Display Solution bars page and were
+	// absent here, so the exchange hours a response was computed against decoded to
+	// the zero value with no error reported. They are the display host's trading
+	// calendar, not the market-wide one, which is why a caller reading a bar cannot
+	// otherwise tell why a session is absent from the result.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	Times        []ExchangeTimes        `json:"times"`
+	SpecialTimes []SpecialExchangeTimes `json:"special_times"`
 }
 
 // BarQuery parameterizes [Client.GetBars]. Symbol, Category and Interval are
@@ -204,6 +248,15 @@ type BatchBarSymbol struct {
 type BatchBars struct {
 	// Result groups the bars by symbol.
 	Result []BatchBarSymbol `json:"result"`
+
+	// The two fields below are required by the Display Solution batch bars page and
+	// were absent here, for the reason given on [StockBars.Times]. The batch page
+	// documents the same two hours arrays with the same two distinct element schemas.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	Times        []ExchangeTimes        `json:"times"`
+	SpecialTimes []SpecialExchangeTimes `json:"special_times"`
 }
 
 // GetBatchBars retrieves historical bars for multiple symbols in one request.

@@ -49,6 +49,15 @@ type FDTradeCalendarEntry struct {
 	Status    string `json:"status"`
 	OpenTime  string `json:"open_time"`
 	CloseTime string `json:"close_time"`
+
+	// The two fields below are required by the page and were absent here, so they
+	// decoded to false with no error reported. They are the authoritative form of the
+	// same two facts Status encodes as a string: a caller that has to tell a half-day
+	// or an early close from a normal session cannot do it from a status word, because
+	// this type has no vocabulary for those. Not live-verified, for the reason given
+	// on [TransferFee.FeeID].
+	IsTradingDay    bool `json:"is_trading_day"`
+	IsSettlementDay bool `json:"is_settlement_day"`
 }
 
 // GetFDTradeCalendar returns the trading calendar for a given market between startDate and endDate.

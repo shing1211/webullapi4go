@@ -61,6 +61,13 @@ type FDAccount struct {
 	// ClientRequestID is required by the page. The sibling broker/ module
 	// carries it in the same role.
 	ClientRequestID string `json:"client_request_id"`
+
+	// ApplicationID is also required by the page and was absent here, so it decoded to
+	// the empty string with no error reported. It identifies the onboarding application
+	// the account was created under, which is how an application distinguishes an
+	// account it opened from one it merely acts for. Not live-verified: the Broker FD
+	// host returns 404 in the HK sandbox and no US credential was available here.
+	ApplicationID string `json:"application_id"`
 }
 
 // ListFDAccounts returns all Broker FD accounts associated with the authenticated user.

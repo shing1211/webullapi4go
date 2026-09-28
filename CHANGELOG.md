@@ -9,6 +9,86 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.33] - 2026-09-28
+
+**Breaking release.** 62 recorded response-contract divergences are resolved: 58
+required names across 18 Broker FD symbols, 4 on the two Display Solution bars
+types, and one breaking envelope wrapper. The required-name class falls from 62 rows
+over 20 symbols to **2 rows over 1 symbol**, which is the whole of what remains and
+is now left recorded deliberately rather than fixed. Root baseline 219 to 157 rows
+over 35 symbols. No fixture changed. Nothing is live-verified.
+
+### Fixed - not breaking
+
+- **58 required names across 18 Broker FD response types reached no field.** Each one
+  decoded to the zero value with no error reported, so a caller following the
+  documentation read an empty string, a zero or a false. `BankAccount` and
+  `ACHAccount` gained their relationship, account-name, account-number, routing and
+  code fields; `CreditInfo` gained all seven it was missing, including the `account`
+  and `amount` that say which account a credit applied to and how much; `Transfer`
+  gained `transfer_type` and `direction`; `TransferFee` gained `fee_id`, `account`,
+  `contra_account` and `status`; `InstantFunding` gained `instant_funding_id`,
+  `currency` and `type`; `Agreement` gained `id`, `name` and `content_type`;
+  `FDCashJournal` gained `from_account` and `to_account`; `FDTradeCalendarEntry` gained
+  `is_trading_day` and `is_settlement_day`; `FDAccount` gained `application_id`; and
+  `FDOrderPreview` gained `estimated_cost` and `estimated_transaction_fee`, which
+  splits a quoted total into base cost and brokerage.
+- **`StockBars` and `BatchBars` gained `times` and `special_times`.** The Display
+  Solution bars pages require both, and without them the display host's trading
+  calendar was unreadable, so a caller could not tell why a session was missing from a
+  bar series.
+- **Dual spellings are carried side by side, as on `FDPosition`.** Several of these
+  types have always carried an SDK spelling for a fact the page spells differently
+  (`bank_id` against `bank_relationship_id`, `funding_id` against
+  `instant_funding_id`, `type` against `transfer_type`, `agreement_id` against `id`).
+  Which of the two a live server sends is unverified, so both are carried and a
+  response populates whichever it carries. Nothing here asserts which a live server
+  sends.
+
+### Fixed - breaking
+
+- **`GetFDAssetsDetail` now returns the documented envelope.** The page documents the
+  200 body as an object with `account_currency_assets`, `total_asset_currency` and
+  `total_cash_balance`, all required; the method returned the currency array alone, so
+  the two totals reached no field and were dropped with no error reported. A caller
+  holding a multi-currency account could see cash per currency but never the total,
+  which is the figure an account is normally reconciled against. It returns
+  `*FDAssetsDetail`; a caller reading the per-currency entries now reads
+  `out.AccountCurrencyAssets[i]` rather than `out[i]`.
+
+### Two distinct types where one would have to lie
+
+- **`data.ExchangeTimes` and `data.SpecialExchangeTimes` are separate types.** The
+  Display bars page requires `start`, `end` and `trading_session` on both hours arrays,
+  but documents `start` and `end` as **strings** in `times` and as **integers** in
+  `special_times`. One element type with a widened field would silently drop whichever
+  form it could not hold, so there are two. A negative test pins the disagreement, so
+  merging them later fails a test instead of quietly losing a form.
+
+### Noted
+
+- **The `TopLevelShape` bite test was repointed, not deleted.** It had been constructed
+  on `GetFDAssetsDetail`, which this release fixes, so it was asserting a defect that
+  no longer existed. The shape class still holds 25 live rows, so the bite moved to
+  `GetFDTransferFees`, which inverts the same way. This is the second time a bite test
+  has outlived the defect it bit on; the `LeafType` bite already manufactures its
+  condition for the same reason.
+- **The last 2 required-name rows are now recorded as deliberately unfixed.**
+  `GetFDOrderDetail` reconciles to the *list* page, so its `combo_type` and `orders`
+  are envelope fields belonging to a list response. Tagging them on `FDOrder` would
+  put two envelope fields on a one-order type shared by seven other methods, and would
+  make the gate green while the detail call still could not read either name. The
+  recorded reason says so, because a required reason is not a required true reason and
+  the previous text implied a retag was the fix.
+- **The four Display rows were decidable all along.** The paid Display entitlement
+  blocks calling the endpoint, not declaring a field the page requires; the two methods
+  send the path the page documents, so the missing tags were a defect rather than a
+  naming choice. They are the only `data` rows in the required-name class and they are
+  now gone, leaving the `data` column of that class at zero.
+- **Still 105 declared-name rows, all in `data`.** The required-name class is
+  effectively closed; the declared-name class is not, and is where any further
+  response-contract work belongs.
+
 ## [2.1.32] - 2026-09-28
 
 **Breaking release.** Three event-contract endpoints decoded the wrong shape, and

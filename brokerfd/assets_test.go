@@ -72,10 +72,18 @@ func TestGetFDAssetsDetail(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]FDAssetDetail{
-			{Currency: "USD", CashBalance: money.Must(money.NewFromString("50000")), MarketValue: money.Must(money.NewFromString("50000")), BuyingPower: money.Must(money.NewFromString("100000")), AvailableCash: money.Must(money.NewFromString("40000"))},
-			{Currency: "HKD", CashBalance: money.Must(money.NewFromString("100000")), MarketValue: money.Must(money.NewFromString("0")), BuyingPower: money.Must(money.NewFromString("200000")), AvailableCash: money.Must(money.NewFromString("100000"))},
-		})
+		// The documented 200 body is an object wrapping the currency array together
+		// with the account-level totals. Serving the SDK's own shape here instead
+		// would make this test pass whichever shape the method decoded, which is how
+		// the totals went missing without any test failing.
+		_, _ = w.Write([]byte(`{
+			"account_currency_assets": [
+				{"currency":"USD","cash_balance":"50000"},
+				{"currency":"HKD","cash_balance":"100000"}
+			],
+			"total_asset_currency": "USD",
+			"total_cash_balance": "485705.0"
+		}`))
 	}))
 	defer srv.Close()
 
@@ -89,11 +97,19 @@ func TestGetFDAssetsDetail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetFDAssetsDetail error = %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("len(got) = %d, want 2", len(got))
+	if len(got.AccountCurrencyAssets) != 2 {
+		t.Fatalf("len(AccountCurrencyAssets) = %d, want 2", len(got.AccountCurrencyAssets))
 	}
-	if got[0].Currency != "USD" {
-		t.Fatalf("Currency[0] = %s, want USD", got[0].Currency)
+	if got.AccountCurrencyAssets[0].Currency != "USD" {
+		t.Fatalf("Currency[0] = %s, want USD", got.AccountCurrencyAssets[0].Currency)
+	}
+	// The two totals are the reason the envelope exists. Before v2.1.33 they reached
+	// no field and were dropped with no error reported.
+	if got.TotalAssetCurrency != "USD" {
+		t.Errorf("TotalAssetCurrency = %q, want USD", got.TotalAssetCurrency)
+	}
+	if want := money.Must(money.NewFromString("485705.0")); got.TotalCashBalance.Cmp(want) != 0 {
+		t.Errorf("TotalCashBalance = %s, want %s", got.TotalCashBalance, want)
 	}
 	if capturedReq.URL.Path != pathFDAssetsDetail {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDAssetsDetail)

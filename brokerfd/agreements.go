@@ -32,6 +32,21 @@ type Agreement struct {
 	Status        string `json:"status"`
 	EffectiveDate string `json:"effective_date"`
 	Content       string `json:"content,omitempty"`
+
+	// The three fields below are also required by the page and were absent here, so
+	// they decoded to the zero value with no error reported. The page's ID is the same
+	// fact this type spells AgreementID, and which of the two names a live server sends
+	// is unverified for the reason given on [BankAccount.BankRelationshipID], so both
+	// are carried. Name and ContentType have no SDK-spelled counterpart and are new;
+	// ContentType is the agreement document's media type, for example "TEXT".
+	//
+	// GetAgreementDetail returns a single Agreement while the page documents an array
+	// of them, so that shape question is left recorded rather than decided here. These
+	// three names describe the agreement itself, so they are readable whichever shape
+	// the server sends.
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ContentType string `json:"content_type"`
 }
 
 // ListAgreements returns all agreements available in the Broker FD system.

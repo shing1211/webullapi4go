@@ -54,6 +54,10 @@ func (c *Client) GetFDAssetsSummary(ctx context.Context, accountID string) (*FDA
 
 // FDAssetDetail provides a per-currency breakdown of cash and buying power
 // for a fractional shares account. Values are presented as strings to preserve numeric precision.
+//
+// This type is one element of [FDAssetsDetail.AccountCurrencyAssets]. The page requires
+// only currency and cash_balance of these; market_value, buying_power and available_cash
+// are the SDK's own fields and the page does not document them.
 type FDAssetDetail struct {
 	Currency      string      `json:"currency"`
 	CashBalance   money.Money `json:"cash_balance"`
@@ -62,16 +66,42 @@ type FDAssetDetail struct {
 	AvailableCash money.Money `json:"available_cash"`
 }
 
-// GetFDAssetsDetail retrieves per-currency asset detail for a fractional shares account.
-// Returns a slice of FDAssetDetail, one per supported currency.
-func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) ([]FDAssetDetail, error) {
+// FDAssetsDetail is the per-currency asset detail for a fractional shares account,
+// together with the account-level totals the response wraps it in.
+//
+// The page documents the 200 body as an object with account_currency_assets,
+// total_asset_currency and total_cash_balance, all required. GetFDAssetsDetail
+// previously returned the currency array alone, so the two totals reached no field and
+// were dropped with no error reported: a caller holding a multi-currency account could
+// see its cash per currency but never the cash in total, which is the figure an account
+// is normally reconciled against.
+//
+// **Breaking, in v2.1.33.** GetFDAssetsDetail returns this instead of []FDAssetDetail.
+// A caller reading the per-currency entries now reads
+// out.AccountCurrencyAssets[i] rather than out[i].
+type FDAssetsDetail struct {
+	// AccountCurrencyAssets is the per-currency breakdown, one entry per currency the
+	// account holds.
+	AccountCurrencyAssets []FDAssetDetail `json:"account_currency_assets"`
+	// TotalAssetCurrency is the currency the totals are denominated in.
+	TotalAssetCurrency string `json:"total_asset_currency"`
+	// TotalCashBalance is the account's cash balance across all currencies. It is a
+	// decimal string on the wire and carried as [money.Money] here.
+	TotalCashBalance money.Money `json:"total_cash_balance"`
+}
+
+// GetFDAssetsDetail retrieves per-currency asset detail for a fractional shares account,
+// together with the account-level totals.
+//
+// Reference: https://developer.webull.com/apis/docs/reference/broker.md
+func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) (*FDAssetsDetail, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []FDAssetDetail
+	var out FDAssetsDetail
 	if err := c.get(ctx, pathFDAssetsDetail, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // FDPosition represents a single position held in a fractional shares account.

@@ -42,6 +42,16 @@ type FDCashJournal struct {
 	// ClientRequestID in the same role.
 	ClientRequestID string `json:"client_request_id"`
 	UpdateTime      string `json:"update_time"`
+
+	// The two fields below are also required by the page and were absent here, so they
+	// decoded to the zero value with no error reported. They are the counterpart
+	// accounts of the movement: FromAccount received the cash and ToAccount paid it,
+	// which is what distinguishes a deposit from a withdrawal when the type alone is
+	// read. AccountID is the account the journal is filed under, which is not
+	// necessarily either of the two. Not live-verified, for the reason given on
+	// [TransferFee.FeeID].
+	FromAccount string `json:"from_account"`
+	ToAccount   string `json:"to_account"`
 }
 
 // ListFDCashJournals returns all cash journal entries for the specified broker-fd account.

@@ -150,7 +150,7 @@ var SDKTypes = map[string]SDKType{
 	"brokerfd.GetAgreementDetail":        {Type: reflect.TypeOf(brokerfd.Agreement{})},
 	"brokerfd.GetFDAccountDetail":        {Type: reflect.TypeOf(brokerfd.FDAccount{})},
 	"brokerfd.GetFDActivities":           {Type: reflect.TypeOf([]brokerfd.FDActivity{})},
-	"brokerfd.GetFDAssetsDetail":         {Type: reflect.TypeOf([]brokerfd.FDAssetDetail{})},
+	"brokerfd.GetFDAssetsDetail":         {Type: reflect.TypeOf(brokerfd.FDAssetsDetail{})},
 	"brokerfd.GetFDCashJournalDetail":    {Type: reflect.TypeOf(brokerfd.FDCashJournal{})},
 	"brokerfd.GetFDCorporateActions":     {Type: reflect.TypeOf([]brokerfd.FDCorporateAction{})},
 	"brokerfd.GetFDCreditInfo":           {Type: reflect.TypeOf(brokerfd.CreditInfo{})},

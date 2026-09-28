@@ -713,9 +713,16 @@ func TestComparisonBites(t *testing.T) {
 	})
 
 	t.Run("TopLevelShape", func(t *testing.T) {
-		// GetFDAssetsDetail decodes a slice where the page documents an object.
-		const sym = "brokerfd.GetFDAssetsDetail"
-		f := mustFixture(t, m, "broker-fd-us/GET-broker-assets-balances-get")
+		// GetFDTransferFees decodes a slice where the page documents an object.
+		//
+		// This subtest used to bite on brokerfd.GetFDAssetsDetail, which inverted
+		// the same way, but v2.1.33 gave that method the documented envelope and the
+		// defect it was constructed to detect no longer exists. Asserting it would
+		// mean asserting a fixed defect, so the bite moved here: the class still has
+		// live rows, so a real one is a better fixture than a manufactured copy.
+		// The same direction applies on both ends, so the helpers below are unchanged.
+		const sym = "brokerfd.GetFDTransferFees"
+		f := mustFixture(t, m, "broker-fd-us/GET-broker-fees-get")
 		entry := mustType(t, sym)
 		before := Compare(f, sym, entry)
 		if !hasKind(before, TopLevelMismatch) {
@@ -730,7 +737,7 @@ func TestComparisonBites(t *testing.T) {
 		// what a caller sees, and it is the decode check firing on the same bit
 		// the shape check named.
 		if err := decodeCommitted(f, entry); err == nil {
-			t.Fatal("the documented object decoded into []brokerfd.FDAssetDetail, so " +
+			t.Fatal("the documented object decoded into []brokerfd.TransferFee, so " +
 				"the recorded shape inversion is not real")
 		} else {
 			t.Logf("documented object into the SDK slice: %v", err)
@@ -738,7 +745,7 @@ func TestComparisonBites(t *testing.T) {
 
 		// SDK side: rebuild the slice as the struct the page documents, from the
 		// slice element's own fields. The top-level bit must flip to agreeing and
-		// the object must then decode. The three missing names stay missing --
+		// the object must then decode. Names the element lacks stay missing --
 		// that is a separate check reporting a separate defect, and pretending
 		// otherwise would hide it.
 		asStruct := structOfElem(t, entry)
