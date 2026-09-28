@@ -9,6 +9,93 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.27] - 2026-09-28
+
+Corrective release. It closes the silent part of live-blocked defect item 20 without
+the credential that item says is required, lints all six modules in CI rather than
+one, and fixes a defect the conformance harness was structurally unable to see. The
+`brokerfd.FDPosition` and `broker.Position` changes are additive, so no call that
+works today can break. No fixture changed; the two baselines lost 6 rows between
+them, from defects that no longer reproduce. Nothing is live-verified.
+
+### Fixed
+
+- **Item 20's three silently zeroed values are no longer zeroed, and no credential
+  was needed.** `GET /broker/assets/positions/list` documents `cost_price`,
+  `last_price` and `unrealized_profit_loss`; both `brokerfd.FDPosition` and
+  `broker.Position` carried only `average_cost`, `market_value` and `unrealized_pl`.
+  The item's own minimal fix offered two routes and gated both on a probe. Only one
+  of them actually needs one: **the documented names are now carried alongside the
+  SDK's own** rather than replacing them, so whichever set a live server sends, the
+  caller reads a populated value. A response populates whichever of the two names
+  it carries, so a caller reading either name reads a value when the server sends
+  it; which of the two a live server sends is precisely what stays unverified. The
+  change is additive rather than a retag — a retag would have been
+  breaking *and* still speculative. `brokerfd.GetFDPositions` now records **no
+  divergence of any kind** for the first time, and the broker baseline falls by 3.
+  Root: 285 to 282 rows, 63 to 62 symbols. Broker: 62 to 59. Combined 341 over 82.
+- **A worse defect in the same struct, which the harness could not see.**
+  `RealizedPL` was tagged `json:"unrealized_pl"`, duplicating `UnrealizedPL`. When
+  two fields of one struct claim the same name, `encoding/json` drops **both** rather
+  than picking one: verified directly, an untagged body fills neither and
+  `encoding/json` reports no error. So **open P&L had been silently zero for every
+  caller since the field was written**, and `realized_pl` was never decodable at all.
+  Nothing here reads as *missing*, which is exactly why 285 rows of divergence
+  hunting never found it: `tagsOf` collects wire names into a map and keeps one of
+  the two, so the harness reported `unrealized_pl` as **covered** while the decoder
+  filled neither field. A tag-lookup harness has a blind spot at the field level
+  that a name-lookup harness does not, and this is it.
+  `TestFDPositionHasNoDuplicateWireName` and `TestPositionHasNoDuplicateWireName`
+  now pin the class by walking the struct rather than naming the pair. A scan of all
+  **365** structs in the root module and the examples found this to be the only
+  occurrence. Reintroducing the duplicate tag was confirmed to fail three tests and
+  show both fields at `"0"`.
+- **The existing test could not have caught either.** `TestGetFDPositions` marshals
+  `[]FDPosition` and decodes it back, which is green on a type that reads nothing,
+  and it never asserted `UnrealizedPL` or `RealizedPL`. The new tests decode literal
+  bodies instead: documented names, SDK names, both at once, and each field carrying
+  a shape the decoder must survive. `TestComparisonBites/RequiredNameCoverage` used
+  to assert the three missing names still reproduced and had to be inverted to assert
+  the fix holds, with its three mutation checks unchanged so the check itself is
+  still proven to bite.
+- **CI now lints all six modules, not one.** `golangci-lint-action` resolves
+  `./...` through the module it is invoked in, so a single run at the repository root
+  never saw `broker/` or any example module — while the `gofmt` step in the same job,
+  being a plain directory walk, did. That asymmetry is why a dead three-line method
+  sat in `broker/client.go` from 2026-09-21 until a local run found it. The lint job
+  is now a six-entry matrix mirroring the Makefile's `MODULES`, and gofmt runs once
+  from the root rather than six times. Reintroducing the dead method is confirmed to
+  be caught by the `broker` entry while a root-level run still reports `0 issues`.
+
+### Changed
+
+- **The three fuzz targets gained real seeds.** Each had one trivial
+  `{"symbol":"AAPL"}` and discarded the decode error, so `make fuzz` was a
+  one-second exercise of almost nothing that could only catch a panic. 88 seed runs
+  now replace 3, chosen from what this SDK actually gets wrong: money fields as both
+  JSON string and number, `quote_time` as the documented string against the SDK's
+  `int64` (item 21's open leaf-type defect), each type seeded with the container
+  inversion its own page is ambiguous about, and the degenerate cases a careless
+  server produces — null, empty, wrong-typed, truncated, non-ASCII. Go replays a
+  fuzz target's seeds as ordinary tests, so every one is now a standing regression
+  case in `go test ./data/`. All three targets fuzz clean at `-fuzztime=1s`, writing
+  no crasher corpus.
+
+### Noted
+
+- **The citation gate caught the fallout of the doc comment, which is the second
+  time this session it has earned its place.** Adding 14 lines above
+  `FDPosition` moved the struct from line 79 to line 98, so the citation in item 20
+  pointed at a range that no longer contained any code. The gate failed on exactly
+  that and nothing else, and the range is corrected to `brokerfd/assets.go:98-121`.
+  Nothing in a build would otherwise have noticed a `file:line` citation pointing
+  into a comment.
+- **`brokerfd.FDPosition` and `broker.Position` grew by 3 fields each.** Six fields
+  in total, all `money.Money` in the first and `string` in the second, matching what
+  those types already used. Any caller that constructs either type with a positional
+  literal would break; a keyed literal is unaffected, and every use in this
+  repository is keyed.
+
 ## [2.1.26] - 2026-09-28
 
 Harness and test release. The Broker API HK surface stops being the largest

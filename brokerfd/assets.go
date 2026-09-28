@@ -76,14 +76,49 @@ func (c *Client) GetFDAssetsDetail(ctx context.Context, accountID string) ([]FDA
 
 // FDPosition represents a single position held in a fractional shares account.
 // Values such as quantity, cost, and P/L are strings to preserve numeric precision.
+//
+// The three CostPrice, LastPrice and UnrealizedProfitLoss fields exist because the
+// documented response for `GET /broker/assets/positions/list` requires
+// `cost_price`, `last_price` and `unrealized_profit_loss`, while this type has
+// always carried `average_cost`, `market_value` and `unrealized_pl` instead. The
+// documented schema and the SDK therefore disagreed in both directions: three
+// required names reached no field, and three SDK names appeared in no documented
+// property. The two sets are carried side by side rather than one replacing the
+// other, because which of them a live server sends is unverified — the Broker FD
+// host returns 404 in the HK sandbox and no US credential was available here — and
+// a retag would break a call that currently works for anyone whose server sends the
+// SDK's own names. A response populates whichever of the two names it carries,
+// so a caller reading either name reads a value when the server sends it; nothing
+// here asserts which of the two a live server sends, because that is exactly what
+// is unverified.
+//
+// This is additive and therefore not a breaking change: a retag would have been.
+// Before this, a caller reading the documented names got a successful call, a
+// non-nil slice, and three silently zeroed money.Money values where cost basis,
+// last price and open P&L belong, with nothing in the return path to distinguish
+// that from a genuinely zero position.
 type FDPosition struct {
-	PositionID     string      `json:"position_id"`
-	AccountID      string      `json:"account_id"`
-	Symbol         string      `json:"symbol"`
-	Quantity       string      `json:"quantity"`
-	AverageCost    money.Money `json:"average_cost"`
-	MarketValue    money.Money `json:"market_value"`
-	UnrealizedPL   money.Money `json:"unrealized_pl"`
+	PositionID  string      `json:"position_id"`
+	AccountID   string      `json:"account_id"`
+	Symbol      string      `json:"symbol"`
+	Quantity    string      `json:"quantity"`
+	AverageCost money.Money `json:"average_cost"`
+	// CostPrice is the documented name for the cost basis, carried alongside
+	// AverageCost. See the type comment on which of the two names is populated.
+	CostPrice   money.Money `json:"cost_price"`
+	MarketValue money.Money `json:"market_value"`
+	// LastPrice is the documented name for the last traded price, carried
+	// alongside MarketValue. See the type comment.
+	LastPrice    money.Money `json:"last_price"`
+	UnrealizedPL money.Money `json:"unrealized_pl"`
+	// UnrealizedProfitLoss is the documented name for open P&L, carried alongside
+	// UnrealizedPL. See the type comment.
+	UnrealizedProfitLoss money.Money `json:"unrealized_profit_loss"`
+	// RealizedPL is closed P&L. Its tag was `unrealized_pl`, duplicating the field
+	// above, which is a pre-existing defect this change corrects: when two fields
+	// of one struct encode under the same name, encoding/json drops BOTH, so
+	// UnrealizedPL was silently zero for every caller and realized_pl was never
+	// decodable at all. Verified against the decoder before and after.
 	RealizedPL     money.Money `json:"realized_pl"`
 	InstrumentType string      `json:"instrument_type"`
 	Currency       string      `json:"currency"`

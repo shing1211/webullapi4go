@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.26`** (2026-09-28)
+- Latest repository tag: **`v2.1.27`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -305,7 +305,7 @@ confirmed without it.
   bullet, and a second pass that corrected one of them left it one line short, so
   re-check these against the file after any edit to it rather than assuming they
   still hold.
-- **`brokerfd.GetFDPositions` cannot receive three required response properties,
+- **RESOLVED: `brokerfd.GetFDPositions` now receives all eight required response properties,
   so three values are silently zeroed.** The request is correct:
   `GetFDPositions` (`brokerfd/assets.go:92-100`) requests
   `pathFDAssetsPositions` (`brokerfd/assets.go:27`), exactly the documented
@@ -316,7 +316,7 @@ confirmed without it.
   is a `type: array` whose `items` require eight properties — `cost_price`,
   `currency`, `instrument_type`, `last_price`, `position_id`, `quantity`,
   `symbol`, `unrealized_profit_loss` — while `FDPosition`
-  (`brokerfd/assets.go:79-90`) declares tags for `position_id`, `account_id`,
+  (`brokerfd/assets.go:98-121`) declares tags for `position_id`, `account_id`,
   `symbol`, `quantity`, `average_cost`, `market_value`, `unrealized_pl`,
   `realized_pl`, `instrument_type`, `currency`. **Three of the eight required
   names have no matching tag**: `cost_price` (the struct has `average_cost`),
@@ -367,6 +367,29 @@ confirmed without it.
     `market_value`, and `unrealized_pl`?* That is a single addition to the
     enquiry the second bullet already requires for its three undocumented paths,
     so it needs no new round trip.
+  - **Resolution, and a defect found while resolving it.** The type now carries
+    `cost_price`, `last_price` and `unrealized_profit_loss` **alongside** the
+    `average_cost`, `market_value` and `unrealized_pl` it always had, rather than one
+    set replacing the other. That route was chosen because it is the one that needs no
+    probe: whichever set the live server sends, the caller now reads a populated
+    value, so the change cannot break a call that works today. A retag would have
+needed the probe this bullet names, and would have been breaking. A response
+populates whichever of the two names it carries, so a caller reading either name
+reads a value when the server sends it; which of the two a live server sends is
+precisely what stays unverified. `broker.Position` carried the identical
+three names for the identical reason and is fixed the same way. These 6 baseline
+    rows are deleted, and `brokerfd.GetFDPositions` records no divergence of any kind
+    for the first time.
+  - **A second, worse defect was found in the same struct, and the harness could not
+    see it.** `RealizedPL` was tagged `json:"unrealized_pl"`, duplicating
+    `UnrealizedPL`. When two fields of one struct claim the same name,
+    `encoding/json` drops **both** rather than picking one — so open P&L had been
+    silently zero for every caller, and `realized_pl` was never decodable at all.
+    Nothing reads as *missing* in that state, which is why looking for missing names
+    never found it. `TestFDPositionHasNoDuplicateWireName` now pins the class, and a
+    scan of all 365 structs in the root module and examples found this to be the only
+    occurrence. A tag-lookup harness has a blind spot at the *field* level that a
+    name-lookup harness does not.
   - Verification status: the static mismatch is **certain** — the struct tags
     and the cached page's `required` list were compared directly and no
     interpretation is involved. Which side the live server honours is
@@ -409,21 +432,21 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 285 divergences fall on 63 symbols, in three packages:
-`brokerfd` 145, `data` 136, `trade` 4. The 4 `trade` rows are all on
+record no divergence. All 282 divergences fall on 62 symbols, in three packages:
+`brokerfd` 142, `data` 136, `trade` 4. The 4 `trade` rows are all on
 `trade.BatchPlaceOrder`; 12 of the 13 trading endpoints the harness compared record
 no divergence, and 4 of the 5 that publish a `required` list are among them, so the
 trading API's response types are the most conformant part of the surface measured.
 That is a statement about what the harness did not find, on the 5 trading pages that
 give it something to check — not a correctness verdict.
 
-- **`missing-required-name` — 122 rows across 29 symbols, the silent class.** A
+- **`missing-required-name` — 119 rows across 28 symbols, the silent class.** A
   name the page marks `required` has no matching json tag anywhere in the type the
   method decodes into, so the documented value decodes to the zero value and no
   error is reported. This is the `brokerfd.GetFDPositions` mechanism at scale, and
   it is the largest class. The check considers the union of json tags at every depth
   of the compared type, because `encoding/json` flattens a response body into one
-  name space, so **122 is a floor rather than a total**: 19 rows carry 41 of their
+  name space, so **119 is a floor rather than a total**: 19 rows carry 41 of their
   90 required names only through a nested object, which the harness prints per row
   under the `required-name-depth` skip. Depth scoping is deliberately not
   enforced, because a documented top-level name the SDK reaches one level down
@@ -447,7 +470,7 @@ give it something to check — not a correctness verdict.
   no matching json tag in the type the method decodes into, so a response carrying it
   would decode the value to its zero value and report no error. The mechanism is
   identical to the class above and the severity is the same; **what differs is the
-  evidence, and the count must not be added to the 122 as if it were.** A `required`
+  evidence, and the count must not be added to the 119 as if it were.** A `required`
   name is a promise the page makes; a declared name is a description of one response,
   so a name absent from a page that does not require it may be optional,
   conditionally sent, or simply absent from the example the page chose. Each of the
@@ -479,7 +502,7 @@ give it something to check — not a correctness verdict.
     instances are empty. This is the same treatment the 29 `decode-failure` rows
     already get.
   - **The floor applies here too, and is not printed.** 104 is a floor for the reason
-    122 is: the union of tags at every depth counts a name as covered. Unlike the
+    119 is: the union of tags at every depth counts a name as covered. Unlike the
     required half, the depth accounting is deliberately not reported per row, because
     `tagsOf` is called with the slice type on an array row, so the element's own
     fields land one level down and the same test would fire on nearly every declared
@@ -524,7 +547,7 @@ give it something to check — not a correctness verdict.
   symbol: 27 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch`
   row. They are recorded so the count stays stable, not because they are 29
   additional defects, and no separate work is attached to them. This is the
-  arithmetic reason the class totals must not be read as 285 independent problems.
+  arithmetic reason the class totals must not be read as 282 independent problems.
 - **`leaf-type-mismatch` — 2 rows across 2 symbols, both `quote_time`.**
   `data.GetQuotes` and `data.GetDisplayDepth` each publish `quote_time` as
   `type: string` and require it, and both SDK fields are `int64`. `data.GetQuotes`
@@ -542,35 +565,36 @@ Per-symbol detail is deliberately kept out of this page.
 `conformance/known-divergences.json` carries every row with its own reason and its
 own `recordedIn` pointer, `make conformance-report` prints the whole observed set
 grouped by check, and `conformance/doc.go` states what the instrument covers and
-what it does not. 5 of the 285 rows already had a home here before this subsection
-existed — the three `brokerfd.GetFDPositions` missing-name rows and the two
-`brokerfd.GetFDAssetsDetail` rows, all recorded above — and each of the remaining
-280 points at item 21, which records the class rather than the row, and says so in
-its own `recordedIn`.
+    what it does not. 2 of the 282 rows still have a home here, and they are the
+    `brokerfd.GetFDAssetsDetail` pair recorded above; the other three that once had
+    one, the `brokerfd.GetFDPositions` missing-name rows, no longer exist, because
+    that type now carries the documented names. Each of the remaining 280 points at
+    item 21, which records the class rather than the row, and says so in its own
+    `recordedIn`.
 
 - **Item 21 — the response contracts across the API surface are now measured, and
   they are largely divergent.** The five bullets above are one host, some path
   literals, a verb and body, a request shape, and one response DTO. This entry is
-  the class that last one belongs to, taken across the surface: 285 recorded
-  divergences on 63 symbols, in `brokerfd` (145), `data` (136), and `trade` (4).
+  the class that last one belongs to, taken across the surface: 282 recorded
+    divergences on 62 symbols, in `brokerfd` (142), `data` (136), and `trade` (4).
 
   | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
   |---|---:|---:|---:|---:|---:|---|
-  | `missing-required-name` | 122 | 29 | 89 | 29 | 4 | **Silently** — the documented value decodes to its zero value, no error reported |
+  | `missing-required-name` | 119 | 28 | 86 | 29 | 4 | **Silently** — the documented value decodes to its zero value, no error reported |
   | `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence — a name the page describes but does not require |
   | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
   | Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
   | `decode-failure` | 29 | 29 | 12 | 17 | 0 | Restates a container-kind or leaf-type row for the same symbol |
   | `leaf-type-mismatch` | 2 | 2 | 0 | 2 | 0 | Loudly — a JSON type error on the documented value |
-  | **Total** | **285** | **63** | **145** | **136** | **4** | |
+  | **Total** | **282** | **62** | **142** | **136** | **4** | |
 
-  Three caveats travel with those numbers. **122 and 104 are both floors, not
+  Three caveats travel with those numbers. **119 and 104 are both floors, not
   totals**: the name checks consider the union of json tags at every depth, so 19
   rows carry 41 of their 90 required names only through a nested object and count
   as covered; the harness prints each required half under the `required-name-depth`
   skip, and the declared half is deliberately not printed, because the same test on
   an array row would fire on nearly every declared name. **The two silent name
-  classes must not be summed as one figure.** 122 rests on a promise and 104 on a
+  classes must not be summed as one figure.** 119 rests on a promise and 104 on a
   description, and 68 of the 104 sit on rows that also record a container-kind
   mismatch, 26 of them restating that mismatch. **19 of the 27 container-kind rows
   are indeterminate, and are more likely documentation errors than SDK defects**:
@@ -605,7 +629,7 @@ its own `recordedIn`.
   - **Nothing here is live-verified.** No endpoint was called and no credential was
     used. The static comparison is certain; which side a live server honours is
     unverified for every row, exactly as for the `brokerfd.GetFDPositions` bullet.
-  - Not 285 defects: 29 rows are the `decode-failure` class restating another row
+  - Not 282 defects: 29 rows are the `decode-failure` class restating another row
     for the same symbol, 68 are declared-name rows resting on a container-kind row
     for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an
     evidence-base hole.
@@ -613,7 +637,7 @@ its own `recordedIn`.
     the subsection above sets out. The order is the silent name class first, then
     the container-kind class once one live body establishes which shape the server
     sends, then the two leaf-type rows. The 104 declared-name rows come after the
-    122 rather than beside them, because a name the page does not require is also a
+    119 rather than beside them, because a name the page does not require is also a
     name that may legitimately be absent.
   - Unblock: US sandbox credentials for the `brokerfd` rows and for the US-only
     `data` surfaces; HK sandbox credentials for the rest of `data` and for `trade`;
@@ -625,10 +649,10 @@ its own `recordedIn`.
     module is separate and no symbol in the root module can name a broker type.
     That is no longer the case: `broker/conformance_test.go` resolves all 29 rows
     from inside the module and runs the identical five checks, and
-    `broker/conformance-divergences.json` records what it found — **62 further
+    `broker/conformance-divergences.json` records what it found — **59 further
     divergences over 28 compared rows, 1 row decoding no body and 0 not
-    comparable**. The counts above remain the root module's own; this entry's 285
-    does not include the 62, and the two sets are reported separately rather than
+    comparable**. The counts above remain the root module's own; this entry's 282
+    does not include the 59, and the two sets are reported separately rather than
     merged, because merging them would lose the fact that one comes from a module
     the root cannot see. Two findings are worth naming because they are not new
     defects but the *same* defect on a second surface: `broker.GetPositions` is
@@ -637,7 +661,7 @@ its own `recordedIn`.
     HK position gets the same three silently zeroed values it already got from
     Broker FD. `broker.UpdateVirtualAccount` is additionally missing
     `client_request_id`, which is the field item 18's verb-and-body defect is
-    about. All 62 remain open and none is live-verified; Broker API HK returns
+    about. All 59 remain open and none is live-verified; Broker API HK returns
     `401 ROUTE_NOT_PERMITTED` in the HK sandbox, so the unblock is a production or
     US-scoped Broker credential.
   - Scope limit: nothing in the 193-fixture manifest is now unexamined. The 29
@@ -710,7 +734,7 @@ its own `recordedIn`.
     about evidence rather than code — obtain a documented `required` list for those
     endpoints, which is a Webull question whose natural form is to ask that the
     pages mark `required` what they always send. That is the only route that would
-    upgrade 104 rows of weaker evidence into rows of the same standing as the 122.
+    upgrade 104 rows of weaker evidence into rows of the same standing as the 119.
     Failing it, the live probe in the next steps still moves rows, because a
     captured response body carries the server's own property names whether or not
     the page marked them required. A fixture change cannot help, and a further
@@ -742,9 +766,9 @@ its own `recordedIn`.
   and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
   maintainer decision on versioning a breaking public API change.
 - **Those five are not the complete list.** Item 21 records a sixth entry covering
-  285 measured response-contract divergences on 63 symbols, of which 280 were
+  282 measured response-contract divergences on 62 symbols, of which 277 were
   previously unwritten. Most of that class fails silently, which is worse than
-  failing loudly. It now spans two silent name classes on different evidence, 122
+  failing loudly. It now spans two silent name classes on different evidence, 119
   resting on a `required` promise and 104 on a name the page merely describes, and
   **the two must not be summed as one figure.**
 - **A limit sits underneath that class, and item 22 is now its own entry.** 90 of
@@ -762,7 +786,7 @@ its own `recordedIn`.
   describe the whole surface. Nothing in the 193-fixture manifest is now
   unexamined: the 29 `broker/` endpoints, out of reach for want of a nameable
   type until this release, are covered by `broker/conformance_test.go` under the
-  same checks and carry **62 further recorded divergences of their own**.
+  same checks and carry **59 further recorded divergences of their own**.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
   not behavior guarantees.
 
@@ -770,8 +794,8 @@ its own `recordedIn`.
 
 1. Live-verify the v2.1.1 repository-tagged request, OMS, stream, and event telemetry with suitable non-production access.
 2. Add US sandbox verification for US-only surfaces; this also unblocks most of the second `brokerfd` defect, the `brokerfd.GetFDPositions` response-schema defect, and the 89 `brokerfd` rows of the response-contract class in item 21. The three paths with no documented counterpart need a written answer from Webull, and that enquiry should also ask whether `GET /broker/assets/positions/list` returns the documented `AssetsPositionResult` names or the SDK's own, which the documentation cannot settle.
-3. Work the response-contract class in item 21, and settle the direction before changing a tag. The cheapest step is the 4 pages that document a single item where the path says list, which one live body or one written answer would resolve; the `brokerfd` silent-name rows come next, and no retag should be applied on the strength of the documentation alone. The 104 `missing-declared-name` rows come **after** the 122 rather than beside them, because a name the page never requires is also a name that may legitimately be absent, so they need the same live evidence before a retag.
-4. Shrink the 90 name-unexamined rows of item 22, which is now a residual rather than an untouched surface: **84 of the 90 are already examined and 6 are named as unnameable**, and the declared-inventory route those 6 would need is fully consumed. What is left is evidence, not instrumentation. The 84 checkable rows fall into only 3 documented shape families — 60 a bare object, 29 an array of objects, 1 an array of strings — so capturing one live response body per family is a bounded task, and a captured body carries the server's own property names whether or not the page marked them `required`. Add to the existing Webull enquiry a request that the affected pages mark `required` the properties they always send, which is the only route that would upgrade the 104 rows of weaker evidence to the standing of the 122.
+3. Work the response-contract class in item 21, and settle the direction before changing a tag. The cheapest step is the 4 pages that document a single item where the path says list, which one live body or one written answer would resolve; the `brokerfd` silent-name rows come next, and no retag should be applied on the strength of the documentation alone. The 104 `missing-declared-name` rows come **after** the 119 rather than beside them, because a name the page never requires is also a name that may legitimately be absent, so they need the same live evidence before a retag.
+4. Shrink the 90 name-unexamined rows of item 22, which is now a residual rather than an untouched surface: **84 of the 90 are already examined and 6 are named as unnameable**, and the declared-inventory route those 6 would need is fully consumed. What is left is evidence, not instrumentation. The 84 checkable rows fall into only 3 documented shape families — 60 a bare object, 29 an array of objects, 1 an array of strings — so capturing one live response body per family is a bounded task, and a captured body carries the server's own property names whether or not the page marked them `required`. Add to the existing Webull enquiry a request that the affected pages mark `required` the properties they always send, which is the only route that would upgrade the 104 rows of weaker evidence to the standing of the 119.
 5. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
 6. Correct `broker.UpdateVirtualAccount` only against the credential it names, and update its test in the same change. Treat `data.GetDisplaySnapshot` as a breaking-API decision rather than a patch: obtain the maintainer decision on versioning a public `data.SnapshotQuery` change first, then probe before touching the path.
 7. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.

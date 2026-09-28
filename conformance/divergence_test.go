@@ -510,16 +510,25 @@ func TestComparisonBites(t *testing.T) {
 		f := mustFixture(t, m, "broker-fd-us/GET-broker-assets-positions-list")
 		entry := mustType(t, sym)
 
-		// The recorded defect, on the unmodified fixture: the page requires
-		// cost_price, last_price and unrealized_profit_loss, and FDPosition tags
-		// average_cost, market_value and unrealized_pl instead. The values decode
-		// to zero money.Money and nothing reports an error.
+		// The three names this row used to be missing are now carried. The page
+		// requires cost_price, last_price and unrealized_profit_loss, and
+		// FDPosition used to tag only average_cost, market_value and unrealized_pl,
+		// so the documented values decoded to zero money.Money with no error
+		// reported. FDPosition now carries both sets, so neither the documented
+		// names nor the SDK's own are missing, and the row records no divergence
+		// for the first time. Asserting the fix rather than the defect is what
+		// keeps a retag from silently reintroducing it, and the three mutation
+		// checks below still prove the check itself bites.
 		before := Compare(f, sym, entry)
 		for _, name := range []string{"cost_price", "last_price", "unrealized_profit_loss"} {
-			if !hasKind(before, MissingRequiredName, name) {
-				t.Fatalf("the recorded defect on %s does not reproduce: %s",
-					name, summary(before))
+			if hasKind(before, MissingRequiredName, name) {
+				t.Errorf("the documented name %s is reported missing again, so the fix "+
+					"did not hold: %s", name, summary(before))
 			}
+		}
+		if len(before.Divergences) != 0 {
+			t.Errorf("expected this row to record no divergence now that both name sets are "+
+				"carried, but it has %d: %s", len(before.Divergences), summary(before))
 		}
 		t.Logf("unmodified fixture: %d divergences", len(before.Divergences))
 		for _, d := range before.Divergences {

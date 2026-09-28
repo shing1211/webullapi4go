@@ -824,33 +824,6 @@
       "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
     },
     {
-      "symbol": "brokerfd.GetFDPositions",
-      "fixture": "broker-fd-us/GET-broker-assets-positions-list",
-      "kind": "missing-required-name",
-      "name": "cost_price",
-      "detail": "no json tag in brokerfd.FDPosition, so the documented value decodes to the zero value",
-      "reason": "Recorded as live-blocked SDK defect item 20: the page requires cost_price, last_price and unrealized_profit_loss and FDPosition tags average_cost, market_value and unrealized_pl, so the three values decode to zero money.Money with no error. The direction of the fix is undecided because it is not established which set the server sends, so a retag applied now could break a call that works.",
-      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Live-blocked SDK defects\" item 20"
-    },
-    {
-      "symbol": "brokerfd.GetFDPositions",
-      "fixture": "broker-fd-us/GET-broker-assets-positions-list",
-      "kind": "missing-required-name",
-      "name": "last_price",
-      "detail": "no json tag in brokerfd.FDPosition, so the documented value decodes to the zero value",
-      "reason": "Recorded as live-blocked SDK defect item 20: the page requires cost_price, last_price and unrealized_profit_loss and FDPosition tags average_cost, market_value and unrealized_pl, so the three values decode to zero money.Money with no error. The direction of the fix is undecided because it is not established which set the server sends, so a retag applied now could break a call that works.",
-      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Live-blocked SDK defects\" item 20"
-    },
-    {
-      "symbol": "brokerfd.GetFDPositions",
-      "fixture": "broker-fd-us/GET-broker-assets-positions-list",
-      "kind": "missing-required-name",
-      "name": "unrealized_profit_loss",
-      "detail": "no json tag in brokerfd.FDPosition, so the documented value decodes to the zero value",
-      "reason": "Recorded as live-blocked SDK defect item 20: the page requires cost_price, last_price and unrealized_profit_loss and FDPosition tags average_cost, market_value and unrealized_pl, so the three values decode to zero money.Money with no error. The direction of the fix is undecided because it is not established which set the server sends, so a retag applied now could break a call that works.",
-      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Live-blocked SDK defects\" item 20"
-    },
-    {
       "symbol": "brokerfd.GetFDStockInstruments",
       "fixture": "broker-fd-us/GET-broker-instruments-stocks-profiles-list",
       "kind": "decode-failure",

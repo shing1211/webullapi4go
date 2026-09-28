@@ -106,22 +106,44 @@ jobs:
   # Lint: formatting and static analysis. Runs on ubuntu-latest (grep-based
   # gofmt check); formatting is OS-independent.
   lint:
-    name: lint
+    name: lint (${{ matrix.module }})
     runs-on: ubuntu-latest
+    strategy:
+      # Every module is linted, not just the root. golangci-lint resolves ./...
+      # through the module it is invoked in, so a single run at the repository root
+      # cannot see broker/ or any of the examples. gofmt below is a plain directory
+      # walk and does reach them, which is exactly why the asymmetry was invisible: a
+      # dead three-line method sat in broker/client.go from 2026-09-21 until a local
+      # run found it, because nothing in CI had ever examined that file.
+      #
+      # The list mirrors MODULES in the Makefile, which stays the source of truth
+      # for the module-aware local gates.
+      fail-fast: false
+      matrix:
+        module:
+          - .
+          - broker
+          - examples/watchlist-cmd
+          - examples/broker-probe
+          - examples/futures-probe
+          - examples/options-multi-leg
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up Go (version from go.mod)
+      - name: Set up Go (version from this module's go.mod)
         uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version-file: ${{ matrix.module }}/go.mod
           check-latest: true
           cache: true
 
       - name: gofmt check
-        # Generated protobuf code under gen/ is excluded (see .golangci.yml);
-        # everything else must be gofmt-clean.
+        # Once, from the root, because gofmt is not module-aware and already walks
+        # every nested module; running it six times would be the same check six
+        # times over. Generated protobuf code under gen/ is excluded (see
+        # .golangci.yml); everything else must be gofmt-clean.
+        if: matrix.module == '.'
         run: |
           UNFORMATTED=$(gofmt -l . | grep -v '^gen/' || true)
           if [ -n "$UNFORMATTED" ]; then
@@ -131,9 +153,13 @@ jobs:
           fi
 
       - name: Run golangci-lint
+        # working-directory is what makes this per-module: the linter reads its
+        # config from there, so each nested module is held to the same
+        # .golangci.yml the root uses rather than to golangci-lint's defaults.
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.9
+          working-directory: ${{ matrix.module }}
 
   # Coverage: measure and report per-package coverage for the baseline gate.
   coverage:
