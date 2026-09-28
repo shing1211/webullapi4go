@@ -45,7 +45,7 @@ func TestUploadDocument(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -79,7 +79,7 @@ func TestDownloadDocument(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -112,7 +112,7 @@ func TestListDocuments(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -149,7 +149,7 @@ func TestGetDocumentDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -176,7 +176,7 @@ func TestDownloadDocumentHandlesError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

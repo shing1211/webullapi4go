@@ -23,7 +23,8 @@ import (
 )
 
 // Client provides access to the Broker FD (US) HTTP API via the shared transport.
-// It wraps a [client.Client] and delegates all HTTP calls to it.
+// It wraps a [client.Client] and delegates all HTTP calls to it, using the Broker
+// host rather than the core host. See the do method for why.
 type Client struct {
 	core *client.Client
 }
@@ -36,11 +37,20 @@ func (c *Client) Core() *client.Client { return c.core }
 
 // do executes an HTTP request with the given method, path, query parameters, body,
 // and populates the response into out. It appends query parameters to the path.
+//
+// The request goes to the Broker host, not the core host. Broker FD is a Broker API
+// surface, so it is reached with [client.Client.DoBroker] exactly as the sibling
+// broker/ module is; routing this package through the core transport sent every
+// Broker FD request to a host that does not serve the surface, which surfaced as a
+// 404 indistinguishable from a genuinely absent endpoint. That is a code-structure
+// fact rather than an empirical one, so it needed no credential to establish: the
+// transport, the endpoint field, and the sibling module's use of it all already
+// existed.
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
 	if len(query) > 0 {
 		path += "?" + query.Encode()
 	}
-	return c.core.Do(ctx, method, path, body, out)
+	return c.core.DoBroker(ctx, method, path, body, out)
 }
 
 // get issues a GET request to the Broker FD API.

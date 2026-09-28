@@ -96,6 +96,14 @@ const (
 	// checks: a decode that succeeds proves almost nothing, and one that fails
 	// is usually the same defect the sharper checks already named.
 	DecodeFailure DivergenceKind = "decode-failure"
+
+	// VerbMismatch means the SDK method sends an HTTP verb the page does not
+	// document for that path, or that its verb could not be read from the source
+	// at all. It is the only kind about the request rather than the response, and
+	// it exists because the path check cannot see it: a method that sends the
+	// documented path with the wrong verb reconciles as a clean match. See
+	// verbs.go.
+	VerbMismatch DivergenceKind = "verb-mismatch"
 )
 
 // checkOf is the harness's priority order. The two shape kinds share rank 1
@@ -147,6 +155,12 @@ const (
 	// such, because the depth-scoped form of the name check would report names
 	// the SDK does decode. See tagsOf.
 	CheckNameDepth Check = "required-name-depth"
+	// CheckVerb is "does the SDK method send the HTTP verb the page declares". It
+	// is the only check here that compares the *request* rather than the response,
+	// and it is the one whose absence let broker.UpdateVirtualAccount reconcile
+	// as a clean match while issuing PUT where the page documents POST. See
+	// verbs.go.
+	CheckVerb Check = "verb-agreement"
 )
 
 // checks is the report order, and the order the gate's summary groups by.
@@ -165,6 +179,8 @@ func checkForKind(k DivergenceKind) Check {
 		return CheckLeafTypes
 	case DecodeFailure:
 		return CheckDecodes
+	case VerbMismatch:
+		return CheckVerb
 	default:
 		return Check("unknown:" + string(k))
 	}
@@ -1043,12 +1059,36 @@ var (
 	jsonUnmarshalerType = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 )
 
+// leafSamples maps a documented JSON kind to a literal of that kind, used to ask a
+// type that brings its own decoder whether it can actually be built from the shape
+// the page documents.
+//
+// The values are deliberately small and unremarkable: the question is which JSON
+// kind the type accepts, not whether it accepts this particular magnitude.
+var leafSamples = map[string]string{
+	"string":  `"1"`,
+	"number":  `1`,
+	"boolean": `true`,
+	"object":  `{}`,
+	"array":   `[]`,
+}
+
 // leafVerdict decides whether a Go field can hold a documented JSON kind.
 //
 // The three outcomes are deliberate. ok means the field can hold it. A non-empty
-// reason means the field is not judgeable from outside -- it decodes itself --
-// which is a different fact from agreement. An empty reason with ok false is a
-// mismatch.
+// reason means the field is not judgeable from outside -- it decodes itself, and its
+// decoder rejected the sample -- which is a different fact from disagreement. An
+// empty reason with ok false is a mismatch.
+//
+// A type that brings its own decoder is asked rather than assumed. The earlier
+// version named money.Money as the one exempt type, which is a fact about the SDK
+// that goes stale the moment a second such type appears, and it had to be extended
+// the moment data.QuoteTime did. Sending the documented kind through the type's own
+// UnmarshalJSON answers the question directly, and it is deliberately one-sided: a
+// type that accepts the sample becomes positively confirmed, and a type that
+// rejects it stays not judgeable rather than being reported as a mismatch. That way
+// this can only reduce the set of unexamined fields, never invent a finding about a
+// decoder the harness has not understood.
 func leafVerdict(field reflect.Type, want string) (ok bool, reason string) {
 	t := field
 	for t.Kind() == reflect.Pointer {
@@ -1064,6 +1104,14 @@ func leafVerdict(field reflect.Type, want string) (ok bool, reason string) {
 		return want == "string" || want == "number", ""
 	}
 	if reflect.PointerTo(t).Implements(jsonUnmarshalerType) || t.Implements(jsonUnmarshalerType) {
+		if sample, has := leafSamples[want]; has {
+			ptr := reflect.New(t)
+			if err := json.Unmarshal([]byte(sample), ptr.Interface()); err == nil {
+				return true, ""
+			}
+			return false, "the SDK field type supplies its own json.Unmarshaler, and that " +
+				"decoder rejected a " + want + " of the documented kind"
+		}
 		return false, "the SDK field type supplies its own json.Unmarshaler"
 	}
 	return jsonKindOf(t) == want, ""

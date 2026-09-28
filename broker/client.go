@@ -73,11 +73,6 @@ func (c *Client) post(ctx context.Context, path string, query url.Values, body, 
 	return c.do(ctx, http.MethodPost, path, query, body, out)
 }
 
-// put is a convenience wrapper around [Client.do] for PUT requests.
-func (c *Client) put(ctx context.Context, path string, query url.Values, body, out any) error {
-	return c.do(ctx, http.MethodPut, path, query, body, out)
-}
-
 // Close releases resources held by the client. The underlying [client.Client]
 // is owned by the caller and is not closed here.
 func (c *Client) Close() error { return nil }

@@ -9,6 +9,127 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.28] - 2026-09-28
+
+Corrective release. It closes three of the four remaining live-blocked defects, two
+of them without the credential those items said was required, because both were
+facts about the code rather than about the server. It adds the two harness checks
+whose absence let those defects hide, and it fixes a response type that could not
+decode half of Webull's own documentation. Root baseline 278 rows over 60 symbols,
+broker 59 over 20; no fixture changed; nothing is live-verified.
+
+### Fixed
+
+- **`brokerfd` sent every request to the core host.** `brokerfd` called `c.core.Do`
+  while its sibling `broker/` module, one directory over, called `c.core.DoBroker`
+  for the same class of request. The transport, the `client.Endpoints.BrokerHTTP`
+  field and the sibling's use of it all already existed - the two packages simply
+  disagreed. The status recorded a US Broker FD credential as the unblock; that was
+  needed to observe the 404, not to establish the cause. `DoBroker` is now used, and
+  `TestEndpointsForAlwaysSuppliesBrokerHost` asserts that every region and environment
+  supplies the field, because an empty one would make the package unusable rather
+  than merely wrong.
+- **The routing fix exposed a live-traffic hazard and it is closed.**
+  `client.WithBaseURL` overrides one field and sets the internal override flag, so
+  `client.New` leaves every other endpoint at its default - the *production* Broker
+  host. 54 call sites in `brokerfd`'s tests used it, so correcting the routing turned
+  the whole suite into calls against a production API. All 54 now use
+  `client.WithEndpoints` with both hosts, as `broker/`'s tests already did.
+  `client/client_test.go` asserts the `WithBaseURL` behaviour so it cannot change
+  silently, because the failure mode is an offline suite reaching production rather
+  than a failing assertion.
+- **`broker.UpdateVirtualAccount` sent the wrong verb, the wrong body, and a field
+  that does not exist.** The status recorded "the wrong verb and body shape". The
+  official page says more: the verb is POST, `account_id` is a **body** field, the
+  request takes no query parameters beyond the auth headers, and two body fields are
+  required - `account_id` and `client_request_id`. The old request type carried one
+  field, `AccountName`, which the page does not declare at all, so the request was
+  wrong in every respect at once. It now issues POST with the documented body, and
+  `UpdateVirtualAccountRequest` carries `ClientRequestID`, `TradingPermissions`,
+  `OptionLevel`, `CommissionCode`, `W8BENInfo` and `ChinaConnectInvestorInfo`.
+  **Source-level break, taken deliberately:** `AccountName` is gone rather than kept
+  and ignored, because a field that was never in the contract and is silently dropped
+  is the worst of the three options - the caller compiles, sets it, and learns
+  nothing. The unexported `put` helper had this as its only call site and went with it.
+- **`data.Quote.QuoteTime` could not decode half of Webull's own documentation, and
+  this was a total failure rather than a silent zero.** Four documented pages carry a
+  `quote_time` property and Webull's own published examples disagree about its type:
+  the stock and Display Solution depth pages show a quoted string
+  (`"1640688000000"`), the futures and event-contract depth pages show a bare number
+  (`1761131409276`). The field was `int64`, so it decoded the two numeric pages and
+  **failed the other two with a decode error that abandoned the whole response** - not
+  one field, the entire body. `data.QuoteTime` reads a quoted decimal, a bare number,
+  an exponent form, null and an omitted field, and reports anything else through one
+  `ErrQuoteTimeFormat` sentinel, so it is correct whichever the server sends. A second
+  field carrying the same name was not an alternative: two fields claiming one json
+  tag is the defect the new duplicate-tag scan exists to catch. Baselines: 4 rows
+  removed, root 282 to 278 and 62 to 60 symbols, and the `leaf-type-mismatch` class is
+  now **empty**.
+- **The additive route that closed item 20 does not apply to a type conflict, and the
+  difference is worth recording.** In item 20 the documentation and the SDK used
+  *different* wire names for one value, so a twin field was possible. Here they use the
+  *same* name with different types, so a twin cannot populate from it - the fix has to
+  be a type that accepts both.
+
+### Added
+
+- **A verb check, because all five pre-existing checks compare the response and none
+  looked at the request.** `broker.UpdateVirtualAccount` reconciled as a clean `match`
+  for the whole life of the harness while issuing PUT where the page documents POST -
+  the sharpest single illustration of the limit the status states about a green row.
+  `conformance.CompareVerb` reads the verb the method actually sends **from the Go
+  source** and compares it with `documented.method`, which the generator already
+  recorded for all 193 fixtures. Reading it from source rather than a hand-maintained
+  table follows the precedent `conformance/envelopes.go` set for unexported types. The
+  extractor follows a method, a sub-service helper, an `http.MethodX` passed as an
+  argument, a verb written as a string literal, and same-package delegation - which it
+  must, because `trade.GetOpenOrders` delegates to `GetOpenOrdersPage` and
+  `display.Service.EnsureToken` to `fetchToken`. On the committed surface: **183 mapped
+  symbols, all readable; 178 rows agree, 0 disagree, 15 not comparable on path.** Zero
+  is honest only because the fix above landed first; reverting one line produces
+  exactly one finding naming it with both sides. Wired into the `broker/` gate too.
+- **A whole-module duplicate-`json`-tag scan, because the class is invisible to a
+  name-lookup harness.** `brokerfd.FDPosition` tagged both `UnrealizedPL` and
+  `RealizedPL` `json:"unrealized_pl"`, and `encoding/json` drops **both** fields when
+  two fields of one struct claim the same name - with no error reported - so open P&L
+  had been silently zero for every caller. It survived 285 rows of conformance work
+  because the harness looks for names that are *missing* and nothing was missing:
+  `tagsOf` keeps one of the two colliding names and reported the name as covered while
+  the decoder filled neither field. The two defects look identical from outside and
+  only the level at which you look tells them apart.
+  `conformance.ScanDuplicateTags` walks **370 structs across 6 module directories**,
+  matching on the name before the comma so `json:"a"` and `json:"a,omitempty"` are
+  correctly a collision, and excluding a nested module from the parent walk by its own
+  `go.mod` so no struct is counted twice.
+- **Two refusals that keep the new checks honest.** A verb the extractor cannot read
+  yields no divergence, because that is a defect in the extractor; it is required to be
+  zero by a test rather than recorded in the baseline, which would put a tool defect
+  in the one file whose purpose is to record SDK defects against the documentation.
+  And `client.CreateToken` and `client.CheckToken` each send several verbs, so they
+  have no single counterpart verb and are reported as not comparable rather than forced
+  into an answer.
+- **`leafVerdict` now asks a type instead of naming it.** It listed `money.Money` as the
+  one exempt type, which is a fact about the SDK that goes stale the moment a second
+  such type appears - and it had to be extended the moment `data.QuoteTime` did. It
+  sends the documented kind through the type's own `UnmarshalJSON` instead,
+  deliberately one-sided: a type that accepts the sample becomes positively confirmed,
+  one that rejects it stays not judgeable rather than being reported as a mismatch. The
+  change can only reduce the set of unexamined fields, never invent a finding.
+
+### Noted
+
+- `TestComparisonBites/LeafType` used `data.Quote.QuoteTime` as a live defect to bite on.
+  That class is now empty, so the bite is manufactured instead: the subtest re-types
+  `quote_time` back to a plain `int64` - exactly the field the SDK carried - and
+  requires the check to name the disagreement again. A bite test that kept asserting a
+  fixed defect would have gone on passing for the wrong reason, and one that deleted
+  itself would have left the check unproven.
+- The `data.QuoteTime` public type change means `Quote.QuoteTime` is no longer an
+  `int64`; a caller assigning it to an `int64` variable needs a conversion. Comparisons
+  against untyped constants are unaffected, and every use in this repository is one.
+- Nothing here is live-verified. The two SDK fixes are derived from the official pages
+  and from the code's own internal inconsistency, not from an observation of a server.
+
 ## [2.1.27] - 2026-09-28
 
 Corrective release. It closes the silent part of live-blocked defect item 20 without

@@ -249,6 +249,19 @@ func TestBrokerResponseContracts(t *testing.T) {
 			}
 			got[d.Key()] = d
 		}
+		// The verb check runs here as well as in the root module, because this is
+		// the module where it earned its place: UpdateVirtualAccount issued PUT
+		// where the page documents POST, and Compare above reports its path as a
+		// clean match because it compares paths and not verbs. Its finding joins the
+		// same exact-set gate rather than being asserted separately, so a future
+		// verb disagreement cannot be recorded in one baseline and forgotten in the
+		// other.
+		for _, d := range conformance.CompareVerb(f, sym) {
+			if _, dup := got[d.Key()]; dup {
+				t.Errorf("divergence reported twice: %s", d.Key())
+			}
+			got[d.Key()] = d
+		}
 	}
 	t.Logf("compared %d of %d rows: %d envelope, %d no-body, %d not-comparable; "+
 		"%d divergence(s) observed against %d recorded",

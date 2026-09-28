@@ -36,7 +36,7 @@ func TestGetFDStockInstruments(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -68,7 +68,7 @@ func TestGetFDStockLocate(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -100,7 +100,7 @@ func TestGetFDCorporateActions(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -130,7 +130,7 @@ func TestGetFDCorporateActionDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -162,7 +162,7 @@ func TestGetFDECInstruments(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -192,7 +192,7 @@ func TestGetFDECInstrumentDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

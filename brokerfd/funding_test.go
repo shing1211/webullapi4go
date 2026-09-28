@@ -37,7 +37,7 @@ func TestListFDBankAccounts(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -69,7 +69,7 @@ func TestGetFDBankAccountDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -101,7 +101,7 @@ func TestAddFDBankAccount(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -133,7 +133,7 @@ func TestRemoveFDBankAccount(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -162,7 +162,7 @@ func TestListFDAchAccounts(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -191,7 +191,7 @@ func TestGetFDAchAccountDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -220,7 +220,7 @@ func TestListFDTransfers(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -249,7 +249,7 @@ func TestGetFDTransferDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -278,7 +278,7 @@ func TestInitiateFDTransfer(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -312,7 +312,7 @@ func TestCreateFDInstantFunding(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -347,7 +347,7 @@ func TestGetFDInstantFundingDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -377,7 +377,7 @@ func TestGetFDTransferFees(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -406,7 +406,7 @@ func TestGetFDCreditInfo(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

@@ -299,23 +299,31 @@ make generate
   reconciler compares path strings only and cannot observe HTTP verbs, request
   bodies, host routing, or response schemas, so a green row in
   `docs/reconciliation.md` is not evidence that an endpoint is correct: it
-  reports the defective `broker.UpdateVirtualAccount` as a clean match, and it
-  is blind to the `brokerfd` host-routing and `data.GetDisplaySnapshot` defects
+  reported the defective `broker.UpdateVirtualAccount` as a clean match - a verb
+  check now exists for exactly that, after it was found - and it is blind to the
+  `brokerfd` path-literal and `data.GetDisplaySnapshot` defects
   recorded below. Sharpest is `brokerfd.GetFDPositions`: a clean match whose
   response DTO silently zeroes three required values. This limit of a path
   comparison, not a generator defect, is recorded in
   `IMPLEMENTATION_STATUS.md` and `docs/implementation-status.md`.
-- Five live-blocked SDK defects are recorded with `file:line`, impact, minimal
+- Four live-blocked SDK defects are recorded with `file:line`, impact, minimal
   fix, and unblock requirement in `IMPLEMENTATION_STATUS.md` and
-  `docs/implementation-status.md`. Four were found by static analysis on
-  2026-09-26: `brokerfd/client.go:43` routes the whole package to the core host
-  instead of the Broker host, `brokerfd` still uses 14 undocumented
+  `docs/implementation-status.md`. The first was found by static analysis on
+  2026-09-26 and **closed in `v2.1.28` without a credential**, because it was a
+  code-structure defect rather than an empirical one: `brokerfd` called
+  `c.core.Do` where its sibling `broker/` module calls `c.core.DoBroker`
+  (`brokerfd/client.go:53`). The other two, found on 2026-09-26, remain:
+  `brokerfd` still uses 14 undocumented
   `/broker-fd/*` path literals (`brokerfd/assets.go:25` is the one the generated
-  report flags), `broker.UpdateVirtualAccount` sends the wrong verb and body,
-  and `data.GetDisplaySnapshot` differs from both official sources. The fifth,
-  `brokerfd.GetFDPositions`, was found on 2026-09-27, also statically: it sends
-  the documented path and reconciles as a clean match, yet three of the eight
-  required response properties have no matching json tag and decode as silent
+  report flags), and `data.GetDisplaySnapshot` differs from both official
+  sources. The fourth, `broker.UpdateVirtualAccount`, was found on 2026-09-26 and
+  **closed in `v2.1.28`**, also without a credential: the reconciler compares
+  paths and not verbs, so the row reconciled as a clean match while the method
+  issued PUT where the page documents POST. A verb check now exists. The fifth
+  defect ever recorded, `brokerfd.GetFDPositions`, was found on 2026-09-27, also
+  statically, and closed in `v2.1.27`: it sends
+  the documented path and reconciled as a clean match, yet three of the eight
+  required response properties had no matching json tag and decoded as silent
   zeroes, and its entry records why a retag is not automatically the fix. None
   is live-verified and none may be changed without the credentials or
   entitlement each entry names.

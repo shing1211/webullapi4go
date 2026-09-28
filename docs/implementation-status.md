@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.27`** (2026-09-28)
+- Latest repository tag: **`v2.1.28`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -190,15 +190,32 @@ live-verified — no pass touched the network — and each may only be changed o
 the credential or entitlement it names is available, because the fix cannot be
 confirmed without it.
 
-- **`brokerfd` sends every request to the core host.** `brokerfd/client.go:43`
-  calls `c.core.Do(...)`, so all Broker FD traffic goes to the Trading/Market
-  Data host instead of the documented `https://broker-api.sandbox.webull.com`
-  (`BrokerHTTP` in `internal/region/region.go:191`); the HK `broker` package
-  routes correctly through `DoBroker` at `broker/client.go:63`. Impact: every
-  method in the package, and the highest-impact item of the four. Minimal fix:
-  route the shared `do` helper through the Broker host. Unblock: US sandbox
-  credentials — the HK host does not serve the FD surface (`404`), so HK cannot
-  distinguish "wrong host" from "wrong region".
+- **RESOLVED: `brokerfd` now sends every request to the Broker host.** The shared `do` helper calls `c.core.DoBroker` (`brokerfd/client.go:53`), which is what the sibling `broker/` package has always done at `broker/client.go:63`.
+  The defect was a fact about the code rather than about the server: the transport,
+  the `client.Endpoints.BrokerHTTP` field and the sibling module's use of it all
+  already existed, and the two packages simply disagreed. The recorded unblock - a US
+  credential to tell "wrong host" from "wrong region" - was needed to observe the
+  symptom, not to establish the cause, which is why this is closed without one.
+  `client.EndpointsFor` populates `BrokerHTTP` for every region and environment, so
+  the change is correct by default; `TestEndpointsForAlwaysSuppliesBrokerHost` asserts
+  that table rather than assuming it, because an empty field would make the package
+  unusable rather than merely wrong.
+
+  The one behaviour change is that a caller building `client.Endpoints` by hand and
+  omitting `BrokerHTTP` now gets a typed configuration error naming the missing field,
+  where the old code sent the request to the core host and returned its 404.
+
+  **The fix exposed a live-traffic hazard.** `client.WithBaseURL` overrides one field
+  and sets the internal override flag, so `client.New` leaves every other endpoint at
+  its default - the *production* Broker host. 54 call sites in `brokerfd`'s tests used
+  it, so correcting the routing turned the whole suite into calls against a production
+  API. All 54 now use `client.WithEndpoints` with both hosts, as `broker/`'s tests
+  already did, and `client/client_test.go` asserts the `WithBaseURL` behaviour so it
+  cannot change silently.
+
+  Verification: `brokerfd/host_routing_test.go` runs two test servers, one per host,
+  and asserts which is reached. Reverting the one line fails three of its tests.
+
 - **`brokerfd` uses undocumented `/broker-fd/*` paths.** 14 non-test literals
   remain (`brokerfd/accounts.go:29-31`, `brokerfd/assets.go:25`,
   `brokerfd/brokerfd.go:58,68`, `brokerfd/documents.go:23-24`,
@@ -241,21 +258,25 @@ confirmed without it.
   distinguish an undocumented path from an endpoint Webull does not offer, so
   they also need a written answer from Webull about whether the endpoints exist
   at all.
-- **`broker.UpdateVirtualAccount` sends the wrong verb and body shape.**
-  `broker/accounts.go:66-68` builds
-  `pathVirtualAccountsUpdate + "?account_id=" + accountID` and issues
-  `c.put`, while the documented endpoint is POST and requires `account_id` AND
-  `client_request_id` in the JSON body with no `account_name` field;
-  `UpdateVirtualAccountRequest.AccountName` (`broker/accounts.go:54`) is
-  undocumented. `GetVirtualAccount` does document `account_id` as a query
-  parameter, so the POST appears to have copied the GET's convention. The path
-  is correct, which is why reconciliation reports a match — the generator
-  compares paths, not verbs or bodies — and
-  `broker/accounts_test.go:151-160` currently certifies the wrong contract.
-  Impact: `broker.UpdateVirtualAccount`. Minimal fix: issue POST with the
-  documented body fields and update the test in the same change. Unblock: a
-  production or US-scoped Broker credential; the HK sandbox returns
-  `401 ROUTE_NOT_PERMITTED` for the whole Broker API.
+- **RESOLVED: `broker.UpdateVirtualAccount` now sends the documented verb, body and fields.** It issues POST with a JSON body (`broker/accounts.go:157`) where it issued PUT with `account_id` in the query, and `UpdateVirtualAccountRequest` now carries the documented fields (`broker/accounts.go:67`).
+  **The recorded defect was larger than it read.** The status recorded the wrong verb
+  and body shape. The official page says more: the verb is POST, `account_id` is a
+  **body** field, the request takes no query parameters other than the auth headers,
+  and two body fields are required - `account_id` and `client_request_id`. The old
+  request type had exactly one field, `AccountName`, which the page does not declare
+  at all. So it was wrong in every respect at once.
+
+  **Source-level break, taken deliberately.** `AccountName` is gone rather than kept
+  and ignored, because a field that was never in the contract and is silently dropped
+  is the worst of the three options: the caller compiles, sets it, and learns nothing.
+  `account_id` stays a method argument so the required pair cannot be built apart. The
+  unexported `put` helper had this as its only call site and was removed with it.
+
+  Unblock, for the live confirmation only: a production or US-scoped Broker credential.
+  The fix is derived from the official page rather than from an observation, and **has
+  not been live-verified**. It was invisible for so long because the reconciler
+  compares *paths* and the path was correct; see the verb check below.
+
 - **`data.GetDisplaySnapshot` differs from both official sources.**
   `data/display_quotes.go:33` sets
   `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:63` sends it
@@ -432,14 +453,58 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 282 divergences fall on 62 symbols, in three packages:
-`brokerfd` 142, `data` 136, `trade` 4. The 4 `trade` rows are all on
+record no divergence. All 278 divergences fall on 60 symbols, in three packages:
+`brokerfd` 142, `data` 132, `trade` 4. The 4 `trade` rows are all on
 `trade.BatchPlaceOrder`; 12 of the 13 trading endpoints the harness compared record
 no divergence, and 4 of the 5 that publish a `required` list are among them, so the
 trading API's response types are the most conformant part of the surface measured.
 That is a statement about what the harness did not find, on the 5 trading pages that
 give it something to check — not a correctness verdict.
 
+
+- **The harness could not see a wrong HTTP verb, and now can.** All five
+  pre-existing checks compare a documented *response* against what the SDK decodes;
+  none looks at the *request* the SDK sends. So a method that sends the right path with
+  the wrong verb reconciles as a clean path match - which is what
+  `broker.UpdateVirtualAccount` did, reported as a `match`. `conformance.CompareVerb`
+  now reads the verb the method actually sends **from the Go source** and compares it
+  with `documented.method`, which the generator already recorded for all 193 fixtures.
+  Reading it from source rather than a hand-maintained table follows the precedent
+  `conformance/envelopes.go` set for unexported types: a table is a second place to
+  forget to update. The extractor follows a method, a sub-service helper, an
+  `http.MethodX` passed as an argument, a verb written as a string literal, and
+  same-package delegation - which it must, because `trade.GetOpenOrders` delegates to
+  `GetOpenOrdersPage` and `display.Service.EnsureToken` to `fetchToken`.
+
+  On the committed surface: **183 mapped symbols, all readable; 178 rows agree, 0
+  disagree, 15 not comparable on path.** Zero is the honest outcome only because the
+  `UpdateVirtualAccount` fix landed first; reverting that one line produces exactly one
+  finding naming it with both sides. **Two honest refusals:** `client.CreateToken` and
+  `client.CheckToken` each send several verbs, so they have no single counterpart verb
+  and are reported as not comparable rather than forced into an answer; and a verb the
+  extractor cannot read yields no divergence at all, because that is a defect in the
+  extractor, so it is required to be zero by a test rather than recorded in the
+  baseline, which would put a tool defect in the one file whose purpose is to record
+  SDK defects against the documentation.
+
+- **A duplicated `json` tag made a value silently unreadable, and only a
+  whole-module scan finds the class.** `brokerfd.FDPosition` tagged both
+  `UnrealizedPL` and `RealizedPL` `json:"unrealized_pl"`, and `encoding/json` drops
+  **both** fields when two fields of one struct claim the same name - with no error
+  reported - so open P&L had been silently zero for every caller. The duplicate-tag
+  defect and the missing-name defect look identical from outside, a value the caller
+  cannot read, and only the level at which you look tells them apart: this harness
+  looks for names that are *missing*, and nothing was missing, because `tagsOf` keeps
+  one of the two colliding names and reported the name as covered while the decoder
+  filled neither field. `conformance.ScanDuplicateTags` now walks every non-test struct
+  in the root module, `broker/` and the four nested example modules - **370 structs
+  across 6 module directories** - and matches on the name before the comma, so
+  `json:"a"` and `json:"a,omitempty"` are correctly a collision. A nested module is
+  excluded from the parent walk by its own `go.mod` and scanned as its own entry, so
+  no struct is counted twice. Reintroducing the original duplicate tag is confirmed to
+  be caught, naming both structs the one careless edit would have hit. The two
+  per-type tests stay, because a per-type test pins the specific defect with its
+  reasoning while the scan only says the class is empty.
 - **`missing-required-name` — 119 rows across 28 symbols, the silent class.** A
   name the page marks `required` has no matching json tag anywhere in the type the
   method decodes into, so the documented value decodes to the zero value and no
@@ -540,15 +605,18 @@ give it something to check — not a correctness verdict.
   either unwrap the documented envelope in the SDK or correct the page — a retag is
   not the fix in this class. Unblock: the same credentials, plus a written answer
   from Webull on the 4 pages that document a single item where the path says list.
-- **`decode-failure` — 29 rows across 29 symbols, the weakest check.** A decode
+- **`decode-failure` — 27 rows across 27 symbols, the weakest check.** A decode
   that succeeds is consistent with a type that ignores every documented name, and a
   decode that fails is usually the same defect one of the other checks already
   named, which is why this check runs last. All 29 rows restate a row for the same
   symbol: 27 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch`
   row. They are recorded so the count stays stable, not because they are 29
   additional defects, and no separate work is attached to them. This is the
-  arithmetic reason the class totals must not be read as 282 independent problems.
-- **`leaf-type-mismatch` — 2 rows across 2 symbols, both `quote_time`.**
+  arithmetic reason the class totals must not be read as 278 independent problems.
+- **`leaf-type-mismatch` — no rows.** The class had two, both
+`data.Quote.QuoteTime`, and both are fixed; see item 25. It is the only class in
+this table that is now empty, which is worth stating plainly rather than leaving
+a row of zeroes to be read as a class that was measured and found clean.
   `data.GetQuotes` and `data.GetDisplayDepth` each publish `quote_time` as
   `type: string` and require it, and both SDK fields are `int64`. `data.GetQuotes`
   cites at its own GoDoc the same reference page the harness read, so the SDK
@@ -565,7 +633,7 @@ Per-symbol detail is deliberately kept out of this page.
 `conformance/known-divergences.json` carries every row with its own reason and its
 own `recordedIn` pointer, `make conformance-report` prints the whole observed set
 grouped by check, and `conformance/doc.go` states what the instrument covers and
-    what it does not. 2 of the 282 rows still have a home here, and they are the
+    what it does not. No row of this class has a home here, and the 2 that had one were
     `brokerfd.GetFDAssetsDetail` pair recorded above; the other three that once had
     one, the `brokerfd.GetFDPositions` missing-name rows, no longer exist, because
     that type now carries the documented names. Each of the remaining 280 points at
@@ -575,18 +643,18 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 - **Item 21 — the response contracts across the API surface are now measured, and
   they are largely divergent.** The five bullets above are one host, some path
   literals, a verb and body, a request shape, and one response DTO. This entry is
-  the class that last one belongs to, taken across the surface: 282 recorded
+  the class that last one belongs to, taken across the surface: 278 recorded
     divergences on 62 symbols, in `brokerfd` (142), `data` (136), and `trade` (4).
 
   | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
   |---|---:|---:|---:|---:|---:|---|
-  | `missing-required-name` | 119 | 28 | 86 | 29 | 4 | **Silently** — the documented value decodes to its zero value, no error reported |
-  | `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence — a name the page describes but does not require |
-  | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
+| `missing-required-name` | 119 | 28 | 86 | 29 | 4 | **Silently** - the documented value decodes to its zero value, no error reported |
+| `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
+| `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
   | Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 27 | 27 | 12 | 15 | 0 | Loudly, at decode time |
-  | `decode-failure` | 29 | 29 | 12 | 17 | 0 | Restates a container-kind or leaf-type row for the same symbol |
-  | `leaf-type-mismatch` | 2 | 2 | 0 | 2 | 0 | Loudly — a JSON type error on the documented value |
-  | **Total** | **282** | **62** | **142** | **136** | **4** | |
+| `decode-failure` | 27 | 27 | 12 | 15 | 0 | Restates a container-kind or leaf-type row for the same symbol |
+| `leaf-type-mismatch` | 0 | 0 | 0 | 0 | 0 | **Empty.** Both rows were `data.Quote.QuoteTime`, fixed by a type that reads both shapes Webull publishes; see item 25 |
+| **Total** | **278** | **60** | **142** | **132** | **4** | |
 
   Three caveats travel with those numbers. **119 and 104 are both floors, not
   totals**: the name checks consider the union of json tags at every depth, so 19
@@ -629,7 +697,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
   - **Nothing here is live-verified.** No endpoint was called and no credential was
     used. The static comparison is certain; which side a live server honours is
     unverified for every row, exactly as for the `brokerfd.GetFDPositions` bullet.
-  - Not 282 defects: 29 rows are the `decode-failure` class restating another row
+  - Not 278 defects: 27 rows are the `decode-failure` class restating another row
     for the same symbol, 68 are declared-name rows resting on a container-kind row
     for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an
     evidence-base hole.
@@ -651,7 +719,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     from inside the module and runs the identical five checks, and
     `broker/conformance-divergences.json` records what it found — **59 further
     divergences over 28 compared rows, 1 row decoding no body and 0 not
-    comparable**. The counts above remain the root module's own; this entry's 282
+    comparable**. The counts above remain the root module's own; this entry's 278
     does not include the 59, and the two sets are reported separately rather than
     merged, because merging them would lose the fact that one comes from a module
     the root cannot see. Two findings are worth naming because they are not new
@@ -766,7 +834,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
   and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
   maintainer decision on versioning a breaking public API change.
 - **Those five are not the complete list.** Item 21 records a sixth entry covering
-  282 measured response-contract divergences on 62 symbols, of which 277 were
+  278 measured response-contract divergences on 60 symbols, of which 273 were
   previously unwritten. Most of that class fails silently, which is worse than
   failing loudly. It now spans two silent name classes on different evidence, 119
   resting on a `required` promise and 104 on a name the page merely describes, and
@@ -797,6 +865,5 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 3. Work the response-contract class in item 21, and settle the direction before changing a tag. The cheapest step is the 4 pages that document a single item where the path says list, which one live body or one written answer would resolve; the `brokerfd` silent-name rows come next, and no retag should be applied on the strength of the documentation alone. The 104 `missing-declared-name` rows come **after** the 119 rather than beside them, because a name the page never requires is also a name that may legitimately be absent, so they need the same live evidence before a retag.
 4. Shrink the 90 name-unexamined rows of item 22, which is now a residual rather than an untouched surface: **84 of the 90 are already examined and 6 are named as unnameable**, and the declared-inventory route those 6 would need is fully consumed. What is left is evidence, not instrumentation. The 84 checkable rows fall into only 3 documented shape families — 60 a bare object, 29 an array of objects, 1 an array of strings — so capturing one live response body per family is a bounded task, and a captured body carries the server's own property names whether or not the page marked them `required`. Add to the existing Webull enquiry a request that the affected pages mark `required` the properties they always send, which is the only route that would upgrade the 104 rows of weaker evidence to the standing of the 119.
 5. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
-6. Correct `broker.UpdateVirtualAccount` only against the credential it names, and update its test in the same change. Treat `data.GetDisplaySnapshot` as a breaking-API decision rather than a patch: obtain the maintainer decision on versioning a public `data.SnapshotQuery` change first, then probe before touching the path.
 7. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
 8. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.

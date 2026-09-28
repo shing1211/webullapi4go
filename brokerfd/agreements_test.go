@@ -36,7 +36,7 @@ func TestListAgreements(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -65,7 +65,7 @@ func TestGetAgreementDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"), client.WithRegion(client.HK))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"), client.WithRegion(client.HK))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

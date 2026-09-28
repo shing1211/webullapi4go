@@ -43,7 +43,7 @@ func TestGetFDAssetsSummary(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -79,7 +79,7 @@ func TestGetFDAssetsDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -115,7 +115,7 @@ func TestGetFDPositions(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL(srv.URL))
+	cl, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

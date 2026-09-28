@@ -36,7 +36,7 @@ func TestGetAccountsSummary(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}
@@ -75,7 +75,7 @@ func TestGetPositions(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl, err := client.New(client.WithBaseURL(srv.URL), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
+	cl, err := client.New(client.WithEndpoints(client.Endpoints{HTTP: srv.URL, BrokerHTTP: srv.URL}), client.WithAppKey("test-key"), client.WithAppSecret("test-secret"))
 	if err != nil {
 		t.Fatalf("client.New error = %v", err)
 	}

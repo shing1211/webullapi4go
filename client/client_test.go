@@ -324,6 +324,23 @@ func TestNewEndpointOverrides(t *testing.T) {
 		t.Fatalf("WithBaseURL endpoint = %q, want %q", got, "http://127.0.0.1:9090")
 	}
 
+	// WithBaseURL overrides one field and sets the override flag, so client.New
+	// does not recompute the set: every other endpoint keeps its DefaultConfig
+	// value, which is the production HK host rather than the sandbox one the
+	// region and environment options above asked for. That is the intended
+	// precedence - "override this one address" - and it is also a trap for a
+	// package that routes through DoBroker, because a test server set as the base
+	// URL still leaves BrokerHTTP pointing at production. broker/ and brokerfd/
+	// both hit it, which is why their tests use WithEndpoints.
+	//
+	// Asserted so a change to the override semantics cannot silently turn an
+	// offline test suite into live production traffic.
+	if got := base.Endpoints().BrokerHTTP; got != client.DefaultEndpoints().BrokerHTTP {
+		t.Errorf("WithBaseURL left BrokerHTTP = %q, want the DefaultConfig value %q; "+
+			"if this ever changes, a broker-routed package pointed at a test server "+
+			"would reach production", got, client.DefaultEndpoints().BrokerHTTP)
+	}
+
 	full := client.Endpoints{HTTP: "http://example.test", MQTT: "mqtt.example.test:1883"}
 	ep, err := client.New(
 		client.WithAppKey(testAppKey),

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/shing1211/webullapi4go/data"
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
@@ -760,30 +761,53 @@ func TestComparisonBites(t *testing.T) {
 	})
 
 	t.Run("LeafType", func(t *testing.T) {
-		// data.Quote.QuoteTime is int64 against a documented required string, and
-		// the page the SDK cites declares `"type": "string"`. The harness reports
-		// the disagreement and the baseline records it as an open defect, not a
-		// waiver: the SDK's own comment says the HK sandbox sends a number, which
-		// makes the two sources disagree, not the harness wrong. See
-		// pkg/domain/money/money.go:177 for a type that accepts both, which is the
-		// shape of fix that does not have to pick a side.
+		// The class this subtest proves is currently empty: its only two rows were
+		// data.Quote.QuoteTime, and QuoteTime is now a type that reads both the
+		// quoted-string and bare-number forms Webull's four depth pages publish
+		// between them. So the check is no longer exercised by a live defect and
+		// the bite has to be manufactured, or this subtest would go on asserting a
+		// defect that no longer exists.
+		//
+		// The manufactured type below is a plain int64, which is exactly the field
+		// the SDK carried before, against the same page that documents a string.
+		// That is the question the check was written to answer.
 		const sym = "data.GetQuotes"
 		f := mustFixture(t, m, "market-data-stock/GET-market-data-stocks-depths-list")
 		entry := mustType(t, sym)
-		before := Compare(f, sym, entry)
-		if !hasKind(before, LeafTypeMismatch, "quote_time") {
-			t.Fatalf("the quote_time leaf mismatch does not reproduce: %s", summary(before))
-		}
-		t.Logf("unmodified fixture: %d divergences", len(before.Divergences))
-		for _, d := range before.Divergences {
-			t.Logf("    %s %s %s", d.Kind, d.Name, d.Detail)
-		}
 
-		// Documented side: the page's own inline example for quote_time is the
-		// number "1640688000000" wrapped as a string, which is the disagreement.
-		// Presenting it as a number is what the SDK's comment says the sandbox
-		// does, and the leaf check must go quiet -- proving it reads the body
-		// rather than the page's prose.
+		// The fix holds: the real type reads the page's quoted string, so the row
+		// reports no leaf disagreement.
+		before := Compare(f, sym, entry)
+		if hasKind(before, LeafTypeMismatch, "quote_time") {
+			t.Errorf("the real QuoteTime type still reports a leaf mismatch: %s", summary(before))
+		}
+		if err := decodeCommitted(f, entry); err != nil {
+			t.Errorf("the real QuoteTime type still fails to decode the committed "+
+				"fixture, whose quote_time is a quoted string: %v", err)
+		}
+		t.Logf("unmodified fixture against the real type: %s", summary(before))
+
+		// The bite: re-type quote_time to int64, which is the pre-fix field, and the
+		// check must name the disagreement again.
+		retyped := withField(t, entry, "quote_time", func(sf reflect.StructField) reflect.StructField {
+			sf.Type = reflect.TypeOf(int64(0))
+			return sf
+		})
+		afterType := Compare(f, sym, retyped)
+		if !hasKind(afterType, LeafTypeMismatch, "quote_time") {
+			t.Fatalf("an int64 quote_time against a documented string no longer "+
+				"reports a leaf mismatch, so this check is not proven to bite: %s",
+				summary(afterType))
+		}
+		if err := decodeCommitted(f, retyped); err == nil {
+			t.Error("an int64 quote_time still decodes the page's quoted string, " +
+				"so the check is not detecting the real disagreement")
+		}
+		t.Logf("copy of the type with quote_time as an int64: %s", summary(afterType))
+
+		// Documented side: the same body presented as a number, which is what the
+		// futures and event-contract pages show. The leaf check must go quiet, which
+		// proves it reads the body rather than the page's prose.
 		asNumber := setLeaf(t, f, "quote_time", json.Number("1640688000000"))
 		afterBody := CompareBody(f, sym, entry, asNumber)
 		if hasKind(afterBody, LeafTypeMismatch, "quote_time") {
@@ -791,34 +815,28 @@ func TestComparisonBites(t *testing.T) {
 		}
 		t.Logf(`copy of the fixture with quote_time as a number: %s`, summary(afterBody))
 
-		// SDK side: re-type the field to a string and the check must agree from
-		// the other direction, with the decode error going away too.
-		widened := withField(t, entry, "quote_time", func(sf reflect.StructField) reflect.StructField {
-			sf.Type = reflect.TypeOf("")
-			return sf
-		})
-		afterType := Compare(f, sym, widened)
-		if hasKind(afterType, LeafTypeMismatch, "quote_time") {
-			t.Errorf("a string-typed quote_time still reports a leaf mismatch: %s", summary(afterType))
-		}
-		if err := decodeCommitted(f, widened); err != nil {
-			t.Errorf("a string-typed quote_time still fails to decode: %v", err)
-		}
-		t.Logf("copy of the type with quote_time as a string: %s", summary(afterType))
-
-		// money.Money is exempt for exactly the two kinds its UnmarshalJSON
-		// accepts. A boolean must still be reported, or the exemption is a blanket
-		// one and the comment claiming otherwise is false.
-		if ok, _ := leafVerdict(reflect.TypeOf(money.Money{}), "boolean"); ok {
-			t.Error("money.Money is accepted for a documented boolean, which its " +
-				"UnmarshalJSON cannot build")
-		}
-		for _, kind := range []string{"string", "number"} {
-			if ok, reason := leafVerdict(reflect.TypeOf(money.Money{}), kind); !ok {
-				t.Errorf("money.Money is rejected for a documented %s: %s", kind, reason)
+		// The two types that accept more than one documented shape must be exempt
+		// for exactly the shapes they accept, or the exemption is a blanket one and
+		// the comment claiming otherwise is false.
+		for _, tc := range []struct {
+			name string
+			typ  reflect.Type
+		}{
+			{"money.Money", reflect.TypeOf(money.Money{})},
+			{"data.QuoteTime", reflect.TypeOf(data.QuoteTime(0))},
+		} {
+			for _, kind := range []string{"string", "number"} {
+				if ok, reason := leafVerdict(tc.typ, kind); !ok {
+					t.Errorf("%s is rejected for a documented %s: %s", tc.name, kind, reason)
+				}
+			}
+			if ok, _ := leafVerdict(tc.typ, "boolean"); ok {
+				t.Errorf("%s is accepted for a documented boolean, which its "+
+					"UnmarshalJSON cannot build", tc.name)
 			}
 		}
-		t.Logf("money.Money agrees with a documented string and number, and not with a boolean")
+		t.Log("money.Money and data.QuoteTime each agree with a documented string " +
+			"and number, and not with a boolean")
 	})
 
 	t.Run("NotComparableWhenThePathDiffers", func(t *testing.T) {
