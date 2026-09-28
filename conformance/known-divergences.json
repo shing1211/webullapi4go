@@ -1438,69 +1438,6 @@
       "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     },
     {
-      "symbol": "data.GetEventContractCategories",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-categories-list",
-      "kind": "missing-required-name",
-      "name": "category_code",
-      "detail": "no json tag in data.EventContractCategory, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks category_code required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractCategories",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-categories-list",
-      "kind": "missing-required-name",
-      "name": "category_id",
-      "detail": "no json tag in data.EventContractCategory, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks category_id required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractCategories",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-categories-list",
-      "kind": "missing-required-name",
-      "name": "category_name",
-      "detail": "no json tag in data.EventContractCategory, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks category_name required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractEvents",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-events-list",
-      "kind": "missing-required-name",
-      "name": "mutually_exclusive",
-      "detail": "no json tag in data.EventContractEvent, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks mutually_exclusive required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractEvents",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-events-list",
-      "kind": "missing-required-name",
-      "name": "series_id",
-      "detail": "no json tag in data.EventContractEvent, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks series_id required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractEvents",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-events-list",
-      "kind": "missing-required-name",
-      "name": "short_name",
-      "detail": "no json tag in data.EventContractEvent, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks short_name required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "data.GetEventContractEvents",
-      "fixture": "event-contracts/GET-trading-instruments-event-contracts-events-list",
-      "kind": "missing-required-name",
-      "name": "symbol",
-      "detail": "no json tag in data.EventContractEvent, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks symbol required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
       "symbol": "data.GetEventContractMarkets",
       "fixture": "event-contracts/GET-trading-instruments-event-contracts-markets-list",
       "kind": "decode-failure",
@@ -2212,42 +2149,6 @@
       "detail": "no json tag in data.ScreenerStock, so the documented value decodes to the zero value",
       "reason": "Open defect on the published schema, on weaker evidence than a missing-required-name row. The page for this call declares price_52w but does not mark it required, and no json tag in data.ScreenerStock carries it, so a response containing it would decode the value to the zero value and report no error. Because the page does not mark the name required, the field may be optional or conditionally sent, so this is a weaker claim than the 122 required-name rows and is recorded as an open divergence rather than as a defect of the same certainty. data.ScreenerStock is the type this method's var out declares. Not live-verified: no live response from this endpoint was captured while recording it.",
       "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
-    },
-    {
-      "symbol": "trade.BatchPlaceOrder",
-      "fixture": "trading/POST-trading-orders-batch-place",
-      "kind": "missing-required-name",
-      "name": "batch_orders",
-      "detail": "no json tag in trade.BatchPlaceOrderResponse, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks batch_orders required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "trade.BatchPlaceOrder",
-      "fixture": "trading/POST-trading-orders-batch-place",
-      "kind": "missing-required-name",
-      "name": "failed",
-      "detail": "no json tag in trade.BatchPlaceOrderResponse, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks failed required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "trade.BatchPlaceOrder",
-      "fixture": "trading/POST-trading-orders-batch-place",
-      "kind": "missing-required-name",
-      "name": "success",
-      "detail": "no json tag in trade.BatchPlaceOrderResponse, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks success required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
-    },
-    {
-      "symbol": "trade.BatchPlaceOrder",
-      "fixture": "trading/POST-trading-orders-batch-place",
-      "kind": "missing-required-name",
-      "name": "total",
-      "detail": "no json tag in trade.BatchPlaceOrderResponse, so the documented value decodes to the zero value",
-      "reason": "Open defect, not waived. The page marks total required and the type this method decodes tags no field for it, so the documented value decodes to the zero value and no error is reported. Found by comparing the struct tags against the page's required list; no test in the tree can see it, because every local test round-trips the SDK type through itself. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
-      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
     }
   ]
 }

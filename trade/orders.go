@@ -542,16 +542,46 @@ func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*order.
 }
 
 // BatchPlaceOrderResult carries the result for one order within a batch.
+//
+// The documented element of batch_orders carries client_order_id, order_id,
+// error_code and message; ErrorCode and Message are what a caller reads when one
+// order in a batch is rejected, and without them a partial failure was
+// indistinguishable from a success that returned no identifier.
 type BatchPlaceOrderResult struct {
 	// ClientOrderID echoes the caller-supplied order identifier.
 	ClientOrderID string `json:"client_order_id"`
 	// OrderID is the system-generated order identifier.
 	OrderID string `json:"order_id"`
+	// ErrorCode is the rejection code when this order in the batch failed, and is
+	// omitted on success.
+	ErrorCode string `json:"error_code,omitempty"`
+	// Message is the human-readable rejection reason, omitted on success.
+	Message string `json:"message,omitempty"`
 }
 
 // BatchPlaceOrderResponse is the response of [Client.BatchPlaceOrder].
+//
+// The page documents total, success, failed and batch_orders, and marks all four
+// required. The four counts are what a caller needs to learn how much of a batch was
+// placed; without them the only way to find out was to count BatchOrders, and a
+// partial failure looked like a success.
+//
+// Results is the SDK's own spelling and appears on no page. It is kept because
+// removing it would break callers, and a response that honours the documentation
+// leaves it empty; BatchOrders is the documented field to read.
 type BatchPlaceOrderResponse struct {
+	// Results is the SDK's own spelling, on no documented page. Prefer
+	// BatchOrders.
 	Results []BatchPlaceOrderResult `json:"results"`
+	// Total is the number of orders in the request.
+	Total int64 `json:"total"`
+	// Success is the number placed successfully.
+	Success int64 `json:"success"`
+	// Failed is the number rejected.
+	Failed int64 `json:"failed"`
+	// BatchOrders carries the per-order result, including the failure reason for
+	// orders that were rejected.
+	BatchOrders []BatchPlaceOrderResult `json:"batch_orders"`
 }
 
 // BatchPlaceOrder submits multiple orders in a single request and returns

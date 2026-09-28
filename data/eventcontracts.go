@@ -33,9 +33,24 @@ const (
 )
 
 // EventContractCategory represents an event contract category.
+//
+// The page documents category_id, category_code and category_name, and marks all
+// three required. Category and Name are the SDK's own spellings and are carried
+// alongside them rather than replaced: a response that honours the documentation
+// previously left all three required values unreadable, with nothing in the return
+// path to distinguish that from a genuinely empty category. Exactly one naming set is
+// populated per response.
 type EventContractCategory struct {
+	// Category is the SDK's own spelling, kept for callers that already read it.
 	Category string `json:"category"`
-	Name     string `json:"name"`
+	// Name is the SDK's own spelling, kept for callers that already read it.
+	Name string `json:"name"`
+	// CategoryID is the documented numeric identifier.
+	CategoryID int64 `json:"category_id"`
+	// CategoryCode is the documented short code, for example ECONOMICS.
+	CategoryCode string `json:"category_code"`
+	// CategoryName is the documented display name.
+	CategoryName string `json:"category_name"`
 }
 
 // EventContractSeries represents a series of related events.
@@ -47,11 +62,33 @@ type EventContractSeries struct {
 }
 
 // EventContractEvent represents a single event within a series.
+//
+// The page documents symbol, series_id, name, status, short_name, strike_date,
+// strike_period and mutually_exclusive, and requires six of them. EventSymbol and
+// SeriesSymbol are the SDK's own spellings for what the page calls symbol and
+// series_id; both sets are carried so a caller reading either name gets a value, and
+// so no call that works today breaks. Exactly one naming set is populated per
+// response.
 type EventContractEvent struct {
-	EventSymbol  string `json:"event_symbol"`
+	// EventSymbol is the SDK's own spelling of the documented symbol.
+	EventSymbol string `json:"event_symbol"`
+	// SeriesSymbol is the SDK's own spelling of the documented series_id.
 	SeriesSymbol string `json:"series_symbol"`
 	Name         string `json:"name"`
 	Status       string `json:"status"`
+	// Symbol is the documented event symbol.
+	Symbol string `json:"symbol"`
+	// SeriesID is the documented series identifier.
+	SeriesID string `json:"series_id"`
+	// ShortName is the documented abbreviated name.
+	ShortName string `json:"short_name"`
+	// MutuallyExclusive reports whether the event is mutually exclusive within its
+	// series, as the page documents it.
+	MutuallyExclusive bool `json:"mutually_exclusive"`
+	// StrikeDate and StrikePeriod are documented but not required; they are omitted
+	// when the server does not send them.
+	StrikeDate   string `json:"strike_date,omitempty"`
+	StrikePeriod string `json:"strike_period,omitempty"`
 }
 
 // EventContractMarket represents a tradable event contract instrument.

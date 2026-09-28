@@ -9,6 +9,64 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.31] - 2026-09-28
+
+Corrective release. 11 more required-name rows are closed by additive fields on three
+response types, and the `trade` package's column in the class table is now empty. It
+also corrects item 26's own conclusion: the envelope cases it deferred as needing a
+live probe are decidable from the page schema, and four of them are recorded with
+their evidence and the decision they now need. Root baseline 250 to 239 rows over 56
+symbols. No fixture changed. Nothing is live-verified.
+
+### Fixed
+
+- **`trade.BatchPlaceOrder` could not report how much of a batch was placed.** The page
+  documents `total`, `success`, `failed` and `batch_orders` and marks all four
+  required, with the per-order element carrying `error_code` and `message`. The SDK's
+  type had a single `Results` field that appears on **no page at all**. So a caller
+  could not learn how much of a batch succeeded, and a rejected order inside a batch was
+  indistinguishable from a success that returned no identifier. All four are now
+  carried, plus the element's `error_code` and `message`; `Results` is kept so nothing
+  that compiles today breaks, with the type comment naming `BatchOrders` as the
+  documented field to read.
+- **The event-contract category and event types could not read their required values.**
+  `EventContractCategory` carried `category` and `name` and none of the three required
+  names the page declares. `EventContractEvent` documented `symbol` and `series_id`
+  where the SDK had `event_symbol` and `series_symbol`, and had no `short_name` or
+  `mutually_exclusive`. Both sets are now carried, which is the additive route rather
+  than a rename, so which naming a live server sends does not have to be known first.
+- **The `trade` column of the class table is now empty.** Its four rows were all
+  `missing-required-name` on `BatchPlaceOrder`, so closing them leaves no `trade` row in
+  that class. Stated here because a zero in a table reads as "measured and clean",
+  which is a stronger claim than "nothing is recorded here yet".
+
+### Noted
+
+- **Item 26 was too cautious, and this release says so.** Item 26 recorded that a page
+  wrapping its payload in an envelope presents object-against-object, which the shape
+  check cannot see, and deferred those rows as needing a live call. Reading the page
+  schemas shows the documented shape is unambiguous, so the mismatch is determinable
+  offline and the only obstacle is a public API break.
+- **`data.GetEventBars` and `GetEventTick` decode one nesting level too deep.** Both
+  pages document `array<{instrument_id, symbol, result: array<...>}>`, requiring
+  `instrument_id`, `result` and `symbol`. The SDK returns the **elements of the inner
+  `result` array**, so the documented grouping key is discarded and bars from different
+  instruments arrive in one flat list. The missing `result` name is the symptom of that
+  depth error, not of an absent field.
+- **`data.GetEventSnapshot` and `GetEventDepth` are wrong shapes, not shallower ones.**
+  The snapshot page requires 15 names, including `price` where the SDK has `last_price`
+  and four `*_size` companions the SDK does not have at all. The depth page requires
+  `no_bids` and `no_asks`, which the SDK's type does not carry, and returns a single
+  object where the page documents an array.
+- **What stopped them is a decision, not a block, and the evidence is now complete.**
+  Fixing any of the four changes a public return type, so callers stop compiling - a
+  larger break than the two field-level ones taken in v2.1.28. Unlike the Display
+  Solution page in item 19, these four pages are not self-contradictory, so on the
+  available evidence the SDK is wrong in all four. That makes it a maintainer call
+  between accepting the break and recording the pages as wrong, and it is not made
+  here.
+- No fixture or manifest byte changed.
+
 ## [2.1.30] - 2026-09-28
 
 Corrective release, and a small one with a large lesson in it. 28 recorded
