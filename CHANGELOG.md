@@ -9,6 +9,69 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.21] - 2026-09-28
+
+Release-records release. It exists to make this repository's own history legible,
+because the last two tags shipped with no changelog entry, the runs index had
+skipped four tags rather than two, and both status documents still named a
+three-releases-old tag as current. It also records a release-process defect that
+cost a release its verification. No `.go` file, no fixture, no baseline entry and
+no workflow was changed; no SDK behaviour differs from `[2.1.20]`; nothing is
+live-verified.
+
+### Fixed
+
+- **`[2.1.19]` and `[2.1.20]` were tagged with no changelog entry at all.** Both
+  were written here from the tag and commit records rather than recalled, and both
+  carry the negatives rather than only the results. `[2.1.19]` records that the
+  divergence set was unchanged — 180 observed against 180 recorded,
+  `conformance/known-divergences.json` byte-identical at sha256 `dec687e6` — and
+  that this invariance is precisely why the check in the following release could be
+  generated against fixed code. `[2.1.20]` records that 68 of its 104 new rows
+  restate a container-kind row and were deliberately kept rather than suppressed,
+  that the free-form-map guard covers 105 declared names and without it 68% of the
+  finding set would have been false positives, and that its 104 rows need the same
+  live evidence as the 122 before any retag.
+- **`docs/runs/index.md` gained four rows, not two.** `v2.1.16` had never been
+  recorded either, and it is the release that repaired the red `v2.1.15`, so its row
+  is what makes the red/green pair readable from the index alone.
+- **Both status documents moved to naming the current tag.** Each read
+  `Latest repository tag: v2.1.17` while `v2.1.20` existed.
+
+### Noted
+
+- **A tag push produces no CI run, and that is why `v2.1.20` was never built.**
+  `.github/workflows/ci.yml` triggers on `push: branches: [main]` only; `tags` is
+  absent from its `on:` block. Every "tagged CI green" in this release history has
+  in fact been the *branch* push at the tagged commit — content-equivalent, but
+  never literally verified at the tag. It cost a real release: the branch push for
+  `3c32230` was rejected because both remotes already held `510deae`, while the tag
+  push succeeded, so `v2.1.20` landed on a commit that was on no branch and a merge
+  was required to keep the published tag valid. The green 26-job run is that merge,
+  `49e3eca`. Adding `tags: [v*]` to the `on:` block would close this; **it is not
+  done here, because the workflow is not to be edited without an explicit request.**
+- **The process lesson, recorded so it is not repeated.** A rejected branch push
+  alongside a successful tag push is a state to detect *before* tagging, not after.
+  This release pushes `main`, confirms both remotes hold the commit, and only then
+  creates the tag.
+- **A third status-document header field is stale in a way the repository cannot
+  settle.** Both documents carry
+  `Current hardening: tagged in repository v2.1.4; introduced in v2.1.1`, left
+  unchanged by this release. Diff evidence: `v2.1.1` does introduce the hardening,
+  but `v2.1.4` contains **no** `.go` changes at all — it is a docs-and-records
+  release — while `v2.1.5` does change `brokerfd/events/events.go` and `stream/`,
+  and no tag from `v2.1.6` onward changes SDK code at all. So if the field means
+  the newest tag carrying hardening code it should read `v2.1.5`; if it means the
+  tag at which hardening was declared closed, `v2.1.4` may be correct. The
+  repository cannot distinguish the two readings, so no value was guessed into a
+  status document. **This needs a maintainer decision.**
+- **The repetition itself is the reason for this release existing.** Three
+  consecutive releases shipped with records owed. The structural fix is a gate —
+  asserting that every annotated tag has a changelog entry, a runs-index row, and a
+  matching status-document header — which is about thirty lines in `conformance/`
+  or a new test and needs no workflow change. It is not added here, having not been
+  asked for.
+
 ## [2.1.20] - 2026-09-28
 
 Harness release. The wire-conformance baseline moves from 180 recorded divergences
