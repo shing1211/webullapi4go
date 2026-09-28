@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -103,7 +104,8 @@ type envelopeField struct {
 	// Type is the field's type as written in the source, without any package
 	// qualifier, because a same-package type is written unqualified.
 	Type string
-	// Tag is the raw struct tag, or "" when the field carries none.
+	// Tag is the struct tag with its source quoting removed, so it is directly
+	// usable as a reflect.StructTag, or "" when the field carries none.
 	Tag string
 	// Pos is the file and line the field is declared on, for an error message
 	// and for a drift report.
@@ -241,7 +243,23 @@ func parseEnvelopeFields(dir, pkg, name string) (fields []envelopeField, declPos
 					}
 					tag := ""
 					if f.Tag != nil {
-						tag = f.Tag.Value
+						// go/ast reports a tag as the source literal, so a raw
+						// string arrives wrapped in backticks. reflect.StructTag
+						// then fails every lookup on it and wireNameOf falls back
+						// to the Go field name, which agrees only for camelCase
+						// and silently loses a snake_case name such as
+						// pagination_key. Unquoting here is what makes such a name
+						// comparable at all.
+						//
+						// A literal that will not unquote is refused rather than
+						// defaulted to the empty tag, because defaulting is the
+						// exact quiet failure this line exists to remove.
+						unquoted, uerr := strconv.Unquote(f.Tag.Value)
+						if uerr != nil {
+							return nil, "", fmt.Errorf("%s: %s.%s field %s has a tag at %s that is not a quoted string: %w",
+								path, pkg, name, f.Names[0].Name, fset.Position(f.Tag.Pos()), uerr)
+						}
+						tag = unquoted
 					}
 					fields = append(fields, envelopeField{
 						Name: f.Names[0].Name,

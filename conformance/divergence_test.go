@@ -202,6 +202,71 @@ func assertEnvelopeMatchesSource(t *testing.T, sym, spelling string, built refle
 	}
 }
 
+// TestEnvelopeTagsAreUsableAsStructTags holds the rebuilt envelope tags to the one
+// property assertEnvelopeMatchesSource cannot check.
+//
+// That helper compares the rebuilt tag against the tag the parser read, so it is
+// faithful to its input whether or not that input is usable. Both sides were wrong
+// together: go/ast reports a tag as its source literal, so a raw string arrived
+// wrapped in backticks, reflect.StructTag failed every lookup on it, and wireNameOf
+// fell back to the Go field name. That agrees for camelCase and silently loses a
+// snake_case name, which is why the round-trip stayed green while a documented
+// snake_case name compared as absent from an SDK that carries it.
+//
+// So this asserts usability rather than fidelity: every tag the parser reports must
+// yield a readable json key, and at least one of them must be snake_case, since that
+// is the case the fallback could not see.
+func TestEnvelopeTagsAreUsableAsStructTags(t *testing.T) {
+	var tags, snake int
+	for _, sym := range TableSymbols() {
+		entry := SDKTypes[sym]
+		if entry.Envelope == "" {
+			continue
+		}
+		pkg, name, ok := strings.Cut(entry.Envelope, ".")
+		if !ok {
+			t.Fatalf("%s: envelope %q is not spelled package.TypeName", sym, entry.Envelope)
+		}
+		dir, err := packageDir(pkg)
+		if err != nil {
+			t.Fatalf("%s: %v", sym, err)
+		}
+		fields, _, err := parseEnvelopeFields(dir, pkg, name)
+		if err != nil {
+			t.Fatalf("%s: %v", sym, err)
+		}
+		for _, f := range fields {
+			if f.Tag == "" {
+				continue
+			}
+			tags++
+			jsonName, ok := reflect.StructTag(f.Tag).Lookup("json")
+			if !ok {
+				t.Errorf("%s: %s.%s field %s at %s carries tag %q, from which no json "+
+					"key can be read, so a name lookup would fall back to the Go field "+
+					"name and report a carried name as absent",
+					sym, pkg, name, f.Name, f.Pos, f.Tag)
+				continue
+			}
+			if strings.Contains(jsonName, "_") {
+				snake++
+			}
+		}
+	}
+	// Both counters guard against a pass that checked nothing. An empty tag set
+	// means the envelopes stopped declaring one, and a snake_case count of zero
+	// means the tags stopped being snake_case, either of which would leave this
+	// test green while the thing it exists to protect was gone.
+	if tags == 0 {
+		t.Error("no envelope field reported a tag, so nothing was checked")
+	}
+	if snake == 0 {
+		t.Error("no envelope tag resolved a snake_case json name, so the case a " +
+			"Go-field-name fallback cannot represent is no longer covered")
+	}
+	t.Logf("checked %d envelope tag(s), %d resolving a snake_case json name", tags, snake)
+}
+
 // TestKnownDivergenceBaseline is the gate.
 //
 // It passes only when the observed divergence set is exactly the committed set.
