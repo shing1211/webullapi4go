@@ -32,3 +32,7 @@
 | 2026-09-27 | citation-qualification | BUILD | released v2.1.14 (qualified 35 bare-filename citations; the gate's inference now resolves nothing) | v2.1.14 |
 | 2026-09-27 | wire-conformance | BUILD | released v2.1.15 (wire-conformance harness: 193 documented-shape fixtures, 180 recorded divergences across 54 symbols) | v2.1.15 |
 | 2026-09-27 | conformance-writeup | BUILD | released v2.1.17 (wrote up the 180 recorded response-contract divergences as item 21) | v2.1.17 |
+| 2026-09-27 | wire-conformance | BUILD | released v2.1.16 (repaired the red v2.1.15: baseline details no longer keyed on encoding/json error text, CRLF-neutral fixture comparison) | v2.1.16 |
+| 2026-09-27 | conformance-writeup | BUILD | released v2.1.18 (corrected the trade split's denominator, one low in 6 places across 3 files) | v2.1.18 |
+| 2026-09-28 | declared-name-check | BUILD | released v2.1.19 (envelope tags unquoted at capture; baseline byte-identical at 180) | v2.1.19 |
+| 2026-09-28 | declared-name-check | BUILD | released v2.1.20 (declared-name check: 104 rows over 30 symbols, baseline 180 to 285) | v2.1.20 |

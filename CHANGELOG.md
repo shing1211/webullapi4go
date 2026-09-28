@@ -9,6 +9,121 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.20] - 2026-09-28
+
+Harness release. The wire-conformance baseline moves from 180 recorded divergences
+to 285, because a second name check now runs over the property names a page
+declares without marking `required` — the route item 22 named as its third
+direction and recorded as unapplied. No SDK `.go` file under `data/`, `trade/`,
+`brokerfd/`, `broker/`, `client/`, `stream/`, `events/` or `display/` was changed,
+no fixture was regenerated, and nothing is live-verified.
+
+### Added
+
+- **`missing-declared-name`, a second name check over 84 of the 90 rows the
+  required-name check cannot reach.** 90 of the 154 compared rows come from pages
+  publishing no `required` list, so the stronger check had nothing to look at and a
+  clean row there was closer to unexamined than to correct. Those pages do declare
+  property names, and the manifest already carried them as
+  `checks.declaredTopLevelNames` and `checks.declaredElementNames`. The new check
+  runs only where the required list is absent and records
+  `missing-declared-name` (104 rows over 30 symbols, `brokerfd` 31 and `data` 73)
+  plus `declared-inventory-empty` (1 row, `brokerfd.ListAccountForms`). It is a
+  separate kind and a separate check rather than an extension of
+  `missing-required-name` because the evidence differs and a baseline entry has to
+  keep that readable: a required name is a promise the page makes, a declared name
+  is a description of one response, and a name absent from a page that does not
+  require it may be optional or conditionally sent. Each of the 104 reasons states
+  that per entry. The 122 required-backed rows are untouched and the two figures
+  are never summed.
+- **It was not a formality.** 9 of the 30 rows that gained a finding recorded no
+  divergence of any kind before it ran, so the 67 "fully clean" rows were not
+  clean. The worst rows are `brokerfd.GetFDCorporateActions`, missing 12 of the 14
+  names its page declares, and `data.GetFinancialAlert`, missing 9 of 14 and so
+  carrying `eps_est`, `rev_est` and `fiscal_year` among them. The structurally
+  interesting pair is `data.GetHighDividendRank` and `data.GetWeek52HighLow`:
+  `data.ScreenerStock` is shared with `data.GetMostActive` and
+  `data.GetTopGainersLosers`, which report no divergence at all, so those pages
+  declare names a shared DTO cannot carry for any of its callers. The 90 now split
+  32/58 rather than 23/67, and both status documents record the new totals.
+- **`declared-inventory-empty` names a hole instead of filing it as a pass.**
+  `brokerfd.ListAccountForms` on `broker-fd-us/GET-broker-forms-list` declares no
+  property name at all, so neither name check had anything to look at. It is a gap
+  in Webull's published documentation, not in the SDK, and it is its own kind
+  precisely so the row does not read as one that examined clean when it was not
+  examined. The row already carried a container-kind and a `decode-failure` row, so
+  this adds no new divergent row.
+
+### Noted
+
+- **68 of the 104 are recorded rather than suppressed, and the dead end is worth
+  keeping.** They sit on rows that also record a container-kind mismatch, 26 of
+  them the `data`/`pagination_key` pair a bare-array SDK cannot carry. The obvious
+  suppression is wrong, because that row set is not homogeneous:
+  `brokerfd.ListFDAccounts` declares 2 names against a page of 6, so its object is
+  an envelope and its names are the wrapper, while `data.GetDSLatestNews` declares
+  6 against a page of 6, so its object is the payload and its 5 missing names are a
+  second, independent defect; `data.GetMarketSectorDetail` is both at once,
+  carrying 4 content names beside 2 wrapper keys. No per-name test exists — the
+  manifest records no type per declared name, and `propertyNameCountInFixture` is 0
+  on these rows because the committed minimal instances are empty — so suppressing
+  per row would have discarded 20 real findings. The overlap is documented instead,
+  which is the treatment the 29 `decode-failure` rows already get.
+- **A guard that mattered more than the check.** `data.GetBalanceSheet`,
+  `data.GetCashFlow` and `data.GetIncomeStatement` decode into a free-form
+  `map[string]any`, which carries every documented name and declares none of them.
+  Their pages declare 105 names between them, so without the `Carrier == nil`
+  guard 68% of the whole finding set would have been false positives. The check is
+  also tag-only: the generator builds each minimal instance from `required` names
+  alone, so every declared name is absent from it and the required-check's
+  "absent from the instance" half would have reported 100% false positives. A biting
+  subtest asserts the three map rows report the check as skipped.
+- **`3c32230`, the commit this tag names, was never built.** The workflow triggers
+  on `push: branches: [main]` only — `tags` is absent from its `on:` block — so a
+  tag push produces no run, and the branch push for `3c32230` was **rejected**
+  because both remotes already held `510deae` while the tag push succeeded. The tag
+  therefore landed on a commit that was on no branch, which forced a merge rather
+  than a rebase to keep the published tag valid. The green 26-job run is the merge
+  `49e3eca`, which contains all nine changed files, so the code is verified; the
+  tagged commit itself is not. Every "tagged CI green" in this release history has
+  in fact been the branch push at the tagged commit.
+
+## [2.1.19] - 2026-09-28
+
+Harness release, deliberately separate from the check that follows it. One latent
+bug in `conformance/envelopes.go`, and the divergence set is **unchanged**: 180
+observed against 180 recorded, with `conformance/known-divergences.json` byte-identical
+at sha256 `dec687e6`. No SDK `.go` file was changed, no fixture was regenerated,
+and nothing is live-verified.
+
+### Fixed
+
+- **A reconstructed envelope's struct tag could not be read at all.**
+  `parseEnvelopeFields` stored `f.Tag.Value`, which `go/ast` reports as the source
+  literal, so a raw string arrived wrapped in backticks.
+  `reflect.StructTag.Lookup("json")` then failed on every tag and `wireNameOf`
+  fell back to the Go field name. That fallback agrees for camelCase and silently
+  loses a snake_case name, so a documented `pagination_key` compared as absent from
+  an SDK type that carries it. The tag is now unquoted at capture, and a literal
+  that will not unquote is refused rather than defaulted to the empty tag, because
+  defaulting is the exact quiet failure the line exists to remove.
+- **The fault was latent by construction, and that is the reusable lesson.**
+  `assertEnvelopeMatchesSource` compares the rebuilt tag against the tag the parser
+  read, so both sides carried the backticks and the round trip was faithful to its
+  own wrong input. A test cannot catch a defect by agreeing with its own source of
+  truth. `TestEnvelopeTagsAreUsableAsStructTags` asserts *usability* instead, and
+  fails on the previous code with the predicted symptom; it also requires at least
+  one tag and at least one snake_case json name, so it cannot pass by checking
+  nothing.
+- **Shipping it alone is what made it safe, and the invariant is checkable.** The
+  only envelope row carrying a required name is `data.GetOptionBars`, whose sole
+  required name `result` is exactly the camelCase case the fallback happened to
+  rescue, so a correct fix *must not* move the 122. It did not. Had the new check
+  landed on the unfixed code, it would have recorded 4 false positives against
+  `data.GetCorporateActions`, `data.GetCorporateActionsByMarket`,
+  `data.GetCryptoInstruments` and `data.GetOptionContracts`, each on
+  `pagination_key`, and they would have entered the baseline as findings.
+
 ## [2.1.18] - 2026-09-27
 
 Corrective documentation release. `2.1.17` documented a `trade` split whose

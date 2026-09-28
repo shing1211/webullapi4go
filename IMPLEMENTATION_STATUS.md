@@ -1,8 +1,8 @@
 # Implementation Status
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.17`** (2026-09-27)
+- Latest repository tag: **`v2.1.21`** (2026-09-28)
 - Current hardening: **tagged in repository `v2.1.4`**; introduced in `v2.1.1`
 - Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
   **by decision**; no `/v2` migration is planned
