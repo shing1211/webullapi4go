@@ -317,3 +317,34 @@ jobs:
 
       - name: Check citations
         run: python tools/citations/check.py
+
+  # Release-record gate: every tagged release from v2.1.10 onward must carry a
+  # CHANGELOG entry, a docs/runs/index.md row, and be named by both status-document
+  # headers. The record fell behind three releases running and nothing else in this
+  # workflow could see it, which is why it is here.
+  #
+  # Full history on purpose, and that is the whole point of the job. The gate
+  # compares the tag set against the documents, and checkout's default fetch-depth
+  # of 1 yields a tag set that is necessarily partial: the first tag-triggered run
+  # fetched only the tag it was building, the gate saw one non-empty tag list, and
+  # failed six build jobs over a clone that could not answer the question. The gate
+  # now skips a shallow clone with that reason rather than guessing, and this job
+  # gives it a clone that can answer.
+  release-records:
+    name: release records
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, for the tag set)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from module go.mod)
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Check the release record
+        run: go test . -run TestReleaseRecord -v -count=1

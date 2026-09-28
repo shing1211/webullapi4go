@@ -9,7 +9,60 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.23] - 2026-09-28
+
+Corrective release. `[2.1.22]` shipped red — 18 of 26 jobs passed, 8 failed — and this
+is the release that fixes it. The `v2.1.22` tag stays as the record of the red one,
+as `v2.1.15` does. The cause was in the release-record gate added by `[2.1.22]`
+itself, so the defect this repository has spent several releases chasing — a check
+added without being exercised in the environment it runs in — repeated one release
+later, and the tag trigger added in the same change is what caught it. Nothing here
+changes SDK behaviour, no fixture and no baseline entry was touched, and nothing is
+live-verified.
+
+### Fixed
+
+- **The release-record gate failed on a shallow clone, turning 8 CI jobs red.**
+  `.github/workflows/ci.yml` checks out with the default `fetch-depth: 1`, which
+  fetches the ref being built and no history. On the first tag-triggered run the
+  clone held exactly one tag: the one being built. The gate listed annotated tags,
+  found a non-empty list, and so its "no tags, nothing to check" skip did not fire;
+  `TestReleaseRecordCutoffNamesATag` then concluded `v2.1.10` was not an annotated
+  tag and failed, taking the six build/vet/test matrix jobs, the coverage job and
+  the lint job with it. The failure was honest — a partial tag set genuinely cannot
+  answer the question — but it was reported as a misconfigured constant rather than
+  as an environment that cannot answer, which is the distinction that matters.
+- **The gate now distinguishes "cannot answer" from "answered no."** It asks git
+  whether the repository is a shallow clone and, if so, skips with that reason
+  rather than treating a partial tag set as a complete one. `git rev-parse
+  --is-shallow-repository` is used rather than looking for `.git/shallow`, because
+  it is authoritative and works from a worktree. Asking and being unable to answer
+  is treated as *not* shallow, so an unanswerable question never becomes a silent
+  skip.
+- **Verified in the exact failing condition, not by inspection.** A clone of
+  `--depth 1 --branch v2.1.22` reproduces the CI condition precisely — shallow, one
+  tag, non-empty — and on the old code it fails with the same message CI produced;
+  on the fixed code both tag-dependent tests skip with the reason and the job goes
+  green. A full clone of the same tree, which is what the new job checks out, has 54
+  tags and runs the gate for real over 13 of them.
+
+### Added
+
+- **A dedicated `release-records` CI job, so the gate is enforced rather than
+  skipped everywhere.** The other eight jobs check out shallow and will therefore
+  skip the gate by design; a gate that only ever skips in CI is the failure mode the
+  file was written against. This one job checks out with `fetch-depth: 0` and runs
+  `go test . -run TestReleaseRecord`, so the check that every tagged release carries
+  a `CHANGELOG.md` entry, a `docs/runs/index.md` row and a current status-document
+  header actually executes on every push and every tag.
+
 ## [2.1.22] - 2026-09-28
+
+**This release is red.** 18 of 26 CI jobs passed; the six build/vet/test matrix jobs,
+the coverage job and the lint job failed. Cause and correction are in `[2.1.23]`: the
+release-record gate added below could not answer its question in a shallow clone and
+reported the environment as a misconfigured constant. The tag stays as the record,
+as `v2.1.15` does.
 
 Corrective release, and the first one whose purpose is to stop the same class of
 defect recurring. It closes the loop opened by `[2.1.21]`: the release record now

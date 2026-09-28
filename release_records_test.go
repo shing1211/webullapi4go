@@ -250,6 +250,26 @@ func headerTagOf(header string) string {
 	return ""
 }
 
+// cloneIsShallow reports whether the working tree is a shallow clone.
+//
+// This is the signal that decides whether the gate can be trusted at all, and it
+// was added because the gate's first real run failed. The first tag-triggered CI
+// run checked out with the default fetch-depth of 1, which fetched the tag being
+// built and none of its predecessors, so the tag set held exactly one entry. That
+// is a partial set that looks complete: it is non-empty, so a "no tags" skip did
+// not fire, and the cutoff check then concluded v2.1.10 was not a tag and failed
+// six build jobs and a coverage job over a misconfigured clone. Asking git is
+// authoritative and works from a worktree too, unlike looking for .git/shallow.
+func cloneIsShallow() bool {
+	out, err := exec.Command("git", "rev-parse", "--is-shallow-repository").Output()
+	if err != nil {
+		// Not being able to tell is not being shallow, and claiming otherwise
+		// would turn an unanswerable question into a silent skip.
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "true"
+}
+
 // annotatedReleaseTags returns every annotated v* tag, ordered by version.
 //
 // Order is by parsed version, not by string or by creation date, because "v2.1.10"
@@ -257,6 +277,11 @@ func headerTagOf(header string) string {
 // wrong silently stops comparing.
 func annotatedReleaseTags(t *testing.T) []string {
 	t.Helper()
+	if cloneIsShallow() {
+		t.Skip("clone is shallow, so its tag set is necessarily partial and a tag list " +
+			"that looks complete is not; the release-records CI job checks out full " +
+			"history and runs this gate for real")
+	}
 	out, err := exec.Command("git", "for-each-ref", "--format=%(refname:short) %(objecttype)", "refs/tags").Output()
 	if err != nil {
 		t.Skipf("git is unavailable in this environment (%v), so there is no release record "+

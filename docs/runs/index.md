@@ -37,4 +37,5 @@
 | 2026-09-28 | declared-name-check | BUILD | released v2.1.19 (envelope tags unquoted at capture; baseline byte-identical at 180) | v2.1.19 |
 | 2026-09-28 | declared-name-check | BUILD | released v2.1.20 (declared-name check: 104 rows over 30 symbols, baseline 180 to 285) | v2.1.20 |
 | 2026-09-28 | release-records | BUILD | released v2.1.21 (recorded v2.1.19 and v2.1.20, four missing index rows, the v2.1.20 has-no-CI-run finding, and the CI tags trigger) | v2.1.21 |
-| 2026-09-28 | release-records | BUILD | released v2.1.22 (release-completeness gate, CI runs on tag pushes, removed 5 dead Extra fields) | v2.1.22 |
+| 2026-09-28 | release-records | BUILD | released v2.1.22 (red: the new release-record gate could not answer its question in a shallow clone and failed 8 jobs) | v2.1.22 |
+| 2026-09-28 | release-records | BUILD | released v2.1.23 (gate skips a shallow clone with a reason; dedicated release-records CI job checks out full history and runs it) | v2.1.23 |
