@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.28`** (2026-09-28)
+- Latest repository tag: **`v2.1.29`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -82,6 +82,29 @@ The generated [SDK ↔ API Reconciliation](reconciliation.md) is authoritative. 
 | ℹ️ Intentionally not implemented | 0 |
 
 The states partition the 209 implemented endpoints: 184 + 4 + 1 = 189 rows carry a verified path, and the remaining 20 are the 3 rows labelled `📄 No OpenAPI schema on page` plus 17 manifest entries deliberately mapped to no SDK symbol. 189 + 3 + 17 = 209, so no endpoint is missing. **The 3 is a label count, not a page count**: 7 gRPC reference pages embed no OpenAPI schema, and the 4 that the manifest also maps to no SDK symbol are labelled `➖ No SDK symbol` instead, because `_reconcile_data()` in `tools/webull-docgen/docgen.py` evaluates the unmapped branch before the no-openapi branch and the status table must partition the 209 rows. A further 3 rows have a JSON block that yields no `path` and are likewise labelled unmapped, so 10 rows in total have no usable official path. Those two categories are why the previously quoted "25 unresolved" was wrong: 20 of those 25 entries were generator artifacts, and the remaining 5 were investigated individually — 4 were correct SDK code the generator could not statically follow, and 1 is the real path mismatch now reported as ⚠️.
+
+**Resolution, 2026-09-28: all four summary-only rows are the `/openapi/*` namespace,
+and in each the SDK path equals the official `llms.txt` summary and differs only from
+the OpenAPI JSON.** `llms.txt` is one of the two official machine-readable sources,
+not a third-party index, so the SDK sides with an official source and the two Webull
+sources disagree with each other:
+
+| SDK | OpenAPI JSON | llms.txt summary (what the SDK sends) |
+|---|---|---|
+| `client.CreateToken` | `POST /auth/tokens/create` | `POST /openapi/auth/token/create` |
+| `client.CheckToken` | `POST /auth/tokens/check` | `POST /openapi/auth/token/check` |
+| `data.GetStockInstruments` | `GET /trading/instruments/stocks/profiles/list` | `GET /openapi/instrument/stock/list` |
+| `data.GetDisplaySnapshot` | `POST /market-data/stocks/snapshots/list` | `POST /openapi/market-data/stock/snapshot` |
+
+**The step that proposed to align these to the OpenAPI JSON is withdrawn, because
+taken literally it moves `client.CreateToken` and every authenticated call in this
+SDK depends on that path.** The OpenAPI JSON spelling has never been exercised by
+this code; the summary spelling is what the SDK sends today. Two official sources
+disagreeing makes the SDK path *supported*, not *proved* - no live call in this
+session tested either spelling, and the sandbox-gated suites that would exercise
+`GetStockInstruments` were not run. Unresolved SDK paths remain `0`, and the single
+row differing from *both* sources is the Broker FD assets summary, which is the
+`/broker-fd/*` item below.
 
 There are no documented-only endpoint gaps, but the snapshot is not a zero-discrepancy report: 4 summary-only and 1 differing remain. Generated pages under `webull-api/` are not hand-edited; the label correction that produced this partition lives in `tools/webull-docgen/`.
 
@@ -217,16 +240,58 @@ confirmed without it.
   and asserts which is reached. Reverting the one line fails three of its tests.
 
 - **`brokerfd` uses undocumented `/broker-fd/*` paths.** 14 non-test literals
-  remain (`brokerfd/accounts.go:29-31`, `brokerfd/assets.go:25`,
+  remain (`brokerfd/accounts.go:46-48`, `brokerfd/assets.go:25`,
   `brokerfd/brokerfd.go:58,68`, `brokerfd/documents.go:23-24`,
   `brokerfd/funding.go:26,30`, `brokerfd/instruments.go:27,29,31`,
   `brokerfd/journals.go:25`) while every other cached `broker-fd-api` page uses
   the `/broker/...` namespace. `brokerfd/assets.go:25` sends
   `/broker-fd/assets/summary` against a documented
   `GET /broker/assets/summaries/get` — the single ⚠️ row in the snapshot.
+
+  **All 14 are now classified against the cache, and none is alignable.** The recorded
+  judgement that "4 can be aligned" was optimistic; against the cached pages the answer
+  is 0. The cache holds 50 Broker FD pages and every one is under `/broker/...`, so none
+  of the 14 `/broker-fd/*` literals appears in the documentation at all.
+
+  - **Contested, 6** - two SDK symbols plausibly own the one documented page, so it
+    cannot be assigned to either without a decision the docs do not make:
+    `GetAccountsSummary` / `GetFDAssetsSummary`, `GetFDPositions` / `GetPositions`
+    (where `GetFDPositions` already sends the exact documented path), and
+    `GetFDCorporateActions` / `GetFDCorporateActionDetail`,
+    `GetFDCashJournalDetail` / `ListFDCashJournals`, and `CreateFDAccount` /
+    `SubmitAccountForm`.
+  - **No documented endpoint, 6** - and therefore unresolvable by any credential,
+    because no probe can return a path no page describes: `ListDocuments` and
+    `GetDocumentDetail` (only upload and download are documented),
+    `GetFDAchAccountDetail` and `GetFDBankAccountDetail` (only create, delete, list),
+    `GetFDStockLocate` (no page in any namespace), and `GetFDECInstrumentDetail` (only
+    category, series, event and market lists).
+  - **Ambiguous, 1** - `GetAccountFormStatus`, whose two candidates are
+    `GET /broker/accounts/applications/get` and `GET /broker/forms/versions/list`,
+    neither named for a status.
+  - **The near miss, recorded so it is not re-attempted from a name match.**
+    `GetAccountFormDetail` looked like the one alignable case: the cached Form Content
+    page declares `GET /broker/forms/get` and is the only single-form fetch. It was
+    aligned, the fixture regenerated, and the change reverted. That endpoint
+    "retrieves the JSON schema for the specified form code and version": it takes
+    `form_code` and `version` as query parameters and its 200 body is a **JSON Schema
+    fragment** whose properties are the schema keywords `required`, `type`, `format`,
+    `min_items`, `max_items`, `max_length`, `enum_values`, `description` and `example`.
+    The method fetches a form *instance* by `form_id` and decodes `brokerfd.AccountForm`.
+    The harness agreed, reporting `form_code` and `version` as required response names
+    that no `AccountForm` field carries - a true statement about the page and a false
+    one about the method. Matching on the word "form" paired different *kinds* of
+    endpoint, and the same trap applies to every candidate.
+
+  **What this changes about the block.** Six of the 14 are not "blocked on a credential"
+  but "unanswerable from the documentation", a different category that should not be
+  waited on. The other 8 need the live probe already named, and the contested 6
+  additionally need a decision about which symbol owns a shared page. The reasoning is
+  recorded in the code next to the three form path constants, and the docgen manifest's
+  Form Content row names the near miss.
   `brokerfd.GetPositions` (`brokerfd/brokerfd.go:67-68`) maps to no documented
   page, and the assets-summary manifest entry at
-  `tools/webull-docgen/_common.py:314` names two symbols for that page:
+  `tools/webull-docgen/_common.py:318` names two symbols for that page:
   `brokerfd.GetAccountsSummary` (`brokerfd/brokerfd.go:57-58`) has no page of
   its own and `brokerfd.GetFDAssetsSummary`'s DTO (`brokerfd/assets.go:32-41`)
   does not match the documented `balance`/`positions` envelope. A separate
@@ -242,7 +307,7 @@ confirmed without it.
   `/broker/instruments/stocks/corporate-actions/get`, and
   `brokerfd/journals.go:25` → `/broker/journals/cash-journals/get` — while 1
   (`brokerfd/brokerfd.go:58`) is a probable duplicate, 6 are plausibly ambiguous
-  (`brokerfd/accounts.go:29-31`, `brokerfd/funding.go:26,30`,
+  (`brokerfd/accounts.go:46-48`, `brokerfd/funding.go:26,30`,
   `brokerfd/instruments.go:31`, where a documented page exists in the same area
   but not for the same operation), and 3 have no documented counterpart at all
   (`brokerfd/instruments.go:27` stock-locate, `brokerfd/documents.go:23`
@@ -277,10 +342,24 @@ confirmed without it.
   not been live-verified**. It was invisible for so long because the reconciler
   compares *paths* and the path was correct; see the verb check below.
 
-- **`data.GetDisplaySnapshot` differs from both official sources.**
+- **`data.GetDisplaySnapshot`: the recorded premise was wrong, and correcting it weakens the case for the breaking change.**
   `data/display_quotes.go:33` sets
   `pathDSSnapshot = "/openapi/market-data/stock/snapshot"` and `:63` sends it
-  with GET, while both official sources say
+  with GET, while the OpenAPI JSON says
+
+  **Correction, 2026-09-28: the recorded premise was wrong.** This said the method
+  differs from *both* official sources. It does not. The `llms.txt` summary for this
+  endpoint is `/openapi/market-data/stock/snapshot`, which is exactly the path the SDK
+  sends, so the method matches one official source and differs from the other. The error
+  was inherited from the same miscount as the four summary-only rows above.
+
+  **What that changes.** The path was the tidiest-looking part of a large breaking
+  change and is now the least likely to be part of the fix, because aligning it would
+  move away from the spelling an official source documents. The unblock is unchanged:
+  the documented request is a required JSON body whose only required property is a
+  `category_symbols` array, while the SDK models one category with one flat symbol list
+  and encodes it as query parameters. That is still the real work, and it still needs
+  the paid entitlement to confirm which contract the host honours.
   `POST /market-data/stocks/snapshots/list`. It is the only `/openapi/…`
   holdout in a const block whose four siblings (`pathDSBars`,
   `pathDSBarsSingle`, `pathDSTick`, `pathDSDepth`, lines 35-41) were aligned in
@@ -824,7 +903,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
   bitmask.
 - Stream callbacks/channels are synchronous; a slow handler or full
   `DropBlock` subscriber causes head-of-line delay until cancellation or close.
-- Four summary-only matches and one differing path remain; unresolved SDK paths
+- The four summary-only matches are resolved as documentation drift: the SDK matches the official `llms.txt` summary and differs only from the OpenAPI JSON. One path still differs from both, the Broker FD assets summary; unresolved SDK paths
   are `0`.
 - Five live-blocked SDK defects are recorded above, none live-verified; the
   `brokerfd` items need US sandbox credentials, and three of the second item's
@@ -864,6 +943,6 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 2. Add US sandbox verification for US-only surfaces; this also unblocks most of the second `brokerfd` defect, the `brokerfd.GetFDPositions` response-schema defect, and the 89 `brokerfd` rows of the response-contract class in item 21. The three paths with no documented counterpart need a written answer from Webull, and that enquiry should also ask whether `GET /broker/assets/positions/list` returns the documented `AssetsPositionResult` names or the SDK's own, which the documentation cannot settle.
 3. Work the response-contract class in item 21, and settle the direction before changing a tag. The cheapest step is the 4 pages that document a single item where the path says list, which one live body or one written answer would resolve; the `brokerfd` silent-name rows come next, and no retag should be applied on the strength of the documentation alone. The 104 `missing-declared-name` rows come **after** the 119 rather than beside them, because a name the page never requires is also a name that may legitimately be absent, so they need the same live evidence before a retag.
 4. Shrink the 90 name-unexamined rows of item 22, which is now a residual rather than an untouched surface: **84 of the 90 are already examined and 6 are named as unnameable**, and the declared-inventory route those 6 would need is fully consumed. What is left is evidence, not instrumentation. The 84 checkable rows fall into only 3 documented shape families — 60 a bare object, 29 an array of objects, 1 an array of strings — so capturing one live response body per family is a bounded task, and a captured body carries the server's own property names whether or not the page marked them `required`. Add to the existing Webull enquiry a request that the affected pages mark `required` the properties they always send, which is the only route that would upgrade the 104 rows of weaker evidence to the standing of the 119.
-5. Resolve the four summary-only and one differing path states through the doc generator and official sources. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
+5. **Withdrawn, and do not perform it as written.** It proposed resolving the four summary-only matches to the OpenAPI JSON paths, which would move `client.CreateToken` off the path every authenticated call depends on. All four are the `/openapi/*` namespace and the SDK matches the official `llms.txt` summary in each; the OpenAPI JSON records a path reorganisation. The only genuinely open path is the Broker FD assets summary, which is the `/broker-fd/*` item. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
 7. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
 8. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.

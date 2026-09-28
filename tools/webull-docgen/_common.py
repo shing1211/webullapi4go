@@ -304,7 +304,18 @@ AREAS["broker-fd-us"] = (
         ("Account Application Detail", US + "broker-fd-api/get-account-application-detail.md", "—", ""),
         ("List Forms", US + "broker-fd-api/get-form-list.md", "brokerfd.ListAccountForms", ""),
         ("List Form Versions", US + "broker-fd-api/get-form-version-list.md", "—", ""),
-        ("Form Content", US + "broker-fd-api/get-form-content.md", "—", ""),
+        # Deliberately mapped to no SDK symbol. It was briefly mapped to
+        # brokerfd.GetAccountFormDetail, on the reading that the page declares
+        # GET /broker/forms/get and is the only single-form fetch. That is wrong by
+        # kind, not by name: the page "retrieves the JSON schema for the specified form
+        # code and version", takes form_code and version as query parameters, and its
+        # 200 body is a JSON Schema fragment whose properties are the schema keywords
+        # required, type, format, min_items, max_items, max_length, enum_values,
+        # description and example. GetAccountFormDetail fetches a form instance by
+        # form_id and decodes brokerfd.AccountForm. The harness confirmed it by
+        # reporting form_code and version as required response names that no
+        # AccountForm field carries. See IMPLEMENTATION_STATUS.md item 17.
+        ("Form Content", US + "broker-fd-api/get-form-content.md", "—", "No SDK counterpart: this endpoint serves a form's JSON Schema, not a form. Do not map it to brokerfd.GetAccountFormDetail; see the note in brokerfd/accounts.go."),
         ("Upload Document", US + "broker-fd-api/document-upload.md", "brokerfd.UploadDocument", ""),
         ("Download Document", US + "broker-fd-api/document-download.md", "brokerfd.DownloadDocument", ""),
         # The assets-summary and positions rows each pair two SDK symbols onto one

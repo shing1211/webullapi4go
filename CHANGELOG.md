@@ -9,6 +9,86 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.29] - 2026-09-28
+
+Documentation release. It changes no SDK request and no fixture. It completes the
+investigation item 17 had been holding open, and it corrects a factual error that had
+propagated into item 19, the next-steps list and `AGENTS.md`: the SDK's `/openapi/*`
+paths were recorded as disagreeing with **both** official Webull sources, and they
+disagree with only one.
+
+### Fixed
+
+- **The four "summary-only" rows are documentation drift, not SDK defects.** All four
+  are the `/openapi/*` namespace, and in each the SDK path equals the **llms.txt
+  summary** - which is one of the two official machine-readable sources, not a
+  third-party index - while the OpenAPI JSON documents a reorganised path:
+  `client.CreateToken` (`/openapi/auth/token/create` against `POST
+  /auth/tokens/create`), `client.CheckToken`, `data.GetStockInstruments` and
+  `data.GetDisplaySnapshot`. The two Webull sources disagree with each other and the
+  SDK sides with one of them, which makes its path *supported* rather than *proved*:
+  no live call in this session tested either spelling.
+- **The next step that proposed aligning them was withdrawn, because taken literally
+  it would have broken authentication.** It asked to "resolve the four summary-only
+  matches ... through the doc generator and official OpenAPI", which means moving
+  `client.CreateToken` off the path that every authenticated call in this SDK depends
+  on. The OpenAPI JSON spelling has never been exercised by this code. A gate or a
+  checklist that proposes this is worse than one that says nothing, so the step is
+  withdrawn in both status documents rather than left to be executed.
+- **`data.GetDisplaySnapshot`'s recorded premise was wrong.** Item 19 read that the
+  method "differs from both official sources". It does not: the llms.txt summary for
+  that endpoint is `/openapi/market-data/stock/snapshot`, exactly the path the SDK
+  sends. That weakens the case for the large breaking change rather than strengthening
+  it, because the path is now the part an official source actively supports, while the
+  request-shape problems - a required JSON body with a `category_symbols` array against
+  an SDK that sends flat query parameters - are untouched and still need the paid
+  entitlement.
+- **The `/openapi/*` sibling alignment, which the same record relied on, now looks
+  like a coincidence.** The item cited the four sibling Display constants having been
+  aligned to `/market-data/stocks/*` in commit `2b29c88`, leaving this one as a
+  "holdout". If the OpenAPI JSON is the reorganised source, that commit aligned four
+  endpoints *away* from a spelling Webull still documents, and this one was left alone
+  correctly. That is a second, larger question this release records rather than
+  answers: it needs a live call per endpoint, and no entitlement is available.
+
+### Noted
+
+- **All 14 `/broker-fd/*` path literals are now classified, and none is alignable.**
+  The recorded judgement that "4 can be aligned" was optimistic; against the docgen
+  cache the answer is 0. The cache holds 50 Broker FD pages and every one is under
+  `/broker/...`, so none of the 14 appears in the documentation at all. They split into
+  **6 contested** (two SDK symbols plausibly own the one documented page, so it cannot
+  be assigned to either without a decision the docs do not make), **6 with no
+  documented endpoint at all**, and **1 ambiguous** with two candidate pages. The
+  contested pairs are `GetAccountsSummary`/`GetFDAssetsSummary`,
+  `GetFDPositions`/`GetPositions`, `GetFDCorporateActions`/
+  `GetFDCorporateActionDetail`, `GetFDCashJournalDetail`/`ListFDCashJournals` and
+  `CreateFDAccount`/`SubmitAccountForm`.
+- **Six of the 14 can never be resolved by a credential.** `ListDocuments`,
+  `GetDocumentDetail`, `GetFDAchAccountDetail`, `GetFDBankAccountDetail`,
+  `GetFDStockLocate` and `GetFDECInstrumentDetail` have no documented counterpart of
+  any kind, because Webull publishes no page for them. No probe can return a path no
+  page describes, so these are "unanswerable from the documentation" rather than
+  "blocked on a credential" - a different category, and not one to wait on.
+- **A near miss, aligned and then reverted, is recorded so it is not re-attempted.**
+  `GetAccountFormDetail` looked like the one clear case: the cached Form Content page
+  declares `GET /broker/forms/get` and is the only single-form fetch. It was aligned,
+  the fixture regenerated, and the change reverted. That endpoint "retrieves the JSON
+  schema for the specified form code and version" - it takes `form_code` and `version`
+  as query parameters and its 200 body is a JSON Schema fragment whose properties are
+  the schema keywords `required`, `type`, `format`, `min_items`, `max_items`,
+  `max_length`, `enum_values`, `description` and `example`, while the method fetches a
+  form *instance* by `form_id` and decodes `brokerfd.AccountForm`. The harness caught
+  it: it reported `form_code` and `version` as required response names that no
+  `AccountForm` field carries, which is a true statement about the page and a false one
+  about the method. Matching endpoints on a shared word paired different *kinds* of
+  endpoint, and the same trap applies to every remaining candidate. The reasoning now
+  sits next to the three form path constants in `brokerfd/accounts.go` and in the
+  docgen manifest's Form Content row.
+- No fixture, manifest or SDK request changed. The committed conformance tree is
+  byte-identical to `v2.1.28`, which the fixture self-check confirms. Nothing is
+  live-verified.
+
 ## [2.1.28] - 2026-09-28
 
 Corrective release. It closes three of the four remaining live-blocked defects, two

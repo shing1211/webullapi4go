@@ -20,12 +20,29 @@ import (
 )
 
 const (
-	pathFDAccountList       = "/broker/accounts/list"
-	pathFDAccountDetail     = "/broker/accounts/get"
-	pathFDAccountCreate     = "/broker/accounts/create"
-	pathFDAccountUpdate     = "/broker/accounts/update"
-	pathFDAccountClose      = "/broker/accounts/close"
-	pathFDAccountForms      = "/broker/forms/list"
+	pathFDAccountList   = "/broker/accounts/list"
+	pathFDAccountDetail = "/broker/accounts/get"
+	pathFDAccountCreate = "/broker/accounts/create"
+	pathFDAccountUpdate = "/broker/accounts/update"
+	pathFDAccountClose  = "/broker/accounts/close"
+	pathFDAccountForms  = "/broker/forms/list"
+	// The three form paths keep the undocumented /broker-fd/* namespace deliberately.
+	//
+	// The obvious candidate for form detail is the cached Form Content page, which
+	// declares GET /broker/forms/get, and aligning to it was tried and reverted: that
+	// endpoint "retrieves the JSON schema for the specified form code and version". It
+	// takes form_code and version as query parameters and its 200 body is a JSON Schema
+	// fragment whose properties are the schema keywords required, type, format,
+	// min_items, max_items, max_length, enum_values, description and example. This
+	// method fetches a form *instance* by form_id and decodes brokerfd.AccountForm, so
+	// matching the two on the word "form" pairs different kinds of endpoint. The
+	// harness agreed: it reported form_code and version as required response names
+	// absent from every AccountForm field, which is a true statement about the page
+	// and a false one about this method.
+	//
+	// That is why none of the 14 is aligned: the remaining candidates are rejected on
+	// kind rather than on name, and the docs cannot settle a kind mismatch without a
+	// live call. See IMPLEMENTATION_STATUS.md item 17.
 	pathFDAccountFormDetail = "/broker-fd/account/form/detail"
 	pathFDAccountFormSubmit = "/broker-fd/account/form/submit"
 	pathFDAccountFormStatus = "/broker-fd/account/form/status"

@@ -283,9 +283,12 @@ make generate
   mapped to no SDK symbol. The 189 rows with a verified path plus those 3 and 17
   account for all 209, so no endpoint is missing; the previously quoted "25
   unresolved" was 20 generator artifacts and 5 individually investigated
-  entries. Do not describe that snapshot as a zero-discrepancy report: 4
-  summary-only and 1 differing remain. Earlier version history lives in
-  `CHANGELOG.md`.
+entries. Do not describe that snapshot as a zero-discrepancy report: 1
+differing path remains. The 4 summary-only rows are **resolved as documentation
+drift**, not open defects: all four are the `/openapi/*` namespace, and in each the
+SDK path equals the official `llms.txt` summary and differs only from the OpenAPI
+JSON, which records a path reorganisation. Earlier version history lives in
+`CHANGELOG.md`.
 - **That label count is not a page count.** 7 gRPC reference pages embed no
   OpenAPI schema at all, but only 3 rows carry the `no OpenAPI schema on page`
   label. `_reconcile_data()` in `tools/webull-docgen/docgen.py` tests the
@@ -315,8 +318,8 @@ make generate
   (`brokerfd/client.go:53`). The other two, found on 2026-09-26, remain:
   `brokerfd` still uses 14 undocumented
   `/broker-fd/*` path literals (`brokerfd/assets.go:25` is the one the generated
-  report flags), and `data.GetDisplaySnapshot` differs from both official
-  sources. The fourth, `broker.UpdateVirtualAccount`, was found on 2026-09-26 and
+  report flags), and `data.GetDisplaySnapshot` differs from the OpenAPI JSON
+  while matching the official `llms.txt` summary. The fourth, `broker.UpdateVirtualAccount`, was found on 2026-09-26 and
   **closed in `v2.1.28`**, also without a credential: the reconciler compares
   paths and not verbs, so the row reconciled as a clean match while the method
   issued PUT where the page documents POST. A verb check now exists. The fifth
