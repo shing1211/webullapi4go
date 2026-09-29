@@ -36,3 +36,6 @@ __pycache__/
 
 # MkDocs internal run artifacts (workspace-only, excluded from published site)
 docs/runs/
+
+# superpowers subagent-development workspace (ledger, briefs, review packages)
+.superpowers/
