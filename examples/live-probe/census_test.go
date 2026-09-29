@@ -720,6 +720,23 @@ func TestEndpointFromDocumentNormalisesTheMethod(t *testing.T) {
 	}
 }
 
+// -assume-discovered substitutes a placeholder for a real account and a real
+// session token, so it must be unusable outside a dry run. A run that reached
+// the sandbox with a placeholder would record 59 endpoints answering 404 against
+// an account nobody holds, which is the exact fabrication this probe exists to
+// rule out.
+func TestAssumeDiscoveredIsRefusedOutsideADryRun(t *testing.T) {
+	err := run(context.Background(), []string{
+		"-assume-discovered", "-out", filepath.Join(t.TempDir(), "census.json"),
+	})
+	if err == nil {
+		t.Fatal("run accepted -assume-discovered without -dry-run")
+	}
+	if !strings.Contains(err.Error(), "-dry-run") {
+		t.Errorf("err = %v, want it to say the flag needs -dry-run", err)
+	}
+}
+
 // An absent cache is a skip, not a failure: it is gitignored, so a fresh
 // checkout cannot judge the corpus either way. The same rule the
 // conformance-fixtures target uses.

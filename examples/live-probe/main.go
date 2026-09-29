@@ -106,8 +106,16 @@ func run(ctx context.Context, args []string) error {
 		"docgen cache directory; empty uses WEBULL_DOCGEN_CACHE, then the cache beside the manifest")
 	dryRun := flags.Bool("dry-run", false,
 		"build every documented request and send nothing; needs no credential")
+	assumeDiscovered := flags.Bool("assume-discovered", false,
+		"dry-run only: resolve account_id and access_token from placeholder values, to "+
+			"measure constructibility as it would be once phase 0 and the token exchange have both run")
 	if err := flags.Parse(args); err != nil {
 		return err
+	}
+	if *assumeDiscovered && !*dryRun {
+		return errors.New("-assume-discovered measures request construction and sends nothing, " +
+			"so it is only meaningful with -dry-run; it is refused here rather than " +
+			"silently substituting a placeholder for a real account or token")
 	}
 
 	manifest, err := resolveManifest(*manifestPath)
@@ -128,7 +136,7 @@ func run(ctx context.Context, args []string) error {
 	}
 
 	if *dryRun {
-		return runDryRun(endpoints, *out, manifest, cache)
+		return runDryRun(endpoints, *out, *assumeDiscovered)
 	}
 
 	cl, err := newClient(*base)
@@ -204,7 +212,23 @@ func run(ctx context.Context, args []string) error {
 // and that number is knowable without a credential. A census reporting blocked
 // for nearly everything is not a finding about the endpoints; it is the probe
 // failing to run, and this mode is where that shows up.
-func runDryRun(endpoints []Endpoint, out, manifest, cache string) error {
+//
+// assumeDiscovered supplies placeholder values for the two inputs phase 0 and
+// the token exchange provide, so the count can be read as constructibility once
+// both have run. The placeholders never leave the process: no request is sent,
+// and neither value is written to the report.
+func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
+	accountNote := "not run: a dry run resolves no account, so every account-scoped request is blocked"
+	if assumeDiscovered {
+		SetAccountID("live-probe-assumed-account")
+		SetSessionToken("live-probe-assumed-session-token")
+		accountNote = "assumed: a placeholder account id and session token stand in for phase 0 " +
+			"and the token exchange, so this count is constructibility once both have run"
+		defer func() {
+			SetAccountID("")
+			SetSessionToken("")
+		}()
+	}
 	outcomes := make([]Outcome, 0, len(endpoints))
 	for _, ep := range endpoints {
 		outcome := Outcome{
@@ -231,7 +255,7 @@ func runDryRun(endpoints []Endpoint, out, manifest, cache string) error {
 	}
 	built := report{
 		Mode:        "dry-run: no request was sent and no credential was read",
-		Account:     "not run: a dry run resolves no account",
+		Account:     accountNote,
 		Endpoints:   len(endpoints),
 		Summary:     Summarise(outcomes),
 		Outcomes:    outcomes,
