@@ -20,9 +20,15 @@ import (
 	"errors"
 )
 
-// stringPlaceholder is what a JSON string reduces to. It is synthetic, so a live
-// value cannot be mistaken for it, and it is not empty, so a reduced string is
-// visibly a value the server sent rather than an absent one.
+// stringPlaceholder is what a JSON string reduces to. It is not empty, so a
+// reduced string is visibly a value the server sent rather than an absent one.
+//
+// What it is not is undetectable, and the distinction matters because an earlier
+// version of this comment claimed it. A server that sent the string "1" has
+// produced bytes identical to this placeholder, and no test can tell the two
+// apart: a one-bit literal carries one bit, and that bit is the kind. The claim
+// a consumer may rely on is that every leaf is the constant this reduction chose,
+// not that no server could ever have sent the same bytes.
 const stringPlaceholder = "1"
 
 // boolPlaceholder is what a JSON boolean reduces to. It is emitted
@@ -38,10 +44,22 @@ const boolPlaceholder = true
 // rather than of readings, and any other number in a reduced tree proves the
 // tree did not come from Skeletonify.
 //
-// The literal is -1 because it is not a figure Webull sends for a price, a
-// size, a timestamp, a ratio or a count, so a reduced tree cannot be read as a
-// snapshot. 0 would be the obvious alternative and the wrong one: a zero
-// balance is a real reading, so a leaked 0 would look like data.
+// The literal is -1, and the reason is stated carefully because the obvious
+// version of it is false. It is NOT the case that -1 is a figure Webull never
+// sends: a ratio can be -1, which is a -100% change, and a body that sent -1 for
+// anything at all would reduce to bytes identical to this placeholder. The
+// collision is undetectable by construction, because any literal the reduction
+// could pick is a literal a server could send.
+//
+// So the property is not that no reading is recoverable. It is that every leaf is
+// the constant this reduction chose, and the leak is inherent to the technique
+// rather than a defect in it: the kind is carried by the type, so the literal is
+// the only thing there is to lose and it carries nothing.
+//
+// 0 is the obvious alternative and the worse one, on legibility rather than on
+// safety: a zero balance is a real reading a reader would take for data, whereas
+// a negative figure reads as a placeholder on sight. That is an argument about
+// how the files look, and it is offered as one.
 const numberPlaceholder = json.Number("-1")
 
 // errTrailingData is returned when a body holds more than one JSON value.

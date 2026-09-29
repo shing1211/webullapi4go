@@ -1,6 +1,6 @@
 {
  "kind": "live-response-skeletons",
- "warning": "These files hold the SHAPE of a live Webull response - every member name the sandbox sent, and no value it sent. Every leaf is a placeholder: a string is \"1\", a number is -1, a boolean is true, a null is null. Nothing in this tree is a price, a size, a timestamp, an account id or a symbol, and there is no reading in it to recover.",
+  "warning": "These files hold the SHAPE of a live Webull response - every member name the sandbox sent, and no value it sent. Every leaf is a placeholder: a string is \"1\", a number is -1, a boolean is true, a null is null. No reading in this tree is recoverable other than a placeholder, so there is no price, size, timestamp, account id or symbol here to recover. A placeholder is a fixed literal and a server can send the same one, so a placeholder is not proof of what the body held - the claim is that every leaf is the constant the reduction chose.",
  "generator": {
   "tool": "examples/live-probe (phase 2, -capture)",
   "command": "go run . -capture -out ../../conformance/testdata",
@@ -14,14 +14,25 @@
  "host": "api.sandbox.webull.hk",
  "region": "hk",
  "environment": "sandbox",
- "totals": {
-  "considered": 55,
-  "captured": 55,
-  "notCaptured": 0,
-  "decodedCleanly": 51,
-  "decodeRejected": 4,
-  "skeletonBytes": 1972932
- },
+  "totals": {
+   "considered": 55,
+   "captured": 55,
+   "notCaptured": 0,
+   "decodedCleanly": 51,
+   "decodeRejected": 4,
+   "skeletonBytes": 1972932,
+   "withoutElementShape": [
+    "live/fundamentals/GET-market-data-fundamentals-fund-splits-get.json",
+    "live/market-data-futures/GET-market-data-futures-ticks-list.json",
+    "live/trading/GET-trading-orders-get.json",
+    "live/trading/GET-trading-orders-open-orders-list.json"
+   ]
+  },
+  "size": {
+   "arrayElements": 8182,
+   "distinctElementShapes": 63,
+   "reason": "totals.skeletonBytes is the whole tree, and most of it is repetition: arrayElements is every element of every array in the written skeletons, distinctElementShapes is how many distinct reduced shapes those elements take, and the difference is the elements repeating a shape the tree already holds elsewhere in it. The sandbox answers with hundreds of rows of a handful of shapes where one row would carry the same names and kinds. These files are live data rather than minimal instances, so the documentation fixtures' sizeTripwire does not apply to them; the tree's size is a fact about the responses that produced it, no bound is imposed on it here, and nothing in this manifest claims the size could not be reduced without losing a member name or a kind."
+  },
  "census": {
   "total": 193,
   "reachable": 158,
