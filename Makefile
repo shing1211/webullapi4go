@@ -18,7 +18,7 @@
 #   make generate   regenerate protobuf code
 #   make proto-tools install protobuf codegen tools
 
-MODULES := . broker examples/watchlist-cmd examples/broker-probe examples/futures-probe examples/options-multi-leg
+MODULES := . broker examples/watchlist-cmd examples/broker-probe examples/futures-probe examples/options-multi-leg examples/live-probe
 
 .PHONY: build vet test test-race cover lint fuzz vuln docs citations conformance-fixtures conformance-fixtures-update conformance-gate conformance-report generate proto-tools
 

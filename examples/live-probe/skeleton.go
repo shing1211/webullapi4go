@@ -20,21 +20,53 @@ import (
 	"errors"
 )
 
+// stringPlaceholder is what a JSON string reduces to. It is synthetic, so a live
+// value cannot be mistaken for it, and it is not empty, so a reduced string is
+// visibly a value the server sent rather than an absent one.
+const stringPlaceholder = "1"
+
+// boolPlaceholder is what a JSON boolean reduces to. It is emitted
+// unconditionally: the reduction does not echo whether the server sent true or
+// false, so a `false` anywhere in a reduced tree proves the tree did not come
+// from Skeletonify. The type carries the kind and a bool has no room for
+// anything else, so mirroring the input would leak nothing and would weaken that
+// check.
+const boolPlaceholder = true
+
 // Skeletonify decodes raw as JSON and reduces it to a value-free type skeleton.
 //
 // The reduction keeps every name the server sent and discards every value. An
 // object reduces to a map from each member name to that member's reduced form,
 // an array reduces to a slice of the reduced elements, and every scalar leaf
-// reduces to its kind name: "string", "number", "boolean", or "null". A member
-// that is present and null therefore survives as "null" instead of vanishing,
-// because a name the SDK does not carry is precisely what the harness is
-// looking for.
+// reduces to a typed placeholder carrying its kind and nothing else:
 //
-// The decoder is configured with UseNumber, so a JSON integer is not widened to
-// a float64 and then reported as something a decimal could equally be. The
-// SDK's own permissiveness must not be allowed to mask what the server sent:
+//   - a JSON string  -> the Go string "1"
+//   - a JSON number  -> the json.Number itself
+//   - a JSON boolean -> the Go bool true
+//   - a JSON null    -> a nil interface
+//
+// The placeholders are typed, not named, because the consumer of a skeleton is
+// conformance.CompareBody, which classifies a decoded value by its Go type in
+// jsonKind (conformance/shapes.go:361). A leaf spelled as the string "number"
+// would be classified "string" there, so every numeric leaf the server sent would
+// be demanded of a Go string, a live null would yield no leaf row at all, and a
+// number where a string is documented would be reported as agreement. The
+// harness would then be unable to detect the wire change it exists to find. Each
+// placeholder above is a value jsonKind classifies as exactly the kind it stands
+// for, so a reduced tree is fixture-shaped input to that comparison unchanged.
+//
+// A number keeps the literal text the server sent. The comparison reads only the
+// kind, and preserving the text is what a float64 round trip would destroy: a
+// 40-digit integer and 1e400 are both numbers a float64 cannot represent, and
+// 1e400 is not a float64 at all. A consumer that commits a reduced tree verbatim
+// would therefore commit a number the server sent, so a consumer must extract
+// kinds rather than serialise the tree.
+//
+// The decoder is configured with UseNumber, so a JSON integer is neither widened
+// to a float64 nor reported as something a decimal could equally be. The SDK's
+// own permissiveness must not be allowed to mask what the server sent:
 // money.Money and data.QuoteTime each decode a JSON string or a number, and a
-// skeleton that called both "string" would hide a wire change the SDK would
+// skeleton that called both a string would hide a wire change the SDK would
 // absorb silently.
 //
 // An array reduces to a slice and never to nil, so an empty body stays
@@ -63,20 +95,34 @@ func Skeletonify(raw []byte) (any, error) {
 }
 
 // SkeletonKind names the kind of a reduced value: "object" for a map, "array"
-// for a slice, and the kind name itself for the string a scalar leaf reduces
-// to. A nil or unrecognised value is reported as "", so a one-line summary
-// never claims a kind it cannot support. Skeletonify reduces a bool to the
-// string "boolean" and never returns an int, so neither is a kind here.
+// for a slice, "string" for the string placeholder, "number" for a json.Number,
+// "boolean" for a bool, and "null" for a nil. Those six are the whole answer set
+// and each is derived from the value's own type, so a kind is never an arbitrary
+// string echoed back from the input.
+//
+// Any other value is reported as "", so a one-line summary never claims a kind
+// it cannot support. That guard is closed: an int, a float64, a struct, or any
+// other type Skeletonify does not produce is a value that skipped the reduction,
+// and saying so beats naming a kind. A slice of unreduced live values is the one
+// case the guard cannot catch at the top level, because its container type really
+// is "array"; the live values are inside it, and the caller that walks the tree
+// is what rejects them.
 func SkeletonKind(v any) string {
-	switch t := v.(type) {
+	switch v.(type) {
 	case map[string]any:
 		return "object"
 	case []any:
 		return "array"
 	case string:
-		return t
+		return "string"
+	case json.Number:
+		return "number"
+	case bool:
+		return "boolean"
+	case nil:
+		return "null"
 	}
-	// A nil value, and any type Skeletonify does not produce, has no kind.
+	// A type Skeletonify does not produce has no kind.
 	return ""
 }
 
@@ -98,13 +144,15 @@ func reduceValue(v any) any {
 		}
 		return out
 	case string:
-		return "string"
+		return stringPlaceholder
 	case json.Number:
-		return "number"
+		// The literal text is the kind's evidence, not a value: it is what keeps
+		// a 40-digit integer and 1e400 numbers rather than a decode failure.
+		return t
 	case bool:
-		return "boolean"
+		return boolPlaceholder
 	}
 	// A JSON null decodes to a nil interface, and nil is the only value left
 	// once the cases above are matched.
-	return "null"
+	return nil
 }
