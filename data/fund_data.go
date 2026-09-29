@@ -53,6 +53,18 @@ type FundNav struct {
 	PrevNav        money.Money `json:"prev_nav"`
 	NavChange      money.Money `json:"nav_change"`
 	NavChangeRatio string      `json:"nav_change_ratio"`
+
+	// The two fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's NetValue is this type's Nav and its Date is this type's NavDate, so
+	// both sets are carried and a response populates whichever it sends. This type
+	// already carries Currency, which the page's element also declares.
+	NetValue money.Money `json:"net_value"`
+	Date     string      `json:"date"`
 }
 
 // GetFundNav retrieves NAV history for a fund or ETF.
@@ -95,6 +107,46 @@ type FundInfo struct {
 	InceptionDate string      `json:"inception_date"`
 	FundType      string      `json:"fund_type"`
 	Category      string      `json:"category"`
+
+	// The six fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's LaunchDate is the same fact this type spells InceptionDate, so both
+	// are carried. The remaining five have no counterpart above.
+	Issuer              string            `json:"issuer"`
+	Custodian           string            `json:"custodian"`
+	Benchmark           string            `json:"benchmark"`
+	InvestmentObjective string            `json:"investment_objective"`
+	LaunchDate          string            `json:"launch_date"`
+	Managers            []FundInfoManager `json:"managers"`
+}
+
+// FundInfoManager is one manager of a fund.
+//
+// The page declares every field without marking any required, so each may be absent.
+type FundInfoManager struct {
+	// Name is the manager's name.
+	Name string `json:"name"`
+	// Title is the manager's role, for example "Manager".
+	Title string `json:"title"`
+	// StartDate is when the manager took the role, as YYYY-MM-DD.
+	StartDate string `json:"start_date"`
+	// EndDate is when the manager left the role, as YYYY-MM-DD, or empty while
+	// incumbent.
+	EndDate string `json:"end_date"`
+	// IsIncumbent reports whether the manager currently holds the role. The page
+	// documents it as an integer, so it is carried as int64 and a caller reads
+	// Incumbent rather than assuming a bool.
+	IsIncumbent int64 `json:"is_incumbent"`
+	// TenureDays is the manager's tenure in days.
+	TenureDays int64 `json:"tenure_days"`
+	// TenureYears is the manager's tenure in years, as a decimal string.
+	TenureYears string `json:"tenure_years"`
+	// TenureReturn is the return over the manager's tenure, as a decimal string.
+	TenureReturn string `json:"tenure_return"`
 }
 
 // GetFundInfo retrieves basic information for a fund or ETF.

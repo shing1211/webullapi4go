@@ -30,6 +30,20 @@ type FDEnum struct {
 	EnumType string `json:"enum_type"`
 	Value    string `json:"value"`
 	Label    string `json:"label"`
+
+	// The three fields below are declared by the page but not marked required, so
+	// they were absent here and a response carrying them decoded the value to the
+	// zero value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent, and nothing here asserts that
+	// a live server sends it.
+	//
+	// The page's Code is the same fact this type spells Value, and Name is the same
+	// fact it spells Label. Both are carried, because which spelling a live server
+	// uses is unverified, for the reason given on [BankAccount.BankRelationshipID].
+	Code       string `json:"code"`
+	Name       string `json:"name"`
+	ParentCode string `json:"parent_code"`
 }
 
 // GetFDEnums returns the list of broker-fd master-data enums.

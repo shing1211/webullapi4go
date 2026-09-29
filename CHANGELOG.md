@@ -9,6 +9,79 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.34] - 2026-09-28
+
+**The evidence here is weaker than in v2.1.33, and the release leads with that.** Every
+page behind these 76 names declares the property but publishes **no `required` list**, so
+a name may be optional, conditionally sent, or absent from the example the page chose.
+Each field added here exists because the page publishes it, not because a server must
+send it. That is the whole difference from the required-name work, and each field's GoDoc
+says so where a reader of the type will actually see it.
+
+76 declared names across 17 response types now reach a field. Each one decoded to the
+zero value with no error reported, so a caller reading a name the page publishes got an
+empty string, a zero or an empty slice. Root baseline 157 to 81 rows over 26 symbols.
+Required-name is unchanged at 2 rows over 1 symbol. No fixture changed. Nothing is
+live-verified.
+
+### Fixed - not breaking
+
+- **`brokerfd.FDCorporateAction` gains 12**, the largest single batch, including `from`
+  and `to` as new types: the two sides of the event, where `to` is an array because a
+  split can have several targets. Without them a caller cannot tell a split from a
+  rename.
+- **`brokerfd.FDEnum` gains 3**; `code` and `name` are the same facts it already spells
+  `Value` and `Label`, so both sets are carried.
+- **`brokerfd.FDOrder` gains `client_order_id`**, which the place and replace pages
+  declare and no Broker FD order type carried.
+- **`data.FinancialAlert` gains 9**, `data.FundInfo` 6, `data.ScreenerStock` 12 across
+  three pages, `data.DSNewsSummaryItem` 10 across four, `data.Logo` 2,
+  `data.FundNav` 2, `data.FinancialIndicator` 2, and `data.StockInstrument` 2.
+
+### Type decisions taken from the page, not the fixture
+
+- **Free-form objects are carried untyped.** `FinancialIndicator.Values`,
+  `DSNewsSummaryItem.Args`, `.Headers` and `.Rows`, and
+  `FDCorporateActionTarget.Payouts` are objects the page declares without naming any
+  property inside, so there is nothing to type them as. They are `map[string]any`, and
+  each says why on the field. A typed struct here would be invented, not read.
+- **`is_incumbent` is an `int64`, not a bool.** The page documents it as an integer, so
+  a caller reads a number. `FundInfoManager` also carries `tenure_days` as an integer.
+- **`id` on the news pages is an `int64`.** The values are 17 digits wide, so a
+  string-backed field would have dropped them.
+- **`is_adr` is a `string` on a page whose example is `"false"`.** The page sends a
+  string, so a `bool` field would have rejected it. `financial-alerts` `fiscal_year`
+  and `fiscal_period` are integers; the four money figures beside them are decimal
+  strings, matching how Webull sends money.
+- **The sector-detail counts are `string`.** `advanced`, `declined` and `flat` are counts,
+  but the page types them as strings, so they are carried as strings rather than
+  widened into an int the wire does not send.
+
+### Noted
+
+- **The `DeclaredNameCoverage` bite test has now outlived two of its subjects.** It was
+  built on `brokerfd.GetFDCorporateActions`, which v2.1.33 fixed, then on
+  `data.GetFundInfo`, which this release fixed. A bite that names a fixed defect asserts
+  the defect is still there, so it moved to `data.GetMarketSectorDetail`, whose
+  `data`/`pagination_key` rows still reproduce. That is the **fourth** bite test to need
+  this treatment: `TopLevelShape` moved in v2.1.33 and `LeafType` already manufactures
+  its condition. Three of the four moved because their subject was fixed, which is a
+  sign the subjects were chosen from a class under active repair rather than from one
+  that is stable.
+- **The declared-name class is now homogeneous, and that is the finding.** 76 of its 104
+  rows are fixed, and all 28 that remain are `data` or `pagination_key` on the 14 methods
+  that return a bare slice where the page documents an envelope. The name check has
+  stopped finding missing fields and started reporting the same missing wrapper 28 times.
+  **That is the next piece of work and it is a functional gap, not a readability one:**
+  `pagination_key` is unreachable and 12 of the 14 methods cannot send one either, so
+  these endpoints cannot be paged at all. It is 14 public signatures, so it is a release
+  of its own rather than a second half of this one.
+- **10 of the 25 shape rows stay recorded as judgement calls, not schema readings.** A
+  `.../list` path whose documented 200 is a single object (`GetDSLatestNews`, `GetLogos`,
+  `GetStockProfilesV3`) is a documentation question, and a wrapper would be a decision
+  rather than a reading. `brokerfd.ListAccountForms` stays recorded because its page
+  publishes no properties at all, so there is nothing to compare.
+
 ## [2.1.33] - 2026-09-28
 
 **Breaking release.** 62 recorded response-contract divergences are resolved: 58

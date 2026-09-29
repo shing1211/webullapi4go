@@ -361,6 +361,18 @@ type FinancialIndicator struct {
 	EPS       string `json:"eps"`
 	NetMargin string `json:"net_margin"`
 	DebtRatio string `json:"debt_ratio"`
+
+	// The two fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// Values is a free-form object the page declares without naming any property
+	// inside, so it is carried untyped; the indicator's own name is what keys it.
+	// Currency is the denomination of the values.
+	Currency string         `json:"currency"`
+	Values   map[string]any `json:"values"`
 }
 
 // GetFinancialIndicators retrieves financial indicators for symbol.
@@ -385,6 +397,28 @@ type FinancialAlert struct {
 	ExpectedReportDate string `json:"expected_report_date"`
 	EstimatedEPS       string `json:"estimated_eps"`
 	LastYearEPS        string `json:"last_year_eps"`
+
+	// The nine fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's EPSEstimate and EPSLastYear are the same facts this type spells
+	// EstimatedEPS and LastYearEPS, and its RevenueEstimate and RevenueLastYear are
+	// the earnings figures this type has no field for. Both spellings are carried,
+	// because which one a live server sends is unverified. FiscalYear and
+	// FiscalPeriod are integers on the page and are carried as int64; every other
+	// field here is a decimal string, as Webull sends money and ratios.
+	Currency     string `json:"currency"`
+	StartDate    string `json:"start_date"`
+	EndDate      string `json:"end_date"`
+	FiscalYear   int64  `json:"fiscal_year"`
+	FiscalPeriod int64  `json:"fiscal_period"`
+	EPSEstimate  string `json:"eps_est"`
+	EPSLastYear  string `json:"eps_ly"`
+	RevEstimate  string `json:"rev_est"`
+	RevLastYear  string `json:"rev_ly"`
 }
 
 // GetFinancialAlert retrieves upcoming earnings-release alert for symbol.

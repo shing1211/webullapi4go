@@ -80,6 +80,55 @@ type FDCorporateAction struct {
 	RecordDate string `json:"record_date"`
 	PayDate    string `json:"pay_date"`
 	Ratio      string `json:"ratio"`
+
+	// The fields below are declared by the page but not marked required, so they were
+	// absent here and a response carrying them decoded the value to the zero value
+	// with no error reported. That is weaker evidence than a missing-required-name
+	// row: the page publishes no required list for this call, so a name may be
+	// optional or conditionally sent, and nothing here asserts that a live server
+	// sends it. Not live-verified: the Broker FD host returns 404 in the HK sandbox
+	// and no US credential was available here.
+	Category             string                    `json:"category"`
+	CountryCode          string                    `json:"country_code"`
+	IssuerCountryCode    string                    `json:"issuer_country_code"`
+	ListingCountryOfCode string                    `json:"listing_country_of_code"`
+	EventID              string                    `json:"event_id"`
+	EventType            string                    `json:"event_type"`
+	EventVersion         string                    `json:"event_version"`
+	PaymentDate          string                    `json:"payment_date"`
+	FinalPayDate         string                    `json:"final_pay_date"`
+	InstrumentID         string                    `json:"instrument_id"`
+	From                 FDCorporateActionPosition `json:"from"`
+	To                   []FDCorporateActionTarget `json:"to"`
+}
+
+// FDCorporateActionPosition is the position's instrument on a corporate action, named
+// "from" on the page.
+type FDCorporateActionPosition struct {
+	// Symbol is the trading symbol of the position's instrument.
+	Symbol string `json:"symbol"`
+	// Name is the display name of the position's instrument.
+	Name string `json:"name"`
+	// Exchange is the exchange the position's instrument trades on.
+	Exchange string `json:"exchange"`
+}
+
+// FDCorporateActionTarget is one target instrument of a corporate action.
+//
+// The page documents the element with default_option_flag, description,
+// option_number and payouts, and publishes no required list for any of them, so each
+// is optional in practice. Payouts is a free-form object on the page: it declares no
+// property, so nothing here can name its fields and it is carried as a map.
+type FDCorporateActionTarget struct {
+	// DefaultOptionFlag reports whether this target is the default option.
+	DefaultOptionFlag string `json:"default_option_flag"`
+	// Description is the human-readable description of the target.
+	Description string `json:"description"`
+	// OptionNumber is the option's number within the contract.
+	OptionNumber string `json:"option_number"`
+	// Payouts is the free-form payout detail for this target. The page declares the
+	// property but no property inside it, so the value is carried untyped.
+	Payouts map[string]any `json:"payouts"`
 }
 
 // GetFDCorporateActions retrieves corporate actions for a fractional share symbol.

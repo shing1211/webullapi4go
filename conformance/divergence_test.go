@@ -591,17 +591,32 @@ func TestComparisonBites(t *testing.T) {
 	})
 
 	t.Run("DeclaredNameCoverage", func(t *testing.T) {
-		// GetFDCorporateActions is one of the 34 rows the declared-name check
-		// fires on: the page declares 14 properties and FDCorporateAction carries
-		// 7, so 12 are missing and the two declared names it does carry are
-		// ex_date and record_date. This row is on a page with no required list, so
-		// the weaker check
-		// is the only name check that applies to it.
-		const sym = "brokerfd.GetFDCorporateActions"
-		f := mustFixture(t, m, "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get")
+		// data.GetMarketSectorDetail is one of the 28 rows the declared-name check
+		// still fires on. This bite has now outlived two of its subjects: it was built
+		// on brokerfd.GetFDCorporateActions, which v2.1.33 fixed, and then on
+		// data.GetFundInfo, which v2.1.34 fixed. A bite that names a fixed defect
+		// asserts the defect is still there, so it moves rather than being deleted or
+		// manufactured. That is the fourth bite test to need this; TopLevelShape
+		// moved in v2.1.33 and LeafType already manufactures its condition.
+		//
+		// The page publishes no required list, so the weaker check is the only name
+		// check that applies. It declares advanced, change_ratio, data, declined, flat,
+		// id, name and pagination_key. Four of those -- the sector counts and the id
+		// -- were added to ScreenerStock in v2.1.34, so the two that still reach no
+		// field are the envelope names: the method returns a bare slice, and the
+		// {data, pagination_key} wrapper the page documents is dropped whole. That
+		// envelope family is what the pagination fix will address, and it is the last
+		// of the declared-name class.
+		//
+		// change_ratio is carried by ScreenerStock, which is what makes this symbol
+		// usable for the tag half as well: a bite needs a carried field whose tag can
+		// be removed to prove the check reads tags rather than agreeing with whatever
+		// the page happens to declare.
+		const sym = "data.GetMarketSectorDetail"
+		f := mustFixture(t, m, "market-data-screener/GET-market-data-screeners-market-sectors-get")
 		entry := mustType(t, sym)
 		before := Compare(f, sym, entry)
-		for _, name := range []string{"event_id", "payment_date", "final_pay_date", "event_type"} {
+		for _, name := range []string{"data", "pagination_key"} {
 			if !hasKind(before, MissingDeclaredName, name) {
 				t.Fatalf("the recorded defect on %s does not reproduce: %s",
 					name, summary(before))
@@ -619,48 +634,49 @@ func TestComparisonBites(t *testing.T) {
 		// Tag side: drop a json tag the SDK does have, from a copy of the type.
 		// The check must then name it, which is what proves it reads tags rather
 		// than agreeing with whatever the page declares.
-		untagged := withField(t, entry, "ex_date", func(f reflect.StructField) reflect.StructField {
+		untagged := withField(t, entry, "change_ratio", func(f reflect.StructField) reflect.StructField {
 			f.Tag = `json:"-"`
 			return f
 		})
 		afterTag := Compare(f, sym, untagged)
-		if !hasKind(afterTag, MissingDeclaredName, "ex_date") {
-			t.Fatalf("removing the ex_date tag did not make the declared-name check "+
+		if !hasKind(afterTag, MissingDeclaredName, "change_ratio") {
+			t.Fatalf("removing the change_ratio tag did not make the declared-name check "+
 				"fail, so the check is not reading tags: %s", summary(afterTag))
 		}
 		if countKind(afterTag, MissingDeclaredName) != countKind(before, MissingDeclaredName)+1 {
 			t.Errorf("expected exactly one more declared name: before %d, after %d",
 				countKind(before, MissingDeclaredName), countKind(afterTag, MissingDeclaredName))
 		}
-		t.Logf("copy of the type with the ex_date tag removed: %s", summary(afterTag))
+		t.Logf("copy of the type with the change_ratio tag removed: %s", summary(afterTag))
 
 		// Case side: encoding/json folds case on a tag miss, so a page spelling a
 		// carried name differently still decodes into it. Stripping the tag must
 		// therefore NOT report a covered name as missing.
 		// Name side: strip the tag entirely, so the field encodes under its Go name
-		// ExDate, and the check must still report ex_date missing. This is not the
-		// case-fold rescue the required-name subtest relies on, and the difference
-		// is worth pinning: strings.EqualFold folds case but not punctuation, so
-		// ex_date cannot match ExDate, and neither can encoding/json. Verified
-		// against the decoder: an untagged struct is filled from `symbol` and
-		// `success` but left empty by `ex_date`. Every declared name on this page
-		// is snake_case, so on this row the fallback can never apply, and a check
-		// that assumed it would have passed a type the decoder drops the value for.
-		folded := withField(t, entry, "ex_date", func(sf reflect.StructField) reflect.StructField {
+		// ChangeRatio, and the check must still report change_ratio missing. This is
+		// not the case-fold rescue the required-name subtest relies on, and the
+		// difference is worth pinning: strings.EqualFold folds case but not
+		// punctuation, so change_ratio cannot match ChangeRatio, and neither can
+		// encoding/json. Verified against the decoder: an untagged struct is filled
+		// from `symbol` and `success` but left empty by `change_ratio`. Every
+		// declared name on this page is snake_case, so on this row the fallback can
+		// never apply, and a check that assumed it would have passed a type the
+		// decoder drops the value for.
+		folded := withField(t, entry, "change_ratio", func(sf reflect.StructField) reflect.StructField {
 			sf.Tag = ``
 			return sf
 		})
 		afterCase := Compare(f, sym, folded)
-		if !hasKind(afterCase, MissingDeclaredName, "ex_date") {
-			t.Errorf("a copy whose ex_date tag was stripped does not report it missing, "+
-				"but the Go name ExDate cannot be filled from the wire key ex_date, so "+
+		if !hasKind(afterCase, MissingDeclaredName, "change_ratio") {
+			t.Errorf("a copy whose change_ratio tag was stripped does not report it missing, "+
+				"but the Go name ChangeRatio cannot be filled from the wire key change_ratio, so "+
 				"the value would be dropped: %s", summary(afterCase))
 		}
 		if got, want := countKind(afterCase, MissingDeclaredName), countKind(before, MissingDeclaredName)+1; got != want {
 			t.Errorf("expected exactly one more declared name: before %d, after %d",
 				want, got)
 		}
-		t.Logf("copy of the type with the ex_date tag stripped (Go name only): %s",
+		t.Logf("copy of the type with the change_ratio tag stripped (Go name only): %s",
 			summary(afterCase))
 
 		// Guard side: a free-form map decodes every documented name and declares

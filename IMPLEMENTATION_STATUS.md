@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.33`** (2026-09-28)
+- Latest repository tag: **`v2.1.34`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -329,8 +329,8 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 157 divergences fall on 35 symbols, in three packages:
-`brokerfd` 56, `data` 101, `trade` 0. The `trade` column is now **empty**: the four
+record no divergence. All 81 divergences fall on 26 symbols, in three packages:
+`brokerfd` 39, `data` 42, `trade` 0. The `trade` column is now **empty**: the four
 rows it held were all `missing-required-name` on `trade.BatchPlaceOrder`, whose page
 documents `total`, `success`, `failed` and `batch_orders` where the SDK had a single
 `results` field appearing on no page. They are all carried now. The remaining `trade`
@@ -347,10 +347,11 @@ the page marks `required` has no matching json tag anywhere in the type the meth
 decodes into, so the documented value decodes to the zero value and no error is
 reported. This is item 20's mechanism at scale, and it is the largest class. The
 check considers the union of json tags at every depth of the compared type, because
-`encoding/json` flattens a response body into one name space, so **119 is a floor
-rather than a total**: 19 rows carry 41 of their 90 required names only through a
-nested object, which the harness prints per row under the `required-name-depth`
-skip. Depth scoping is deliberately not enforced, because a documented top-level
+`encoding/json` flattens a response body into one name space, so the class size is a
+floor rather than a total. When this class stood at 119 rows, 19 of them carried 41 of
+their 90 required names only through a nested object, which the harness printed per row
+under the `required-name-depth` skip; the 2 rows left do not, so that figure is history
+rather than a property of the class today. Depth scoping is deliberately not enforced, because a documented top-level
 name the SDK reaches one level down still decodes and reporting it would trade a
 floor for a class of false positives — so names sitting at the wrong depth are not
 measured at all, by design. The check can fire only on a page that publishes a
@@ -367,48 +368,48 @@ sandbox credentials for the 29 `data` rows, less the US-only `data` surfaces amo
 them, which need the same US grant; and the same HK credentials for the 4 `trade`
 rows.
 
-**`missing-declared-name` — 104 rows across 30 symbols, the same silent class on
-weaker evidence.** A property the page declares but does not mark `required` has no
+**`missing-declared-name` - 28 rows across 14 symbols, and every one is now the
+same two names.** A property the page declares but does not mark `required` has no
 matching json tag in the type the method decodes into, so a response carrying it
 would decode the value to its zero value and report no error. The mechanism is
 identical to the class above and the severity is the same; **what differs is the
-evidence, and the count must not be added to the 119 as if it were.** A `required`
-name is a promise the page makes; a declared name is a description of one response,
-so a name absent from a page that does not require it may be optional,
-conditionally sent, or simply absent from the example the page chose. Each of the
-104 reasons says so, per entry. The check runs only where a page publishes no
-`required` list, which is exactly where the class above cannot run at all, and it is
-a separate check and a separate kind so the two strengths never collapse into one
-number. The worst-affected rows are `brokerfd.GetFDCorporateActions` at 12 of the 14
-names its page declares, `data.GetFinancialAlert` at 9 of 14 — carrying `eps_est`,
-`rev_est`, `fiscal_year` and four more — and `data.GetFundInfo`,
-`data.GetHighDividendRank` and `data.GetWeek52HighLow` at 6 each. The two screener
-rows are the structurally interesting ones: `data.ScreenerStock` is shared with
-`data.GetMostActive` and `data.GetTopGainersLosers`, which report no divergence at
-all, so those pages declare names a shared DTO cannot carry for every one of its
-callers. Minimal fix direction: the same as the class above, and item 20's warning
-applies identically — no retag on the strength of the documentation alone, because
-a name the page never promises is also a name that may simply be absent. Unblock:
-the same credentials as the class above.
-- **68 of the 104 sit on rows that also record a container-kind mismatch, and 26 of
-those are the `data`/`pagination_key` pair** a bare-array SDK cannot carry. They are
-recorded rather than suppressed, and the dead end is worth recording because the
-obvious suppression is wrong. `brokerfd.ListFDAccounts` declares 2 names against a
-page of 6, so its object is an envelope and its names are the wrapper;
-`data.GetDSLatestNews` declares 6 against a page of 6, so its object is the payload
-and its 5 missing names are a second, independent defect. `data.GetMarketSectorDetail`
-is both at once, carrying 4 content names beside 2 wrapper keys. Suppressing per
-row would discard the content names, and no per-name test exists — the manifest
-records no type per declared name, and `propertyNameCountInFixture` is 0 on these
-rows because the committed minimal instances are empty. This is the same treatment
-the 29 `decode-failure` rows already get.
-- **The floor applies here too, and is not printed.** 104 is a floor for the reason
-119 is: the union of tags at every depth counts a name as covered. Unlike the
-required half, the depth accounting is deliberately not reported per row, because
-`tagsOf` is called with the slice type on an array row, so the element's own fields
-land one level down and the same test would fire on nearly every declared name of
-every array row as a false "reached from below".
+evidence, and the count must not be added to the 2 as if it were.** A `required` name
+is a promise the page makes; a declared name is a description of one response, so a
+name absent from a page that does not require it may be optional, conditionally sent,
+or simply absent from the example the page chose. Each of the 28 reasons says so, per
+entry. The check runs only where a page publishes no `required` list, which is
+exactly where the class above cannot run at all, and it is a separate check and a
+separate kind so the two strengths never collapse into one number.
 
+**This class was 104 rows across 30 symbols, and 76 of them were fixed in v2.1.33
+and v2.1.34.** They were genuine gaps in the same sense as the required half -- a
+caller reading a name the page publishes got an empty string, a zero or an empty
+slice -- but on the weaker evidence, and each field added says so in its own GoDoc
+rather than being presented as a documented requirement. The 28 that remain are all
+`data` and `pagination_key` on the 14 methods that return a bare slice where the page
+documents a `{data, pagination_key}` envelope. So the class is now homogeneous: the
+name check has stopped finding missing fields and has started reporting the same
+missing wrapper 28 times, which is a signal to fix the wrapper rather than to keep
+adding fields. **That is the next piece of work, and it is a functional gap rather
+than a readability one:** `pagination_key` is unreachable, and 12 of the 14 methods
+cannot send one either, so these endpoints cannot be paged at all. It is also 14
+public signatures, which is why it is a release of its own.
+
+- **The 28 rows are recorded rather than suppressed, and the obvious suppression is
+still wrong.** Every row also records a container-kind mismatch, and 14 of the 28 are
+the `data`/`pagination_key` pair a bare-array SDK cannot carry. Suppressing the two
+wrapper names per row would make the class look empty while leaving the endpoints
+unpageable, and no per-name test exists: the manifest records no type per declared
+name, and `propertyNameCountInFixture` is 0 on these rows because the committed
+minimal instances are empty, since the pages publish no `required` list for them.
+This is the same treatment the 25 `decode-failure` rows already get.
+
+- **The floor applies here too, and is not printed.** 28 is a floor for the reason
+the required half is: the union of tags at every depth counts a name as covered.
+Unlike the required half, the depth accounting is deliberately not reported per row,
+because `tagsOf` is called with the slice type on an array row, so the element's own
+fields land one level down and the same test would fire on nearly every declared name
+of every array row as a false "reached from below".
 **`declared-inventory-empty` — 1 row, 1 symbol, and it is a hole rather than a
 defect.** `brokerfd.ListAccountForms` on `broker-fd-us/GET-broker-forms-list`
 declares no property name at all, so neither name check had anything to look at. It
@@ -451,7 +452,7 @@ is why this check runs last. All 29 rows restate a row for the same symbol: 27
 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch` row. They are
 recorded so the count stays stable, not because they are 29 additional defects, and
 no separate work is attached to them. This is the arithmetic reason the class
-totals must not be read as 157 independent problems.
+totals must not be read as 81 independent problems.
 
 **`leaf-type-mismatch` — no rows.** The class had two, both
 `data.Quote.QuoteTime`, and both are fixed; see item 25. It is the only class in
@@ -480,27 +481,30 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     280 points at item 21, which records the class rather than the row, and says so
     in its own `recordedIn`.
 
-21. **The response contracts across the API surface are now measured, and they are largely divergent.** The five items above are one host, some path literals, a verb and body, a request shape, and one response DTO. This item is the class that last one belongs to, taken across the surface: 157 recorded divergences on 35 symbols, in `brokerfd` (56), `data` (101), and `trade` (0).
+21. **The response contracts across the API surface are now measured, and they are largely divergent.** The five items above are one host, some path literals, a verb and body, a request shape, and one response DTO. This item is the class that last one belongs to, taken across the surface: 81 recorded divergences on 26 symbols, in `brokerfd` (39), `data` (42), and `trade` (0).
 
     | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
     |---|---:|---:|---:|---:|---:|---|
 | `missing-required-name` | 2 | 1 | 2 | 0 | 0 | **Silently** - the documented value decodes to its zero value, no error reported |
-| `missing-declared-name` | 104 | 30 | 31 | 73 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
+| `missing-declared-name` | 28 | 14 | 14 | 14 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
 | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
 | Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 25 | 25 | 11 | 14 | 0 | Loudly, at decode time |
 | `decode-failure` | 25 | 25 | 11 | 14 | 0 | Restates a container-kind or leaf-type row for the same symbol |
 | `leaf-type-mismatch` | 0 | 0 | 0 | 0 | 0 | **Empty.** Both rows were `data.Quote.QuoteTime`, fixed by a type that reads both shapes Webull publishes; see item 25 |
-| **Total** | **157** | **35** | **56** | **101** | **0** |
+| **Total** | **81** | **26** | **39** | **42** | **0** |
 
-    Three caveats travel with those numbers. **119 and 104 are both floors, not
-    totals**: the name checks consider the union of json tags at every depth, so 19
-    rows carry 41 of their 90 required names only through a nested object and count
-    as covered; the harness prints each required half under the `required-name-depth`
-    skip, and the declared half is deliberately not printed, because the same test on
-    an array row would fire on nearly every declared name. **The two silent name
-    classes must not be summed as one figure.** 119 rests on a promise and 104 on a
-    description, and 68 of the 104 sit on rows that also record a container-kind
-    mismatch, 26 of them restating that mismatch. **19 of the 27 container-kind rows
+    Three caveats travel with those numbers. **The name checks report a floor, not a
+total**: each considers the union of json tags at every depth, so a name reachable
+only through a nested object counts as covered. The harness prints the required half
+per row under the `required-name-depth` skip and deliberately does not print the
+declared half, because the same test on an array row would fire on nearly every
+declared name. **The two silent name classes must not be summed as one figure.** The
+2 required-name rows rest on a promise the page makes, and the 28 declared-name rows
+on a description of one response, and only the first is a defect of the same
+certainty as the class above. All 28 of the second sit on rows that also record a
+container-kind mismatch, because they are the `data`/`pagination_key` pair a
+bare-array SDK cannot carry; they restate that mismatch rather than adding a
+finding, and the envelope fix will remove both together. **19 of the 27 container-kind rows
     are indeterminate, and are more likely documentation errors than SDK defects**:
     19 sit on pages whose name ends `-list`, of which 12 document a
     `{data, pagination_key}` envelope the SDK does not unwrap and 4 document a single
@@ -511,7 +515,7 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
     - **No SDK fix is applied.** No `*.go` file under `data/`, `trade/`, `brokerfd/` or `broker/` was changed. The only code changed is the `conformance/` harness itself, and it changed behaviour only for the envelopes whose tags it could not previously read — see the envelope note below.
     - **One harness defect was fixed in the same release, and it changed the set.** `conformance/envelopes.go` stored a reconstructed envelope's struct tag as `go/ast` reports it, which is the source literal with its backticks, so `reflect.StructTag` could not read a single tag and `wireNameOf` fell back to the Go field name. That fallback agrees for camelCase and silently loses a snake_case name, so 4 rows were false positives — `data.GetCorporateActions`, `data.GetCorporateActionsByMarket`, `data.GetCryptoInstruments` and `data.GetOptionContracts`, each on `pagination_key`. The fault was latent because the test that round-trips an envelope compared the rebuilt tag against the tag the parser read, so both sides were wrong together. It is fixed, `TestEnvelopeTagsAreUsableAsStructTags` fails on the previous code, and 4 rows this class would have recorded are absent.
     - **Nothing here is live-verified.** No endpoint was called and no credential was used. The static comparison is certain; which side a live server honours is unverified for every row, exactly as for item 20.
-    - Not 157 defects: 25 rows are the `decode-failure` class restating another row for the same symbol, 68 are declared-name rows resting on a container-kind row for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an evidence-base hole.
+    - Not 81 defects: 25 rows are the `decode-failure` class restating another row for the same symbol, 68 are declared-name rows resting on a container-kind row for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an evidence-base hole.
     - Minimal fix direction: settle the direction per class before changing a tag, as the subsection above sets out. The order is the silent name class first, then the container-kind class once one live body establishes which shape the server sends, then the two leaf-type rows. The 104 declared-name rows come after the 119 rather than beside them, because a name the page does not require is also a name that may legitimately be absent.
     - Unblock: US sandbox credentials for the `brokerfd` rows and for the US-only `data` surfaces; HK sandbox credentials for the rest of `data` and for `trade`; a paid Display Solution entitlement for `data.GetDisplayDepth`; and a written answer from Webull on the 4 pages that document a single item where the path says list.
     - **The `broker/` module is now measured too, by the same code.** Its 29 documented endpoints were out of scope here until two releases ago, because the module is separate and no symbol in the root module can name a broker type. That is no longer the case: `broker/conformance_test.go` resolves all 29 rows from inside the module and runs the identical five checks, and `broker/conformance-divergences.json` records what it found — **59 further divergences over 28 compared rows, 1 row decoding no body and 0 not comparable**. The counts above remain the root module's own; this item's 282 does not include the 59, and the two sets are reported separately rather than merged, because merging them would lose the fact that one comes from a module the root cannot see. The three names `broker.GetPositions` shared with `brokerfd.GetFDPositions` — `cost_price`, `last_price` and `unrealized_profit_loss` — have since been fixed on both surfaces, so that row is down to the two names it was missing alone, `option_strategy` and `position_id`. `broker.UpdateVirtualAccount` is additionally missing `client_request_id`, which is the field item 18's verb-and-body defect is about. All 59 remain open and none is live-verified; Broker API HK returns `401 ROUTE_NOT_PERMITTED` in the HK sandbox, so the unblock is a production or US-scoped Broker credential.

@@ -38,6 +38,34 @@ type DSNewsSummaryItem struct {
 	PubTime  string `json:"pub_time"`
 	Symbol   string `json:"symbol"`
 	Category string `json:"category"`
+
+	// The fields below are declared by the news and summary pages but not marked
+	// required, so they were absent here and a response carrying them decoded the
+	// value to the zero value with no error reported. That is weaker evidence than a
+	// missing-required-name row: these pages publish no required list, so a name may
+	// be optional or conditionally sent, and nothing here asserts that a live server
+	// sends it.
+	//
+	// The pages spell these facts differently from the fields above, and the two
+	// spellings are carried side by side: NewsID, NewsTime, NewsURL, SourceName and
+	// Thumbnail are the page names, and ID and Type are new. The summary page's Type
+	// selects which of Args, Headers and Message is populated, so a caller reading
+	// one of them must read Type first. Args, Headers and Rows are free-form objects
+	// the page declares without naming any property inside, so they are carried
+	// untyped.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	ID         int64          `json:"id"`
+	NewsTime   string         `json:"news_time"`
+	NewsURL    string         `json:"news_url"`
+	SourceName string         `json:"source_name"`
+	Thumbnail  string         `json:"thumbnail"`
+	Type       string         `json:"type"`
+	Message    string         `json:"message"`
+	Args       map[string]any `json:"args"`
+	Headers    map[string]any `json:"headers"`
+	Rows       map[string]any `json:"rows"`
 }
 
 // GetDSNewsSummary retrieves news summaries for the given symbols via the

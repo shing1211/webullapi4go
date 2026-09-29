@@ -46,6 +46,18 @@ type FDOrder struct {
 	FilledQuantity money.Money `json:"filled_quantity"`
 	AvgFillPrice   money.Money `json:"avg_fill_price,omitempty"`
 	CreateTime     string      `json:"create_time"`
+
+	// ClientRequestID is declared by the place and replace pages but not marked
+	// required, so it was absent here and a response carrying it decoded the value to
+	// the empty string with no error reported. That is weaker evidence than a
+	// missing-required-name row: those pages publish no required list, so the name
+	// may be optional or conditionally sent.
+	//
+	// It is the caller's own correlation key, which is what makes an order placed
+	// through this SDK traceable to the request that placed it. The sibling broker/
+	// module carries it in the same role. Not live-verified, for the reason given
+	// on [TransferFee.FeeID].
+	ClientRequestID string `json:"client_order_id"`
 }
 
 // FDOrderPreviewRequest contains the order parameters for a preview request.

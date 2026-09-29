@@ -35,6 +35,20 @@ type LogoQuery struct {
 type Logo struct {
 	Symbol string `json:"symbol"`
 	Logo   string `json:"logo"`
+
+	// The two fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's LogoURL is this type's Logo, so both are carried and a response
+	// populates whichever it sends. Category is the instrument's market.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	Category string `json:"category"`
+	LogoURL  string `json:"logo_url"`
 }
 
 // GetLogos retrieves logo image URLs for the specified securities.

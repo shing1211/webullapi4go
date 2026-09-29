@@ -253,6 +253,34 @@ type ScreenerStock struct {
 	// RelativeVolume10D is the current-day volume divided by the ten-day
 	// average volume.
 	RelativeVolume10D string `json:"relative_volume_10d"`
+
+	// The fields below are declared by the three screener pages that resolve to this
+	// type but not marked required, so they were absent here and a response carrying
+	// them decoded the value to the zero value with no error reported. That is weaker
+	// evidence than a missing-required-name row: those pages publish no required
+	// list, so a name may be optional or conditionally sent, and nothing here asserts
+	// that a live server sends it. Not live-verified: the HK sandbox market data is
+	// limited to AAPL and the screener v2 surface is not reachable there.
+	//
+	// The 52-week page's ChangeRatio52W, Price1W and Price52W are this type's own
+	// ChangeRatio, Price and High over a different window, and the dividend page's
+	// Dividend, ExDate and Yield have no counterpart above. The sector-detail page's
+	// counts are string-typed on the page even though they are counts, and are carried
+	// as string to match. This type already carries InstrumentID, which the
+	// sector-detail page spells Id.
+	Category       string      `json:"category"`
+	Currency       string      `json:"currency"`
+	ChangeRatio52W string      `json:"change_ratio_52w"`
+	Price1W        money.Money `json:"price_1w"`
+	Price52W       money.Money `json:"price_52w"`
+	Dividend       money.Money `json:"dividend"`
+	ExDate         string      `json:"ex_date"`
+	Yield          string      `json:"yield"`
+	PETTM          string      `json:"pe_ttm"`
+	ID             string      `json:"id"`
+	Advanced       string      `json:"advanced"`
+	Declined       string      `json:"declined"`
+	Flat           string      `json:"flat"`
 }
 
 // GetTopGainersLosers retrieves the top gaining or losing US stocks for a
