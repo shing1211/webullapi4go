@@ -1,2 +1,16 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The committed fixture trees are compared byte for byte against what the
+# generators re-encode, so the bytes on disk have to be the bytes in the blob.
+# `text=auto` above normalizes on commit but still writes CRLF into the working
+# tree wherever core.autocrlf is true, which is every Windows clone. The three
+# byte-exact assertions in conformance (TestEncodeSkeletonIsIdempotent,
+# TestExpandSkeletonIsTheInverseOfEncode, and TestLiveBaselineIsCanonical's
+# re-render check) then fail on all 55 live fixtures and on the live baseline,
+# for a reason that has nothing to do with the SDK. These are data, not source:
+# nothing diffs them line by line, so marking them -text is the narrower fix than
+# turning normalization off for the whole repository.
+conformance/testdata/** -text
+conformance/live-divergences.json -text
+conformance/known-divergences.json -text
