@@ -362,9 +362,13 @@ JSON, which records a path reorganisation. Earlier version history lives in
   uses it for business validation such as invalid symbols, unsupported
   categories, and rejected strategies. Preserve status/message for diagnostics;
   never infer every 417 is a token failure or match the message string.
-- Display Solution requires a paid Webull subscription; the HK sandbox host
+- Display Solution requires a paid Webull subscription. The branding host
   (`hk-co-branding-openapi.uat.webullbroker.com`) returns `403 Forbidden` at the
-  host level, blocking all Display Solution endpoints even with valid credentials.
+  host level, and neither that host nor the entitlement has been exercised with a
+  valid subscription. This is a property of **that** host, not of Display
+  Solution as an API: on 2026-09-29 six `display-solution` endpoints answered
+  `200` from the **core** sandbox host `api.sandbox.webull.hk`. That says nothing
+  about the branding host and nothing about the entitlement.
 - Broker API HK (`/broker/...`) returns `401 ROUTE_NOT_PERMITTED` in the HK
   sandbox — the app lacks the required scope, not a path issue. Broker HK remains
   unverified pending production or US sandbox access.
