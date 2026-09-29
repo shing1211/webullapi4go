@@ -41,14 +41,26 @@
 //
 // Usage:
 //
-//	live-probe -out census.json                     # walk the sandbox, mutating endpoints refused
-//	live-probe -dry-run -out census-construct.json # build every request, send nothing
+//	live-probe -out census.json                          # walk the sandbox, mutating endpoints refused
+//	live-probe -dry-run -out census-construct.json       # build every request, send nothing
+//	live-probe -capture -out ..\..\conformance\testdata  # reduce the 200s and write live/
 //
 // A run needs WEBULL_APP_KEY and WEBULL_APP_SECRET, and it reads them from the
 // environment through client.WithEnv. A -dry-run needs neither and contacts
 // nothing. There is no flag that opens the mutating gate: the two environment
 // variables are the only door, so the closed default cannot be widened by a
 // mistyped argument.
+//
+// -capture is phase 2, and it runs on the reachability census this command
+// produces: it re-calls every endpoint the census recorded as HTTP 200, reduces
+// each response to a value-free type skeleton, and writes one file per endpoint
+// plus live-manifest.json under the -out directory. It is refused outright if
+// the mutation gate is open, because a capture re-calls the endpoints that
+// answered 200 and an open gate would put the order-placing ones among them.
+// With -capture, -out names a conformance/testdata directory rather than a
+// census file, and the census is printed rather than written: the per-endpoint
+// rows are a run-local artefact, and a run-local artefact has no business inside
+// a tracked evidence tree.
 package main
 
 import (
@@ -120,7 +132,8 @@ func main() {
 func run(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("live-probe", flag.ContinueOnError)
 	out := flags.String("out", "census.json",
-		"where to write the census as JSON")
+		"where to write the census as JSON; with -capture it is instead the "+
+			"conformance/testdata directory the live tree is written into")
 	base := flags.String("base", "",
 		"override the base URL; empty uses the region and environment from the environment")
 	account := flags.String("accounts", "",
@@ -131,11 +144,19 @@ func run(ctx context.Context, args []string) error {
 		"docgen cache directory; empty uses WEBULL_DOCGEN_CACHE, then the cache beside the manifest")
 	dryRun := flags.Bool("dry-run", false,
 		"build every documented request and send nothing; needs no credential")
+	capture := flags.Bool("capture", false,
+		"phase 2: re-call every endpoint the census recorded as HTTP 200, reduce each "+
+			"response to a value-free type skeleton, and write the live tree and "+
+			"live-manifest.json under the -out directory")
 	assumeDiscovered := flags.Bool("assume-discovered", false,
 		"dry-run only: resolve account_id and access_token from placeholder values, to "+
 			"measure constructibility as it would be once phase 0 and the token exchange have both run")
 	if err := flags.Parse(args); err != nil {
 		return err
+	}
+	if *capture && *dryRun {
+		return errors.New("-capture re-calls the endpoints that answered 200, so it cannot be " +
+			"combined with -dry-run, which sends nothing")
 	}
 	if *assumeDiscovered && !*dryRun {
 		return errors.New("-assume-discovered measures request construction and sends nothing, " +
@@ -223,6 +244,11 @@ func run(ctx context.Context, args []string) error {
 	// is the same reading, labelled with the same value, so the mutationGate line
 	// above the table and the rows beneath it are decided by one fact.
 	host := hostOf(cl)
+	summary := Summarise(outcomes)
+	if *capture {
+		return runCapture(ctx, cl, endpoints, outcomes, summary, *out, host,
+			cl.Region().String(), cl.Environment().String())
+	}
 	built := report{
 		Mode:        "live",
 		Host:        host,
@@ -231,7 +257,7 @@ func run(ctx context.Context, args []string) error {
 		Account:     accountDiscovery,
 		Mutation:    mutationNote("live", ResolveMutationGate(host)),
 		Endpoints:   len(endpoints),
-		Summary:     Summarise(outcomes),
+		Summary:     summary,
 		Outcomes:    outcomes,
 	}
 	return finish(built, *out)
