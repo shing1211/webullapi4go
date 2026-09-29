@@ -28,9 +28,30 @@
 // the live endpoint returns three zero-valued money.Money with no error.
 //
 // The cure is a body that came from somewhere other than the SDK. Every file
-// under testdata is a minimal conforming instance of the 200 response schema
-// Webull publishes for that endpoint, so the fixture is a snapshot of the
-// documentation and the SDK type is what has to agree with it.
+// under testdata outside live/ is a minimal conforming instance of the 200
+// response schema Webull publishes for that endpoint, so the fixture is a
+// snapshot of the documentation and the SDK type is what has to agree with it.
+//
+// The tree holds a second kind of file, and the exception has to be named here
+// because this is a public package and its documentation is what a reader trusts
+// about its own tree. testdata/live/ holds response skeletons captured from the
+// running sandbox by examples/live-probe: the shape of what a server answered,
+// with every value replaced by a placeholder. They are not instances of any
+// published schema, nothing in this package reads them, and none of the
+// comparisons below applies to them. testdata/live-manifest.json indexes them and
+// live/README.md says what they are from inside the tree itself.
+//
+// The split is a partition rather than an exemption, and it is enforced rather
+// than asserted. TestManifestDescribesTheWholeTree walks the embedded tree and
+// holds each half to its own index: a file outside live/ must be named by
+// testdata/manifest.json and a file under live/ must be named by
+// testdata/live-manifest.json, so a skeleton with no provenance is still a
+// failure and only the index it must appear in has changed. The tree's own README
+// is described by neither, because it is prose about the tree rather than
+// evidence in it. On the generator side, tools/conformance/gen_fixtures.py
+// excludes live/ and live-manifest.json by exact first path segment, so --check
+// does not report committed evidence as a deleted fixture; its seven self-test
+// checks pin both edges of that exclusion.
 //
 // # Where the checking lives, and why
 //
@@ -66,6 +87,9 @@
 //
 //	testdata/manifest.json                     provenance and per-fixture checks
 //	testdata/<area>/<METHOD>-<path>.json       one fixture per documented endpoint
+//	testdata/live-manifest.json                the live tree's own index
+//	testdata/live/README.md                    what the live tree is, in the tree
+//	testdata/live/<area>/<METHOD>-<path>.json  one skeleton per captured endpoint
 //	known-divergences.json                    the recorded divergence baseline
 //	symbols.go                                the symbol-to-type table
 //	envelopes.go                              unexported decode targets, read from source
@@ -74,7 +98,18 @@
 // The <area> directory is the tools/webull-docgen AREAS manifest key, so a
 // fixture's directory says which part of the API surface it documents. The file
 // name repeats the documented method and path, which makes a fixture
-// identifiable from a terminal prompt without opening the manifest.
+// identifiable from a terminal prompt without opening the manifest. A skeleton
+// repeats the name of the documentation fixture for the same endpoint, so the two
+// trees join row for row on the name and nothing has to be mapped between them.
+//
+// What the live tree rests on, and where each half of it is checked, is in
+// fixtures_test.go rather than here: TestLiveSkeletonsCarryNoValue walks the
+// committed bytes and fails on any leaf that is not the placeholder for its kind
+// and on any member name that could itself be a value the server sent, and
+// TestLiveManifestDeclaresItHoldsNoValues holds the index to the claim it makes
+// about its own contents. Neither the skeleton files nor the manifest is consumed
+// by divergence_test.go, and a skeleton is not a fixture: it is one observation of
+// one response, where a fixture is a restatement of one published schema.
 //
 // # What "the committed bytes" means on a given checkout
 //
