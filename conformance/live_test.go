@@ -106,7 +106,10 @@ func hasDirection(rows []LiveDivergence, pairKey string, d LiveDirection) bool {
 // and a made-up one has none. That also makes it a test of the real thing: this
 // is the exact shape of the finding the baseline records for
 // data.GetFuturesTick, where the page requires instrument_id, the SDK tags it,
-// and the live body sends instrumentId.
+// and the live body sends instrumentId. The SDK has since grown a decoder that
+// accepts either spelling, and the row is still reported, which is the point
+// this test holds: the check reads tag inventory, and a custom UnmarshalJSON
+// does not change a tag.
 //
 // The way to break this test is to run the checks once, against the fixture, and
 // report the result in both directions.
@@ -146,7 +149,9 @@ func TestCompareLiveReportsTheSDKDirection(t *testing.T) {
 
 	// The detail has to name the observation rather than restate the kind, and it
 	// has to say what the server sent instead, because "the name is missing" on
-	// its own does not tell a reader there is a near-miss spelling of it.
+	// its own does not tell a reader there is a near-miss spelling of it. It stops
+	// at the tag on purpose: what a caller then reads is not a thing this check
+	// inspects, and the SDK now decodes the member its tag cannot match.
 	if got[0].Detail == "" {
 		t.Fatal("the finding carries no detail, so nothing says what disagrees")
 	}

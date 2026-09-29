@@ -206,7 +206,10 @@ divergence at all - but 6 of the 90 remain unnameable and the evidence on the re
 is a description rather than a promise. That is item 22. A **third** set now exists
 and is also not in this list: 13 findings measured against a live server rather
 than against a page, recorded separately because a live finding is a claim about
-Webull's server rather than about this SDK. That is item 28.
+  Webull's server rather than about this SDK. That is item 28. One of those 13 was a
+  demonstrated SDK defect and has been fixed; the row stays recorded, so the count
+  still reads 13 and the row's own `reason` is what tells a reader which of the two
+  it is.
 
 Blocked or unverified areas:
 
@@ -1058,34 +1061,51 @@ SDK defects.
       send for equities is a promise the page does not keep, and that is a claim
       about the page.
     - **2 are the one documentation divergence this run settled**, below.
-    - **1 is the single demonstrated defect**, below.
-  - **The demonstrated defect: `data.GetFuturesTick` decodes `instrument_id` to `""`
-    on every response it gets.** The page requires `instrument_id` and
-    `data.StockTicks` tags the field `instrument_id` (`data/tick.go:66`), so the
-    documented comparison is green and stays green — its fixture carries the name
+    - **1 is the single demonstrated defect this run produced, and its SDK half is now
+      fixed**, below. The row is still in the set and the count is still 13, because
+      the name check reads tag inventory rather than decoding behaviour — so this row
+      is now a record of what the server sends, not a defect a caller can still hit.
+  - **The one demonstrated defect, now fixed: `data.GetFuturesTick` decoded
+    `instrument_id` to `""` on every response it got, and `data.StockTicks` now
+    accepts either spelling.** The page requires `instrument_id` and
+    `data.StockTicks` tags the field `instrument_id` (`data/tick.go:71`), so the
+    documented comparison was green and stayed green — its fixture carries the name
     the page documents
     (`conformance/testdata/market-data-futures/GET-market-data-futures-ticks-list.json:1`).
     The sandbox sent `instrumentId`
     (`conformance/testdata/live/market-data-futures/GET-market-data-futures-ticks-list.json:3`).
     `encoding/json` matches a member name exactly and then case-insensitively, and
-    an underscore is not a case, so the tag matches neither what the server sent nor
-    what the page documents: `GetFuturesTick` (`data/futures_market.go:47`) returns
-    a `StockTicks` whose `InstrumentID` is the empty string, with no error and
-    nothing to indicate a value was missed. A doc-versus-SDK harness reports this
+    an underscore is not a case, so the tag matched neither what the server sent nor
+    what the page documents: `GetFuturesTick` (`data/futures_market.go:47`) returned
+    a `StockTicks` whose `InstrumentID` was the empty string, with no error and
+    nothing to indicate a value was missed. A doc-versus-SDK harness reported this
     endpoint as clean forever, because the fixture and the type were made to match
     each other.
+    - **The fix, and what it deliberately does not change.** `StockTicks` gained an
+      `UnmarshalJSON` (`data/tick.go:91`) that decodes the identifier from
+      `instrument_id` or `instrumentId`, preferring the documented spelling when a
+      body carries both. The field, its `json:"instrument_id"` tag, the marshalled
+      wire form, and all three methods returning the type (`GetTick`,
+      `GetFuturesTick`, `GetDisplayTick`) keep their existing signatures, so the
+      change is additive and no caller is asked to opt in. **No tag is changed**, and
+      the public wire name a caller reads and writes is still the documented one.
     - **Why this row and not the other twelve.** It is the only one whose mechanism
-      is provable from the committed tree without first deciding which side is
+      was provable from the committed tree without first deciding which side is
       right. The wire name cannot match the tag; that is a fact about
       `encoding/json`, not an inference about either party's intent. Every other row
       records an observation and a direction that is still undecided.
-    - **Why it is recorded and not fixed.** Changing a public DTO's wire name is a
-      breaking change for anyone already written against `StockTicks.InstrumentID`,
-      and one host's answer cannot establish whether `instrumentId` is specific to
-      this endpoint or the spelling this environment uses across the surface.
-      Unblock: one probe of the same endpoint against a second host. Nothing else is
-      needed to fix it, and nothing else will decide it. **No tag is changed by this
-      item**, and none should be until that probe exists.
+    - **Why the live row is retained after the fix.** The name check compares the
+      SDK's tag inventory against the names a body carries, and a custom decoder
+      changes neither the tag nor the fixture, so
+      `data.GetFuturesTick|missing-required-name|instrument_id` is still reported and
+      the live-only count is still 13. The row is no longer a claim about this SDK:
+      what remains is a record that the server sends a name the documentation does
+      not describe. Its `reason` and `unblock` in `conformance/live-divergences.json`
+      say so, and a reader who counts 13 rows as 13 SDK defects is reading a number
+      that no longer carries that claim. Unblock: one probe of the same endpoint
+      against a second host, which would establish whether `instrumentId` is specific
+      to this endpoint or the spelling this environment uses across the surface — a
+      question about the server, and the only one this row still waits on.
   - **What the run settled in the documented set, and what it could not.** Item 21's
     25 recorded documentation divergences cover 12 symbols, and the census reached
     **2 of the 25 rows**.
@@ -1150,24 +1170,24 @@ SDK defects.
       as proven to hold nothing.
     - **A live finding is an observation, not a verdict.** That is what the separate
       file, the per-row `reason` and the separate `unblock` requirements all encode.
-  - Minimal fix direction: none of the 13 has a fix applied. The order is
-    `data.GetFuturesTick` first, because it is the only one whose fix is known and
-    whose remaining obstacle is a maintainer's decision rather than more evidence;
-    then the four decode rejections, which need Webull to say which contract the
-    host honours before any type changes; then the `data.GetStockInstruments`
-    container question, which is a path decision first and a shape decision second.
-    **No retag in this class should be applied on the strength of one sandbox body
-    alone**, which is item 20's argument again, and the `instrumentId` row is the
-    case where the tempting move is exactly that.
-  - Unblock: a second host for the futures tick wire name, which is the only single
-    question standing between the demonstrated defect and a fix; US sandbox or
-    production credentials for the futures, screener and Broker FD rows; a paid
-    Display Solution entitlement for the two `GetDisplay*` rows and the six
-    `display-solution` pages; a written answer from Webull on the 4 pages that
-    document a single item where the path says list; and an account holding at
-    least one order and one option position for the two absence-of-evidence rows. A
-    second run of the census needs no new credential at all — it needs the docgen
-    cache, which is gitignored and has to be rebuilt.
+  - Minimal fix direction: 1 of the 13 now has a fix applied — `data.GetFuturesTick`,
+    by a decoder that accepts both spellings without touching the public tag. The
+    remaining order is unchanged: the four decode rejections first, because they need
+    Webull to say which contract the host honours before any type changes; then the
+    `data.GetStockInstruments` container question, which is a path decision first and
+    a shape decision second. **No retag in this class should be applied on the
+    strength of one sandbox body alone**, which is item 20's argument again, and the
+    `instrumentId` row is the case where the tempting move was exactly that: the fix
+    that shipped tolerates both names instead of choosing between them.
+  - Unblock: a second host for the futures tick wire name, which now settles only
+    whether the camelCase spelling is endpoint-specific or environment-wide and no
+    longer stands between a defect and its fix; US sandbox or production credentials
+    for the futures, screener and Broker FD rows; a paid Display Solution entitlement
+    for the two `GetDisplay*` rows and the six `display-solution` pages; a written
+    answer from Webull on the 4 pages that document a single item where the path says
+    list; and an account holding at least one order and one option position for the
+    two absence-of-evidence rows. A second run of the census needs no new credential
+    at all — it needs the docgen cache, which is gitignored and has to be rebuilt.
 
 ## Remaining risks
 
@@ -1216,10 +1236,13 @@ SDK defects.
   a page.** Item 28 records 13 findings from one HK sandbox walk on 2026-09-29, and
   the document above is right that the other entries are not the complete list: the
   13 are not in the live-blocked set either, because a live finding is a claim about
-  Webull's server. **Only one of the 13 is a demonstrated SDK defect** —
-  `data.GetFuturesTick` sends `instrumentId` where `data.StockTicks` tags
-  `instrument_id`, so the field decodes to `""` silently and a documented
-  comparison reports the endpoint as clean forever. The other 12 are observations:
+  Webull's server. **Only one of the 13 was a demonstrated SDK defect, and it is now
+  fixed** — `data.GetFuturesTick` sent `instrumentId` where `data.StockTicks` tagged
+  `instrument_id`, so the field decoded to `""` silently and a documented comparison
+  reported the endpoint as clean forever; `data.StockTicks` now decodes either
+  spelling without a change to the public tag. The row stays recorded and the count
+  stays 13, because the name check reads tag inventory rather than decoding
+  behaviour. The other 12 are observations:
   4 decode rejections whose direction is undecided, 3 rows of one container
   disagreement, 3 absence-of-evidence rows against an empty account and an equity
   position, and the 2 rows of the one documentation divergence the run settled. The
@@ -1235,4 +1258,4 @@ SDK defects.
 5. **Withdrawn, and do not perform it as written.** It proposed resolving the four summary-only matches to the OpenAPI JSON paths, which would move `client.CreateToken` off the path every authenticated call depends on. All four are the `/openapi/*` namespace and the SDK matches the official `llms.txt` summary in each; the OpenAPI JSON records a path reorganisation. The only genuinely open path is the Broker FD assets summary, which is the `/broker-fd/*` item. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
 7. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
 8. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.
-9. Probe `data.GetFuturesTick` against a second host, and only then decide the `instrumentId` retag. It is the one demonstrated defect the 2026-09-29 run produced (item 28), and the second host is the only thing that decides whether the camelCase spelling is endpoint-specific or this environment's convention. Do not retag on one host's answer: `data.StockTicks` is a public type and the tag is a breaking change for anyone reading it.
+9. Probe `data.GetFuturesTick` against a second host. It is the one demonstrated defect the 2026-09-29 run produced (item 28), and the SDK half is now fixed: `data.StockTicks` decodes either spelling and the public tag is unchanged. The second host is what decides whether the camelCase spelling is endpoint-specific or this environment's convention, and until it exists the SDK says nothing about which name Webull intends. Do not retag on one host's answer, and do not treat the retained live row as an open SDK defect: `data.StockTicks` is a public type, the tag is a breaking change for anyone reading it, and the row records a server observation the harness reports from tag inventory rather than from decoding.

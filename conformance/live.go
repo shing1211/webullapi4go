@@ -314,9 +314,15 @@ func nameNearMiss(detail string, d Divergence, direction LiveDirection, skeleton
 		return detail
 	}
 	if near, ok := nearMissName(skeleton, d.Name); ok {
+		// The clause stops at the tag. "so the field is left at its zero value" was
+		// once the natural ending, and it stopped being true when data.StockTicks
+		// grew a decoder that accepts the member its tag cannot match: the finding
+		// is about what a json tag can reach, which a custom UnmarshalJSON does not
+		// change, and asserting the caller's value here would make this report claim
+		// something no check in this package inspects.
 		return detail + "; the live response sends " + near +
 			" instead, which encoding/json matches to this field by neither an exact " +
-			"nor a case-insensitive comparison, so the field is left at its zero value"
+			"nor a case-insensitive comparison"
 	}
 	return detail
 }

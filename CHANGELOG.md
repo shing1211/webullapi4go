@@ -9,6 +9,52 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [Unreleased]
+
+### Fixed
+
+- **`data.StockTicks` now decodes either instrument-identifier spelling.** The 2026-09-29
+  live-evidence run (v2.1.36) found the one demonstrated SDK defect in the tree: the
+  sandbox sends `instrumentId` where the page documents `instrument_id`, and
+  `encoding/json` matches a member name exactly and then case-insensitively — an
+  underscore is not a case — so `GetFuturesTick` returned a `StockTicks` whose
+  `InstrumentID` was `""`, with no error and nothing to indicate a value was missed.
+  `StockTicks` gained an `UnmarshalJSON` that accepts either name and prefers the
+  documented one when a body carries both. `data/tick.go`.
+- **This is additive, and the public wire name is unchanged.** The `InstrumentID`
+  field, its `json:"instrument_id"` tag, the marshalled form, and the signatures of
+  all three methods that return the type (`GetTick`, `GetFuturesTick`,
+  `GetDisplayTick`) are exactly as before, so the fix is not a breaking change and
+  requires no action from a caller. The tolerance is deliberately wider than the
+  single endpoint it was found on: a decoder that read one name for futures and
+  another for stocks would leave the same silent zero reachable through two other
+  methods.
+- **The conformance fixture tree no longer fails its byte-exactness checks on
+  Windows.** `text=auto` normalized these files on commit but still wrote CRLF into
+  the working tree wherever `core.autocrlf` is true, so re-encoding a committed
+  fixture produced different bytes than the file held — 55 live fixtures plus the two
+  baseline files, and four tests failing for a reason unrelated to the SDK. The
+  fixture trees and the two divergence baselines are now marked `-text` in
+  `.gitattributes`, so the bytes on disk are the bytes in the blob on every
+  platform.
+
+### Changed
+
+- **The live-conformance row for `data.GetFuturesTick` is retained, with rewritten
+  prose.** `conformance/live-divergences.json` still records
+  `data.GetFuturesTick|missing-required-name|instrument_id` and the live-only count
+  is still 13. That is not an oversight: the name check compares the SDK's *tag
+  inventory* against the names a body carries, and a custom decoder changes neither
+  the tag nor the fixture, so the row still reproduces. What the row now records is
+  that the server sends a name the documentation does not describe — a claim about
+  Webull rather than about this SDK — and its `reason`, `unblock`, and the
+  surrounding prose in `conformance/doc.go`, `conformance/live.go`, and the status
+  documents were rewritten to say so. Removing the row would have turned the gate
+  red for a reason that is not a defect. A second host remains the only open
+  question: it would establish whether the camelCase spelling is endpoint-specific
+  or this environment's convention, which is a question about the server and not
+  something this SDK can answer.
+
 ## [2.1.36] - 2026-09-29
 
 **First live evidence in the repository.** Until this release the conformance

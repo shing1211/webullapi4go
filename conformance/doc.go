@@ -236,12 +236,21 @@
 // what it carries instead is the class that check cannot see. The page requires
 // instrument_id, data.StockTicks tags the field instrument_id, the server sends
 // instrumentId, and encoding/json matches neither exactly nor case-insensitively
-// because the underscore is not a case -- so the field is left at its zero value
-// on every response and the body that carried it decodes cleanly. A decode
-// rejection reports a server and a type that disagree about the body; this row is
+// because the underscore is not a case. The field was therefore left at its zero
+// value on every response, and the body that carried it decoded cleanly. A decode
+// rejection reports a server and a type that disagree about the body; this row was
 // a type that accepted a body and dropped one of its members, which no amount of
 // reading the documentation could have found and no failure in unmarshalling can
 // report.
+//
+// The SDK now decodes either spelling, so that caller-visible half is fixed and
+// the row is retained anyway. The check reads the tag inventory rather than the
+// decoder's behaviour, so a type that tolerates a member its tag cannot match
+// still reports the name, and the row has become what it always was underneath: a
+// record that the server sends a name the documentation does not describe. Its
+// reason says so, and the count of findings in the bucket has not moved, so a
+// reader who counts rows and concludes the SDK is still broken would be reading a
+// number that no longer carries that claim.
 //
 // Everything here rests on one authorised run against one sandbox. A finding is
 // what api.sandbox.webull.hk answered once, and nothing in this package says what

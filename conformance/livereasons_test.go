@@ -134,7 +134,8 @@ func liveOnlyGroup(c LiveClassification) (string, bool) {
 	case "data.GetFuturesBars|decode-failure|":
 		return "a bare array where the SDK decodes an envelope struct", true
 	case "data.GetFuturesTick|missing-required-name|instrument_id":
-		return "a camelCase member name the SDK's snake_case tag cannot match", true
+		return "a camelCase member name where the page and the SDK's tag both require the " +
+			"snake_case one, which the decoder now accepts", true
 	case "data.GetStockInstruments|decode-failure|",
 		"data.GetStockInstruments|top-level-shape-mismatch|",
 		"data.GetStockInstruments|missing-declared-name|data",
@@ -251,20 +252,22 @@ func liveReasonFor(c LiveClassification) (reason, unblock string, ok bool) {
 				"was made against an endpoint whose full response shape this harness has not seen.", true
 
 	case "data.GetFuturesTick|missing-required-name|instrument_id":
-		return "The strongest and most actionable finding in the set. The page requires " +
-				"instrument_id and the SDK tags the field instrument_id, so the documented comparison " +
-				"is green. The live response sends instrumentId -- camelCase -- and encoding/json " +
-				"matches a member exactly and then case-insensitively, and the underscore is not a " +
-				"case, so the field is left at its zero value with no error. A caller reading " +
-				"StockTicks.InstrumentID from this endpoint gets \"\". It is live-only precisely " +
-				"because the documentation does not describe the wire: this is the class of defect " +
-				"the whole live harness exists to find.",
-			"Nothing further is needed to fix it -- the tag or the field name is wrong on one " +
-				"side. It is recorded rather than fixed because it was found by a single HK sandbox " +
-				"run and changing a public DTO's wire name is a breaking change for anyone who has " +
-				"already written against it, so it needs the maintainer's decision rather than a " +
-				"silent edit. Confirming against a second host would establish whether the camelCase " +
-				"spelling is endpoint-specific or SDK-wide.", true
+		return "The finding the whole live harness was built to produce, and the one row in this " +
+				"set whose SDK defect has been fixed. The page requires instrument_id and the SDK tags " +
+				"the field instrument_id, so the documented comparison was green and stayed green -- the " +
+				"fixture carries the name the page documents. The live response sends instrumentId, and " +
+				"encoding/json matches a member exactly and then case-insensitively, and the underscore " +
+				"is not a case, so a caller reading StockTicks.InstrumentID from this endpoint used to " +
+				"get \"\" with no error. data.StockTicks now decodes either spelling, so the field is " +
+				"populated. The row is retained rather than removed because the name check compares the " +
+				"SDK's tag inventory against the names a body carries, and a custom decoder changes " +
+				"neither the tag nor the fixture: what remains is a record that the server sends a name " +
+				"the documentation does not describe, which is a claim about Webull and not about this " +
+				"SDK. Dropping the row would also turn this gate red for a reason that is not a defect.",
+			"Nothing further is needed to fix the SDK, and the decoder is in place. One probe of the " +
+				"same endpoint against a second host remains, and it would establish whether the " +
+				"camelCase spelling is endpoint-specific or this environment's convention -- which " +
+				"is a question about the server, and the reason the row stays recorded.", true
 
 	case "data.GetStockInstruments|top-level-shape-mismatch|":
 		return "The SDK decodes []data.StockInstrument and the live response is an object carrying " +

@@ -16,8 +16,10 @@ package data_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
@@ -98,5 +100,89 @@ func TestGetTickOmitsOptionalParams(t *testing.T) {
 		Category: data.StockCategoryUS,
 	}); err != nil {
 		t.Fatalf("GetTick() error = %v", err)
+	}
+}
+
+// TestStockTicksInstrumentIDSpellings pins the two spellings Webull sends and the
+// precedence between them. The sandbox futures response carries instrumentId while
+// the page documents instrument_id, and encoding/json reaches neither from the
+// other's tag, so a regression here is a caller silently reading "".
+func TestStockTicksInstrumentIDSpellings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"documented snake_case", `{"symbol":"A","instrument_id":"1","result":[]}`, "1"},
+		{"observed camelCase", `{"symbol":"A","instrumentId":"2","result":[]}`, "2"},
+		{
+			"both prefer documented",
+			`{"symbol":"A","instrument_id":"1","instrumentId":"2","result":[]}`,
+			"1",
+		},
+		{"neither", `{"symbol":"A","result":[]}`, ""},
+		{"null camelCase", `{"symbol":"A","instrumentId":null,"result":[]}`, ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var got data.StockTicks
+			if err := json.Unmarshal([]byte(tc.body), &got); err != nil {
+				t.Fatalf("Unmarshal() error = %v", err)
+			}
+			if got.InstrumentID != tc.want {
+				t.Errorf("InstrumentID = %q, want %q", got.InstrumentID, tc.want)
+			}
+		})
+	}
+}
+
+// TestStockTicksMarshalKeepsDocumentedName holds the wire form stable. A caller
+// that round-trips a decoded value must still see instrument_id, or the fix for
+// reading a response would have broken writing one.
+func TestStockTicksMarshalKeepsDocumentedName(t *testing.T) {
+	t.Parallel()
+
+	var got data.StockTicks
+	if err := json.Unmarshal([]byte(`{"instrumentId":"2","symbol":"A","result":[]}`), &got); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	enc, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if !strings.Contains(string(enc), `"instrument_id":"2"`) {
+		t.Errorf("encoded = %s, want the instrument_id member", enc)
+	}
+	if strings.Contains(string(enc), "instrumentId") {
+		t.Errorf("encoded = %s, must not carry the camelCase member", enc)
+	}
+}
+
+// TestGetFuturesTickAcceptsCamelCaseInstrumentID is the endpoint the defect was
+// observed on, driven end to end rather than through json.Unmarshal alone.
+func TestGetFuturesTickAcceptsCamelCaseInstrumentID(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.Path, "/market-data/futures/ticks/list"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		if got, want := r.URL.Query().Get("category"), "US_FUTURES"; got != want {
+			t.Errorf("category = %q, want %q", got, want)
+		}
+		_, _ = w.Write([]byte(`{"symbol":"ESZ5","instrumentId":"913256135","result":[]}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	got, err := c.GetFuturesTick(context.Background(), data.FuturesTickQuery{Symbol: "ESZ5"})
+	if err != nil {
+		t.Fatalf("GetFuturesTick() error = %v", err)
+	}
+	if got.InstrumentID != "913256135" {
+		t.Errorf("InstrumentID = %q, want %q", got.InstrumentID, "913256135")
 	}
 }
