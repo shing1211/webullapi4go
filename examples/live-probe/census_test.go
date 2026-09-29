@@ -176,7 +176,13 @@ func TestCensusRecordsTheRequestItAttempted(t *testing.T) {
 // The deliverable: a request built from what the page documents, asserted on
 // the wire. The query and the body are the whole product of this task, so they
 // are asserted byte for byte rather than through a decode.
+//
+// The gate is opened here, and only here, because the case is about the bytes on
+// the wire and a request that is never sent produces no bytes. It is a local
+// httptest server and the opt-in is set for this test alone; the gate's own
+// behaviour is pinned in mutate_test.go against the same server.
 func TestCensusSendsTheDocumentedQueryAndBody(t *testing.T) {
+	t.Setenv(MutateOptInEnv, MutateOptInValue)
 	t.Cleanup(func() { SetAccountID("") })
 	SetAccountID(probeDiscoveredAccount)
 

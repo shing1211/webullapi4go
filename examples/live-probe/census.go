@@ -99,9 +99,10 @@ type Endpoint struct {
 // It records whether the sandbox answered and how, never what it said. Err
 // carries the SDK's error Code and not the server's message, because
 // [errs.FromHTTPStatus] folds a response body into that message and a body can
-// carry an account number. The two numbers a reader must never add together are
-// Reachable and Blocked, and [Outcome] keeps them apart: a status means the
-// endpoint answered, and Blocked means the probe never asked.
+// carry an account number. The three numbers a reader must never add together
+// are Reachable, Blocked and Skipped, and [Outcome] keeps them apart: a status
+// means the endpoint answered, Blocked means the probe could not build a
+// request, and Skipped means the probe built one and declined to send it.
 type Outcome struct {
 	// Symbol is the SDK method the manifest maps the endpoint to.
 	Symbol string `json:"symbol"`
@@ -126,6 +127,20 @@ type Outcome struct {
 	// rejected by the server and the rejection recorded as the endpoint's own
 	// answer.
 	Blocked string `json:"blocked,omitempty"`
+	// Skipped is why the probe declined to call an endpoint it could have
+	// called, or "" when no gate stopped it. A skipped endpoint has Status 0 and
+	// Blocked "" by construction, and it is the only Outcome carrying a server's
+	// absence: reporting "we did not call it" as anything else - a 404, a
+	// transport failure, a block - would state a server behaviour the probe never
+	// observed. The three classes are counted separately and never summed into
+	// one.
+	Skipped string `json:"skipped,omitempty"`
+	// Mutating reports that the endpoint is in the mutating class (see
+	// [IsMutating]), whether or not the gate stopped the call. It is recorded on
+	// every run, including a dry run that sends nothing, so the size of the class
+	// is knowable without a credential and a reader can see which rows a live
+	// run would not have called.
+	Mutating bool `json:"mutating,omitempty"`
 	// QueryKeys names the query parameters the request carried. The values are
 	// not recorded, for the same reason Path is not substituted.
 	QueryKeys []string `json:"queryKeys,omitempty"`
@@ -149,20 +164,36 @@ type Outcome struct {
 // AreaSummary is one area's census. Reachable counts endpoints that answered,
 // whatever they answered: a 404 from broker-fd-us is a live answer and a 200 is
 // a live answer, and collapsing the two would lose the information the census
-// exists to collect. Blocked counts endpoints the probe could not ask, and
-// Unanswered counts requests that produced no response at all.
+// exists to collect. Blocked counts endpoints the probe could not ask, Skipped
+// counts the ones it chose not to ask, and Unanswered counts requests that
+// produced no response at all. Those four partition Total.
 type AreaSummary struct {
-	Total      int            `json:"total"`
-	Reachable  int            `json:"reachable"`
-	Blocked    int            `json:"blocked"`
-	Unanswered int            `json:"unanswered"`
-	Statuses   map[string]int `json:"statuses,omitempty"`
+	Total      int `json:"total"`
+	Reachable  int `json:"reachable"`
+	Blocked    int `json:"blocked"`
+	Skipped    int `json:"skipped"`
+	Unanswered int `json:"unanswered"`
+	// Mutating is how many of the area's endpoints are in the mutating class,
+	// so Skipped can be read against the size of the class rather than against
+	// the area total.
+	Mutating int            `json:"mutating"`
+	Statuses map[string]int `json:"statuses,omitempty"`
 }
 
 // add records one outcome in this area.
+//
+// The order of the first two cases is the safety property. A skipped endpoint is
+// counted before a blocked one and neither reaches the status map, so "the probe
+// chose not to send this" can never be tallied as an answer or as a build
+// failure.
 func (a *AreaSummary) add(o Outcome) {
 	a.Total++
+	if o.Mutating {
+		a.Mutating++
+	}
 	switch {
+	case gateClosed(o):
+		a.Skipped++
 	case o.Blocked != "":
 		a.Blocked++
 	case o.Status == 0:
@@ -188,7 +219,13 @@ type CensusSummary struct {
 	Total      int `json:"total"`
 	Reachable  int `json:"reachable"`
 	Blocked    int `json:"blocked"`
+	Skipped    int `json:"skipped"`
 	Unanswered int `json:"unanswered"`
+	// Mutating is the size of the mutating class over the whole corpus. It is
+	// reported whether or not the gate stopped anything, because the number a
+	// reader needs before authorising a live run is the number a live run would
+	// not cover.
+	Mutating int `json:"mutating"`
 	// Area is keyed by the area name and holds one AreaSummary per area.
 	Area map[string]AreaSummary `json:"area"`
 	// Statuses counts every status the corpus answered with, over all areas.
@@ -202,8 +239,8 @@ type CensusSummary struct {
 }
 
 // Summarise aggregates outcomes into the counts a reader looks at first. The
-// three totals partition Total: Reachable, Blocked and Unanswered, and none of
-// them is the same measure as another.
+// four totals partition Total: Reachable, Blocked, Skipped and Unanswered, and
+// none of them is the same measure as another.
 func Summarise(outcomes []Outcome) CensusSummary {
 	summary := CensusSummary{
 		Total:          len(outcomes),
@@ -223,7 +260,12 @@ func Summarise(outcomes []Outcome) CensusSummary {
 		if o.Err != "" {
 			summary.Errs[o.Err]++
 		}
+		if o.Mutating {
+			summary.Mutating++
+		}
 		switch {
+		case gateClosed(o):
+			summary.Skipped++
 		case o.Blocked != "":
 			summary.Blocked++
 			summary.BlockedReasons[o.Blocked]++
@@ -471,9 +513,28 @@ func prepare(ep Endpoint) preparedRequest {
 			// An empty array is the minimal instance a required array admits: no
 			// page in the cache declares minItems, so [] satisfies the schema.
 			// It is also the only value that cannot place an order, cancel one
-			// or move money, which is what lets this walk 50 POST endpoints
-			// without the census mutating anything. The choice is recorded on
-			// the Outcome so a reader can see which endpoints rest on it.
+			// or move money, which is what lets a called trading endpoint be
+			// inert. The choice is recorded on the Outcome so a reader can see
+			// which endpoints rest on it.
+			//
+			// This is the SECOND of two barriers, and it is not a substitute for
+			// the first. [IsMutating] gates the 34 endpoints that can change
+			// state; this rule makes the ones that are called harmless. They are
+			// independent and each covers a case the other cannot:
+			//
+			//   - /trading/orders/place holds a required array, so it is both
+			//     gated and inert; the gate is what protects it, since prepare
+			//     does not consult the gate at all.
+			//   - /broker/accounts/create, /trading/orders/cancel and
+			//     /broker/funding/ach/relationships/create have scalar bodies, so
+			//     there is no array here to empty and this rule says nothing about
+			//     them. The gate is the only barrier.
+			//   - a market-data-watchlist POST holds a required array and is not
+			//     in the mutating class, so it is called, and this rule is the
+			//     only barrier.
+			//
+			// Either mechanism alone leaves a class of endpoint that can be
+			// changed, so both are load-bearing and both are tested.
 			body[p.Name] = []any{}
 			out.SynthesisedEmptyArrays = append(out.SynthesisedEmptyArrays, p.Name)
 			continue
@@ -541,6 +602,23 @@ func sortedKeys(v url.Values) []string {
 // record the server's rejection of the fabrication as the endpoint's own answer,
 // and a census of 193 rejections would look like a finding.
 //
+// The mutating gate is the second distinction, and it is applied before the
+// request is built, so a refused endpoint is refused on the fact of what it is
+// rather than on whether this run happened to be able to construct a request for
+// it. A refused endpoint gets no request, no status, no error code and no
+// Blocked reason: it gets Skipped, which is a fourth class the summary counts on
+// its own. Collapsing "we did not call it" into "the server said no" is the one
+// outcome this walk must never produce, because it would report a sandbox
+// restriction as a server behaviour.
+//
+// The gate is on sending, not on building. [prepare] stays pure, so a dry run
+// still measures whether a mutating endpoint's request is constructible, and that
+// is the only place the constructibility of the 34 is measurable at all - a live
+// run that does not opt in learns nothing about them beyond their existence.
+//
+// The opt-in is read once, before the loop, so a process that changed its own
+// environment mid-walk could not end up with a half-open gate.
+//
 // Endpoints are walked sequentially. The rate limits are per App Key and the
 // token endpoint allows ten requests per thirty seconds, so a concurrent walk
 // would turn a census into a self-inflicted 429, and a 429 is an answer about the
@@ -553,14 +631,21 @@ func Census(ctx context.Context, cl *client.Client, endpoints []Endpoint) ([]Out
 	if cl == nil {
 		return nil, errors.New("live-probe: Census needs a client")
 	}
+	mutateAllowed := MutationOptedIn()
 	outcomes := make([]Outcome, 0, len(endpoints))
 	for _, ep := range endpoints {
 		outcome := Outcome{
-			Symbol:  ep.Symbol,
-			Fixture: ep.Fixture,
-			Area:    areaOf(ep.Fixture),
-			Method:  ep.Method,
-			Path:    ep.Path,
+			Symbol:   ep.Symbol,
+			Fixture:  ep.Fixture,
+			Area:     areaOf(ep.Fixture),
+			Method:   ep.Method,
+			Path:     ep.Path,
+			Mutating: IsMutating(ep),
+		}
+		if outcome.Mutating && !mutateAllowed {
+			outcome.Skipped = skippedMutationReason
+			outcomes = append(outcomes, outcome)
+			continue
 		}
 		request := prepare(ep)
 		if request.Blocked != "" {
@@ -1126,9 +1211,13 @@ func cacheIsPopulated(cacheDir string) (bool, error) {
 }
 
 // statusText renders an outcome's status for a report line, so a blocked row and
-// an unanswered row are never both written as a bare zero.
+// an unanswered row are never both written as a bare zero. A skipped row reads
+// as its own word rather than as a status, because the one thing it must never
+// look like is an answer from the server.
 func statusText(o Outcome) string {
 	switch {
+	case gateClosed(o):
+		return "skipped: mutating"
 	case o.Blocked != "":
 		return "blocked"
 	case o.Status == 0:
@@ -1140,11 +1229,14 @@ func statusText(o Outcome) string {
 	return http.StatusText(o.Status)
 }
 
-// blockedOrErr renders the reason a row is not a plain success: why the probe
-// could not ask, or the classified error code when a request produced no status.
-// It is empty for a 2xx, so a column of it is mostly empty on purpose.
-func blockedOrErr(o Outcome) string {
+// rowReason renders why a row is not a plain success: why the probe declined to
+// call it, why it could not ask, or the classified error code when a request
+// produced no status. It is empty for a 2xx, so a column of it is mostly empty on
+// purpose.
+func rowReason(o Outcome) string {
 	switch {
+	case gateClosed(o):
+		return o.Skipped
 	case o.Blocked != "":
 		return o.Blocked
 	case o.Err != "":

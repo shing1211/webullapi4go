@@ -23,17 +23,26 @@
 // It writes census.json and prints a per-area table. What it records is whether
 // an endpoint answered and how: never a response body, never a request value,
 // and never a credential. A census row is evidence about the endpoint, and the
-// two numbers it produces - endpoints the sandbox answered and endpoints the
-// probe was able to ask - are different numbers and are never summed.
+// three numbers it produces - endpoints the sandbox answered, endpoints the
+// probe could not ask, and endpoints the probe refused to ask - are different
+// numbers and are never summed.
+//
+// 34 of the 193 documented endpoints can place an order, cancel one, move money
+// or modify an account. The probe does not call any of them unless
+// WEBULL_TRADE_MUTATE=1 is set, the same opt-in the mutating sandbox tests use,
+// and a refused endpoint is reported as skipped rather than as any status: a run
+// that did not ask must not be recorded as one that was told no.
 //
 // Usage:
 //
-//	live-probe -out census.json                     # walk the sandbox
+//	live-probe -out census.json                     # walk the sandbox, mutating endpoints refused
 //	live-probe -dry-run -out census-construct.json # build every request, send nothing
 //
 // A run needs WEBULL_APP_KEY and WEBULL_APP_SECRET, and it reads them from the
 // environment through client.WithEnv. A -dry-run needs neither and contacts
-// nothing.
+// nothing. There is no flag that opens the mutating gate: the environment
+// variable is the only door, so the closed default cannot be widened by a
+// mistyped argument.
 package main
 
 import (
@@ -58,12 +67,19 @@ import (
 // a reader can commit one without committing a reading. The endpoint's host is
 // the single environment fact it records, and only the host: a base URL may
 // carry userinfo, and the key and secret never reach this struct at all.
+//
+// Mutation is the one field that is always written, never omitted. It says
+// whether the run was allowed to call the endpoints that can change state, so a
+// census that called them can never be read as one that did not - the ambiguity
+// a shared opt-in variable creates, and the reason the field is not derived from
+// the counts after the fact.
 type report struct {
 	Mode        string                   `json:"mode"`
 	Host        string                   `json:"host,omitempty"`
 	Region      string                   `json:"region,omitempty"`
 	Environment string                   `json:"environment,omitempty"`
 	Account     string                   `json:"accountDiscovery"`
+	Mutation    string                   `json:"mutationGate"`
 	Endpoints   int                      `json:"endpointCount"`
 	Summary     CensusSummary            `json:"summary"`
 	Outcomes    []Outcome                `json:"outcomes"`
@@ -192,12 +208,17 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	// Read once, after the walk, and label the report with the same value the
+	// walk used. Reading it again here would be a second source of truth that
+	// could disagree with the rows.
+	mutateAllowed := MutationOptedIn()
 	built := report{
 		Mode:        "live",
 		Host:        hostOf(cl),
 		Region:      cl.Region().String(),
 		Environment: cl.Environment().String(),
 		Account:     accountDiscovery,
+		Mutation:    mutationNote("live", mutateAllowed),
 		Endpoints:   len(endpoints),
 		Summary:     Summarise(outcomes),
 		Outcomes:    outcomes,
@@ -217,6 +238,13 @@ func run(ctx context.Context, args []string) error {
 // the token exchange provide, so the count can be read as constructibility once
 // both have run. The placeholders never leave the process: no request is sent,
 // and neither value is written to the report.
+//
+// The mutating class is not gated here and that is the point, not an oversight.
+// The gate is on sending; a dry run sends nothing, so gating it would subtract
+// 34 endpoints from a constructibility measurement that is still true of them and
+// would be the only place it can be made. Instead every mutating endpoint carries
+// Mutating, and the summary prints the size of the class, so a reader knows what a
+// live run would not call before choosing to call it.
 func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 	accountNote := "not run: a dry run resolves no account, so every account-scoped request is blocked"
 	if assumeDiscovered {
@@ -232,12 +260,13 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 	outcomes := make([]Outcome, 0, len(endpoints))
 	for _, ep := range endpoints {
 		outcome := Outcome{
-			Symbol:  ep.Symbol,
-			Fixture: ep.Fixture,
-			Area:    areaOf(ep.Fixture),
-			Method:  ep.Method,
-			Path:    ep.Path,
-			DryRun:  true,
+			Symbol:   ep.Symbol,
+			Fixture:  ep.Fixture,
+			Area:     areaOf(ep.Fixture),
+			Method:   ep.Method,
+			Path:     ep.Path,
+			Mutating: IsMutating(ep),
+			DryRun:   true,
 		}
 		request := prepare(ep)
 		if request.Blocked != "" {
@@ -256,6 +285,7 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 	built := report{
 		Mode:        "dry-run: no request was sent and no credential was read",
 		Account:     accountNote,
+		Mutation:    mutationNote("dry-run", false),
 		Endpoints:   len(endpoints),
 		Summary:     Summarise(outcomes),
 		Outcomes:    outcomes,
@@ -264,8 +294,35 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 	return finish(built, out)
 }
 
-// finish renders the table and writes the JSON, and is where the two numbers
-// are printed far enough apart that a reader cannot add them.
+// mutationNote states, in one line, whether this run was allowed to call the
+// endpoints that can change state, and names the variable that decides. It is
+// the line an operator reads before believing any number below it, because the
+// numbers mean different things depending on the answer: 155 reachable with the
+// gate closed is a complete census of the read surface, and the same 155 with it
+// open is a census that placed orders.
+func mutationNote(mode string, allowed bool) string {
+	if isDryRun(mode) {
+		return "not applicable: a dry run sends no request, so no endpoint that can mutate was " +
+			"called; a live run needs " + MutateOptInEnv + "=" + MutateOptInValue + " to call any"
+	}
+	if allowed {
+		return "OPEN: " + MutateOptInEnv + "=" + MutateOptInValue + " was set, so every endpoint in " +
+			"the mutating class was called and may have changed account state"
+	}
+	return "closed: " + MutateOptInEnv + "=" + MutateOptInValue + " is not set, so no endpoint in " +
+		"the mutating class was called"
+}
+
+// isDryRun reports whether a mode string names a dry run. Both report builders
+// and the table depend on it, so it is one predicate rather than three copies of
+// a string prefix.
+func isDryRun(mode string) bool {
+	return strings.HasPrefix(mode, "dry-run")
+}
+
+// finish renders the table and writes the JSON, and is where the four numbers -
+// answered, unbuildable, refused and unanswered - are printed far enough apart
+// that a reader cannot add any two of them.
 func finish(built report, out string) error {
 	built.Diagnostics = diagnose(built.Outcomes)
 	printSummary(built)
@@ -278,52 +335,65 @@ func finish(built report, out string) error {
 
 // printSummary prints the per-area table and the diagnostics.
 //
-// The column that matters is Reachable, and the note under it is the reason the
-// table exists: a reachable endpoint may have answered 404, and constructibility
-// is a different number again, and by area the two diverge sharply.
+// The columns that matter are Reachable, Blocked and Skipped, and the gate line
+// above them is why: a reachable endpoint may have answered 404, a blocked one
+// was never asked, and a skipped one was deliberately not asked, and the third
+// says nothing whatever about the server. The Reachable column is the summary's
+// own Reachable and not Total minus Blocked, because that subtraction would count
+// every refused endpoint as an answer - which is the one number a safety gate
+// must not produce.
 func printSummary(built report) {
 	s := built.Summary
 	// A dry run sent nothing, so "reachable" would be zero by construction and
 	// the number a reader compares against an expectation is the complement of
-	// blocked. The two columns are named for what they measure so the two modes
+	// blocked and skipped. The two modes are named for what they measure so they
 	// cannot be read as the same table.
-	buildable := "reachable"
-	second := "no response"
-	if strings.HasPrefix(built.Mode, "dry-run") {
-		buildable, second = "constructible", "not called"
+	primary, primaryLabel := s.Reachable, "reachable"
+	secondLabel := "no response"
+	if isDryRun(built.Mode) {
+		primaryLabel, secondLabel = "constructible", "not called"
+		primary = s.Total - s.Blocked - s.Skipped
 	}
 	fmt.Printf("%s\n", built.Mode)
 	if built.Host != "" {
 		fmt.Printf("host %s  region %s  environment %s\n", built.Host, built.Region, built.Environment)
 	}
 	fmt.Printf("account discovery: %s\n", built.Account)
-	fmt.Printf("endpoints %d   %s %d   blocked %d   %s %d\n\n",
-		s.Total, buildable, s.Total-s.Blocked, s.Blocked, second, s.Unanswered)
+	fmt.Printf("mutating gate: %s\n", built.Mutation)
+	fmt.Printf("endpoints %d   %s %d   blocked %d   skipped %d   %s %d   mutating class %d\n\n",
+		s.Total, primaryLabel, primary, s.Blocked, s.Skipped, secondLabel, s.Unanswered,
+		s.Mutating)
 
 	areas := make([]string, 0, len(s.Area))
 	for name := range s.Area {
 		areas = append(areas, name)
 	}
 	sort.Strings(areas)
-	fmt.Printf("%-24s %5s %9s %7s %12s  %s\n", "area", "total", buildable, "blocked",
-		second, "statuses")
+	fmt.Printf("%-24s %5s %12s %7s %8s %9s %12s  %s\n", "area", "total", primaryLabel, "blocked",
+		"skipped", "mutating", secondLabel, "statuses")
 	for _, name := range areas {
 		a := s.Area[name]
-		shown := a.Unanswered
-		if strings.HasPrefix(built.Mode, "dry-run") {
-			shown = a.Total - a.Blocked
+		shown := a.Reachable
+		if isDryRun(built.Mode) {
+			shown = a.Total - a.Blocked - a.Skipped
 		}
-		fmt.Printf("%-24s %5d %9d %7d %12d  %s\n", name, a.Total, shown, a.Blocked,
-			a.Unanswered, renderCounts(a.Statuses))
+		fmt.Printf("%-24s %5d %12d %7d %8d %9d %12d  %s\n", name, a.Total, shown, a.Blocked,
+			a.Skipped, a.Mutating, a.Unanswered, renderCounts(a.Statuses))
 	}
-	fmt.Printf("%-24s %5d %9d %7d %12d  %s\n", "TOTAL", s.Total, s.Total-s.Blocked, s.Blocked,
-		s.Unanswered, renderCounts(s.Statuses))
+	fmt.Printf("%-24s %5d %12d %7d %8d %9d %12d  %s\n", "TOTAL", s.Total, primary, s.Blocked,
+		s.Skipped, s.Mutating, s.Unanswered, renderCounts(s.Statuses))
 
 	if len(s.BlockedReasons) > 0 {
 		fmt.Println("\nblocked, by reason:")
 		for _, reason := range sortedKeysOfCounts(s.BlockedReasons) {
 			fmt.Printf("  %4d  %s\n", s.BlockedReasons[reason], reason)
 		}
+	}
+	if s.Skipped > 0 {
+		fmt.Printf("\nskipped: %d endpoint(s) were not called. A skipped row is a statement about\n", s.Skipped)
+		fmt.Println("this probe, not about the endpoint: it is not a 404, a 403 or any other status,")
+		fmt.Printf("because no request was sent. Re-run with %s=%s to call them.\n",
+			MutateOptInEnv, MutateOptInValue)
 	}
 	if len(s.Errs) > 0 {
 		fmt.Println("\nrequests that produced no status, by SDK error code:")
@@ -337,7 +407,7 @@ func printSummary(built report) {
 	// column is the reason the probe has it or does not.
 	fmt.Println("\nper-endpoint outcomes:")
 	for _, o := range built.Outcomes {
-		fmt.Printf("  %-6s %-58s %-12s %s\n", o.Method, o.Path, statusText(o), blockedOrErr(o))
+		fmt.Printf("  %-6s %-58s %-18s %s\n", o.Method, o.Path, statusText(o), rowReason(o))
 	}
 
 	// A reachable endpoint is not a working endpoint, and the reason is the
@@ -345,9 +415,11 @@ func printSummary(built report) {
 	fmt.Println("\nread this next: reachable counts every endpoint that answered, whatever it")
 	fmt.Println("answered. A 404 from broker-fd-us, a 403 from display-solution and a 401 from")
 	fmt.Println("broker-hk are live answers about an endpoint's reachability, and they are not")
-	fmt.Println("evidence that the SDK's decoding is right. Request-constructibility is the")
-	fmt.Println("separate number in a dry run, and the two diverge by area: constructible is")
-	fmt.Println("everything in market data and nothing in display-solution.")
+	fmt.Println("evidence that the SDK's decoding is right. blocked means the probe could not")
+	fmt.Println("build the request and skipped means it declined to send one; neither is an")
+	fmt.Println("answer from any server. Request-constructibility is the separate number in a")
+	fmt.Println("dry run, and the two diverge by area: constructible is everything in market")
+	fmt.Println("data and nothing in display-solution.")
 
 	if len(built.Diagnostics) > 0 {
 		fmt.Println("\nprobe diagnostics - a non-zero count here is a statement about this probe:")
@@ -364,11 +436,16 @@ func printSummary(built report) {
 // diagnose classifies the rows that describe a limitation of the probe rather
 // than an answer from an endpoint.
 //
-// The two classes that matter are the two a reader would otherwise have to catch
-// by eye. A row blocked on a parameter named like an SDK-signed header is a
-// filter bug, and a row blocked on a parameter the page published an example for
-// is a schema-reading bug; both are counted here so a real 404 is never read as
-// one of them.
+// The three classes that matter are the three a reader would otherwise have to
+// catch by eye. A row blocked on a parameter named like an SDK-signed header is a
+// filter bug; a row blocked on a parameter the page published an example for is a
+// schema-reading bug; a row in the mutating class is a gate the operator did not
+// open. Each is counted here so a real 404 is never read as one of them.
+//
+// The mutating class is keyed off Outcome.Mutating and not off Skipped, so it
+// reports the class in a dry run too. A dry run sends nothing, so every row in it
+// is uncalled; the class is still the number a reader needs before a live run, and
+// the gate line above the table says which of them a live run would skip.
 func diagnose(outcomes []Outcome) map[string]DiagnosticSet {
 	header := DiagnosticSet{}
 	exampleMissed := DiagnosticSet{}
@@ -377,11 +454,15 @@ func diagnose(outcomes []Outcome) map[string]DiagnosticSet {
 	account := DiagnosticSet{}
 	sessionToken := DiagnosticSet{}
 	emptyArray := DiagnosticSet{}
+	mutating := DiagnosticSet{}
 
 	for _, o := range outcomes {
 		if len(o.SynthesisedEmptyArrays) > 0 {
 			emptyArray.Detail = append(emptyArray.Detail, o.Fixture+": "+
 				strings.Join(o.SynthesisedEmptyArrays, ", "))
+		}
+		if o.Mutating {
+			mutating.Detail = append(mutating.Detail, o.Fixture+": "+o.Method+" in "+o.Area)
 		}
 		if o.Blocked == "" {
 			continue
@@ -411,13 +492,14 @@ func diagnose(outcomes []Outcome) map[string]DiagnosticSet {
 
 	set := map[string]DiagnosticSet{}
 	for name, d := range map[string]DiagnosticSet{
-		"sdk-signed header not filtered":          header,
-		"example published but not read":          exampleMissed,
-		"undocumented required body string":       bodyString,
-		"request body is not JSON":                noBody,
-		"account id unavailable":                  account,
-		"session token unavailable":               sessionToken,
-		"body rests on a synthesised empty array": emptyArray,
+		"sdk-signed header not filtered":                  header,
+		"example published but not read":                  exampleMissed,
+		"undocumented required body string":               bodyString,
+		"request body is not JSON":                        noBody,
+		"account id unavailable":                          account,
+		"session token unavailable":                       sessionToken,
+		"body rests on a synthesised empty array":         emptyArray,
+		"endpoint can mutate, gated by " + MutateOptInEnv: mutating,
 	} {
 		d.Endpoints = len(d.Detail)
 		sort.Strings(d.Detail)
