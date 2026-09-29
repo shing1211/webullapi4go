@@ -380,6 +380,15 @@ func resolveValue(name string, spec ParamSpec) (any, error) {
 	return Param(name, spec)
 }
 
+// errNoAccountReported is phase 0 finding no account to address. It is a sentinel
+// rather than a formatted error because the report renders this case by identity:
+// a caller has to be able to say "the list came back empty" without quoting the
+// error, and the error's own text is prose this program wrote, so quoting it would
+// be safe but a sentinel keeps the one line in the artefact from depending on a
+// message that can be reworded.
+var errNoAccountReported = errors.New("live-probe: account discovery: the account list is empty, " +
+	"so no account id can be threaded into an account-scoped request")
+
 // DiscoverAccountID returns the first account id the trading account list
 // reports.
 //
@@ -398,8 +407,7 @@ func DiscoverAccountID(ctx context.Context, cl *client.Client) (string, error) {
 		return "", fmt.Errorf("live-probe: account discovery: %w", err)
 	}
 	if len(accounts) == 0 {
-		return "", errors.New("live-probe: account discovery: the account list is empty, " +
-			"so no account id can be threaded into an account-scoped request")
+		return "", errNoAccountReported
 	}
 	return accounts[0].AccountID, nil
 }

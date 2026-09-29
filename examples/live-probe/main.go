@@ -79,9 +79,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/shing1211/webullapi4go/client"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // report is what census.json holds.
@@ -253,8 +255,8 @@ func run(ctx context.Context, args []string) error {
 		switch {
 		case discoverErr != nil:
 			SetAccountID("")
-			accountDiscovery = "failed: " + discoverErr.Error()
-			fmt.Fprintln(os.Stderr, "live-probe: account discovery failed: "+discoverErr.Error())
+			accountDiscovery = discoveryFailure(discoverErr)
+			fmt.Fprintln(os.Stderr, "live-probe: account discovery failed: "+accountDiscovery)
 			fmt.Fprintln(os.Stderr, "live-probe: every account-scoped endpoint is reported blocked, "+
 				"which is a statement about the probe and not about those endpoints")
 		default:
@@ -404,6 +406,44 @@ func mutationNote(mode string, gate MutationGate) string {
 // a string prefix.
 func isDryRun(mode string) bool {
 	return strings.HasPrefix(mode, "dry-run")
+}
+
+// discoveryFailure renders why phase 0 could not resolve an account id, without
+// quoting what the server said.
+//
+// The report's contract is that no value the server sent appears in it, and every
+// other server string in the artefact is classified rather than printed: through
+// classify for a request that produced a status, describeContentType for a media
+// type, decodeFailure and reduceFailure for a body. Phase 0 was the one place
+// that did not, and it is the one that could have written a whole HTML error page
+// into census.json, because errs.FromHTTPStatus folds the response body into its
+// message and falls back to the raw trimmed body when the body is not a
+// recognised Webull error envelope. The file is gitignored and written 0600, so
+// the blast radius was local rather than committed; the discipline is the same
+// either way, and this artefact is the evidence the write-up quotes.
+//
+// So the line names the status and the class and stops. A status and an SDK error
+// code are facts about the request, and they are what a reader acts on - an
+// operator who is told phase 0 was refused with FORBIDDEN looks at the
+// entitlement, and one handed a sentence of server prose looks at nothing.
+func discoveryFailure(err error) string {
+	if errors.Is(err, errNoAccountReported) {
+		return "failed: the account-list request was answered with an empty list, so no account id " +
+			"could be threaded into an account-scoped request and every account-scoped endpoint " +
+			"is reported blocked"
+	}
+	var typed *errs.Error
+	if !errors.As(err, &typed) {
+		return "failed: the account-list request produced no HTTP answer, which the SDK " +
+			"classifies as " + classify(err) + "; the error's own message is not recorded"
+	}
+	if typed.Status == 0 {
+		return "failed: the account-list request produced no HTTP answer, which the SDK " +
+			"classifies as " + string(typed.Code) + "; the error's own message is not recorded"
+	}
+	return "failed: the account-list request was answered HTTP " + strconv.Itoa(typed.Status) +
+		", which the SDK classifies as " + string(typed.Code) + "; the server's own message is " +
+		"not recorded"
 }
 
 // finish renders the table and writes the JSON, and is where the four numbers -

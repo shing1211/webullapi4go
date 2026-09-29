@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/conformance"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // --------------------------------------------------------------------------
@@ -1385,6 +1387,80 @@ func TestRunRefusesAnOpenMutationGateBeforeItCallsAnEndpoint(t *testing.T) {
 	if got := control.mutatingRequests(); len(got) == 0 {
 		t.Errorf("an open gate called no mutating path, so the refused run's zero proves "+
 			"nothing: the recorded requests were %v", control.allRequests())
+	}
+}
+
+// A phase-0 failure is written into the report as a class, not as the server's
+// own words. Every other server string in that artefact goes through one of the
+// probe's classifications - classify for a status, describeContentType for a
+// media type, decodeFailure and reduceFailure for a body - and the report's own
+// contract says no value the server sent appears in it. Phase 0 was the one
+// place that printed err.Error(), and errs.FromHTTPStatus folds the response body
+// into the message and falls back to the raw trimmed body when it is not a
+// recognised Webull error envelope, so an HTML denial page reached census.json
+// whole.
+//
+// The assertion is on both halves: the line names what kind of failure it was,
+// and it carries no byte of the body. A version that classified the failure and
+// then appended the message would pass the first and fail the second.
+//
+// The way to break this test is to fall back to err.Error() for a case the
+// classifications do not cover, which is what a plain error is here: the probe
+// has no class for a failure it did not anticipate, and "unclassified" is the
+// honest answer rather than the server's sentence.
+func TestDiscoveryFailureClassifiesRatherThanQuotesTheServer(t *testing.T) {
+	const page = `<html>Access denied for account ` + syntheticAccountID + `</html>`
+	cases := []struct {
+		name  string
+		err   error
+		want  []string
+		never []string
+	}{
+		{
+			name:  "a status the SDK classifies",
+			err:   fmt.Errorf("live-probe: account discovery: %w", errs.FromHTTPStatus(403, []byte(page))),
+			want:  []string{"failed", "403", "FORBIDDEN"},
+			never: []string{"html", "Access denied", syntheticAccountID},
+		},
+		{
+			name:  "a status whose body is a recognised envelope",
+			err:   fmt.Errorf("live-probe: account discovery: %w", errs.FromHTTPStatus(417, []byte(`{"message":"Invalid Symbol"}`))),
+			want:  []string{"failed", "417", "INVALID_TOKEN"},
+			never: []string{"Invalid Symbol"},
+		},
+		{
+			name:  "an answer with no rows in it",
+			err:   errNoAccountReported,
+			want:  []string{"failed", "empty list", "blocked"},
+			never: []string{"account list is empty"},
+		},
+		{
+			name:  "a failure that never reached a server",
+			err:   errs.Wrap(errs.CodeTransport, "dialing the account list", errors.New("no such host")),
+			want:  []string{"failed", "no HTTP answer", string(errs.CodeTransport)},
+			never: []string{"dialing", "no such host"},
+		},
+		{
+			name:  "an error of no class at all",
+			err:   errors.New("something this program did not anticipate"),
+			want:  []string{"failed", "no HTTP answer", "unclassified"},
+			never: []string{"did not anticipate"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := discoveryFailure(tc.err)
+			for _, want := range tc.want {
+				if !strings.Contains(got, want) {
+					t.Errorf("the line does not name %q: %q", want, got)
+				}
+			}
+			for _, never := range tc.never {
+				if strings.Contains(got, never) {
+					t.Errorf("the line quotes %q from the error: %q", never, got)
+				}
+			}
+		})
 	}
 }
 
