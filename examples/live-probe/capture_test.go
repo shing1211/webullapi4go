@@ -1390,6 +1390,85 @@ func TestRunRefusesAnOpenMutationGateBeforeItCallsAnEndpoint(t *testing.T) {
 	}
 }
 
+// The closed gate is the other half of the refusal, and it is the half that has
+// to keep working: the check now sits in run, before the walk, so a mistake there
+// would refuse every capture rather than none. This drives run with the gate
+// CLOSED and the same corpus, and asserts that the run reaches the capture phase -
+// the tree and the manifest are written, and the mutating endpoint was skipped by
+// the walk and re-called by nobody.
+//
+// The requests are asserted in both directions. No request reached a mutating
+// path, which is the gate holding; and requests were made at all, which is what
+// makes that zero a gate rather than a corpus that could not be called.
+func TestRunCapturesWhenTheMutationGateIsClosed(t *testing.T) {
+	t.Setenv("WEBULL_APP_KEY", probeTestCredentialA)
+	t.Setenv("WEBULL_APP_SECRET", probeTestCredentialB)
+	t.Setenv("WEBULL_ENVIRONMENT", "sandbox")
+	t.Cleanup(func() { SetAccountID("") })
+
+	rec := newRequestRecorder(t)
+	manifest, cache := writeProbeCorpus(t, []probeEndpointDoc{
+		{ID: "broker-hk/POST-accounts-create", Method: "POST", Path: "/broker/accounts/create",
+			Doc: `{"method":"post","path":"/broker/accounts/create","responses":{}}`},
+		{ID: "market-data-stock/GET-quote", Method: "GET", Path: "/market-data/quote",
+			Doc: `{"method":"get","path":"/market-data/quote","responses":{}}`},
+	})
+	out := t.TempDir()
+
+	if err := run(t.Context(), []string{
+		"-capture", "-base", rec.URL, "-accounts", probeDiscoveredAccount,
+		"-manifest", manifest, "-cache", cache, "-out", out,
+	}); err != nil {
+		t.Fatalf("run refused a -capture with the gate closed: %v", err)
+	}
+
+	if got := rec.mutatingRequests(); len(got) != 0 {
+		t.Errorf("a closed gate still called a mutating path: %v (all requests: %v)",
+			got, rec.allRequests())
+	}
+	sent := rec.allRequests()
+	var read []string
+	for _, entry := range sent {
+		if strings.HasSuffix(entry, "/market-data/quote") {
+			read = append(read, entry)
+		}
+	}
+	if len(read) == 0 {
+		t.Fatalf("no request reached the read endpoint, so this case never exercised the "+
+			"walk; every request was %v", sent)
+	}
+	// The census calls each 200 once and the capture calls it again: two is the
+	// documented cost of phase 2, and one would mean the capture phase did not run.
+	if len(read) != 2 {
+		t.Errorf("the read endpoint was called %d time(s), want 2 (once by the census, once by "+
+			"the capture): %v", len(read), sent)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(out, liveManifestName))
+	if err != nil {
+		t.Fatalf("read the live manifest: %v", err)
+	}
+	var doc LiveManifest
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse the live manifest: %v", err)
+	}
+	if len(doc.Entries) != 1 {
+		t.Fatalf("the manifest records %d entry(ies), want 1: the census answered 200 on the "+
+			"read endpoint alone, since the mutating one was skipped", len(doc.Entries))
+	}
+	if got := doc.Entries[0].Skeleton; got == "" {
+		t.Error("the captured row names no skeleton")
+	} else if _, err := os.Stat(filepath.Join(out, got)); err != nil {
+		// The key carries the live/ prefix WriteLiveCapture writes under, so the
+		// file is <out>/live/<rest>.
+		t.Errorf("the skeleton %q was not written under %s: %v", got, out, err)
+	}
+	if doc.Census == nil {
+		t.Error("the manifest records no census block, so the tree cannot be read against the " +
+			"run that produced it")
+	}
+}
+
 // A phase-0 failure is written into the report as a class, not as the server's
 // own words. Every other server string in that artefact goes through one of the
 // probe's classifications - classify for a status, describeContentType for a
