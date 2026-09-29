@@ -5,7 +5,7 @@
     "bothDetailChanged": "both-detail-changed means the same key was observed on both sides with *different* detail, so the two bodies disagree about the same disagreement. It is neither agreement nor two findings, and a naive set difference loses it. It holds 0 finding(s), and it is empty here, which is a result rather than a gap: no endpoint in this tree has the SDK disagreeing with the server and the page in two different ways at once.",
     "decodeRejected": "decodeRejected names the 4 captured body the SDK's own type could not unmarshal. All of them are top-level-kind mismatches, and that is the strongest signal this harness can produce: the documented comparison is blind to it by construction, because a page and a fixture that agree with each other decode cleanly whether or not either matches the server.",
     "docsOnly": "docs-only means the documentation and the SDK disagree where the server and the SDK do not, so it is evidence about the page rather than about the SDK. It holds 1 finding(s).",
-    "liveOnly": "live-only is the new signal: the server sent something the documentation does not describe, which is the class the documented comparison is structurally blind to. It holds 11 finding(s).",
+    "liveOnly": "live-only is the new signal: the server sent something the documentation does not describe, which is the class the documented comparison is structurally blind to. It holds 11 finding(s). That is a count of observations, not of defects: they reduce to 7 distinct disagreement(s), and 4 of the 11 are only a further view of a disagreement another row already names. A reader quoting this bucket as a count of SDK defects would be over-reading it; each entry's reason says which it is, and the four decode rejections are the strongest signal in the whole set.",
     "notComparable": "notComparable names the 3 row(s) whose SDK method sends a path its page does not document. The documented half of those rows claims nothing, and the live half still runs: a skeleton was captured by calling the SDK method itself, so the path question does not bear on it.",
     "oneRun": "Every figure here comes from one authorised run against api.sandbox.webull.hk on 2026-09-29 and there is no second one to compare it against. A finding here is what that host answered once; nothing here says what production answers.",
     "topLevelIsNotLive": "checkShape reads the top level from the manifest's recorded checks rather than from the body, so a top-level-shape-mismatch is the same observation in both runs and is a claim about the page. The live evidence for a container-kind disagreement arrives as a decode rejection instead, and the two are different kinds because they are different checks. See the package comment in live.go."
@@ -34,7 +34,7 @@
       "fixture": "fundamentals/GET-market-data-fundamentals-capital-flows-get",
       "direction": "live-docs",
       "kind": "decode-failure",
-      "detail": "the compared body's instance does not unmarshal into []data.CapitalFlowEntry: the compared body's top level is object and []data.CapitalFlowEntry decodes it as array",
+      "detail": "the compared body's instance does not unmarshal into []data.CapitalFlowEntry: the recorded top level is object and []data.CapitalFlowEntry decodes it as array",
       "reason": "The documented fixture does not unmarshal into []data.CapitalFlowEntry, and the decode check reports the same top-level inversion the shape check named. It is docs-only because the live body -- an array -- decodes cleanly, so the live server does not reproduce the failure. The decode check is the harness's weakest and it is recorded beside the sharper finding rather than instead of it, which is why both rows exist for one defect.",
       "unblock": "Defers to the top-level-shape-mismatch row for data.GetCapitalFlow, which names the same defect: a correction on the reference page. No credential is required to close the documented half.",
       "bucket": "docs-only"
@@ -95,7 +95,7 @@
       "fixture": "trading/GET-trading-instruments-stocks-profiles-list",
       "direction": "live-sdk",
       "kind": "decode-failure",
-      "detail": "the compared body's instance does not unmarshal into []data.StockInstrument: the compared body's top level is object and []data.StockInstrument decodes it as array",
+      "detail": "the compared body's instance does not unmarshal into []data.StockInstrument: the recorded top level is object and []data.StockInstrument decodes it as array",
       "reason": "The same container disagreement as the row above, reported by the decode check because that is the check that reads the body. Recorded beside the sharper finding rather than instead of it, which is why one defect produces two rows: the shape check names the inversion and the decode check reports what a caller experiences.",
       "unblock": "Defers to the top-level-shape-mismatch row for data.GetStockInstruments, which names the same container disagreement and the same fix.",
       "bucket": "live-only"

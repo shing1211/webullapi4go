@@ -264,30 +264,47 @@ func TestLiveFindingsAreAttributable(t *testing.T) {
 	}
 }
 
-// TestLiveBaselineDetailsNameWhatTheyRead pins the neutral phrasing.
+// TestLiveBaselineDetailsNameWhatTheyRead holds every recorded detail to the claim
+// it makes, rather than to the absence of a word.
 //
-// A live finding that says "the documented instance" is attributing a server
-// observation to a Webull page, which would make the whole set misread. The
-// rewrite is mechanical, so a check that grows a new phrase would leave a stale
-// "documented" behind, and that has to be visible rather than merely wrong in a
-// way nobody reads.
+// The first version of this test grepped for "documented" and stopped there, and
+// it passed over a detail asserting a page fact about a live body. The word was
+// gone and the claim was not: a decode-failure detail is a wrapper plus a cause
+// list, and decodeCauses builds the cause for a container inversion out of
+// f.Checks -- the page -- while a uniform substitution rewrote only the word
+// around it. The detail read "the compared body's top level is object" about a
+// body that was an array. The committed file escaped by coincidence:
+// data.GetStockInstruments' live body really is an object and
+// data.GetCapitalFlow's decode failure is docs-only, so no recorded row was wrong.
+// One kind of body away it would have been, and this package's whole purpose is
+// not to assert a page fact about the wire.
 //
-// The second half is the part that is easy to get wrong in the other direction. A
-// detail must name *what the check read*, and the checks do not all read the same
-// thing: four read the body and the shape check reads the manifest. So a shape
-// finding's detail says "the recorded top level" and a body finding's says "the
-// compared body's". Demanding the body phrasing of a shape finding would be
-// demanding a false statement -- the shape check never looked at the body, and
-// data.GetCapitalFlow's live body is an array while its manifest row records an
-// object.
+// So the check is on the claim. Every container kind a detail states is held
+// against the fact it can be checked against: a "recorded" statement against the
+// page's own Checks, and a "the compared body's" statement against the kind of
+// the body the finding was observed on. A kind stated about the body that is not
+// the body's kind fails, which is what a renamed word cannot hide.
 //
-// The way to break this test is to drop the substitution list, which leaves
-// CompareBody's fixture-specific wording in the file.
+// The two halves are different failures and both are kept. The word check catches
+// a phrase the substitution list has not caught up with, which is a stale sentence
+// a reviewer would read; the claim check catches a substituted word wrapping an
+// unsubstituted value, which is a false statement. Neither implies the other, so
+// a test that only did one would leave the other's failure invisible.
+//
+// The way to break this test is to leave a kind out of quotesTheRecordedCheck, or
+// to re-introduce an early return that skips the body substitutions for a kind
+// that quotes the page.
 func TestLiveBaselineDetailsNameWhatTheyRead(t *testing.T) {
 	baseline, err := LoadLiveBaseline()
 	if err != nil {
 		t.Fatalf("load %s: %v", LiveBaselineName, err)
 	}
+	byID := fixturesByID(t)
+	live, err := LoadLive("")
+	if err != nil {
+		t.Fatalf("LoadLive: %v", err)
+	}
+
 	for _, e := range baseline.Entries {
 		where := e.Symbol + " / " + string(e.Kind) + " / " + e.Name
 		if strings.Contains(e.Detail, "documented") {
@@ -297,22 +314,340 @@ func TestLiveBaselineDetailsNameWhatTheyRead(t *testing.T) {
 				"to a Webull page",
 				LiveBaselineName, where, e.Detail)
 		}
-		switch e.Kind {
-		case TopLevelMismatch, ElementTypeMismatch:
-			// These two read the manifest, so their detail must say so.
-			if !strings.Contains(e.Detail, "recorded") {
-				t.Errorf("%s: %s is a shape finding whose detail does not say it read "+
-					"the manifest's recorded check: %q; the shape check never reads a "+
-					"body, so a detail implying otherwise asserts something unexamined",
-					LiveBaselineName, where, e.Detail)
-			}
-		default:
-			// Every other check reads the body it was handed.
-			if !strings.Contains(e.Detail, neutralDetailPhrase) {
-				t.Errorf("%s: %s has a detail that never says it read a body: %q",
-					LiveBaselineName, where, e.Detail)
-			}
+		f, ok := byID[e.Fixture]
+		if !ok {
+			t.Errorf("%s: %s names fixture %q, which the documentation manifest does "+
+				"not, so its detail cannot be held to anything", LiveBaselineName, where, e.Fixture)
+			continue
 		}
+		var body []byte
+		if e.Direction == LiveSDKDirection {
+			sk, ok := live[e.Symbol]
+			if !ok {
+				t.Errorf("%s: %s is a live finding and the live tree holds no skeleton "+
+					"for it, so its detail cannot be held to the body it describes",
+					LiveBaselineName, where)
+				continue
+			}
+			body = sk.Body
+		} else {
+			raw, err := f.Read()
+			if err != nil {
+				t.Errorf("%s: %s: read the documented fixture: %v", LiveBaselineName, where, err)
+				continue
+			}
+			body = raw
+		}
+		if !assertDetailKindsAreTrue(t, f, body, e.Detail) {
+			t.Errorf("%s: %s states a kind the evidence contradicts: %q", LiveBaselineName, where, e.Detail)
+		}
+	}
+}
+
+// fixturesByID indexes the documentation manifest by fixture id, which is what a
+// recorded live entry names.
+func fixturesByID(t *testing.T) map[string]Fixture {
+	t.Helper()
+	m := loadManifest(t)
+	byID := make(map[string]Fixture, len(m.Fixtures))
+	for _, f := range m.Fixtures {
+		byID[f.ID] = f
+	}
+	return byID
+}
+
+// containerKindPhrases are every way a detail can state a JSON kind about
+// something, and what each one has to be true of.
+//
+// A phrase about the recorded check is the page's, so it is checked against the
+// page. A phrase about the compared body is that body's, so it is checked against
+// the body -- and that is the assertion that catches a container kind attributed
+// to a body the check never read.
+var containerKindPhrases = []struct {
+	// phrase is the text as it appears in a detail, subject included.
+	phrase string
+	// aspect is which of the container kinds the phrase is about.
+	aspect string
+	// recorded reports whether the phrase is about the page's recorded check.
+	recorded bool
+}{
+	{recordedTopLevel, "top level", true},
+	{recordedElementType, "element type", true},
+	{neutralDetailPhrase + " top level", "top level", false},
+	{neutralDetailPhrase + " element type", "element type", false},
+}
+
+// The kinds a container phrase can state. checkShape and decodeCauses both write
+// one of jsonKind's outputs, and a kind outside this set means a phrase the
+// checker cannot read -- which is a failure, not a skip.
+var containerKinds = []string{"array", "boolean", "null", "number", "object", "string"}
+
+// assertDetailKindsAreTrue holds every container kind a detail states to the
+// fact it can be checked against, and reports whether the detail was fully
+// accounted for.
+//
+// It is one function rather than two assertions so the committed baseline and the
+// driven case below are held to exactly the same rule; a second copy of the rule
+// would be a second thing to keep true.
+//
+// Every occurrence of "top level" or "element type" has to be part of a phrase
+// this knows and a kind it can read. That is what makes a new phrase in
+// shapes.go fail here rather than pass unnoticed: a detail the checker cannot
+// account for is reported, so adding a fifth way to state a kind does not quietly
+// widen what the baseline is allowed to say.
+//
+// The leaf kinds a detail may quote are deliberately not checked. Those come from
+// documentedNames, which reads the fixture instance the check was handed, so in
+// the live run they are read from the live body and are the body's to state. The
+// container kinds are the ones the page supplies, which is the whole of the axis
+// this guards.
+func assertDetailKindsAreTrue(t liveValueSink, f Fixture, body []byte, detail string) bool {
+	t.Helper()
+	ok := true
+	accounted := detail
+	for _, p := range containerKindPhrases {
+		for {
+			at := strings.Index(accounted, p.phrase)
+			if at < 0 {
+				break
+			}
+			rest := accounted[at+len(p.phrase):]
+			kind, width := leadingKind(rest)
+			if kind == "" {
+				t.Errorf("the detail states %q and then no JSON kind this checker can "+
+					"read: %q", p.phrase, detail)
+				ok = false
+				break
+			}
+			want := f.Checks.TopLevel
+			if p.aspect == "element type" {
+				want = f.Checks.ElementType
+			}
+			if p.recorded {
+				// The page's own record. Nothing to compare against but the page,
+				// and the value came from there, so this asserts the detail quotes
+				// the field it names rather than a body it never read.
+				if kind != want {
+					t.Errorf("the detail says the recorded %s is %q and the manifest "+
+						"records %q", p.aspect, kind, want)
+					ok = false
+				}
+			} else if got := bodyKind(body); kind != got {
+				t.Errorf("the detail says the compared body's %s is %q and the body it "+
+					"was observed on is %q: the sentence attributes to the wire a fact "+
+					"the check read from the page", p.aspect, kind, got)
+				ok = false
+			}
+			accounted = rest[width:]
+		}
+	}
+	for _, aspect := range []string{"top level", "element type"} {
+		if strings.Contains(accounted, aspect) {
+			t.Errorf("the detail mentions the %s in a form this checker does not "+
+				"account for, so the claim cannot be held to anything: %q", aspect, detail)
+			ok = false
+		}
+	}
+	return ok
+}
+
+// TestDetailKindClaimCheckerBites is the checker held to its own claims, because a
+// rule that silently accepts everything would make the two tests that use it
+// worthless.
+//
+// The cases that matter are the last four. A detail that states the page's kind
+// correctly passes; one that states it wrongly fails; one that states the body's
+// kind correctly passes; one that states it wrongly fails -- and that last pair is
+// the one this checker exists for, because a kind attributed to the wire that came
+// from the page is exactly the defect the rewrite fixed. The fifth case is the
+// guard on the guard: a phrasing the checker does not know is reported rather than
+// passed, so adding a fifth way for shapes.go to state a kind fails here instead of
+// quietly widening what the baseline may say.
+//
+// The way to break this test is to make the checker lenient -- skip the body
+// comparison, or stop reporting an unaccounted mention -- at which point the last
+// four cases pass for the wrong reason.
+func TestDetailKindClaimCheckerBites(t *testing.T) {
+	f := liveFixture("test/GET-example", "object", nil, nil)
+	f.Checks.ElementType = "object"
+	array := []byte(`[{"a":"1"}]`)
+	object := []byte(`{"a":"1"}`)
+
+	cases := []struct {
+		name        string
+		body        []byte
+		detail      string
+		wantReports int
+		because     string
+	}{
+		{
+			name:   "a detail that states no kind",
+			body:   array,
+			detail: "the compared body's instance omits a name the page requires",
+			because: "most findings say nothing about a container kind, and the checker " +
+				"must not report those or every name-level row would fail",
+		},
+		{
+			name:   "a leaf kind, which the body supplies",
+			body:   object,
+			detail: "the compared body's string, SDK field P.A is a number",
+			because: "a leaf kind is read from the instance the check was handed, so it is " +
+				"the body's to state and there is nothing to hold it to",
+		},
+		{
+			name:   "the recorded top level, stated as the manifest records it",
+			body:   array,
+			detail: "the recorded top level is object, []row decodes it as array",
+			because: "the page records an object and the detail says so; this is what the " +
+				"rewrite is for and it must pass",
+		},
+		{
+			name:        "the recorded top level, stated wrongly",
+			body:        array,
+			detail:      "the recorded top level is array, []row decodes it as array",
+			wantReports: 1,
+			because: "the page records an object, so a detail quoting an array is false " +
+				"about the page whether or not the body agrees",
+		},
+		{
+			name:   "the body's top level, stated as the body is",
+			body:   array,
+			detail: "the compared body's top level is array, []row decodes it as array",
+			because: "true of the body, and the checker has to be able to say so rather " +
+				"than refusing every body-phrased claim",
+		},
+		{
+			name:        "the body's top level, stated as the page records it",
+			body:        array,
+			detail:      "the compared body's top level is object, []row decodes it as array",
+			wantReports: 1,
+			because: "this is the exact sentence the old substitution produced, and the " +
+				"body is an array, so the claim is false",
+		},
+		{
+			name:        "a phrasing the checker does not know",
+			body:        array,
+			detail:      "the wire's top level is array, []row decodes it as array",
+			wantReports: 1,
+			because: "a new phrasing has to be reported rather than passed, or a check " +
+				"that grows one widens the baseline silently",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &recordingSink{}
+			if got := assertDetailKindsAreTrue(rec, f, tc.body, tc.detail); got != (tc.wantReports == 0) {
+				t.Errorf("assertDetailKindsAreTrue returned %t with %d report(s), want %t "+
+					"with %d: %v; %s", got, len(rec.messages), tc.wantReports == 0,
+					tc.wantReports, rec.messages, tc.because)
+			}
+			if got := len(rec.messages); got != tc.wantReports {
+				t.Errorf("assertDetailKindsAreTrue reported %d time(s), want %d: %v; %s",
+					got, tc.wantReports, rec.messages, tc.because)
+			}
+		})
+	}
+}
+
+// leadingKind reads the JSON kind a container phrase is followed by, and how many
+// bytes of rest it took. shapes.go writes " is <kind>" immediately after the
+// phrase, so the word is bounded by the next space or comma.
+func leadingKind(rest string) (kind string, width int) {
+	trimmed := strings.TrimLeft(rest, " ")
+	consumed := len(rest) - len(trimmed) + len("is ")
+	if !strings.HasPrefix(trimmed, "is ") {
+		return "", 0
+	}
+	trimmed = trimmed[len("is "):]
+	for _, candidate := range containerKinds {
+		if !strings.HasPrefix(trimmed, candidate) {
+			continue
+		}
+		after := trimmed[len(candidate):]
+		if after == "" || after[0] == ' ' || after[0] == ',' {
+			return candidate, consumed + len(candidate)
+		}
+	}
+	return "", 0
+}
+
+// bodyKind is the JSON kind of a compared body's top level, as the check that read
+// it would have classified it.
+func bodyKind(body []byte) string {
+	var tree any
+	if err := decodeNumbered(body, &tree); err != nil {
+		return "unreadable"
+	}
+	return jsonKind(tree)
+}
+
+// TestLiveDecodeDetailDoesNotAssertAPageFactAboutTheWire is the case the word
+// check could not see, driven end to end through the real pipeline.
+//
+// The page records an object, the SDK decodes an array, and the server sent an
+// array -- so the two facts differ, and the decode detail has to say which one it
+// is quoting. Every kind of body away from the two the committed tree happens to
+// hold, and the substitution that keeps the word out of the detail is exactly what
+// would put the page's value inside the body's claim.
+//
+// The body is an array whose element does not decode, so the failure is a genuine
+// rejection and the cause list is the top-level one rather than the fallback
+// clause. The detail is then held to the same rule the committed baseline is held
+// to, against the same page record and the same body, so this is not a word check
+// wearing a new hat: it asserts that the kind the detail states about the body is
+// the kind the body has.
+//
+// The way to break this test is to drop DecodeFailure from
+// quotesTheRecordedCheck, which leaves the detail saying the body's top level is
+// an object while the body is an array. No test in the repository fails on that:
+// the detail is prose, the bucket is unchanged, the counts are unchanged and the
+// key is unchanged.
+func TestLiveDecodeDetailDoesNotAssertAPageFactAboutTheWire(t *testing.T) {
+	type row struct {
+		Close float64 `json:"close"`
+	}
+	// The page records an object; the SDK decodes a slice, so the shape check
+	// reports an inversion and that report becomes the decode check's cause.
+	f := liveFixture("test/GET-example", "object", nil, nil)
+	if recorded := f.Checks.TopLevel; recorded != "object" {
+		t.Fatalf("the fixture records top level %q, so this test no longer covers the "+
+			"case it was written for", recorded)
+	}
+	// The server sent an array, and an element of it does not decode, so the
+	// rejection is real and its stated cause is the page's top level.
+	sk := liveSkeleton(t, `[{"close":"not-a-number"}]`)
+	if got, want := bodyKind(sk), "array"; got != want {
+		t.Fatalf("the body is a %s, so this test no longer covers the case it was "+
+			"written for: the detail would be right", got)
+	}
+
+	rows := CompareLive(f, "test", reflect.TypeOf([]row{}), sk)
+
+	var failures []LiveDivergence
+	for _, r := range rows {
+		if r.Kind == DecodeFailure && r.Direction == LiveSDKDirection {
+			failures = append(failures, r)
+		}
+	}
+	if len(failures) != 1 {
+		t.Fatalf("got %d live decode finding(s), want 1; rows: %v", len(failures), rows)
+	}
+	detail := failures[0].Detail
+	if !strings.Contains(detail, "does not unmarshal") {
+		t.Fatalf("the detail does not report a rejection: %q", detail)
+	}
+	if !assertDetailKindsAreTrue(t, f, sk, detail) {
+		t.Error("the detail states a kind the evidence contradicts: " + detail)
+	}
+	// Spelled out as well, so the failure message is readable without the
+	// checker's vocabulary: the page's object must appear as the page's and never
+	// as the body's.
+	if strings.Contains(detail, neutralDetailPhrase+" top level is object") {
+		t.Errorf("the detail says the live body is an object; it is an array, and the "+
+			"object is the page's: %q", detail)
+	}
+	if !strings.Contains(detail, recordedTopLevel+" is object") {
+		t.Errorf("the detail does not say the object is the page's recorded top level: %q", detail)
 	}
 }
 
@@ -341,6 +676,53 @@ func TestLiveBaselineIsCanonical(t *testing.T) {
 	}
 }
 
+// TestLiveBaselineNotesDescribeTheRun holds the whole notes block to the run it
+// describes, sentence for sentence.
+//
+// The notes are the part of the file a reader quotes, and a note is prose, so
+// nothing else here would notice one that had stopped being true: the gate
+// compares findings and coverage, the bucket test compares counts it computes
+// itself, and the notes are only checked for having the right keys. A live-only
+// note still reading "It holds 11 finding(s)" after the bucket emptied, or still
+// claiming a decomposition the tree no longer has, would pass every test.
+//
+// The reason this matters rather than being tidiness is the live-only note
+// specifically. It is the headline a reader takes away, and the number in it is
+// the one number in the file that is not a count of defects. Rendering it from
+// countLiveOnly rather than transcribing it means the qualification travels with
+// the count, and comparing the whole map means the qualification cannot survive
+// the evidence it qualifies.
+//
+// The way to break this test is to edit the committed notes without editing
+// liveBaselineNotes, which is the whole point: one of the two is then wrong and
+// this says which.
+func TestLiveBaselineNotesDescribeTheRun(t *testing.T) {
+	baseline, err := LoadLiveBaseline()
+	if err != nil {
+		t.Fatalf("load %s: %v", LiveBaselineName, err)
+	}
+	run := CompareAllLive()
+	if len(run.Errs) > 0 {
+		t.Fatalf("the run could not compare everything: %v", run.Errs)
+	}
+	want := liveBaselineNotes(run)
+	for _, key := range sortedKeys(want) {
+		if got, ok := baseline.Notes[key]; !ok {
+			t.Errorf("%s has no note for %q", LiveBaselineName, key)
+		} else if got != want[key] {
+			t.Errorf("%s: the note for %q does not describe this run.\ncommitted: %s\n"+
+				"derived:   %s", LiveBaselineName, key, got, want[key])
+		}
+	}
+	for key := range baseline.Notes {
+		if _, ok := want[key]; !ok {
+			t.Errorf("%s records a note for %q, which nothing derives any more: a note "+
+				"no run produces is a sentence about a run that did not happen",
+				LiveBaselineName, key)
+		}
+	}
+}
+
 // TestLiveBucketCountsAreTotal is the conservation check.
 //
 // Every finding the comparison produced lands in exactly one bucket, and the
@@ -366,6 +748,130 @@ func TestLiveBucketCountsAreTotal(t *testing.T) {
 	// empty bucket from one nobody counted.
 	if len(counts) != 4 {
 		t.Errorf("BucketCounts reports %d bucket(s), want 4: %v", len(counts), counts)
+	}
+}
+
+// TestLiveComparisonCollidesOnNoPairKey is the arithmetic's blind spot, named.
+//
+// TestLiveBucketCountsAreTotal sums buckets over classifications, so a key that
+// collapsed on the way into ClassifyLive has already become one classification by
+// the time it counts: the sum stays right and one detail is gone. This looks at
+// the rows instead, and it is what makes "none is dropped" a statement about the
+// real run rather than a claim about a function that cannot be reached this way.
+//
+// Each CompareBody emits at most one finding per (kind, name), so a collision
+// cannot arise from CompareAllLive. That is the property being checked rather than
+// the reason for trusting the check.
+//
+// The way to break this test is any change that lets two rows of one direction
+// share a pair key -- a check that reports a name twice, a run that visits a
+// fixture under two symbols.
+func TestLiveComparisonCollidesOnNoPairKey(t *testing.T) {
+	run := CompareAllLive()
+	seen := map[string]LiveDivergence{}
+	for _, r := range run.Rows {
+		key := string(r.Direction) + "\x1f" + r.PairKey()
+		if prev, dup := seen[key]; dup {
+			t.Errorf("two %s findings share the pair key %q, so one of them is a detail "+
+				"the classification can only keep one of; the bucket counts are computed "+
+				"from classifications and would not notice.\nfirst:  %s\nsecond: %s",
+				r.Direction, r.PairKey(), prev.Detail, r.Detail)
+		}
+		seen[key] = r
+	}
+	for _, c := range run.Classifications {
+		if len(c.Colliding) > 0 {
+			t.Errorf("%s / %s / %q is classified with %d further detail(s) it did not "+
+				"keep: %v. CompareBody emits at most one finding per (kind, name), so "+
+				"this cannot come from the checks and means a row was produced twice",
+				c.Symbol, c.Kind, c.Name, len(c.Colliding), c.Colliding)
+		}
+	}
+}
+
+// TestClassifyLiveReportsACollidingPairKey is the exported contract, driven.
+//
+// ClassifyLive documents that no finding is dropped, and the version that
+// documented it that way could drop one: two rows on one side sharing a pair key
+// became one classification with the last row's detail and the first gone, with
+// no error and no word. This is the input that does it, and the assertion is
+// that every detail the classifier was handed comes back out -- carried in Detail
+// or listed in Colliding.
+//
+// The assertion is deliberately about the *set* of details rather than about the
+// field, so it states the claim and not the implementation: a classifier that
+// kept the first detail and reported the second as a collision passes, one that
+// kept the first and dropped the second does not, and so does one that keeps the
+// second. Which detail is carried is a presentation choice; losing one is not.
+//
+// It is unreachable through CompareAllLive and is here anyway, because the
+// function is exported and a caller will read its contract rather than discover
+// which inputs its producer happens to allow.
+//
+// The way to break this test is the map assignment the last row of the pair key
+// sees, which is what the previous version did.
+func TestClassifyLiveReportsACollidingPairKey(t *testing.T) {
+	const fixture = "test/GET-example"
+	rows := []LiveDivergence{
+		{Symbol: "s", Fixture: fixture, Direction: LiveSDKDirection, Kind: DecodeFailure,
+			Detail: "the compared body's instance does not unmarshal: the recorded top level is object"},
+		{Symbol: "s", Fixture: fixture, Direction: LiveSDKDirection, Kind: DecodeFailure,
+			Detail: "the compared body's instance does not unmarshal: no name, shape or leaf check disagrees"},
+		// An exact repeat is one observation, not two, and is held separately below.
+		{Symbol: "s", Fixture: fixture, Direction: LiveSDKDirection, Kind: LeafTypeMismatch,
+			Name: "price", Detail: "the compared body's number, SDK field P.Price is string"},
+		{Symbol: "s", Fixture: fixture, Direction: LiveSDKDirection, Kind: LeafTypeMismatch,
+			Name: "price", Detail: "the compared body's number, SDK field P.Price is string"},
+	}
+
+	got := ClassifyLive(rows)
+	if len(got) != 2 {
+		t.Fatalf("got %d classification(s), want 2: a pair key observed three times is "+
+			"still one finding: %+v", len(got), got)
+	}
+	byKey := map[string]LiveClassification{}
+	for _, c := range got {
+		byKey[c.Key] = c
+	}
+
+	decode, ok := byKey[pairKeyOf("s", fixture, DecodeFailure, "")]
+	if !ok {
+		t.Fatalf("the colliding key was not classified at all: %+v", got)
+	}
+	// Every detail handed in is accounted for, which is the whole claim.
+	carried := map[string]bool{decode.Detail: true}
+	for _, extra := range decode.Colliding {
+		carried[extra] = true
+	}
+	for _, r := range rows {
+		if r.Kind != DecodeFailure {
+			continue
+		}
+		if !carried[r.Detail] {
+			t.Errorf("a detail handed to the classifier is in neither Detail (%q) nor "+
+				"Colliding (%v): the finding was dropped without a word", r.Detail, decode.Colliding)
+		}
+	}
+	if len(decode.Colliding) != 1 {
+		t.Errorf("the colliding key reports %d further detail(s), want 1: %v",
+			len(decode.Colliding), decode.Colliding)
+	}
+	// The choice of which to carry is order-free, because the whole function is.
+	forward := ClassifyLive(rows)
+	reversed := ClassifyLive([]LiveDivergence{rows[3], rows[2], rows[1], rows[0]})
+	if !reflect.DeepEqual(forward, reversed) {
+		t.Errorf("which detail a collision carries depends on row order.\nforward %+v\n"+
+			"reversed %+v", forward, reversed)
+	}
+
+	// An exact repeat is not a collision: it is the same observation twice, and
+	// reporting it as two would turn one finding into an apparent disagreement.
+	leaf, ok := byKey[pairKeyOf("s", fixture, LeafTypeMismatch, "price")]
+	if !ok {
+		t.Fatalf("the repeated key was not classified: %+v", got)
+	}
+	if len(leaf.Colliding) != 0 {
+		t.Errorf("one detail supplied twice is reported as a collision: %v", leaf.Colliding)
 	}
 }
 

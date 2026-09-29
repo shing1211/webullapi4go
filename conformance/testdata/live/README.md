@@ -74,7 +74,11 @@ pinned by a test in `conformance/liveskeleton_test.go`:
 - **The order is canonical, not observed.** Records are sorted by their shape, so
   a server returning the same names in a different order produces a diff of
   nothing. Order was never evidence: a list of identical shapes in a different
-  order is not a different list.
+  order is not a different list. Note what that costs, though: the original
+  interleaving of shapes inside an array is **not recoverable** from this form. An
+  array captured as `[A, B, A, A, B]` expands to `[A, A, A, B, B]`, because a
+  record's copies are written together. The multiset is preserved exactly, which is
+  what the comparison reads; the order is not, and no reader should infer it was.
 
 `conformance.ExpandSkeleton` turns the committed bytes back into the reduced tree,
 and that tree is what `conformance.CompareBody` reads. **A skeleton is therefore
@@ -90,7 +94,11 @@ held to a rule of its own — a positive integer, which no reading is — with o
 stated limit. A reading that *is* a positive integer (an account id, a timestamp)
 is indistinguishable from a count, exactly as a string-valued key is
 indistinguishable from a member name. What makes the position safe is structural:
-the count is computed by counting elements, so no response value can reach it.
+the count is computed by counting elements, so no response value can reach it. That
+is a property of how the file is produced, not a check on how it reads — a count
+planted by hand would pass every integrity test in the repository, including this
+gate, so the trust is narrower here than the rest of the tree and a maintainer
+editing a committed skeleton has to know it.
 
 ## What is here
 

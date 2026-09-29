@@ -47,11 +47,27 @@ const liveBaselinePolicy = "The gate passes when the classified set exactly equa
 // each bucket means, and what the coverage numbers are a count of.
 func liveBaselineNotes(run LiveRun) map[string]string {
 	counts := BucketCounts(run.Classifications)
+	// The live-only headline is the one number a reader will quote, so it is
+	// reduced here rather than stated raw. A note that says "11 finding(s)" and
+	// stops is a number that cannot be checked and cannot be qualified; the
+	// per-entry reasons are where the qualification lives, and this is the one
+	// place that says how to read them.
+	liveOnly, grouped := countLiveOnly(run.Classifications)
+	liveOnlyNote := "It holds " + countNote(counts[LiveOnly]) + " finding(s)."
+	if grouped {
+		liveOnlyNote += " That is a count of observations, not of defects: they reduce to " +
+			countNote(liveOnly.Groups) + " distinct disagreement(s), and " +
+			countNote(liveOnly.Repeated) + " of the " + countNote(liveOnly.Findings) +
+			" are only a further view of a disagreement another row already names. A " +
+			"reader quoting this bucket as a count of SDK defects would be over-reading " +
+			"it; each entry's reason says which it is, and the four decode rejections are " +
+			"the strongest signal in the whole set."
+	}
 	return map[string]string{
 		"liveOnly": "live-only is the new signal: " +
 			"the server sent something the documentation does not describe, which is the class the " +
 			"documented comparison is structurally blind to. " +
-			"It holds " + countNote(counts[LiveOnly]) + " finding(s).",
+			liveOnlyNote,
 		"both": "both means the same finding was observed on both sides with the same detail, so " +
 			"it is a pre-existing documentation-versus-SDK disagreement the live server reproduces " +
 			"rather than new evidence. It holds " + countNote(counts[LiveBoth]) + " finding(s).",
@@ -87,6 +103,87 @@ func liveBaselineNotes(run LiveRun) map[string]string {
 // countNote renders a count for the notes above, so they read as sentences
 // rather than as a format string.
 func countNote(n int) string { return strconv.Itoa(n) }
+
+// liveOnlyGroup names the single underlying disagreement a live-only finding is an
+// observation of, so the headline count can say how many of them are one thing
+// rather than many.
+//
+// It exists because "It holds 11 finding(s)" is the sentence a reader quotes, and
+// 11 is a count of observations rather than of defects. Four of the eleven are one
+// container disagreement seen from four angles, two more are one empty account
+// probed twice, and one is a required name the sandbox could not supply for an
+// equity position. Without the grouping the note states a number that cannot be
+// checked against anything and invites exactly the over-reading this set is most
+// exposed to -- that a claim about Webull's server is a defect in this SDK.
+//
+// It is keyed the same way liveReasonFor is, so a finding that moves is a missing
+// key and the regeneration fails on it rather than a note going quietly stale. A
+// group is one disagreement: two findings that are the same defect from different
+// angles share a label, and two findings that are genuinely different do not.
+func liveOnlyGroup(c LiveClassification) (string, bool) {
+	key := c.Symbol + "|" + c.Kind + "|" + c.Name
+	switch key {
+	case "data.GetDisplayGainersLosers|decode-failure|":
+		return "a bare array where the SDK decodes a paginated page type", true
+	case "data.GetDisplayTopActive|decode-failure|":
+		// A separate endpoint, a separate response and a separate fix from the
+		// gainers/losers row, so a separate group: merging them would make one
+		// endpoint's repair close the other's finding, which is the reason that row
+		// is recorded separately in the first place.
+		return "a bare array on a second screener the SDK decodes as a paginated page type", true
+	case "data.GetFuturesBars|decode-failure|":
+		return "a bare array where the SDK decodes an envelope struct", true
+	case "data.GetFuturesTick|missing-required-name|instrument_id":
+		return "a camelCase member name the SDK's snake_case tag cannot match", true
+	case "data.GetStockInstruments|decode-failure|",
+		"data.GetStockInstruments|top-level-shape-mismatch|",
+		"data.GetStockInstruments|missing-declared-name|data",
+		"data.GetStockInstruments|missing-declared-name|pagination_key":
+		return "an object envelope where the SDK decodes a bare slice", true
+	case "trade.GetOrderDetail|missing-required-name|client_order_id",
+		"trade.GetOrderDetail|missing-required-name|combo_type":
+		return "one probe against an account the sandbox left empty", true
+	case "trade.GetPositions|missing-required-name|option_strategy":
+		return "a required name the server omits for every non-option position", true
+	}
+	return "", false
+}
+
+// liveOnlyCounts is the bucket's arithmetic: how many findings it holds, how many
+// distinct disagreements they are observations of, and how many are a further view
+// of one another finding already names.
+type liveOnlyCounts struct {
+	// Findings is how many classifications the bucket holds.
+	Findings int
+	// Groups is how many distinct disagreements they reduce to.
+	Groups int
+	// Repeated is Findings - Groups: the findings that add no disagreement their
+	// group does not already have.
+	Repeated int
+}
+
+// countLiveOnly reduces the live-only bucket to findings, groups and repeats.
+//
+// It returns false for a live-only finding with no group written, so a new
+// finding cannot quietly enter the count while the note describing it does not.
+func countLiveOnly(classifications []LiveClassification) (liveOnlyCounts, bool) {
+	counts := liveOnlyCounts{}
+	groups := map[string]bool{}
+	for _, c := range classifications {
+		if c.Bucket != LiveOnly {
+			continue
+		}
+		group, ok := liveOnlyGroup(c)
+		if !ok {
+			return counts, false
+		}
+		counts.Findings++
+		groups[group] = true
+	}
+	counts.Groups = len(groups)
+	counts.Repeated = counts.Findings - counts.Groups
+	return counts, true
+}
 
 // liveReasonFor returns the reason and unblock requirement for a classification.
 //

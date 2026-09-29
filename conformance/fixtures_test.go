@@ -306,18 +306,6 @@ const (
 // true unconditionally, so a false leaf proves the file did not come from the
 // reduction at all. Both are checked here so a future change to either the
 // reduction or the writer cannot quietly reintroduce a reading.
-// TestLiveSkeletonsCarryNoValue holds every committed live skeleton to the one
-// property that makes it safe to be in a repository: it carries every member
-// name the sandbox sent and no value it sent.
-//
-// This is the test that would catch a leak after the fact. A skeleton is
-// committed, so a price, a share count, a timestamp or an account number in one
-// is in git history, which is not a mistake anyone can delete. The reduction is
-// what prevents that, and this asserts the result rather than the intent: every
-// leaf in every committed file is the placeholder for its kind and nothing else,
-// and no key in any of them is a reading. The key half is half the tree - a
-// member name is kept verbatim by the reduction, so a name that is a value is a
-// leak this walk would otherwise pass - and its rule is keyCarriesAReading.
 //
 // # What the dedupe changed, and what it did not
 //
@@ -333,7 +321,8 @@ const (
 // and the tree of names are untouched, and a value planted anywhere in a shape is
 // caught by the same walk that caught it before. The leak gate was not weakened
 // to accommodate the dedupe; it was extended to cover the one new position, and
-// that position is checked rather than skipped.
+// that position is checked rather than skipped. The one thing the new position
+// does admit, and the whole suite cannot see, is set out at isPositiveInteger.
 func TestLiveSkeletonsCarryNoValue(t *testing.T) {
 	files := liveJSONFiles(t)
 	if len(files) == 0 {
@@ -560,14 +549,33 @@ func assertNoDedupeWrapper(t liveValueSink, wrapper map[string]any, records any,
 // positive integers, and if one of those were written into a $count the rule
 // here would accept it.
 //
-// That is a genuine weakening of the guarantee the tree otherwise holds, and it
-// is stated rather than left for a reader to discover. The mitigation is
-// structural rather than a matter of the rule: the count is written by
-// EncodeSkeleton, which computes it by counting the elements of the response and
-// has no path by which a response *value* could reach it -- a number in the tree
-// arrives only as a leaf placeholder, and a leaf placeholder is -1, which this
-// rule refuses. So a reading would have to be written into the field by hand,
-// after the reduction, rather than surviving it.
+// That is a genuine widening of the guarantee the tree otherwise holds, and it is
+// stated rather than left for a reader to discover. The mitigation is structural
+// rather than a matter of the rule: the count is written by EncodeSkeleton, which
+// computes it by counting the elements of the response and has no path by which a
+// response *value* could reach it -- a number in the tree arrives only as a leaf
+// placeholder, and a leaf placeholder is -1, which this rule refuses. So a reading
+// would have to be written into the field by hand, after the reduction, rather
+// than surviving it.
+//
+// # What catches it then, stated exactly
+//
+// Nothing automatic, and that is the honest answer. The structural mitigation
+// above is a property of how the file is *produced*, not a check on how it reads,
+// and the two are not the same: every other integrity check in this package would
+// stay green. Element-count conservation holds, because a count is a count of
+// whatever it claims and the arithmetic does not know what the number came from.
+// Canonicality holds, because re-encoding reproduces whatever counts are written.
+// The manifest's own accounts hold, because they are computed from the counts by
+// the same rule. And this walk holds, because a positive integer is exactly what
+// it requires a count to be.
+//
+// So the count is the one position in the committed tree where a planted reading
+// would pass every test in the repository, and the only thing standing between
+// the tree and a hand-edited $count is that nobody hand-edits one. That is not a
+// guarantee and must not be described as one; it is a narrower trust than the rest
+// of the tree rests on, and a maintainer editing a committed skeleton has to know
+// it.
 //
 // The same is true of a string-valued member name, which keyCarriesAReading
 // already states it cannot see, and for the same reason: the reduction keeps
@@ -595,12 +603,15 @@ func isPositiveInteger(v any) bool {
 // here from a planted value, and a case that expects no report is a case where
 // that position is genuinely unremarkable.
 //
-// The cases that matter most are the last three. A count of 197 is the shape the
-// encoding writes and must pass; a count of 385.6, a count of -1 and a count
+// The three count cases are the ones that matter most. A count of 197 is the shape
+// the encoding writes and must pass; a count of 385.6, a count of -1 and a count
 // that is a string must all fail, because each of them is a reading wearing the
-// one position a reading could reach that no other rule covers. If the count
-// check were removed, those three would pass silently, which is the specific way
-// the dedupe could have weakened this gate.
+// one position a reading could reach that no other rule covers. If the count check
+// were removed, those three would pass silently, which is the specific way the
+// dedupe could have weakened this gate. The case after them is the one that shows
+// the limit instead: a reading that *is* a positive integer passes here, and
+// isPositiveInteger sets out why nothing else in the repository would catch it
+// either.
 func TestLiveSkeletonWrapperCarriesNoValue(t *testing.T) {
 	shape := func() any {
 		return map[string]any{"symbol": liveStringPlaceholder, "close": json.Number(liveNumberPlaceholder)}
@@ -686,9 +697,13 @@ func TestLiveSkeletonWrapperCarriesNoValue(t *testing.T) {
 			because: "the rule's stated limit, pinned deliberately: an account id or a " +
 				"millisecond timestamp IS a positive integer, so the count rule cannot " +
 				"refuse it. This is a real widening of the leak gate and it is recorded " +
-				"rather than papered over -- see countCarriesAReading's own comment. A " +
-				"count is a multiplicity of a shape, so a reading that is an integer is " +
-				"indistinguishable from one, exactly as a string-valued key is",
+				"rather than papered over -- see isPositiveInteger's own comment for the " +
+				"wider and more uncomfortable half: this case would pass the WHOLE suite, " +
+				"not just this walk. Element-count conservation, canonicality and the " +
+				"manifest's accounts all hold on a planted count, so the only thing that " +
+				"catches it is that EncodeSkeleton computes the count and nobody hand-edits " +
+				"one. A count is a multiplicity of a shape, so a reading that is an integer " +
+				"is indistinguishable from one, exactly as a string-valued key is",
 		},
 		{
 			name: "a count of zero",

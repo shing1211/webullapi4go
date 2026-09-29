@@ -391,15 +391,42 @@ func fold(name string) string {
 // sentence. So the shape check's wording names what it actually read -- the
 // recorded check, which is the page's -- and that is true in both directions.
 //
+// # Why the decode check is in the same set, and it is not the same fix
+//
+// The obvious reading of "the shape check does not read the body" is that the
+// substitution belongs to the two shape kinds, and that is where it started. The
+// decode check quotes the same page fact through a second path, so it needs the
+// same substitution, and the reason is worth stating because the two kinds fail
+// differently if it is missed.
+//
+// A shape finding is the *whole* detail, so renaming the word renames the claim:
+// the sentence has no other content and cannot be half right. A decode-failure
+// detail is a wrapper plus a cause list, and decodeCauses builds the cause for a
+// top-level inversion out of f.Checks.TopLevel -- the page's -- while the leaf
+// causes are built out of the fixture instance, which in the live run is the live
+// body. So the detail mixes a page fact and a body fact, and a substitution that
+// rewrites only the word leaves the value attributed to the wrong source: the
+// detail reads "the compared body's top level is object" about a body that is an
+// array.
+//
+// The committed file escapes that by coincidence rather than by design.
+// data.GetStockInstruments' live body really is an object, and
+// data.GetCapitalFlow's decode failure is docs-only, so no recorded row is wrong
+// today. That is one kind of body away from being wrong, and this file's whole
+// purpose is not to assert a page fact about the wire, so the decode kind is
+// rewritten on the same rule as the shape kinds: a container kind in a detail is
+// the page's until the wording says it is the body's.
+//
 // The per-kind wording is longer than a uniform one and it is the right trade: the
 // strongest findings in this set are the container disagreements, and the shape
 // check is the one that cannot see them, so its sentences are the ones most likely
 // to be read as saying more than they do.
 //
-// Every phrase shapes.go writes for a fixture is replaced, and a test pins that no
-// detail reaching the baseline still names a source -- so a check that gains a
-// new phrase fails visibly rather than being silently mis-bucketed. A stale phrase
-// is a misleading sentence a reviewer can read, which is the direction this
+// Every phrase shapes.go writes for a fixture is replaced, and a test holds each
+// detail's stated kind against the fact it can actually be checked against -- so a
+// check that gains a new phrase fails visibly rather than being silently
+// mis-bucketed, and a rewritten word with an unrewritten value fails too. A stale
+// phrase is a misleading sentence a reviewer can read, which is the direction this
 // failure has to fail in; a mis-bucketed finding is one nobody can see.
 const (
 	// neutralDetailPhrase names the body, for the checks that read one.
@@ -410,19 +437,35 @@ const (
 	recordedElementType = "the recorded element type"
 )
 
+// quotesTheRecordedCheck reports whether a kind's detail states a fact the harness
+// read from the page rather than from the body it was handed.
+//
+// The two shape kinds are the page's own observation. DecodeFailure is included
+// because decodeCauses builds its top-level and element-type causes from
+// f.Checks, the same field checkShape reads; its leaf causes are built from the
+// instance the check was given, and those are handled by the body substitutions
+// below rather than by this one.
+func quotesTheRecordedCheck(kind DivergenceKind) bool {
+	switch kind {
+	case TopLevelMismatch, ElementTypeMismatch, DecodeFailure:
+		return true
+	}
+	return false
+}
+
 func neutralDetail(d Divergence) string {
 	out := d.Detail
-	if d.Kind == TopLevelMismatch || d.Kind == ElementTypeMismatch {
+	if quotesTheRecordedCheck(d.Kind) {
 		out = strings.ReplaceAll(out, "the documented top level", recordedTopLevel)
 		out = strings.ReplaceAll(out, "the documented element type", recordedElementType)
 		out = strings.ReplaceAll(out, "documented top level", recordedTopLevel)
 		out = strings.ReplaceAll(out, "documented element type", recordedElementType)
-		return out
 	}
 	// The long phrases are replaced before the bare "documented" that stands alone
 	// in the leaf check's "documented %s, SDK field ...", so the word does not fire
 	// inside a phrase that was already rewritten and no detail ends up with two
-	// articles.
+	// articles. A decode-failure detail reaches here too, so the substitution is
+	// no longer restricted to the kinds that are wholly body-derived.
 	out = strings.ReplaceAll(out, "the documented instance", neutralDetailPhrase+" instance")
 	out = strings.ReplaceAll(out, "the documented value", neutralDetailPhrase+" value")
 	out = strings.ReplaceAll(out, "the documented", neutralDetailPhrase)
@@ -482,16 +525,28 @@ type LiveClassification struct {
 	// OtherDetail is the detail from the other side, set only on
 	// LiveBothDetailChanged, where the two disagree.
 	OtherDetail string `json:"otherDetail,omitempty"`
+	// Colliding holds every detail this pair key was observed with beyond the one
+	// Detail carries, on either side.
+	//
+	// It is set only where one side contributed two rows under a single pair key,
+	// which the checks this harness runs cannot do: each CompareBody emits at most
+	// one finding per (kind, name), and the pair key is exactly that tuple plus the
+	// endpoint. So a collision means the caller passed rows this harness did not
+	// produce, and the two are recorded rather than one of them quietly kept. An
+	// empty list is the normal case and is omitted from the file.
+	Colliding []string `json:"colliding,omitempty"`
 }
 
 // ClassifyLive diffs the two runs and puts every keyed finding in a bucket.
 //
 // The comparison is a set difference over *pair keys*, never over slices and
-// never over the detail. Five properties follow and each is load-bearing:
+// never over the detail. Four properties follow and each is load-bearing:
 //
 //   - Ordering is irrelevant. CompareBody returns a slice, the two runs will not
 //     produce the same order, and an element-wise comparison would report a
-//     different answer for the same evidence.
+//     different answer for the same evidence. A side that contributed more than one
+//     detail for one key is therefore reduced by sorting those details rather than
+//     by keeping the last one seen.
 //   - The pair key excludes the direction, so a finding both runs observed is one
 //     finding with two details. Including the direction would make the two "both"
 //     buckets unreachable and every shared divergence read as two unrelated ones.
@@ -502,18 +557,36 @@ type LiveClassification struct {
 //     ignoring the detail would report it as agreement, which is worse.
 //   - The output is sorted by key, so a baseline file is a readable diff rather
 //     than a reordering.
-//   - One classification per pair key, so no finding is counted twice and none is
-//     dropped.
 //
-// The last property is why this returns classifications rather than two sets: a
-// caller that diffed the sets itself would have to re-derive the same-key rule,
-// and a caller that got it wrong would report a live change as agreement.
+// # One classification per pair key, and what happens when a key arrives twice
+//
+// The fourth property -- one classification per pair key, so no finding is
+// counted twice and none is dropped -- is a claim about *one row per side*, and
+// it was documented as a claim about no row at all, which it did not deliver. A
+// map keyed on the pair key keeps the last row it sees, so two rows sharing a
+// pair key on one side became one classification with the first detail gone and
+// nothing said. This version says so rather than hiding it: every distinct detail
+// a pair key was observed with is reported, the classification carries the
+// lexicographically first of them so the choice does not depend on row order, and
+// the rest are listed in LiveClassification.Colliding.
+//
+// Detect-and-report was chosen over last-wins for the same reason every other
+// check in this file reports rather than tolerates: a finding that disappears
+// without saying so is the failure mode this package exists to end, and a caller
+// that reads the contract would otherwise rely on it.
+//
+// # The collision is unreachable through CompareAllLive
+//
+// Each CompareBody emits at most one finding per (kind, name), so the two rows
+// that would collide cannot both come from one run of the checks. That makes the
+// property of the *inputs* rather than of this function, and it is why
+// CompareAllLive's output cannot contain one -- a test asserts it rather than
+// this comment being taken on trust. It is still exported with a contract, and an
+// exported contract that is false for a reachable input is worse than a private
+// one, because a caller will rely on it.
 func ClassifyLive(rows []LiveDivergence) []LiveClassification {
-	type side struct {
-		detail string
-	}
-	live := map[string]side{}
-	docs := map[string]side{}
+	live := map[string]liveSide{}
+	docs := map[string]liveSide{}
 	identity := map[string]LiveDivergence{}
 	for _, r := range rows {
 		key := r.PairKey()
@@ -522,9 +595,13 @@ func ClassifyLive(rows []LiveDivergence) []LiveClassification {
 		}
 		switch r.Direction {
 		case LiveSDKDirection:
-			live[key] = side{detail: r.Detail}
+			s := live[key]
+			s.add(r.Detail)
+			live[key] = s
 		case LiveDocsDirection:
-			docs[key] = side{detail: r.Detail}
+			s := docs[key]
+			s.add(r.Detail)
+			docs[key] = s
 		}
 	}
 
@@ -548,26 +625,80 @@ func ClassifyLive(rows []LiveDivergence) []LiveClassification {
 	for _, key := range keys {
 		l, inLive := live[key]
 		d, inDocs := docs[key]
+		lDetail, dDetail := l.kept(), d.kept()
 		c := LiveClassification{Key: key}
 		if id, ok := identity[key]; ok {
 			c.Symbol, c.Fixture, c.Kind, c.Name = id.Symbol, id.Fixture, string(id.Kind), id.Name
 		}
 		switch {
-		case inLive && inDocs && l.detail == d.detail:
-			c.Bucket, c.Detail = LiveBoth, l.detail
+		case inLive && inDocs && lDetail == dDetail:
+			c.Bucket, c.Detail = LiveBoth, lDetail
 		case inLive && inDocs:
 			// The interesting case: the same disagreement, described differently
 			// by the two bodies. Reporting it as LiveBoth would call it agreement;
 			// reporting it as two findings would double-count one defect.
-			c.Bucket, c.Detail, c.OtherDetail = LiveBothDetailChanged, l.detail, d.detail
+			c.Bucket, c.Detail, c.OtherDetail = LiveBothDetailChanged, lDetail, dDetail
 		case inLive:
-			c.Bucket, c.Detail = LiveOnly, l.detail
+			c.Bucket, c.Detail = LiveOnly, lDetail
 		default:
-			c.Bucket, c.Detail = LiveDocsOnly, d.detail
+			c.Bucket, c.Detail = LiveDocsOnly, dDetail
+		}
+		// Whatever the bucket, the details that lost the ordering decision are
+		// reported rather than dropped, so the classification accounts for every row
+		// it was built from.
+		if extra := append(l.unkept(), d.unkept()...); len(extra) > 0 {
+			sort.Strings(extra)
+			c.Colliding = extra
 		}
 		out = append(out, c)
 	}
 	return out
+}
+
+// liveSide is every distinct detail one direction contributed for one pair key.
+//
+// It is a list rather than a single string because a collision has to survive.
+// CompareBody emits at most one finding per (kind, name), so a second entry here
+// cannot come from the checks this harness runs; when one appears anyway, the
+// detail it carries is a finding that would otherwise be lost without a word.
+type liveSide struct{ details []string }
+
+// add records a detail, ignoring an exact repeat.
+//
+// The repeat is ignored rather than doubled so that a caller passing the same row
+// twice gets one classification saying one thing, not one saying the same thing
+// twice, and so a genuine second *account* of one key is what surfaces.
+func (s *liveSide) add(detail string) {
+	for _, have := range s.details {
+		if have == detail {
+			return
+		}
+	}
+	s.details = append(s.details, detail)
+}
+
+// kept is the detail the classification carries. It is the lexicographically first
+// rather than the first seen, so the answer does not depend on the order rows
+// arrived in -- the same property that makes the whole function order-blind.
+func (s liveSide) kept() string {
+	if len(s.details) == 0 {
+		return ""
+	}
+	sorted := make([]string, len(s.details))
+	copy(sorted, s.details)
+	sort.Strings(sorted)
+	return sorted[0]
+}
+
+// unkept is every detail kept did not choose, in the same order-free way.
+func (s liveSide) unkept() []string {
+	if len(s.details) < 2 {
+		return nil
+	}
+	sorted := make([]string, len(s.details))
+	copy(sorted, s.details)
+	sort.Strings(sorted)
+	return sorted[1:]
 }
 
 // LiveBaseline is the committed record of what the live comparison observes, and

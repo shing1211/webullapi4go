@@ -27,6 +27,17 @@ import (
 // expanded bytes carry the same member names and the same JSON kinds, so a
 // finding about the SDK is a finding about what the sandbox sent.
 //
+// # What the encoding does not carry
+//
+// The per-array multiset survives it exactly: every distinct shape, and how many
+// elements took it. The original interleaving does not. An array that was
+// [A, B, A, A, B] commits as two records and expands to [A, A, A, B, B], so
+// nothing in either form records where the B's sat. The tests below therefore
+// assert over multisets, never over element order -- and a reader must not read
+// "the encoding does not preserve order" as "the encoding is insensitive to
+// order". It is the second and not the first, deliberately, and the
+// reordering test below is what pins that.
+//
 // A test in this file is worthless if it would still pass with the comparison
 // inverted, so each one below has a stated way to break it and the breakage is
 // checked to actually produce a failure.
@@ -272,6 +283,73 @@ func sortStringsAscending(s []string) bool {
 		}
 	}
 	return true
+}
+
+// TestExpandSkeletonPreservesTheArrayMultisetAndNotTheInterleaving states the
+// limit of the encoding as a property rather than only in prose.
+//
+// A capture of a mixed array puts its shapes wherever the server put them, and
+// the committed form cannot say where. Here the input is A, B, A, A, B and the
+// expansion is A, A, A, B, B: the same multiset, grouped by shape. So the claim
+// this test holds is the multiset -- every distinct shape, with the number of
+// elements that took it -- and the interleaving is not part of it.
+//
+// The assertion is deliberately on the multiset and not on the order, so an
+// encoder that one day did preserve order would not fail here. What would fail is
+// a dropped shape, a changed count, or a shape silently altered, which is the
+// whole losslessness claim; the order is stated because a reader of the committed
+// bytes must not assume it survived, and the previous test is what pins that a
+// reordering produces no diff at all.
+func TestExpandSkeletonPreservesTheArrayMultisetAndNotTheInterleaving(t *testing.T) {
+	a := map[string]any{"symbol": "1", "close": json.Number("-1")}
+	b := map[string]any{"symbol": "1", "open": json.Number("-1")}
+	elements := []any{a, b, a, a, b}
+
+	encoded, err := EncodeSkeleton(map[string]any{"data": elements})
+	if err != nil {
+		t.Fatalf("EncodeSkeleton: %v", err)
+	}
+	expanded, err := ExpandSkeleton(encoded)
+	if err != nil {
+		t.Fatalf("ExpandSkeleton: %v", err)
+	}
+	back, ok := decodeSkeletons(t, expanded).(map[string]any)
+	if !ok {
+		t.Fatalf("the expansion is not an object: %s", expanded)
+	}
+	got, ok := back["data"].([]any)
+	if !ok {
+		t.Fatalf("the expansion holds no array at data: %T", back["data"])
+	}
+	if len(got) != len(elements) {
+		t.Fatalf("the expansion holds %d element(s), the capture observed %d: the "+
+			"counts beside the shapes are the only thing that carries the length",
+			len(got), len(elements))
+	}
+
+	// Multiset, by construction rather than by order: how many elements took each
+	// shape, which is the whole of what the encoding promises to preserve.
+	want := map[string]int{}
+	for _, e := range elements {
+		want[compact(t, e)]++
+	}
+	counts := map[string]int{}
+	for _, e := range got {
+		counts[compact(t, e)]++
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Errorf("the expanded multiset is not the captured one.\n got %v\nwant %v", counts, want)
+	}
+
+	// And the order the expansion really has, recorded so the two properties cannot
+	// be confused by a later reader: the records are grouped, so this array came
+	// back as A, A, A, B, B rather than the A, B, A, A, B it was captured as.
+	if groups, want := compact(t, got), `[{"close":-1,"symbol":"1"},{"close":-1,"symbol":"1"},`+
+		`{"close":-1,"symbol":"1"},{"open":-1,"symbol":"1"},{"open":-1,"symbol":"1"}]`; groups != want {
+		t.Errorf("the expansion interleaves the shapes as\n%s\nwant\n%s\nThe grouping is "+
+			"what the committed form cannot say, and a reader must not read the order "+
+			"back into it", groups, want)
+	}
 }
 
 // TestEncodeSkeletonRefusesTheReservedNames is the ambiguity guard.

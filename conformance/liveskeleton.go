@@ -52,6 +52,23 @@ import (
 //     order produces a diff of nothing. Order was never evidence: a list of
 //     identical shapes in a different order is not a different list.
 //
+// # What is lost, stated plainly
+//
+// The original interleaving of shapes inside an array is not recoverable from the
+// committed form, and the same is true of the expanded tree ExpandSkeleton
+// returns: a record's count copies are written together, so an array that was
+// [A, B, A, A, B] expands to [A, A, A, B, B]. Nothing in the bytes records where
+// the B's sat.
+//
+// That is stated because a reader must not assume the opposite. What *is*
+// preserved exactly is the multiset: every distinct shape, and how many elements
+// took it, which is what the comparison reads and what the element-count
+// conservation check pins. Order within one array was never a property the
+// harness used, and a server that reordered its rows must produce a diff of
+// nothing, which is the property above. But "the tree does not preserve order" is
+// a different sentence from "the tree does not care about order", and only the
+// second is true.
+//
 // The committed bytes are therefore not a CompareBody input. ExpandSkeleton turns
 // them back into the reduced tree, and that tree is what the comparison reads, so
 // the value-free guarantee and the leak gate are unchanged by the encoding: every
@@ -433,11 +450,17 @@ func decodeNumbered(raw []byte, out any) error {
 
 // walkSurvey accumulates one skeleton's accounts, over an expanded reduced tree.
 //
-// The rule is the probe's, restated rather than shared: the probe is a separate
-// Go module and this package must not import it, so the two implementations of
-// one definition live side by side and a test in each asserts the number its own
-// manifest records. That is a duplication with teeth -- a change to one without
-// the other fails a test -- rather than a shared helper pretending to be one.
+// The probe that writes the tree calls SurveySkeleton rather than keeping its own
+// copy of this walk, so the two are one definition rather than two that can
+// disagree. That is the direction the dependency already runs: examples/live-probe
+// imports this package for the symbol table and for the encoder, and nothing here
+// imports it. A reimplementation across that boundary would be a second opinion
+// about the same counts, and the disagreement it could produce is a manifest that
+// describes a tree other than the one in the repository -- which is exactly the
+// class of defect this harness exists to end. The rule is restated here in one
+// sentence: an array with an element anywhere in the file carries an element shape,
+// and only a file that holds an array and never populated one is listed as
+// carrying none.
 func walkSurvey(v any, s *SkeletonSurvey) {
 	switch node := v.(type) {
 	case map[string]any:
