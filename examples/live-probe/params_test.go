@@ -69,10 +69,13 @@ func TestParamRejectsUnresolvable(t *testing.T) {
 func ptr(f float64) *float64 { return &f }
 
 // The brief's case pins `symbol` alone. The class is the instrument, and the
-// corpus spells it three ways, so all three are pinned: a name the class
-// covers that resolves to an error is reported as an unbuildable request, and
-// one that resolves to a bare string where the page declares a list is a
-// request the endpoint answers with a 400 the probe would misread.
+// corpus spells it nine ways, so all nine are pinned: a name the class covers
+// that resolves to an error is reported as an unbuildable request, and one that
+// resolves to a bare string where the page declares a list is a request the
+// endpoint answers with a 400 the probe would misread.
+//
+// The names below are the ones the corpus spells, so a page that starts spelling
+// the class a tenth way is a case to add here rather than a surprise in a census.
 func TestParamSymbolNames(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -82,11 +85,21 @@ func TestParamSymbolNames(t *testing.T) {
 	}{
 		{"symbol", "symbol", ParamSpec{Type: "string"}, DefaultSymbol},
 		{"series_symbol", "series_symbol", ParamSpec{Type: "string"}, DefaultSymbol},
+		{"event_symbol", "event_symbol", ParamSpec{Type: "string"}, DefaultSymbol},
+		{"root_symbol", "root_symbol", ParamSpec{Type: "string"}, DefaultSymbol},
+		{"underlying_symbol", "underlying_symbol", ParamSpec{Type: "string"}, DefaultSymbol},
 		// The plural is the one place the resolution returns a container. The
 		// page declares the arity in the name, since the spec carries no field
 		// for it, so `symbols` is a list of one and `symbol` is a bare string.
 		{"symbols", "symbols", ParamSpec{Type: "string"}, []string{DefaultSymbol}},
 		{"symbols declared as an array", "symbols", ParamSpec{Type: "array"}, []string{DefaultSymbol}},
+		{"option_symbols", "option_symbols", ParamSpec{Type: "string"}, []string{DefaultSymbol}},
+		{"category_symbols", "category_symbols", ParamSpec{Type: "string"}, []string{DefaultSymbol}},
+		// `instruments` is a plural symbol name as a query parameter and a list
+		// of order bodies as a request body. Param only ever sees the former, so
+		// the body case stays with the caller's body synthesis: resolving it
+		// here cannot make a body buildable.
+		{"instruments", "instruments", ParamSpec{Type: "string"}, []string{DefaultSymbol}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -102,13 +115,13 @@ func TestParamSymbolNames(t *testing.T) {
 }
 
 // The correlation-key class is the only one whose value has to differ from call
-// to call, and the brief pins one name of the two. Both are pinned here
-// because the property is the uniqueness rather than the name: a probe that
-// sends the same key to two endpoints gets the second request rejected as a
-// duplicate, which is a false negative about the endpoint rather than about the
-// key.
+// to call, and the brief pins one name of the two. All five names the corpus
+// spells are pinned here because the property is the uniqueness rather than the
+// name: a probe that sends the same key to two endpoints gets the second request
+// rejected as a duplicate, which is a false negative about the endpoint rather
+// than about the key.
 func TestParamCorrelationKeysAreUnique(t *testing.T) {
-	for _, name := range []string{"client_request_id", "client_order_id"} {
+	for _, name := range []string{"client_request_id", "client_order_id", "reqid", "event_id", "milestone_id"} {
 		t.Run(name, func(t *testing.T) {
 			first, err := Param(name, ParamSpec{Type: "string"})
 			if err != nil {
@@ -124,6 +137,29 @@ func TestParamCorrelationKeysAreUnique(t *testing.T) {
 			}
 			if key == second {
 				t.Errorf("two calls both produced %q", key)
+			}
+		})
+	}
+}
+
+// A correlation key is echoed into logs and sometimes into a response, so its
+// value has to be recognisable as this probe's own. The property pinned here is
+// the prefix: the corpus publishes a UUID for `reqid` and `client_request_id`,
+// so an unprefixed 32-hex string is exactly the shape a reader could not tell
+// apart from an identifier the server issued.
+func TestParamCorrelationKeysAreObviouslySynthetic(t *testing.T) {
+	for _, name := range []string{"client_request_id", "client_order_id", "reqid", "event_id", "milestone_id"} {
+		t.Run(name, func(t *testing.T) {
+			got, err := Param(name, ParamSpec{Type: "string"})
+			if err != nil {
+				t.Fatalf("err = %v", err)
+			}
+			key, ok := got.(string)
+			if !ok {
+				t.Fatalf("got %#v (%T), want a string", got, got)
+			}
+			if !strings.HasPrefix(key, "live-probe-") {
+				t.Errorf("key %q does not say that it is the probe's own", key)
 			}
 		})
 	}
@@ -305,5 +341,185 @@ func TestParamErrorReturnsNoValue(t *testing.T) {
 	}
 	if got != nil {
 		t.Errorf("got %#v alongside an error, want nil", got)
+	}
+}
+
+// probePlaceholderToken stands in for a session token in the two cases that pin
+// the session-token class. It is not a token and is not credential-shaped, and
+// nothing sends it anywhere: the class is about which string the resolver hands
+// back, and that is observable without a credential. No case in this file
+// supplies a real token and none can, because the value enters the process
+// through SetSessionToken at run time.
+const probePlaceholderToken = "probe-placeholder"
+
+// The access token is the one value the probe must never invent: the client
+// already holds it from the token exchange, so the resolver reads the recorded
+// one and refuses the parameter when there is none. Both halves are pinned,
+// because the failure mode being guarded against is a fabricated bearer token
+// leaving this process, and a resolver that quietly filled the gap would be
+// indistinguishable from a correct one in a census.
+func TestParamSessionToken(t *testing.T) {
+	t.Cleanup(func() { SetSessionToken("") })
+
+	got, err := Param("access_token", ParamSpec{Type: "string"})
+	if err == nil {
+		t.Fatalf("resolved to %#v with no token recorded; the probe must not invent one", got)
+	}
+	if got != nil {
+		t.Errorf("got %#v alongside an error, want nil", got)
+	}
+	if !strings.Contains(err.Error(), "access_token") {
+		t.Errorf("error %q does not name the parameter", err)
+	}
+
+	SetSessionToken(probePlaceholderToken)
+	got, err = Param("access_token", ParamSpec{Type: "string"})
+	if err != nil {
+		t.Fatalf("err = %v with a token recorded", err)
+	}
+	if got != probePlaceholderToken {
+		t.Errorf("got %#v, want the recorded token back unchanged", got)
+	}
+	if SessionToken() != probePlaceholderToken {
+		t.Errorf("SessionToken() = %q, want the recorded token", SessionToken())
+	}
+}
+
+// Setting an empty token is how a caller returns the process to its start state,
+// and it is a clear rather than a value to send: a recorded empty token must not
+// resolve the parameter, because that would put an empty bearer on the wire.
+func TestParamEmptySessionTokenIsNotAToken(t *testing.T) {
+	t.Cleanup(func() { SetSessionToken("") })
+	SetSessionToken("")
+	if got, err := Param("access_token", ParamSpec{Type: "string"}); err == nil {
+		t.Errorf("resolved to %#v; an empty token is an absent token", got)
+	}
+	if SessionToken() != "" {
+		t.Errorf("SessionToken() = %q, want empty", SessionToken())
+	}
+}
+
+// The optional cursor is the one parameter whose correct request is the one that
+// leaves it out, so the marker has to be distinguishable from every value Param
+// could otherwise return. The empty string is the case that matters: a caller
+// that serialises a resolved "" as a present key has sent a different request
+// from one that omits the key, and the server is free to answer them differently.
+func TestParamOmitsTheOptionalCursor(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		spec ParamSpec
+	}{
+		{"string", ParamSpec{Type: "string"}},
+		{"undeclared type", ParamSpec{}},
+		{"array", ParamSpec{Type: "array"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Param("pagination_key", tc.spec)
+			if err != nil {
+				t.Fatalf("omitting an optional parameter must not be an error: %v", err)
+			}
+			if !IsOmitted(got) {
+				t.Errorf("got %#v (%T), want the Omitted marker", got, got)
+			}
+			if got == "" {
+				t.Error("omitted resolved to the empty string, which is a different request")
+			}
+		})
+	}
+}
+
+// The marker is recognised as itself and as nothing else. Without this, a caller
+// testing for omission with a type assertion would also match a page's own
+// empty-string example, which is a value to send.
+func TestIsOmittedMatchesOnlyTheMarker(t *testing.T) {
+	if !IsOmitted(Omitted) {
+		t.Error("IsOmitted(Omitted) = false")
+	}
+	for _, v := range []any{nil, "", "cursor", 0, false, []string{DefaultSymbol}, DefaultSymbol} {
+		if IsOmitted(v) {
+			t.Errorf("IsOmitted(%#v) = true, want false", v)
+		}
+	}
+}
+
+// The SDK signs nine headers itself and they appear in the published document of
+// an endpoint, so a caller can hand one to Param. Every one is refused, and the
+// refusal is case-insensitive and separator-insensitive because an HTTP header
+// name is: a refusal that a capital letter walks past is not a refusal. The
+// documented example and enum cases in the loop are the ordering claim — the
+// refusal sits above both, because a page's own example for x-app-key is still a
+// credential that must not leave this process.
+func TestParamRefusesSDKSignedHeaders(t *testing.T) {
+	names := []string{
+		"x-app-key", "x-app-secret", "x-timestamp", "x-access-token", "x-signature",
+		"x-signature-algorithm", "x-signature-nonce", "x-signature-version", "x-version",
+		"X-App-Key", "X-SIGNATURE", "x_app_key", "  x-signature  ",
+	}
+	specs := []struct {
+		name string
+		spec ParamSpec
+	}{
+		{"bare", ParamSpec{Type: "string"}},
+		{"documented example", ParamSpec{Type: "string", Example: "documented", HasExample: true}},
+		{"documented enum", ParamSpec{Type: "string", Enum: []any{"documented"}}},
+	}
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			for _, s := range specs {
+				got, err := Param(name, s.spec)
+				if err == nil {
+					t.Errorf("with a %s: resolved to %#v; the SDK signs this header", s.name, got)
+				}
+				if got != nil {
+					t.Errorf("with a %s: got %#v alongside an error, want nil", s.name, got)
+				}
+			}
+		})
+	}
+}
+
+// The refusal is narrow: a header-shaped name that the SDK does not sign is not
+// refused, because refusing names it does not own would block a request the
+// probe can make and the refusal would read as evidence about the endpoint.
+func TestParamDoesNotRefuseUnownedHeaderNames(t *testing.T) {
+	for _, name := range []string{"x-request-id", "x-trace-id", "accept", "user-agent"} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Param(name, ParamSpec{Type: "string"}); err == nil {
+				t.Logf("%q resolves through the type default", name)
+			}
+			if isSDKSignedHeader(name) {
+				t.Errorf("%q is not a header the SDK signs, so it must not be refused", name)
+			}
+		})
+	}
+}
+
+// Every name the tier-B rules claim to cover has to resolve, and the names are
+// written out here rather than read from the implementation, so that a rule
+// dropped from params.go fails this case instead of quietly returning a blocked
+// census row. The counts the corpus measures for each name are in the
+// task-2 report; this case is the floor, not the census.
+func TestParamCoversEveryDocumentedTierBName(t *testing.T) {
+	t.Cleanup(func() { SetSessionToken("") })
+	SetSessionToken(probePlaceholderToken)
+	names := []string{
+		// Rule 1, default symbol.
+		"symbol", "symbols", "series_symbol", "event_symbol", "root_symbol",
+		"underlying_symbol", "option_symbols", "instruments", "category_symbols",
+		// Rule 2, caller-generated id.
+		"reqid", "client_request_id", "client_order_id", "event_id", "milestone_id",
+		// Rule 3, optional cursor omitted.
+		"pagination_key",
+		// Rule 4, session token.
+		"access_token",
+	}
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			if got, err := Param(name, ParamSpec{Type: "string"}); err != nil {
+				t.Errorf("Param(%q) = %v; a name the tier-B rules cover must resolve", name, err)
+			} else if got == nil {
+				t.Errorf("Param(%q) = nil with no error; a resolved value is never nil", name)
+			}
+		})
 	}
 }
