@@ -1,142 +1,35 @@
-[
- {
-  "aum": "1",
-  "bond": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "cash": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "convertible": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "date": "1",
-  "other": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "preferred": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "stock": {
-   "ratio": "1",
-   "value": "1"
+{
+ "$array": [
+  {
+   "$count": 5,
+   "$shape": {
+    "aum": "1",
+    "bond": {
+     "ratio": "1",
+     "value": "1"
+    },
+    "cash": {
+     "ratio": "1",
+     "value": "1"
+    },
+    "convertible": {
+     "ratio": "1",
+     "value": "1"
+    },
+    "date": "1",
+    "other": {
+     "ratio": "1",
+     "value": "1"
+    },
+    "preferred": {
+     "ratio": "1",
+     "value": "1"
+    },
+    "stock": {
+     "ratio": "1",
+     "value": "1"
+    }
+   }
   }
- },
- {
-  "aum": "1",
-  "bond": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "cash": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "convertible": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "date": "1",
-  "other": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "preferred": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "stock": {
-   "ratio": "1",
-   "value": "1"
-  }
- },
- {
-  "aum": "1",
-  "bond": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "cash": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "convertible": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "date": "1",
-  "other": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "preferred": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "stock": {
-   "ratio": "1",
-   "value": "1"
-  }
- },
- {
-  "aum": "1",
-  "bond": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "cash": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "convertible": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "date": "1",
-  "other": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "preferred": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "stock": {
-   "ratio": "1",
-   "value": "1"
-  }
- },
- {
-  "aum": "1",
-  "bond": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "cash": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "convertible": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "date": "1",
-  "other": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "preferred": {
-   "ratio": "1",
-   "value": "1"
-  },
-  "stock": {
-   "ratio": "1",
-   "value": "1"
-  }
- }
-]
+ ]
+}

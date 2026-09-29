@@ -20,7 +20,7 @@
    "notCaptured": 0,
    "decodedCleanly": 51,
    "decodeRejected": 4,
-   "skeletonBytes": 1972932,
+   "skeletonBytes": 30665,
    "withoutElementShape": [
     "live/fundamentals/GET-market-data-fundamentals-fund-splits-get.json",
     "live/market-data-futures/GET-market-data-futures-ticks-list.json",
@@ -31,7 +31,7 @@
   "size": {
    "arrayElements": 8182,
    "distinctElementShapes": 63,
-   "reason": "totals.skeletonBytes is the whole tree, and most of it is repetition: arrayElements is every element of every array in the written skeletons, distinctElementShapes is how many distinct reduced shapes those elements take, and the difference is the elements repeating a shape the tree already holds elsewhere in it. The sandbox answers with hundreds of rows of a handful of shapes where one row would carry the same names and kinds. These files are live data rather than minimal instances, so the documentation fixtures' sizeTripwire does not apply to them; the tree's size is a fact about the responses that produced it, no bound is imposed on it here, and nothing in this manifest claims the size could not be reduced without losing a member name or a kind."
+   "reason": "arrayElements is every element of every array the skeletons expand to, and distinctElementShapes is how many distinct reduced shapes those elements take. The written tree holds each distinct shape once beside a count of how many elements took it, so the two numbers are the tree's evidence rather than its size: 8,182 elements are written as 63 shapes. The sandbox answers with hundreds of rows of a handful of shapes where one row would carry the same names and kinds, and the tree stores the shapes and the counts rather than the repetition, which is lossless for member names and JSON kinds because nothing was dropped and the counts still sum to the original length. These files are live data rather than minimal instances, so the documentation fixtures' sizeTripwire does not apply to them; the tree's size is a fact about the responses that produced it and no bound is imposed on it here."
   },
  "census": {
   "total": 193,

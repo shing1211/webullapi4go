@@ -1,36 +1,23 @@
-[
- {
-  "actual": "1",
-  "est": "1",
-  "fiscal_period": -1,
-  "fiscal_year": -1,
-  "reported": true
- },
- {
-  "actual": "1",
-  "est": "1",
-  "fiscal_period": -1,
-  "fiscal_year": -1,
-  "reported": true
- },
- {
-  "actual": "1",
-  "est": "1",
-  "fiscal_period": -1,
-  "fiscal_year": -1,
-  "reported": true
- },
- {
-  "actual": "1",
-  "est": "1",
-  "fiscal_period": -1,
-  "fiscal_year": -1,
-  "reported": true
- },
- {
-  "est": "1",
-  "fiscal_period": -1,
-  "fiscal_year": -1,
-  "reported": true
- }
-]
+{
+ "$array": [
+  {
+   "$count": 4,
+   "$shape": {
+    "actual": "1",
+    "est": "1",
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "reported": true
+   }
+  },
+  {
+   "$count": 1,
+   "$shape": {
+    "est": "1",
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "reported": true
+   }
+  }
+ ]
+}

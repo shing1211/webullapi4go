@@ -1,36 +1,17 @@
 {
- "data": [
-  {
-   "name": "1",
-   "rank": -1,
-   "symbol": "1",
-   "value": "1"
-  },
-  {
-   "name": "1",
-   "rank": -1,
-   "symbol": "1",
-   "value": "1"
-  },
-  {
-   "name": "1",
-   "rank": -1,
-   "symbol": "1",
-   "value": "1"
-  },
-  {
-   "name": "1",
-   "rank": -1,
-   "symbol": "1",
-   "value": "1"
-  },
-  {
-   "name": "1",
-   "rank": -1,
-   "symbol": "1",
-   "value": "1"
-  }
- ],
+ "data": {
+  "$array": [
+   {
+    "$count": 5,
+    "$shape": {
+     "name": "1",
+     "rank": -1,
+     "symbol": "1",
+     "value": "1"
+    }
+   }
+  ]
+ },
  "fiscal_period": -1,
  "fiscal_year": -1,
  "industry_name": "1",

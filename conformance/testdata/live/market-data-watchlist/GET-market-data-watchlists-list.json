@@ -1,14 +1,13 @@
-[
- {
-  "create_time": "1",
-  "name": "1",
-  "update_time": "1",
-  "watchlist_id": "1"
- },
- {
-  "create_time": "1",
-  "name": "1",
-  "update_time": "1",
-  "watchlist_id": "1"
- }
-]
+{
+ "$array": [
+  {
+   "$count": 2,
+   "$shape": {
+    "create_time": "1",
+    "name": "1",
+    "update_time": "1",
+    "watchlist_id": "1"
+   }
+  }
+ ]
+}

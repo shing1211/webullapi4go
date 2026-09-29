@@ -306,6 +306,34 @@ const (
 // true unconditionally, so a false leaf proves the file did not come from the
 // reduction at all. Both are checked here so a future change to either the
 // reduction or the writer cannot quietly reintroduce a reading.
+// TestLiveSkeletonsCarryNoValue holds every committed live skeleton to the one
+// property that makes it safe to be in a repository: it carries every member
+// name the sandbox sent and no value it sent.
+//
+// This is the test that would catch a leak after the fact. A skeleton is
+// committed, so a price, a share count, a timestamp or an account number in one
+// is in git history, which is not a mistake anyone can delete. The reduction is
+// what prevents that, and this asserts the result rather than the intent: every
+// leaf in every committed file is the placeholder for its kind and nothing else,
+// and no key in any of them is a reading. The key half is half the tree - a
+// member name is kept verbatim by the reduction, so a name that is a value is a
+// leak this walk would otherwise pass - and its rule is keyCarriesAReading.
+//
+// # What the dedupe changed, and what it did not
+//
+// The committed form is a deduplicated encoding (see liveskeleton.go): an array
+// is written as distinct element shapes with a count beside each. So the walk has
+// one new leaf position, the count, and it is the one place a reading could hide
+// that did not exist before. It is held to a rule of its own rather than being
+// walked past: a count must be a positive integer, which is not a reading a
+// server sends, and every leaf *inside* a shape is still the placeholder for its
+// kind exactly as before.
+//
+// That is the whole of the change. The reduction, the placeholders, the key rule
+// and the tree of names are untouched, and a value planted anywhere in a shape is
+// caught by the same walk that caught it before. The leak gate was not weakened
+// to accommodate the dedupe; it was extended to cover the one new position, and
+// that position is checked rather than skipped.
 func TestLiveSkeletonsCarryNoValue(t *testing.T) {
 	files := liveJSONFiles(t)
 	if len(files) == 0 {
@@ -412,10 +440,20 @@ func keyCarriesAReading(name string) bool {
 // The map case checks the key before it descends, so the invariant is asserted
 // over the whole tree and not over its leaves alone. keyCarriesAReading holds the
 // rule and states what it cannot see.
+//
+// The dedupe wrapper is the one new case, and it is handled rather than skipped.
+// A wrapper's own members are the encoding's and are checked against the
+// encoding's rules; its count is held to a rule of its own; and its shape is
+// walked exactly as an object would be, so every name and every leaf inside a
+// shape is held to the same rule as before.
 func assertNoLiveValue(t liveValueSink, value any, path, file string) {
 	t.Helper()
 	switch leaf := value.(type) {
 	case map[string]any:
+		if records, wrapped := leaf[SkeletonArrayKey]; wrapped {
+			assertNoDedupeWrapper(t, leaf, records, path, file)
+			return
+		}
 		for name, member := range leaf {
 			if keyCarriesAReading(name) {
 				t.Errorf("%s holds the member name %q at %s: no Webull member name is a "+
@@ -450,6 +488,272 @@ func assertNoLiveValue(t liveValueSink, value any, path, file string) {
 			file, leaf, path)
 	default:
 		t.Errorf("%s holds a %T at %s: no reduction emits that type", file, leaf, path)
+	}
+}
+
+// assertNoDedupeWrapper holds one dedupe wrapper to the encoding's rules.
+//
+// It is written to fail on anything it does not recognise rather than to walk
+// past it, because a wrapper this function cannot account for is a position
+// where a reading could sit unchecked. Three things are checked: the wrapper
+// carries nothing but the reserved member, every record carries exactly a count
+// and a shape, and the count is a positive integer -- the one leaf the dedupe
+// introduced, and the one a reading would have to impersonate.
+func assertNoDedupeWrapper(t liveValueSink, wrapper map[string]any, records any, path, file string) {
+	t.Helper()
+	for name := range wrapper {
+		if name != SkeletonArrayKey {
+			t.Errorf("%s holds %q beside a dedupe wrapper at %s: the wrapper's own members "+
+				"are the encoding's, and an extra one means the position is unaccounted for",
+				file, name, path)
+		}
+	}
+	list, ok := records.([]any)
+	if !ok {
+		t.Errorf("%s holds a %T as the %s of a dedupe wrapper at %s, not a list of records",
+			file, records, SkeletonArrayKey, path)
+		return
+	}
+	for i, r := range list {
+		at := fmt.Sprintf("%s.%s[%d]", path, SkeletonArrayKey, i)
+		record, ok := r.(map[string]any)
+		if !ok {
+			t.Errorf("%s holds a %T as a dedupe record at %s, not an object", file, r, at)
+			continue
+		}
+		for name := range record {
+			if name != SkeletonCountKey && name != SkeletonShapeKey {
+				t.Errorf("%s holds %q in a dedupe record at %s: a record carries a count and "+
+					"a shape and nothing else", file, name, at)
+			}
+		}
+		count, hasCount := record[SkeletonCountKey]
+		if !hasCount {
+			t.Errorf("%s holds a dedupe record at %s with no %s, so its multiplicity is unrecorded",
+				file, at, SkeletonCountKey)
+		} else if !isPositiveInteger(count) {
+			t.Errorf("%s holds %v as the %s of a dedupe record at %s; a count is a positive "+
+				"integer -- a reading is not", file, count, SkeletonCountKey, at)
+		}
+		shape, hasShape := record[SkeletonShapeKey]
+		if !hasShape {
+			t.Errorf("%s holds a dedupe record at %s with no %s, so the element shape is absent",
+				file, at, SkeletonShapeKey)
+			continue
+		}
+		assertNoLiveValue(t, shape, at+"."+SkeletonShapeKey, file)
+	}
+}
+
+// isPositiveInteger reports whether v is a JSON integer of one or more.
+//
+// It is stricter than "is a number" on purpose. The count is the only position
+// the dedupe introduced, and the property being defended is that it holds a
+// multiplicity rather than a reading; a float, a negative number, zero or a
+// string are all things a count is not, and each of them is a sign that the
+// position is being used for something else.
+//
+// # What the count cannot see, which is a real widening
+//
+// A reading that is a positive integer is not distinguishable from a count. An
+// account id, an instrument id, a millisecond timestamp and a share count are all
+// positive integers, and if one of those were written into a $count the rule
+// here would accept it.
+//
+// That is a genuine weakening of the guarantee the tree otherwise holds, and it
+// is stated rather than left for a reader to discover. The mitigation is
+// structural rather than a matter of the rule: the count is written by
+// EncodeSkeleton, which computes it by counting the elements of the response and
+// has no path by which a response *value* could reach it -- a number in the tree
+// arrives only as a leaf placeholder, and a leaf placeholder is -1, which this
+// rule refuses. So a reading would have to be written into the field by hand,
+// after the reduction, rather than surviving it.
+//
+// The same is true of a string-valued member name, which keyCarriesAReading
+// already states it cannot see, and for the same reason: the reduction keeps
+// names verbatim, so a name is the one position a reading survives, and the rule
+// covers the forms it can rather than the form it cannot. The count is weaker
+// than that: a name is a string, so the rule can at least refuse the numeric and
+// placeholder forms, whereas the count's form is the reading's own form.
+func isPositiveInteger(v any) bool {
+	number, ok := v.(json.Number)
+	if !ok {
+		return false
+	}
+	n, err := number.Int64()
+	return err == nil && n >= 1
+}
+
+// TestLiveSkeletonWrapperCarriesNoValue is the dedupe half of the leak gate on
+// its own, and it exists because the wrapper is the one position the encoding
+// introduced.
+//
+// The gate above walks the committed tree, which proves the committed tree is
+// clean. It cannot prove the gate would *notice* a value, because a value in a
+// committed file is a value in git history and the test that would have caught
+// it is the one being written. So every position the encoding owns is driven
+// here from a planted value, and a case that expects no report is a case where
+// that position is genuinely unremarkable.
+//
+// The cases that matter most are the last three. A count of 197 is the shape the
+// encoding writes and must pass; a count of 385.6, a count of -1 and a count
+// that is a string must all fail, because each of them is a reading wearing the
+// one position a reading could reach that no other rule covers. If the count
+// check were removed, those three would pass silently, which is the specific way
+// the dedupe could have weakened this gate.
+func TestLiveSkeletonWrapperCarriesNoValue(t *testing.T) {
+	shape := func() any {
+		return map[string]any{"symbol": liveStringPlaceholder, "close": json.Number(liveNumberPlaceholder)}
+	}
+	record := func(count any) any {
+		return map[string]any{SkeletonCountKey: count, SkeletonShapeKey: shape()}
+	}
+	wrapper := func(records ...any) any {
+		return map[string]any{"data": map[string]any{SkeletonArrayKey: records}}
+	}
+
+	cases := []struct {
+		name        string
+		tree        any
+		wantReports int
+		because     string
+	}{
+		{
+			name:        "a well-formed wrapper",
+			tree:        wrapper(record(json.Number("197"))),
+			wantReports: 0,
+			because:     "this is the shape the encoding writes, so it must pass",
+		},
+		{
+			name:        "a wrapper with no record at all",
+			tree:        wrapper(),
+			wantReports: 0,
+			because:     "an empty array is an observation, not a leak",
+		},
+		{
+			name:        "a price in a shape",
+			tree:        wrapper(record(json.Number("1")), record(json.Number("197"))),
+			wantReports: 0,
+			because:     "a price is a leaf, and the leaf rule already covers it",
+		},
+		{
+			name: "a reading as a leaf inside a shape",
+			tree: wrapper(record(json.Number("197")), map[string]any{
+				SkeletonCountKey: json.Number("1"),
+				SkeletonShapeKey: map[string]any{"symbol": "AAPL"},
+			}),
+			wantReports: 1,
+			because: "a value inside a shape is the case the whole gate exists for, " +
+				"and the dedupe must not have made a shape a blind spot",
+		},
+		{
+			name: "a reading as a name inside a shape",
+			tree: wrapper(record(json.Number("197")), map[string]any{
+				SkeletonCountKey: json.Number("1"),
+				SkeletonShapeKey: map[string]any{"9110101000000000001": liveStringPlaceholder},
+			}),
+			wantReports: 1,
+			because: "a member name inside a shape is still a member name, and the " +
+				"dedupe must not have exempted a shape from the key rule",
+		},
+		{
+			name: "a price as a count",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: json.Number("385.6"),
+				SkeletonShapeKey: shape(),
+			}),
+			wantReports: 1,
+			because: "a count is a positive integer, and a price is not one; this is the " +
+				"case that fails if the count check is removed",
+		},
+		{
+			name: "the number placeholder as a count",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: json.Number(liveNumberPlaceholder),
+				SkeletonShapeKey: shape(),
+			}),
+			wantReports: 1,
+			because: "a count of -1 is indistinguishable from the number the reduction " +
+				"emits everywhere else, and it is still not a count",
+		},
+		{
+			name: "a reading as a count",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: json.Number("9110101000000000001"),
+				SkeletonShapeKey: shape(),
+			}),
+			wantReports: 0,
+			because: "the rule's stated limit, pinned deliberately: an account id or a " +
+				"millisecond timestamp IS a positive integer, so the count rule cannot " +
+				"refuse it. This is a real widening of the leak gate and it is recorded " +
+				"rather than papered over -- see countCarriesAReading's own comment. A " +
+				"count is a multiplicity of a shape, so a reading that is an integer is " +
+				"indistinguishable from one, exactly as a string-valued key is",
+		},
+		{
+			name: "a count of zero",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: json.Number("0"),
+				SkeletonShapeKey: shape(),
+			}),
+			wantReports: 1,
+			because:     "an array element the capture did not observe is not a count of one",
+		},
+		{
+			name: "a count that is a string",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: "197",
+				SkeletonShapeKey: shape(),
+			}),
+			wantReports: 1,
+			because:     "a string is a reading's own form, and the encoding writes a number",
+		},
+		{
+			name:        "a record with no count",
+			tree:        wrapper(map[string]any{SkeletonShapeKey: shape()}),
+			wantReports: 1,
+			because: "a record whose multiplicity is unrecorded is a position the walk " +
+				"cannot account for",
+		},
+		{
+			name:        "a record with no shape",
+			tree:        wrapper(map[string]any{SkeletonCountKey: json.Number("3")}),
+			wantReports: 1,
+			because:     "a count with no shape beside it accounts for nothing",
+		},
+		{
+			name: "a record carrying an extra member",
+			tree: wrapper(map[string]any{
+				SkeletonCountKey: json.Number("3"),
+				SkeletonShapeKey: shape(),
+				"price":          "385.6",
+			}),
+			wantReports: 1,
+			because: "the extra member is unaccounted for. Its value is not separately " +
+				"reported, because a member of a record is not walked -- the record is " +
+				"the encoding's, and the encoding writes two members and no third. One " +
+				"report naming it is the right answer, and a second would mean the walk " +
+				"had descended into a position it does not own",
+		},
+		{
+			name: "a bare list of records with no wrapper",
+			tree: map[string]any{SkeletonArrayKey: []any{
+				map[string]any{SkeletonCountKey: json.Number("3"), SkeletonShapeKey: shape()},
+			}},
+			wantReports: 0,
+			because: "the reserved member alone makes a wrapper, so this is a " +
+				"well-formed one wherever it appears, including at the top level",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &recordingSink{}
+			assertNoLiveValue(rec, tc.tree, "$", "planted.json")
+			if got := len(rec.messages); got != tc.wantReports {
+				t.Errorf("assertNoLiveValue reported %d time(s), want %d: %v; %s",
+					got, tc.wantReports, rec.messages, tc.because)
+			}
+		})
 	}
 }
 
@@ -636,18 +940,9 @@ func TestLiveManifestDeclaresItHoldsNoValues(t *testing.T) {
 	}
 }
 
-// liveTreePrefix, liveReadmeFile and liveManifestFile locate the live evidence
-// tree and its index inside the committed testdata directory.
-//
-// The three are spelled out rather than derived, and the prefix ends in a
-// separator so a file called "liver" is not in the live tree. They are facts
-// about the committed layout, and a fact a test re-derives from the tree it is
-// checking is a fact the tree can change underneath it.
-const (
-	liveTreePrefix   = "live/"
-	liveReadmeFile   = "README.md"
-	liveManifestFile = "live-manifest.json"
-)
+// liveTreePrefix, liveReadmeFile and liveManifestFile are declared in live.go,
+// alongside the code that reads the tree they locate. This file used to declare
+// them, and the live comparison could not then name its own input.
 
 // loadLiveManifest reads the live manifest and returns the skeleton paths it
 // names, relative to live/.

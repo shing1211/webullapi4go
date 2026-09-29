@@ -5,52 +5,21 @@
  "investment_objective": "1",
  "issuer": "1",
  "launch_date": "1",
- "managers": [
-  {
-   "is_incumbent": -1,
-   "name": "1",
-   "start_date": "1",
-   "tenure_days": -1,
-   "tenure_return": "1",
-   "tenure_years": "1",
-   "title": "1"
-  },
-  {
-   "is_incumbent": -1,
-   "name": "1",
-   "start_date": "1",
-   "tenure_days": -1,
-   "tenure_return": "1",
-   "tenure_years": "1",
-   "title": "1"
-  },
-  {
-   "is_incumbent": -1,
-   "name": "1",
-   "start_date": "1",
-   "tenure_days": -1,
-   "tenure_return": "1",
-   "tenure_years": "1",
-   "title": "1"
-  },
-  {
-   "is_incumbent": -1,
-   "name": "1",
-   "start_date": "1",
-   "tenure_days": -1,
-   "tenure_return": "1",
-   "tenure_years": "1",
-   "title": "1"
-  },
-  {
-   "is_incumbent": -1,
-   "name": "1",
-   "start_date": "1",
-   "tenure_days": -1,
-   "tenure_return": "1",
-   "tenure_years": "1",
-   "title": "1"
-  }
- ],
+ "managers": {
+  "$array": [
+   {
+    "$count": 5,
+    "$shape": {
+     "is_incumbent": -1,
+     "name": "1",
+     "start_date": "1",
+     "tenure_days": -1,
+     "tenure_return": "1",
+     "tenure_years": "1",
+     "title": "1"
+    }
+   }
+  ]
+ },
  "name": "1"
 }

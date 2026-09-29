@@ -1,6 +1,8 @@
 {
  "delay_minutes": -1,
  "instrumentId": "1",
- "result": [],
+ "result": {
+  "$array": []
+ },
  "symbol": "1"
 }

@@ -1,62 +1,25 @@
 {
- "account_currency_assets": [
-  {
-   "available_withdrawal": "1",
-   "buying_power": "1",
-   "cash_balance": "1",
-   "currency": "1",
-   "frozen_amount": "1",
-   "held_amount": "1",
-   "init_margin": "1",
-   "interests_unpaid": "1",
-   "market_value": "1",
-   "settled_cash": "1",
-   "unrealized_profit_loss": "1",
-   "unsettled_cash": "1"
-  },
-  {
-   "available_withdrawal": "1",
-   "buying_power": "1",
-   "cash_balance": "1",
-   "currency": "1",
-   "frozen_amount": "1",
-   "held_amount": "1",
-   "init_margin": "1",
-   "interests_unpaid": "1",
-   "market_value": "1",
-   "settled_cash": "1",
-   "unrealized_profit_loss": "1",
-   "unsettled_cash": "1"
-  },
-  {
-   "available_withdrawal": "1",
-   "buying_power": "1",
-   "cash_balance": "1",
-   "currency": "1",
-   "frozen_amount": "1",
-   "held_amount": "1",
-   "init_margin": "1",
-   "interests_unpaid": "1",
-   "market_value": "1",
-   "settled_cash": "1",
-   "unrealized_profit_loss": "1",
-   "unsettled_cash": "1"
-  },
-  {
-   "available_withdrawal": "1",
-   "buying_power": "1",
-   "cash_balance": "1",
-   "currency": "1",
-   "frozen_amount": "1",
-   "held_amount": "1",
-   "init_margin": "1",
-   "interests_unpaid": "1",
-   "market_value": "1",
-   "settled_cash": "1",
-   "unrealized_profit_loss": "1",
-   "unsettled_cash": "1"
-  }
- ],
+ "account_currency_assets": {
+  "$array": [
+   {
+    "$count": 4,
+    "$shape": {
+     "available_withdrawal": "1",
+     "buying_power": "1",
+     "cash_balance": "1",
+     "currency": "1",
+     "frozen_amount": "1",
+     "held_amount": "1",
+     "init_margin": "1",
+     "interests_unpaid": "1",
+     "market_value": "1",
+     "settled_cash": "1",
+     "unrealized_profit_loss": "1",
+     "unsettled_cash": "1"
+    }
+   }
+  ]
+ },
  "init_margin": "1",
  "total_asset_currency": "1",
  "total_cash_balance": "1",

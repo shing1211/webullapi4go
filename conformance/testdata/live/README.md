@@ -20,7 +20,7 @@ Two properties make that confusion harmless even if you do it:
    reading of the server's to recover. `conformance.TestLiveSkeletonsCarryNoValue`
    walks every committed file and fails on any leaf that is not a placeholder.
 
-   Three limits are stated here rather than left for you to discover.
+   Four limits are stated here rather than left for you to discover.
 
    - **A placeholder is not proof.** The literals are fixed and one bit wide, so a
      server that sent `-1` for a `-100%` change, or the string `"1"` for a symbol,
@@ -43,6 +43,55 @@ Two properties make that confusion harmless even if you do it:
    sorted by member name, so the same body always produces the same bytes and a
    diff after a re-run means the sandbox sent something different.
 
+## What an array looks like here
+
+The probe's reduction keeps every array element, and the sandbox answers a
+screener or an instrument list with hundreds of rows drawn from a handful of
+shapes. Writing every row made this tree 1.97 MB, of which 92.1% was identical
+sibling elements, so an array is stored as the **distinct element shapes with a
+count beside each**:
+
+```json
+"data": {
+ "$array": [
+  {"$count": 997, "$shape": {"symbol": "1", "close": "1"}},
+  {"$count": 3,   "$shape": {"symbol": "1", "close": "1", "volume": "-1"}}
+ ]
+}
+```
+
+Three properties make that lossless for what the harness reads, and each is
+pinned by a test in `conformance/liveskeleton_test.go`:
+
+- **No shape is dropped.** There is no cap and no truncation. Nine arrays in this
+  tree are heterogeneous, and in `high-dividend-ranks` the odd element first
+  appears at index 144 of 200; any bound low enough to matter would drop a shape,
+  and because the counts still sum to the original length, nothing in the
+  encoding would report the loss.
+- **The multiplicity is written down.** A count of 997 beside one shape carries
+  what 997 copies of it carried, so an array's length survives the reduction.
+  `totals.arrayElements` in the manifest is the number the tree expands to.
+- **The order is canonical, not observed.** Records are sorted by their shape, so
+  a server returning the same names in a different order produces a diff of
+  nothing. Order was never evidence: a list of identical shapes in a different
+  order is not a different list.
+
+`conformance.ExpandSkeleton` turns the committed bytes back into the reduced tree,
+and that tree is what `conformance.CompareBody` reads. **A skeleton is therefore
+not itself a `CompareBody` input** — the wrapper members are not Webull's, and the
+placeholders are what matter.
+
+The `$` prefix is the encoding's own, and the encoder refuses any member name
+carrying it rather than hoping none arrives. No Webull member name in this tree
+begins with `$`.
+
+One leaf position is new, and it is the one the encoding owns: the `$count`. It is
+held to a rule of its own — a positive integer, which no reading is — with one
+stated limit. A reading that *is* a positive integer (an account id, a timestamp)
+is indistinguishable from a count, exactly as a string-valued key is
+indistinguishable from a member name. What makes the position safe is structural:
+the count is computed by counting elements, so no response value can reach it.
+
 ## What is here
 
 One file per endpoint, named exactly as its documentation fixture is named, under
@@ -61,15 +110,18 @@ compare an error against a documented success response.
 Nothing in this directory is written by hand and nothing here is edited by hand.
 Both trees are generated, and regenerating either is a diff a reviewer reads.
 
-## Why the tree is this big
+## Why the tree is this size
 
-`totals.skeletonBytes` is 1,972,932 across 55 files, and the manifest's `size`
-block says where it went: 8,182 array elements take 63 distinct shapes, so most
-of the tree is the sandbox returning hundreds of rows of a handful of shapes.
+`totals.skeletonBytes` is about 30 KB across 55 files, and the manifest's `size`
+block says where it went: 8,182 array elements take 63 distinct shapes, and the
+differences are the elements repeating a shape the tree already holds elsewhere
+in it. The sandbox answers with hundreds of rows of a handful of shapes where one
+row would carry the same names and kinds, so the tree stores the shapes and a
+count rather than the repetition.
+
 These files are live data rather than minimal instances, so the documentation
-fixtures' `sizeTripwire` does not apply to them and no bound is imposed here.
-Nothing in the manifest claims the size could not be reduced without losing a
-member name or a kind, and this file states no bound either.
+fixtures' `sizeTripwire` does not apply to them and no bound is imposed here. The
+size is a fact about the responses that produced it.
 
 ## One caveat about the line endings
 

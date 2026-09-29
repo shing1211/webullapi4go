@@ -1,20 +1,13 @@
-[
- {
-  "rating_agency": "1",
-  "rating_cycle": "1",
-  "rating_date": "1",
-  "rating_results": -1
- },
- {
-  "rating_agency": "1",
-  "rating_cycle": "1",
-  "rating_date": "1",
-  "rating_results": -1
- },
- {
-  "rating_agency": "1",
-  "rating_cycle": "1",
-  "rating_date": "1",
-  "rating_results": -1
- }
-]
+{
+ "$array": [
+  {
+   "$count": 3,
+   "$shape": {
+    "rating_agency": "1",
+    "rating_cycle": "1",
+    "rating_date": "1",
+    "rating_results": -1
+   }
+  }
+ ]
+}

@@ -37,9 +37,19 @@
 // about its own tree. testdata/live/ holds response skeletons captured from the
 // running sandbox by examples/live-probe: the shape of what a server answered,
 // with every value replaced by a placeholder. They are not instances of any
-// published schema, nothing in this package reads them, and none of the
-// comparisons below applies to them. testdata/live-manifest.json indexes them and
+// published schema, and none of the five checks below applies to them as
+// written -- a fixture is a restatement of a page, and a skeleton is one
+// observation of one response. testdata/live-manifest.json indexes them and
 // live/README.md says what they are from inside the tree itself.
+//
+// live.go is what reads them, and it reads them by running the same five checks
+// against them: a skeleton is a body, and CompareBody takes one. So the live tree
+// is evidence about this SDK, where every other file in the tree is evidence
+// about Webull's documentation, and the two are kept apart throughout: a separate
+// comparison, a separate set of directions, a separate baseline in
+// live-divergences.json, and a separate gate. Recording a live finding in
+// known-divergences.json would put 25 documented rows and N live rows in one
+// backlog when the live rows are not claims about this SDK at all.
 //
 // The split is a partition rather than an exemption, and it is enforced rather
 // than asserted. TestManifestDescribesTheWholeTree walks the embedded tree and
@@ -90,10 +100,13 @@
 //	testdata/live-manifest.json                the live tree's own index
 //	testdata/live/README.md                    what the live tree is, in the tree
 //	testdata/live/<area>/<METHOD>-<path>.json  one skeleton per captured endpoint
-//	known-divergences.json                    the recorded divergence baseline
+//	known-divergences.json                    the recorded documentation baseline
+//	live-divergences.json                     the recorded live baseline
 //	symbols.go                                the symbol-to-type table
 //	envelopes.go                              unexported decode targets, read from source
 //	shapes.go                                 the five comparisons
+//	live.go                                   the live comparison, its buckets and baseline
+//	liveskeleton.go                           the committed skeleton form and its inverse
 //
 // The <area> directory is the tools/webull-docgen AREAS manifest key, so a
 // fixture's directory says which part of the API surface it documents. The file
@@ -110,6 +123,13 @@
 // about its own contents. Neither the skeleton files nor the manifest is consumed
 // by divergence_test.go, and a skeleton is not a fixture: it is one observation of
 // one response, where a fixture is a restatement of one published schema.
+//
+// The committed skeletons are stored deduplicated -- distinct element shapes with
+// a count beside each, which is the evidence rather than the repetition -- so a
+// skeleton is not itself a body the comparison can read. liveskeleton.go holds
+// the form and its inverse, ExpandSkeleton turns the committed bytes back into
+// the reduced tree, and the leak gate walks the committed form rather than the
+// expanded one, so the guarantee is asserted against the bytes a reader can open.
 //
 // # What "the committed bytes" means on a given checkout
 //
@@ -187,6 +207,33 @@
 // the observed set stops being exactly that set. No entry is waived. See
 // baseline.go for why a baseline rather than a skip list, and for why a required
 // reason, while it blocks a reasonless entry, does not make a reason true.
+//
+// # What the live comparison adds, and what it cannot
+//
+// live.go runs the same five checks against the live tree, and everything it
+// rests on is in its own file comment: the two runs, the classification, the key,
+// and the limit that checkShape reads the manifest rather than the body. The two
+// short statements that belong here are the ones a reader of this package's
+// documentation should not have to go looking for.
+//
+// A live finding is a claim about Webull's server, so it is recorded in
+// live-divergences.json and not in known-divergences.json. The documented
+// baseline holds 25 entries and this one holds 13 from a single run against one
+// host; reading them as one backlog of 38 would be wrong, because the live rows
+// are not claims about this SDK. TestLiveFindingsAreAttributable exists because
+// the documented baseline's recorded failure was a reason repeated across many
+// entries, which satisfies a required-field check perfectly.
+//
+// Four of the 13 are the captured bodies the SDK's own type could not decode, and
+// that is the class the documented comparison is structurally blind to: a page
+// and a fixture made to agree with each other decode cleanly whether or not
+// either matches the server. One of the four -- data.GetFuturesTick -- is a name
+// the page and the SDK agree on and the server spells differently, which no
+// amount of reading the documentation could have found.
+//
+// Everything here rests on one authorised run against one sandbox. A finding is
+// what api.sandbox.webull.hk answered once, and nothing in this package says what
+// production answers.
 //
 // # Scope of the committed tree
 //

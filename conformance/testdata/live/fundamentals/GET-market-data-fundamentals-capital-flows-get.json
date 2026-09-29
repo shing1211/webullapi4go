@@ -1,47 +1,16 @@
-[
- {
-  "date": "1",
-  "large_in": "1",
-  "large_out": "1",
-  "medium_in": "1",
-  "medium_out": "1",
-  "small_in": "1",
-  "small_out": "1"
- },
- {
-  "date": "1",
-  "large_in": "1",
-  "large_out": "1",
-  "medium_in": "1",
-  "medium_out": "1",
-  "small_in": "1",
-  "small_out": "1"
- },
- {
-  "date": "1",
-  "large_in": "1",
-  "large_out": "1",
-  "medium_in": "1",
-  "medium_out": "1",
-  "small_in": "1",
-  "small_out": "1"
- },
- {
-  "date": "1",
-  "large_in": "1",
-  "large_out": "1",
-  "medium_in": "1",
-  "medium_out": "1",
-  "small_in": "1",
-  "small_out": "1"
- },
- {
-  "date": "1",
-  "large_in": "1",
-  "large_out": "1",
-  "medium_in": "1",
-  "medium_out": "1",
-  "small_in": "1",
-  "small_out": "1"
- }
-]
+{
+ "$array": [
+  {
+   "$count": 5,
+   "$shape": {
+    "date": "1",
+    "large_in": "1",
+    "large_out": "1",
+    "medium_in": "1",
+    "medium_out": "1",
+    "small_in": "1",
+    "small_out": "1"
+   }
+  }
+ ]
+}
