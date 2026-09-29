@@ -97,6 +97,8 @@ make docs
 make citations
 make conformance-fixtures
 make conformance-gate
+make conformance-live-gate
+make conformance-live-report
 ```
 
 - `make build`, `make vet`, and `make test` must pass without credentials.
@@ -145,6 +147,19 @@ make conformance-gate
   silent refresh; `make conformance-fixtures-update` is the only way to adopt
   new output. Both skip with exit 0 when the cache is absent, so a fresh
   checkout cannot judge drift either way.
+- `make conformance-live-gate` and `make conformance-live-report` are the same
+  pair pointed at the `live/` half of that tree: the observed set must be
+  exactly the set recorded in `conformance/live-divergences.json`, and the
+  report prints it. CI already enforced this, because the root build job runs
+  `go test -race ./...`, so the set was never ungated — but nothing a reader of
+  `AGENTS.md` could run reached it, and the third divergence set
+  `CHANGELOG.md` advertises had no documented way to be gated or reported. The
+  gate is a claim about Webull's server rather than about this SDK, so its
+  findings belong in that file and not in `known-divergences.json`; a green run
+  is no more evidence of correctness here than the documented gate's is. The
+  gate covers the whole `TestLive*` family by name prefix rather than by an
+  enumerated list, so a new live test is gated by default; see the Makefile for
+  the two names that do not share the prefix.
 - Every entry in `conformance/known-divergences.json` carries a reason and the
   loader refuses one that is empty, so a finding cannot be dropped by blanking a
   field. A reason explains why a divergence is recorded rather than fixed; a
