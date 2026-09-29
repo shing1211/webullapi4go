@@ -207,6 +207,20 @@ func TestEveryManifestFixtureIsEmbedded(t *testing.T) {
 // TestManifestDescribesTheWholeTree walks the embedded tree and holds the
 // manifest to it in both directions, so a fixture nobody can get back to a page
 // cannot sit in the package unrecorded.
+//
+// The tree holds two kinds of file and two indexes, and the walk is split to
+// match. Everything outside live/ is described by testdata/manifest.json, which
+// is generated from Webull's published OpenAPI JSON. Everything under live/ is
+// described by testdata/live-manifest.json, which examples/live-probe writes
+// from the sandbox: a different author, a different input, and a different
+// consumer, and merging the two would put a live reading next to a documented
+// example in one index and make a reader unable to tell which is which. The
+// README at the root of live/ is described by neither, because it is prose about
+// the tree rather than evidence in it.
+//
+// The split is a partition rather than an exemption: a file under live/ still
+// has to be named by the live manifest, so the relaxation is that the live tree
+// has its own index, not that it is unindexed.
 func TestManifestDescribesTheWholeTree(t *testing.T) {
 	m := load(t)
 	want := make(map[string]bool, len(m.Fixtures)+1)
@@ -214,7 +228,10 @@ func TestManifestDescribesTheWholeTree(t *testing.T) {
 	for _, f := range m.Fixtures {
 		want[f.Fixture] = true
 	}
-	var got []string
+	liveWant := loadLiveManifest(t)
+	want[liveManifestFile] = true
+
+	var got, liveGot []string
 	err := fs.WalkDir(fixturesFS, testdataDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -222,6 +239,13 @@ func TestManifestDescribesTheWholeTree(t *testing.T) {
 		rel, ok := strings.CutPrefix(path, testdataDir+"/")
 		if !ok {
 			return fmt.Errorf("path %q is not under %s", path, testdataDir)
+		}
+		if rel == "live/"+liveReadmeFile {
+			return nil
+		}
+		if strings.HasPrefix(rel, liveTreePrefix) {
+			liveGot = append(liveGot, strings.TrimPrefix(rel, liveTreePrefix))
+			return nil
 		}
 		got = append(got, rel)
 		return nil
@@ -237,8 +261,221 @@ func TestManifestDescribesTheWholeTree(t *testing.T) {
 		}
 	}
 	if len(got) != len(want) {
-		t.Errorf("tree holds %d files, manifest describes %d", len(got), len(want))
+		t.Errorf("tree holds %d documentation files, manifest describes %d", len(got), len(want))
 	}
+
+	sort.Strings(liveGot)
+	for _, rel := range liveGot {
+		if !liveWant[rel] {
+			t.Errorf("live/%s is committed but not in %s; that manifest is the "+
+				"index of the live tree, so this skeleton has no provenance", rel, liveManifestFile)
+		}
+	}
+	if len(liveGot) != len(liveWant) {
+		t.Errorf("live tree holds %d file(s), %s describes %d", len(liveGot), liveManifestFile, len(liveWant))
+	}
+}
+
+// The placeholders a reduced tree is made of. They are spelled out here rather
+// than imported from the program that wrote the tree, because the point of the
+// check below is that a reader of the committed files can verify the claim
+// without trusting - or running - the producer. A check that called the
+// producer's own helper would be asking the writer whether it had written what
+// it was asked to write.
+const (
+	liveStringPlaceholder = "1"
+	liveNumberPlaceholder = "-1"
+)
+
+// TestLiveSkeletonsCarryNoValue holds every committed live skeleton to the one
+// property that makes it safe to be in a repository: it carries every member
+// name the sandbox sent and no value it sent.
+//
+// This is the test that would catch a leak after the fact. A skeleton is
+// committed, so a price, a share count, a timestamp or an account number in one
+// is in git history, which is not a mistake anyone can delete. The reduction is
+// what prevents that, and this asserts the result rather than the intent: every
+// leaf in every committed file is the placeholder for its kind and nothing else.
+//
+// Four leaf types are accepted and two are rejected, and the rejections are the
+// interesting half. A float64 or an int is a value a decode without UseNumber
+// would have left behind, widened. A false is a boolean the reduction emits as
+// true unconditionally, so a false leaf proves the file did not come from the
+// reduction at all. Both are checked here so a future change to either the
+// reduction or the writer cannot quietly reintroduce a reading.
+func TestLiveSkeletonsCarryNoValue(t *testing.T) {
+	files := liveJSONFiles(t)
+	if len(files) == 0 {
+		t.Fatal("the live tree holds no .json file, so this test is asserting nothing")
+	}
+	for _, name := range files {
+		t.Run(name, func(t *testing.T) {
+			data, err := fixturesFS.ReadFile(name)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			dec := json.NewDecoder(bytes.NewReader(data))
+			dec.UseNumber()
+			var value any
+			if err := dec.Decode(&value); err != nil {
+				t.Fatalf("a committed skeleton is not parseable JSON: %v", err)
+			}
+			if dec.More() {
+				t.Fatal("a committed skeleton holds more than one JSON value")
+			}
+			assertNoLiveValue(t, value, "$", name)
+		})
+	}
+}
+
+// assertNoLiveValue walks one decoded skeleton and fails on any leaf that could
+// carry something the server sent.
+func assertNoLiveValue(t *testing.T, value any, path, file string) {
+	t.Helper()
+	switch leaf := value.(type) {
+	case map[string]any:
+		for name, member := range leaf {
+			assertNoLiveValue(t, member, path+"."+name, file)
+		}
+	case []any:
+		for i, element := range leaf {
+			assertNoLiveValue(t, element, fmt.Sprintf("%s[%d]", path, i), file)
+		}
+	case string:
+		if leaf != liveStringPlaceholder {
+			t.Errorf("%s holds %q at %s: a string the reduction emits is %q",
+				file, leaf, path, liveStringPlaceholder)
+		}
+	case json.Number:
+		if leaf.String() != liveNumberPlaceholder {
+			t.Errorf("%s holds the number %s at %s: the reduction emits %s for every number",
+				file, leaf, path, liveNumberPlaceholder)
+		}
+	case bool:
+		if !leaf {
+			t.Errorf("%s holds false at %s: the reduction emits true for every boolean, "+
+				"so a false leaf proves the file was not reduced", file, path)
+		}
+	case nil:
+	case float64, int, int64:
+		t.Errorf("%s holds a %T at %s: a widened value, which the reduction never emits",
+			file, leaf, path)
+	default:
+		t.Errorf("%s holds a %T at %s: no reduction emits that type", file, leaf, path)
+	}
+}
+
+// liveJSONFiles returns every .json path under the live tree, in sorted order,
+// so a failure names a file rather than an index.
+//
+// The root is spelled without a trailing separator because io/fs requires a
+// valid path: fs.WalkDir stats its root before it walks, and an embedded FS
+// rejects a name with a trailing slash, which would fail this test on a tree
+// that is present.
+func liveJSONFiles(t *testing.T) []string {
+	t.Helper()
+	var found []string
+	root := testdataDir + "/" + strings.TrimSuffix(liveTreePrefix, "/")
+	err := fs.WalkDir(fixturesFS, root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".json") {
+			found = append(found, p)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", root, err)
+	}
+	sort.Strings(found)
+	return found
+}
+
+// TestLiveManifestDeclaresItHoldsNoValues checks the two statements the live
+// manifest makes about itself that a reader would otherwise have to infer: that
+// it is a different artifact from the documentation manifest beside it, and that
+// it holds no readings.
+func TestLiveManifestDeclaresItHoldsNoValues(t *testing.T) {
+	data, err := fixturesFS.ReadFile(testdataDir + "/" + liveManifestFile)
+	if err != nil {
+		t.Fatalf("read %s: %v", liveManifestFile, err)
+	}
+	var manifest struct {
+		Kind      string `json:"kind"`
+		Warning   string `json:"warning"`
+		Generator struct {
+			ContainsValues bool `json:"containsValues"`
+		} `json:"generator"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatalf("parse %s: %v", liveManifestFile, err)
+	}
+	if manifest.Kind == "" {
+		t.Errorf("%s does not name its own kind, so a reader holding only the file "+
+			"cannot tell it from the documentation manifest", liveManifestFile)
+	}
+	if manifest.Generator.ContainsValues {
+		t.Errorf("%s claims to hold values", liveManifestFile)
+	}
+	if !strings.Contains(manifest.Warning, "no value it sent") {
+		t.Errorf("%s does not warn that it holds no values: %q", liveManifestFile, manifest.Warning)
+	}
+}
+
+// liveTreePrefix, liveReadmeFile and liveManifestFile locate the live evidence
+// tree and its index inside the committed testdata directory.
+//
+// The three are spelled out rather than derived, and the prefix ends in a
+// separator so a file called "liver" is not in the live tree. They are facts
+// about the committed layout, and a fact a test re-derives from the tree it is
+// checking is a fact the tree can change underneath it.
+const (
+	liveTreePrefix   = "live/"
+	liveReadmeFile   = "README.md"
+	liveManifestFile = "live-manifest.json"
+)
+
+// loadLiveManifest reads the live manifest and returns the skeleton paths it
+// names, relative to live/.
+//
+// The manifest is read with a minimal anonymous struct rather than a type of its
+// own: it is written by an example program, not by this package, and this
+// package has no business depending on the shape of a file it does not read
+// elsewhere. The only field this needs is the file each entry was written to,
+// and reading one field is what a cross-boundary reader should do: a strict
+// parse would make this test fail for an unrelated field the two sides are
+// entitled to evolve independently.
+func loadLiveManifest(t *testing.T) map[string]bool {
+	t.Helper()
+	data, err := fixturesFS.ReadFile(testdataDir + "/" + liveManifestFile)
+	if err != nil {
+		t.Fatalf("read %s: %v", liveManifestFile, err)
+	}
+	var manifest struct {
+		Entries []struct {
+			Skeleton string `json:"skeleton"`
+		} `json:"entries"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatalf("parse %s: %v", liveManifestFile, err)
+	}
+	if len(manifest.Entries) == 0 {
+		t.Fatalf("%s records no entries, so the live tree is unindexed", liveManifestFile)
+	}
+	named := make(map[string]bool, len(manifest.Entries))
+	for _, e := range manifest.Entries {
+		if e.Skeleton == "" {
+			continue
+		}
+		rel, ok := strings.CutPrefix(e.Skeleton, liveTreePrefix)
+		if !ok {
+			t.Errorf("%s names skeleton %q, which is not under %s", liveManifestFile, e.Skeleton, liveTreePrefix)
+			continue
+		}
+		named[rel] = true
+	}
+	return named
 }
 
 func TestManifestTotalsAgreeWithRecords(t *testing.T) {

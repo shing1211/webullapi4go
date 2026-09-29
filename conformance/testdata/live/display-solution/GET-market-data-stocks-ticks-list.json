@@ -1,0 +1,76 @@
+{
+ "instrument_id": "1",
+ "result": [
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  },
+  {
+   "price": "1",
+   "side": "1",
+   "time": "1",
+   "trading_session": "1",
+   "volume": "1"
+  }
+ ],
+ "symbol": "1"
+}

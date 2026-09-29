@@ -1,0 +1,221 @@
+{
+ "currency": "1",
+ "values": {
+  "cap_surplus_ps": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "debt_to_assets": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "diluted_eps_incl_extra": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "naps": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "net_margin": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "ocf_ps": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "roa": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ],
+  "roe": [
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   },
+   {
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "value": "1"
+   }
+  ]
+ }
+}

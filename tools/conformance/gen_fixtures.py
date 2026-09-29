@@ -103,6 +103,24 @@ import _common as common  # noqa: E402  (needs the path above)
 OUT_DIR = os.path.join(_ROOT, "conformance", "testdata")
 MANIFEST_NAME = "manifest.json"
 
+# Paths under OUT_DIR this tool does not own, and therefore must not read as
+# drift. `live/` holds the value-free response skeletons
+# examples/live-probe captures from the sandbox, and `live-manifest.json` indexes
+# them; both are evidence from a running server, and neither is a function of the
+# published OpenAPI JSON this tool regenerates from.
+#
+# The exclusion is exact-name rather than prefix-and-hope, so a genuinely new
+# documentation fixture is still reported: `check` compares every file this tool
+# did not plan against every file it found, and a name that is not on this list
+# is still in that comparison. Without the exclusion, `--check` would report
+# every live file as *removed* - planned set versus found set - and a gate that
+# reports the committed evidence as deleted is a gate nobody can read.
+#
+# conformance/fixtures_test.go makes the matching change on the Go side: the live
+# tree is indexed by the live manifest rather than by the documentation one.
+LIVE_DIR = "live"
+LIVE_MANIFEST_NAME = "live-manifest.json"
+
 # A fixture this large is still readable in a diff; a fixture much larger than
 # this is not a schema-derived instance any more. A future page that inlines a
 # base64 blob as an `example` would blow past both, and the committed tree would
@@ -668,8 +686,19 @@ def out_path(name):
     return os.path.normpath(os.path.join(OUT_DIR, *name.split("/")))
 
 
+def owned_by_generator(rel):
+    """Report whether a testdata-relative path is one this tool generates.
+
+    ``committed_files`` collects every file under ``OUT_DIR`` so ``--check`` can
+    compare the planned set with the found set, and the live evidence tree is
+    not in the planned set. See ``LIVE_DIR`` for why the exclusion exists.
+    """
+    first = rel.split("/", 1)[0]
+    return first != LIVE_DIR and rel != LIVE_MANIFEST_NAME
+
+
 def committed_files():
-    """Map every file under ``conformance/testdata`` to its text.
+    """Map every file under ``conformance/testdata`` this tool owns to its text.
 
     Keys are forward-slashed and relative to ``OUT_DIR``, the same key space
     ``record["fixture"]`` uses. Keying on the raw path instead made ``--check``
@@ -680,8 +709,11 @@ def committed_files():
     for root, _dirs, files in os.walk(OUT_DIR):
         for name in files:
             path = os.path.join(root, name)
+            rel = os.path.relpath(path, OUT_DIR).replace(os.sep, "/")
+            if not owned_by_generator(rel):
+                continue
             with open(path, "r", encoding="utf-8") as fh:
-                found[os.path.relpath(path, OUT_DIR).replace(os.sep, "/")] = fh.read()
+                found[rel] = fh.read()
     return found
 
 
@@ -982,6 +1014,20 @@ def self_test():
     check("pointer escaping",
           pointer("responses", "200", "content", "application/json"),
           "/responses/200/content/application~1json")
+
+    # -- the live evidence tree this tool does not own --------------------
+    # Without these, `--check` reports every captured skeleton as a deletion and
+    # the drift gate becomes unreadable. The two edges matter as much as the
+    # middle one: a directory whose name merely starts with "live" is a
+    # documentation fixture, and MANIFEST_NAME must still be ours.
+    check("live skeleton is not ours", owned_by_generator("live/trading/x.json"), False)
+    check("live readme is not ours", owned_by_generator("live/README.md"), False)
+    check("live manifest is not ours", owned_by_generator(LIVE_MANIFEST_NAME), False)
+    check("a documentation fixture is ours", owned_by_generator("trading/GET-x.json"), True)
+    check("the documentation manifest is ours", owned_by_generator(MANIFEST_NAME), True)
+    check("a directory merely starting with live is ours", owned_by_generator("liver/x.json"), True)
+    check("a file named like the live manifest elsewhere is ours",
+          owned_by_generator("trading/live-manifest.json"), True)
 
     if failures:
         print("self-test FAILED (%d of %d checks):" % (len(failures), len(ran)))
