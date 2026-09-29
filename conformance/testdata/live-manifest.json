@@ -5,10 +5,10 @@
   "tool": "examples/live-probe (phase 2, -capture)",
   "command": "go run . -capture -out ../../conformance/testdata",
   "source": "the sandbox named by host below, reached through client.WithEnv; the app key and app secret come from the process environment and reach no file here",
-  "derivedFrom": "the live response body of each endpoint, reduced by Skeletonify, which keeps every member name and replaces every value",
-  "containsValues": false,
-  "leafForms": "\"1\" is a string, -1 is a number, true is a boolean, null is a null; an array reduces to an array and an object to an object, so the shape is preserved and the reading is not",
-  "determinism": "A skeleton is a function of the response body alone: object members are written in sorted order, so the same body always produces the same bytes and a diff means the server sent something different. This manifest is the one file that changes on every re-run, because probedAt is a clock reading."
+    "derivedFrom": "the live response body of each endpoint, reduced by Skeletonify, which keeps every member name and replaces every value, and written by conformance.EncodeSkeleton, which stores each distinct array element shape once beside a count of how many elements took it",
+    "containsValues": false,
+    "leafForms": "\"1\" is a string, -1 is a number, true is a boolean, null is a null; an object reduces to an object and an array to a list of its distinct element shapes with a count beside each, so the shape is preserved and the reading is not",
+    "determinism": "A skeleton is a function of the response body alone: object members are written in sorted order and the array records are sorted by the encoding of the shape they hold, so the same body always produces the same bytes and a diff means the server sent something different. This manifest is the one file that changes on every re-run, because probedAt is a clock reading."
  },
  "scope": "Only endpoints the reachability census recorded as HTTP 200 are captured. A 404, 401, 403, 417, 500 or 504 is a live answer about whether an endpoint is served, but its body is Webull's error shape, and reducing one would compare an error against a documented success response and manufacture a divergence. The census block below records every other status this run saw and why it was not captured.",
  "host": "api.sandbox.webull.hk",

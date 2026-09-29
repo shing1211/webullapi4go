@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/shing1211/webullapi4go/conformance"
 )
 
 // --------------------------------------------------------------------------
@@ -167,8 +169,9 @@ func TestWriteCaptureWritesTheSkeletonVerbatim(t *testing.T) {
 	}
 }
 
-// A real capture writes the bytes Skeletonify and encodeSkeleton produce, so the
-// literal above is checked against the pipeline rather than trusted.
+// A real capture writes the bytes Skeletonify and conformance.EncodeSkeleton
+// produce, so the literal above is checked against the pipeline rather than
+// trusted.
 func TestCaptureWritesTheReducedTreeAndNothingElse(t *testing.T) {
 	// A body carrying every kind at depth, a name the SDK does not have, and the
 	// figures a leak would look like.
@@ -199,9 +202,14 @@ func TestCaptureWritesTheReducedTreeAndNothingElse(t *testing.T) {
 		t.Fatalf("reading the skeleton: %v", err)
 	}
 
+	// The committed form is the deduplicated one the conformance package reads, so
+	// the arrays are $array wrappers: "lots" holds one record of one copy, and
+	// "empty" holds none. Pinning the literal is the point -- it is the whole
+	// claim about what a skeleton file looks like -- and the wrapper is part of it.
 	const want = "{\n \"a_name_the_sdk_does_not_carry\": \"1\",\n \"active\": true,\n" +
-		" \"close\": -1,\n \"empty\": [],\n \"filled_quantity\": -1,\n" +
-		" \"lots\": [\n  {\n   \"price\": \"1\",\n   \"symbol\": \"1\"\n  }\n ],\n" +
+		" \"close\": -1,\n \"empty\": {\n  \"$array\": []\n },\n \"filled_quantity\": -1,\n" +
+		" \"lots\": {\n  \"$array\": [\n   {\n    \"$count\": 1,\n" +
+		"    \"$shape\": {\n     \"price\": \"1\",\n     \"symbol\": \"1\"\n    }\n   }\n  ]\n },\n" +
 		" \"order_id\": \"1\",\n \"place_time_at\": -1,\n \"ratio\": null,\n" +
 		" \"total_quantity\": \"1\"\n}\n"
 	if string(raw) != want {
@@ -310,9 +318,9 @@ func TestWriteCaptureIsByteIdenticalAcrossRuns(t *testing.T) {
 		for i := 0; i < 9; i++ {
 			reduced["m"+strconv.Itoa(i)] = map[string]any{"n": "1", "v": -1}
 		}
-		encoded, err := encodeSkeleton(reduced)
+		encoded, err := conformance.EncodeSkeleton(reduced)
 		if err != nil {
-			t.Fatalf("encodeSkeleton: %v", err)
+			t.Fatalf("conformance.EncodeSkeleton: %v", err)
 		}
 		return map[string][]byte{"live/fundamentals/x.json": encoded}
 	}
@@ -483,9 +491,9 @@ func TestLiveManifestAccountsForSkeletonsWithNoElementShape(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Skeletonify(%s): %v", tc.body, err)
 			}
-			raw, err := encodeSkeleton(reduced)
+			raw, err := conformance.EncodeSkeleton(reduced)
 			if err != nil {
-				t.Fatalf("encodeSkeleton(%s): %v", tc.body, err)
+				t.Fatalf("conformance.EncodeSkeleton(%s): %v", tc.body, err)
 			}
 			key := tc.key
 			doc := NewLiveManifest(
@@ -504,7 +512,7 @@ func TestLiveManifestAccountsForSkeletonsWithNoElementShape(t *testing.T) {
 			if doc.Size.ArrayElements != tc.wantElement {
 				t.Errorf("size.arrayElements = %d, want %d", doc.Size.ArrayElements, tc.wantElement)
 			}
-			if doc.Size.Reason != liveSizeReason {
+			if doc.Size.Reason != liveSizeReason(doc.Size.ArrayElements, doc.Size.DistinctElementShapes) {
 				t.Error("the size block carries no reason, so a reader of a large " +
 					"tree has the numbers and nothing to read them with")
 			}
@@ -514,17 +522,17 @@ func TestLiveManifestAccountsForSkeletonsWithNoElementShape(t *testing.T) {
 	// The corpus case: two files sharing one element shape, and one shape of their
 	// own. The distinct count is over the whole tree, so a shape both files hold is
 	// counted once - that is what makes it a composition rather than a sum.
-	shared, err := encodeSkeleton(map[string]any{
+	shared, err := conformance.EncodeSkeleton(map[string]any{
 		"rows": []any{map[string]any{"a": numberPlaceholder}},
 	})
 	if err != nil {
-		t.Fatalf("encodeSkeleton: %v", err)
+		t.Fatalf("conformance.EncodeSkeleton: %v", err)
 	}
-	own, err := encodeSkeleton(map[string]any{
+	own, err := conformance.EncodeSkeleton(map[string]any{
 		"rows": []any{map[string]any{"b": numberPlaceholder}},
 	})
 	if err != nil {
-		t.Fatalf("encodeSkeleton: %v", err)
+		t.Fatalf("conformance.EncodeSkeleton: %v", err)
 	}
 	doc := NewLiveManifest([]ManifestEntry{
 		{Fixture: "x.json", Skeleton: "live/x.json", Status: 200, Host: "h"},
@@ -545,6 +553,126 @@ func TestLiveManifestAccountsForSkeletonsWithNoElementShape(t *testing.T) {
 			"want 1: the count is over the tree, not the sum of the counts per file",
 			both.Size.DistinctElementShapes)
 	}
+}
+
+// The committed manifest is the writer's own account of the committed tree, and
+// the only thing that keeps the two from drifting apart is a test that reads one
+// and holds it to the other.
+//
+// A -capture run rewrites the whole file, so the prose is not what breaks first:
+// what breaks is the tree. But the prose went stale once already, in the other
+// direction -- the tree was re-encoded and the writer still described the
+// expanded form, so a re-run would have produced a manifest that contradicted the
+// files beside it. Nothing in either module would have said so, because the
+// manifest's own tests all build a manifest and compare it to the code, and the
+// committed file was never compared to the code.
+//
+// So this reads the committed manifest and holds the three blocks a reader relies
+// on to what this program would write today: the provenance block, the size
+// block's numbers, and the sentence in the size block that names those numbers.
+// probedAt, host and the per-row readings are excluded deliberately -- they are a
+// capture's readings and they change on every run by design.
+//
+// The way to break this test is to edit the committed manifest, or the strings
+// this program builds, without doing the other. That is the whole drift.
+func TestCommittedLiveManifestMatchesThisWriter(t *testing.T) {
+	path, err := committedLiveManifest()
+	if err != nil {
+		t.Skipf("the committed live manifest is not reachable from here: %v", err)
+	}
+	raw, err := os.ReadFile(path) //nolint:gosec // G304: the path came from committedLiveManifest, which locates the committed file.
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var committed struct {
+		Generator LiveGenerator `json:"generator"`
+		Size      LiveSize      `json:"size"`
+	}
+	if err := json.Unmarshal(raw, &committed); err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	if want := liveGeneratorBlock(); committed.Generator != want {
+		t.Errorf("the committed manifest's generator block is not what this writer "+
+			"produces.\ncommitted: %+v\nproduced:  %+v", committed.Generator, want)
+	}
+	// The counts are recomputed from the committed skeletons rather than read from
+	// the manifest, so a manifest whose numbers no longer describe the tree fails
+	// here instead of being taken on trust.
+	var (
+		elements int
+		shapes   = map[string]bool{}
+	)
+	skeletons, err := committedLiveSkeletons(filepath.Dir(path))
+	if err != nil {
+		t.Skipf("the committed live tree is not reachable from here: %v", err)
+	}
+	for _, body := range skeletons {
+		survey := conformance.SurveySkeleton(body)
+		elements += survey.ArrayElements
+		for shape := range survey.DistinctElementShapes {
+			shapes[shape] = true
+		}
+	}
+	if committed.Size.ArrayElements != elements {
+		t.Errorf("the committed manifest records %d array element(s) and the committed "+
+			"tree expands to %d", committed.Size.ArrayElements, elements)
+	}
+	if committed.Size.DistinctElementShapes != len(shapes) {
+		t.Errorf("the committed manifest records %d distinct element shape(s) and the "+
+			"committed tree holds %d", committed.Size.DistinctElementShapes, len(shapes))
+	}
+	if want := liveSizeReason(elements, len(shapes)); committed.Size.Reason != want {
+		t.Errorf("the committed manifest's size reason is not what this writer renders "+
+			"for %d element(s) and %d shape(s).\ncommitted: %s\nproduced:  %s",
+			elements, len(shapes), committed.Size.Reason, want)
+	}
+}
+
+// committedLiveManifest locates the committed live manifest by walking up from
+// this program's directory, so the test does not depend on the working directory
+// `go test` happens to choose.
+func committedLiveManifest() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		candidate := filepath.Join(dir, "conformance", "testdata", liveManifestName)
+		if _, statErr := os.Stat(candidate); statErr == nil {
+			return candidate, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errors.New("no conformance/testdata/" + liveManifestName + " in any parent directory")
+		}
+		dir = parent
+	}
+}
+
+// committedLiveSkeletons reads every skeleton the committed manifest names, under
+// the testdata directory the manifest itself lives in.
+func committedLiveSkeletons(testdata string) (map[string][]byte, error) {
+	raw, err := os.ReadFile(filepath.Join(testdata, liveManifestName)) //nolint:gosec // G304: a fixed name under the directory committedLiveManifest located.
+	if err != nil {
+		return nil, err
+	}
+	var doc struct {
+		Entries []struct {
+			Skeleton string `json:"skeleton"`
+		} `json:"entries"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, err
+	}
+	out := map[string][]byte{}
+	for _, e := range doc.Entries {
+		body, err := os.ReadFile(filepath.Join(testdata, filepath.FromSlash(e.Skeleton))) //nolint:gosec // G304: the key came from the committed manifest beside the committed skeletons.
+		if err != nil {
+			return nil, err
+		}
+		out[e.Skeleton] = body
+	}
+	return out, nil
 }
 
 // The manifest's derived accounting has to survive the round trip through JSON,
@@ -1249,13 +1377,29 @@ func captureThroughServer(t *testing.T, srv *httptest.Server, ep Endpoint, statu
 // skeleton_test.go applies to a tree in memory, run here on the committed form:
 // a reduction can be correct in memory and a serialisation can still be wrong,
 // and only the second one reaches git.
+//
+// The committed form is the deduplicated one, so the walk runs over its expansion
+// rather than over the records. Expanding is not a weakening: a record's shape is
+// walked in full, so a value planted inside one is still reached, and the
+// expansion itself failing is a failure -- a file this program cannot read back
+// is not evidence. The count is the one position the walk does not see, and
+// isPositiveInteger in conformance/fixtures_test.go states why nothing in either
+// program could see a reading there anyway.
 func assertNoLiveValueInFile(t *testing.T, raw []byte) {
 	t.Helper()
-	dec := json.NewDecoder(bytes.NewReader(raw))
+	if !json.Valid(raw) {
+		t.Fatalf("the committed skeleton is not valid JSON: %s", raw)
+	}
+	expanded, err := conformance.ExpandSkeleton(raw)
+	if err != nil {
+		t.Fatalf("the committed skeleton is not one the reader can expand, so nothing "+
+			"downstream could compare it either: %v", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(expanded))
 	dec.UseNumber()
 	var decoded any
 	if err := dec.Decode(&decoded); err != nil {
-		t.Fatalf("the committed skeleton does not decode: %v", err)
+		t.Fatalf("the expansion does not decode: %v", err)
 	}
 	assertNoLiveValue(t, decoded, "$")
 }

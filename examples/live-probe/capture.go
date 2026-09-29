@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +26,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -71,10 +71,18 @@ import (
 // Two trees now sit under conformance/testdata. The documentation fixtures are
 // derived from Webull's published OpenAPI JSON by tools/conformance, and
 // conformance.CompareBody reads them. The live skeletons are derived from the
-// sandbox, and nothing in the conformance package reads them yet. They are kept
-// in separate subtrees with separate manifests so a reader scanning the
-// directory can tell which is which without opening a file, and so a change to
-// one can never be mistaken for drift in the other.
+// sandbox, and conformance.CompareLive reads those -- as a second body for the
+// same five checks, with the findings recorded in conformance/live-divergences.json
+// rather than in the SDK's own backlog. They are kept in separate subtrees with
+// separate manifests so a reader scanning the directory can tell which is which
+// without opening a file, and so a change to one can never be mistaken for drift
+// in the other.
+//
+// The dependency runs this way and not the other: this program already imports
+// the conformance package for the symbol table, so the writer and the reader share
+// one encoder and one survey rather than holding a copy of each. A reimplementation
+// here could disagree with the reader with no test failing at the boundary, and the
+// committed file it produced would be a tree the harness could not read.
 
 // liveTreeName is the single directory this probe may write into under
 // conformance/testdata.
@@ -330,36 +338,65 @@ func liveGeneratorBlock() LiveGenerator {
 		Source: "the sandbox named by host below, reached through client.WithEnv; the " +
 			"app key and app secret come from the process environment and reach no file here",
 		DerivedFrom: "the live response body of each endpoint, reduced by Skeletonify, which " +
-			"keeps every member name and replaces every value",
+			"keeps every member name and replaces every value, and written by " +
+			"conformance.EncodeSkeleton, which stores each distinct array element shape once " +
+			"beside a count of how many elements took it",
 		ContainsValues: false,
 		LeafForms: `"1" is a string, -1 is a number, true is a boolean, null is a null; ` +
-			"an array reduces to an array and an object to an object, so the shape is preserved " +
-			"and the reading is not",
+			"an object reduces to an object and an array to a list of its distinct element " +
+			"shapes with a count beside each, so the shape is preserved and the reading is not",
 		Determinism: "A skeleton is a function of the response body alone: object members are " +
-			"written in sorted order, so the same body always produces the same bytes and a diff " +
+			"written in sorted order and the array records are sorted by the encoding of the " +
+			"shape they hold, so the same body always produces the same bytes and a diff " +
 			"means the server sent something different. This manifest is the one file that " +
 			"changes on every re-run, because probedAt is a clock reading.",
 	}
 }
 
-// liveSizeReason states what the size block's two counts mean. It is a constant
-// rather than prose beside the code because it is written into every manifest and
-// is what the next reader of a 1.9 MB tree will look for.
+// liveSizeReason states what the size block's two counts mean, in the terms the
+// written tree uses. It is a function of the counts rather than a constant because
+// it names them, and a sentence with the numbers transcribed into it goes stale
+// the moment a capture changes the tree -- which is the drift this package exists
+// to end, applied to its own prose.
 //
 // It corrects a claim this tree previously implied and did not make. Bounding an
 // array and moving the tree are not the only two things that could be done to the
 // size, and treating them as the whole set was wrong: the numbers below show where
 // the bytes are, and what they rule in as well as out. Nothing here proposes an
 // action, and no bound is imposed.
-const liveSizeReason = "totals.skeletonBytes is the whole tree, and most of it is repetition: " +
-	"arrayElements is every element of every array in the written skeletons, distinctElementShapes " +
-	"is how many distinct reduced shapes those elements take, and the difference is the elements " +
-	"repeating a shape the tree already holds elsewhere in it. The sandbox answers with hundreds of " +
-	"rows of a handful of shapes where one row would carry the same names and kinds. These files " +
-	"are live data rather than minimal instances, so the documentation fixtures' sizeTripwire does " +
-	"not apply to them; the tree's size is a fact about the responses that produced it, no bound is " +
-	"imposed on it here, and nothing in this manifest claims the size could not be reduced without " +
-	"losing a member name or a kind."
+func liveSizeReason(elements, shapes int) string {
+	return "arrayElements is every element of every array the skeletons expand to, and " +
+		"distinctElementShapes is how many distinct reduced shapes those elements take. The " +
+		"written tree holds each distinct shape once beside a count of how many elements " +
+		"took it, so the two numbers are the tree's evidence rather than its size: " +
+		groupThousands(elements) + " elements are written as " + strconv.Itoa(shapes) +
+		" shapes. The sandbox answers with hundreds of rows of a handful of shapes where one " +
+		"row would carry the same names and kinds, and the tree stores the shapes and the " +
+		"counts rather than the repetition, which is lossless for member names and JSON " +
+		"kinds because nothing was dropped and the counts still sum to the original length. " +
+		"These files are live data rather than minimal instances, so the documentation " +
+		"fixtures' sizeTripwire does not apply to them; the tree's size is a fact about the " +
+		"responses that produced it and no bound is imposed on it here."
+}
+
+// groupThousands renders n with a comma every three digits, so the sentence
+// liveSizeReason builds reads the way a reader of 8,182 elements expects. It is a
+// helper rather than a format string because the manifest's own fields carry raw
+// integers and this prose is the only place a grouped figure belongs.
+func groupThousands(n int) string {
+	digits := strconv.Itoa(n)
+	if len(digits) <= 3 {
+		return digits
+	}
+	var b strings.Builder
+	for i, r := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
 
 // NewLiveManifest assembles the manifest for one capture run from its rows and
 // the skeletons they produced.
@@ -371,8 +408,9 @@ const liveSizeReason = "totals.skeletonBytes is the whole tree, and most of it i
 //
 // The size block and the WithoutElementShape list are derived from the skeleton
 // bytes for the same reason: they describe the tree, so reading them off the tree
-// is the only way they cannot disagree with it. Both walk the committed form
-// rather than the reduced tree, because the committed form is what a reader sees.
+// is the only way they cannot disagree with it. The reason block is rendered from
+// the two counts it names, so a sentence in it cannot survive a capture that
+// changed them.
 func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveManifest {
 	doc := LiveManifest{
 		Kind:      liveKind,
@@ -380,10 +418,8 @@ func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveM
 		Generator: liveGeneratorBlock(),
 		Scope:     liveScope,
 		Entries:   append([]ManifestEntry(nil), entries...),
-		Size:      LiveSize{Reason: liveSizeReason},
 	}
 	sort.Slice(doc.Entries, func(i, j int) bool { return doc.Entries[i].Fixture < doc.Entries[j].Fixture })
-
 	// One set across the whole tree, so DistinctElementShapes is the number of
 	// shapes the tree holds rather than the sum of the number each file holds.
 	shapes := map[string]bool{}
@@ -427,6 +463,7 @@ func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveM
 	}
 	sort.Strings(doc.Totals.WithoutElementShape)
 	doc.Size.DistinctElementShapes = len(shapes)
+	doc.Size.Reason = liveSizeReason(doc.Size.ArrayElements, doc.Size.DistinctElementShapes)
 	return doc
 }
 
@@ -434,52 +471,33 @@ func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveM
 // manifest records about it: the distinct array element shapes it holds, how many
 // array elements it holds in all, and whether it holds any element at all.
 //
-// The shapes are keyed by the compact encoding of the element. encoding/json
-// writes a map's members in sorted order, so two elements with the same shape have
-// the same encoding and the keying does not depend on the order the members happen
-// to appear in. UseNumber is on so a number element keeps the literal it was
-// written with rather than a float64 round trip.
+// It delegates to conformance.SurveySkeleton, and the delegation is the point
+// rather than a convenience. The manifest describes the tree the reader sees, and
+// the reader sees the deduplicated form, so the accounts have to be computed over
+// the *expanded* tree: read the committed bytes directly and a record holding a
+// count of 997 counts as one element, so every multi-element array in the tree
+// would be undercounted and totals.arrayElements would describe something the
+// file does not hold.
 //
-// A skeleton that does not parse is reported as carrying an element, and a
-// skeleton with no array at all is reported as carrying one too. Both are the
-// conservative direction: the field this feeds is a list of skeletons whose every
-// array is empty, and adding a skeleton that holds a member-name-and-kind shape to
-// that list would tell a reader it holds nothing when it holds something.
+// That is the same reason the encoder is conformance.EncodeSkeleton. Two
+// implementations of one definition, one in this program and one in the reader,
+// can disagree with no test failing at the boundary: a probe that walked the
+// committed form while the reader walked the expanded one would each be internally
+// consistent and jointly wrong. The dependency already runs this way -- this file
+// imports the conformance package for Subject and SDKTypes -- so sharing the
+// reader's definitions costs nothing in structure and removes the class.
+//
+// The shapes are keyed by the compact encoding of the element, so two elements
+// with the same shape have the same key and the count does not depend on the order
+// the members happen to appear in. A skeleton that cannot be read is reported as
+// carrying an element, and a skeleton with no array at all is reported as carrying
+// one too: both are the conservative direction, because the field this feeds is a
+// list of skeletons whose every array is empty, and adding a skeleton that holds a
+// member-name-and-kind shape to that list would tell a reader it holds nothing when
+// it holds something.
 func surveySkeleton(raw []byte) (shapes map[string]bool, elements int, carriesElement bool) {
-	shapes = map[string]bool{}
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	var tree any
-	if err := dec.Decode(&tree); err != nil {
-		return shapes, 0, true
-	}
-	var sawArray, sawPopulatedArray bool
-	var walk func(any)
-	walk = func(v any) {
-		switch node := v.(type) {
-		case map[string]any:
-			for _, member := range node {
-				walk(member)
-			}
-		case []any:
-			sawArray = true
-			if len(node) > 0 {
-				sawPopulatedArray = true
-			}
-			for _, element := range node {
-				elements++
-				encoded, err := json.Marshal(element)
-				if err == nil {
-					shapes[string(encoded)] = true
-				}
-				walk(element)
-			}
-		}
-	}
-	walk(tree)
-	// A populated array anywhere in the tree counts, whatever order the map walk
-	// reached it in, so an empty list visited after a populated one cannot undo it.
-	return shapes, elements, !sawArray || sawPopulatedArray
+	survey := conformance.SurveySkeleton(raw)
+	return survey.DistinctElementShapes, survey.ArrayElements, survey.CarriesElementShape
 }
 
 // WriteCapture writes the skeletons and the live manifest for one run under
@@ -703,27 +721,6 @@ func resolveLivePath(root, key string) (string, error) {
 			key, resolved, liveRoot)
 	}
 	return resolved, nil
-}
-
-// encodeSkeleton renders a reduced tree as the bytes that get committed.
-//
-// The form is json.MarshalIndent with one space of indent and a trailing
-// newline, which is what conformance/testdata/manifest.json uses, so the two
-// files in the same directory read the same way. encoding/json writes the
-// members of a map in sorted order, so the bytes are a function of the tree
-// alone: the same response produces the same file, and a diff after a re-run
-// means the server sent something different rather than that Go randomised a
-// map.
-//
-// Only the reduced tree is marshalled. Nothing else about the response reaches
-// this function, so there is no path by which a live value can reach the file it
-// writes.
-func encodeSkeleton(reduced any) ([]byte, error) {
-	encoded, err := json.MarshalIndent(reduced, "", " ")
-	if err != nil {
-		return nil, err
-	}
-	return append(encoded, '\n'), nil
 }
 
 // liveKey is where an endpoint's skeleton is written: the documentation fixture
@@ -1109,9 +1106,16 @@ func Capture(ctx context.Context, cl *client.Client, ep Endpoint, prev Outcome) 
 			"empty shape, which would read as an endpoint that answered with nothing"
 		return nil, entry, nil
 	}
-	skeleton, encodeErr := encodeSkeleton(reduced)
+	// conformance.EncodeSkeleton is the encoder, not a second one beside it. The
+	// committed form is deduplicated -- an array is written as its distinct element
+	// shapes with a count beside each -- and that form is a shared contract: the
+	// conformance package reads it, its leak gate walks it, and its canonicality
+	// check re-encodes it. A local marshaller would write the expanded form over a
+	// tree the reader expects to be deduped, and the only signal would be a
+	// 1.9 MB diff that looks like evidence and is not one.
+	skeleton, encodeErr := conformance.EncodeSkeleton(reduced)
 	if encodeErr != nil {
-		return nil, entry, fmt.Errorf("live-probe: %s: a reduced tree did not marshal, which no "+
+		return nil, entry, fmt.Errorf("live-probe: %s: a reduced tree did not encode, which no "+
 			"reduced tree should: %w", ep.Fixture, encodeErr)
 	}
 	entry.Skeleton = liveKey(ep.Fixture)
