@@ -181,7 +181,7 @@ func TestSkeletonifyNoLiveValueSurvives(t *testing.T) {
 		// the most account-number-shaped literal available, which is why it is
 		// in the corpus: it is the number a reader of a committed fixture would
 		// have to notice.
-		{"forty digit integer", `{"id":1234567890123456789012345678901234567890,"acct":"9110101000000000001"}`},
+		{"forty digit integer", `{"id":1234567890123456789012345678901234567890,"acct":"` + syntheticAccountID + `"}`},
 		// 1e400 overflows float64 to +Inf and is a decode error without
 		// UseNumber, so it is the case that makes the option load-bearing. With
 		// it, both numbers decode and neither literal may survive.
@@ -360,7 +360,7 @@ func TestSkeletonifyRejectsAReadingCarriedAsAKey(t *testing.T) {
 			wantReports: 0, because: "a name is evidence and must survive"},
 		{name: "a camelCase member name", in: `{"instrumentId":"9132750001"}`,
 			wantReports: 0, because: "the rule is not a snake_case rule"},
-		{name: "an account id as a key", in: `{"9110101000000000001":{"symbol":"AAPL"}}`,
+		{name: "an account id as a key", in: `{"` + syntheticAccountID + `":{"symbol":"AAPL"}}`,
 			wantReports: 1, because: "an account id as a key is committed verbatim"},
 		{name: "an instrument id as a key", in: `{"9132750001":{"symbol":"AAPL"}}`,
 			wantReports: 1, because: "a ten digit id is the JSON number grammar"},
@@ -375,7 +375,7 @@ func TestSkeletonifyRejectsAReadingCarriedAsAKey(t *testing.T) {
 			wantReports: 1, because: "caught by the number rule too, and both agreeing is the point"},
 		{name: "an empty key", in: `{"":{"symbol":"AAPL"}}`,
 			wantReports: 1, because: "an empty key is indistinguishable from an empty string reading"},
-		{name: "a reading as a key at depth", in: `{"data":{"9110101000000000001":{"symbol":"AAPL"}}}`,
+		{name: "a reading as a key at depth", in: `{"data":{"` + syntheticAccountID + `":{"symbol":"AAPL"}}}`,
 			wantReports: 1, because: "the walk descends, so a nested map cannot hide a key"},
 		{name: "a ticker as a key", in: `{"AAPL":{"symbol":"AAPL"},"MSFT":{"symbol":"AAPL"}}`,
 			wantReports: 0, because: "the stated limit, pinned: a JSON member name and a " +

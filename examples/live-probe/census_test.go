@@ -54,6 +54,22 @@ const probeDiscoveredAccount = "live-probe-discovered-account"
 // this file carrying an identifier Webull issued.
 const probePageExampleAccount = "live-probe-page-example-account"
 
+// syntheticAccountID is a number shaped like a Webull account id, used by the
+// cases that hold the reduction to placeholders: a body that carries a reading
+// has to be refused for the same reason a body carrying a price is, and the
+// reading has to be one a reader would recognise as a reading.
+//
+// It is a constant, and this is its comment, because it was a bare literal in
+// four files until a whole-branch review asked which it was. It is NOT an
+// identifier Webull issued: it is not in the docgen cache, it is not a documented
+// example, it appears nowhere under docs/ or conformance/testdata, and it
+// predates the live run (it arrived with d13085e, in the reduction itself).
+// Commit fc75d6c removed the account id the trading schema publishes from
+// census_test.go on the principle that no hand-written file here should carry
+// one, and that principle is what this constant records: a reader who sees the
+// digits know they are a fixture, because something now says so.
+const syntheticAccountID = "9110101000000000001"
+
 // newProbeTestClient returns a client aimed at baseURL. Auto-token is off and
 // retry is off so that a case observes exactly one request and one status.
 func newProbeTestClient(t *testing.T, baseURL string) *client.Client {

@@ -866,7 +866,7 @@ func TestCaptureKeepsAByteOfTheBodyOutOfNotCaptured(t *testing.T) {
 		// documented way to stop the sniffing, and an undeclared header is the
 		// case isJSONMediaType accepts.
 		w.Header()["Content-Type"] = nil
-		_, _ = w.Write([]byte(`<html>Access denied for account 9110101000000000001</html>`))
+		_, _ = w.Write([]byte(`<html>Access denied for account ` + syntheticAccountID + `</html>`))
 	}))
 	defer srv.Close()
 
@@ -887,7 +887,7 @@ func TestCaptureKeepsAByteOfTheBodyOutOfNotCaptured(t *testing.T) {
 			entry.NotCaptured)
 	}
 	for _, leaked := range []string{"invalid character", "<", "html", "Access denied",
-		"9110101000000000001"} {
+		syntheticAccountID} {
 		if strings.Contains(entry.NotCaptured, leaked) {
 			t.Errorf("notCaptured carries %q from the body: %q", leaked, entry.NotCaptured)
 		}
@@ -906,29 +906,29 @@ func TestReduceFailureQuotesNothingFromTheBody(t *testing.T) {
 	}{
 		{
 			name:  "an HTML body with no media type",
-			err:   SkeletonifyErr(t, `<html>denied for 9110101000000000001</html>`),
+			err:   SkeletonifyErr(t, `<html>denied for `+syntheticAccountID+`</html>`),
 			want:  "not well-formed JSON",
-			never: []string{"html", "denied", "9110101000000000001", "<"},
+			never: []string{"html", "denied", syntheticAccountID, "<"},
 		},
 		{
 			name:  "a document that stops mid-value",
-			err:   SkeletonifyErr(t, `{"account":"9110101000000000001","lots":[{"a":1`),
+			err:   SkeletonifyErr(t, `{"account":"`+syntheticAccountID+`","lots":[{"a":1`),
 			want:  "ended before the JSON document closed",
-			never: []string{"account", "lots", "9110101000000000001"},
+			never: []string{"account", "lots", syntheticAccountID},
 		},
 		{
 			name:  "trailing data after the document",
-			err:   SkeletonifyErr(t, `{"account":"9110101000000000001"} {"b":2}`),
+			err:   SkeletonifyErr(t, `{"account":"`+syntheticAccountID+`"} {"b":2}`),
 			want:  "more than one JSON document",
-			never: []string{`{"account"`, "9110101000000000001", `{"b"`},
+			never: []string{`{"account"`, syntheticAccountID, `{"b"`},
 		},
 		{
 			name: "an error carrying raw bytes",
-			err:  &echoingError{value: "raw-bytes-9110101000000000001"},
+			err:  &echoingError{value: "raw-bytes-" + syntheticAccountID},
 			want: "not recorded",
 			// The classified default branch, which is where a TextUnmarshaler
 			// error carrying the raw bytes falls.
-			never: []string{"raw-bytes", "9110101000000000001", "not a decimal"},
+			never: []string{"raw-bytes", syntheticAccountID, "not a decimal"},
 		},
 	}
 	for _, tc := range cases {
@@ -967,7 +967,7 @@ func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
 	recognised := []string{
 		"text/html", "text/html; charset=utf-8", "  TEXT/HTML  ",
 		// Parameters are stripped, so a value hiding in one is dropped with them.
-		`text/html; charset="utf-8"; boundary=9110101000000000001`,
+		`text/html; charset="utf-8"; boundary=` + syntheticAccountID,
 		"application/xhtml+xml", "application/xml", "text/xml",
 		"application/octet-stream", "text/csv", "image/png", "application/pdf",
 		"application/x-www-form-urlencoded", "text/event-stream",
@@ -978,7 +978,7 @@ func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
 			if want := strings.ToLower(strings.TrimSpace(strings.SplitN(header, ";", 2)[0])); got != want {
 				t.Errorf("describeContentType(%q) = %q, want %q", header, got, want)
 			}
-			if strings.Contains(got, "9110101000000000001") {
+			if strings.Contains(got, syntheticAccountID) {
 				t.Errorf("describeContentType(%q) = %q, which kept a parameter", header, got)
 			}
 		})
@@ -992,10 +992,10 @@ func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
 	// is the whole point: quoting an unrecognised token would put the server's own
 	// string back into a committed manifest.
 	unnamed := []string{
-		"application/vnd.webull.internal+error; note=9110101000000000001",
+		"application/vnd.webull.internal+error; note=" + syntheticAccountID,
 		"application/x-" + strings.Repeat("z", 200),
 		"text/plain-ish",
-		"not-a-media-type-at-all; account=9110101000000000001",
+		"not-a-media-type-at-all; account=" + syntheticAccountID,
 	}
 	for _, header := range unnamed {
 		t.Run("unnamed "+header, func(t *testing.T) {
@@ -1003,7 +1003,7 @@ func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
 			if got != "a media type this probe does not name" {
 				t.Errorf("describeContentType(%q) = %q, want the unnamed classification", header, got)
 			}
-			for _, leaked := range []string{"9110101000000000001", "boundary=", "note=",
+			for _, leaked := range []string{syntheticAccountID, "boundary=", "note=",
 				"account=", "; ", "webull", "not-a-media-type"} {
 				if strings.Contains(got, leaked) {
 					t.Errorf("describeContentType(%q) = %q, which carries %q from the header",
@@ -1020,7 +1020,7 @@ func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
 func TestCaptureRecordsAContentTypeClassificationNotItsText(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type",
-			"application/vnd.webull.internal+error; note=9110101000000000001")
+			"application/vnd.webull.internal+error; note="+syntheticAccountID)
 		_, _ = w.Write([]byte("upstream is unwell"))
 	}))
 	defer srv.Close()
@@ -1038,7 +1038,7 @@ func TestCaptureRecordsAContentTypeClassificationNotItsText(t *testing.T) {
 	if !strings.Contains(entry.NotCaptured, "does not name") {
 		t.Errorf("the reason does not report the media type as unnamed: %q", entry.NotCaptured)
 	}
-	for _, leaked := range []string{"9110101000000000001", "note=", "webull.internal"} {
+	for _, leaked := range []string{syntheticAccountID, "note=", "webull.internal"} {
 		if strings.Contains(entry.NotCaptured, leaked) {
 			t.Errorf("notCaptured carries %q from the header: %q", leaked, entry.NotCaptured)
 		}
@@ -1143,9 +1143,9 @@ func TestDecodeFailureQuotesNothingFromTheBody(t *testing.T) {
 		},
 		{
 			name:  "a body that is not JSON at all",
-			raw:   `<html>Access denied for account 9110101000000000001</html>`,
+			raw:   `<html>Access denied for account ` + syntheticAccountID + `</html>`,
 			want:  "the body is not well-formed JSON",
-			never: []string{"html", "9110101000000000001", "Access denied"},
+			never: []string{"html", syntheticAccountID, "Access denied"},
 		},
 	}
 	for _, tc := range cases {

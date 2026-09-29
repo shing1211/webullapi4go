@@ -35,6 +35,22 @@ import (
 // in divergence_test.go, together with the known-divergence baseline that keeps
 // the gate green while every current defect stays recorded and visible.
 
+// syntheticAccountID is a number shaped like a Webull account id, used by the
+// cases that hold the committed tree to placeholders. A member name that is a
+// number is the one position a reading survives into a skeleton, so the cases that
+// refuse it need a value that looks like one, and an id is the reading a reader is
+// most alarmed to find in a file that claims to hold none.
+//
+// It is a constant, and this is its comment, because it was a bare literal in
+// four files until a whole-branch review asked which it was. It is NOT an
+// identifier Webull issued: it is not in the docgen cache, it is not a documented
+// example, it appears nowhere under docs/ or in this committed tree, and it
+// predates the live run. Commit fc75d6c removed the account id the trading schema
+// publishes from a probe test on the principle that no hand-written file in this
+// repository should carry one; naming the value is how the other four files honour
+// the same principle.
+const syntheticAccountID = "9110101000000000001"
+
 func load(t *testing.T) *Manifest {
 	t.Helper()
 	m, err := Load()
@@ -661,7 +677,7 @@ func TestLiveSkeletonWrapperCarriesNoValue(t *testing.T) {
 			name: "a reading as a name inside a shape",
 			tree: wrapper(record(json.Number("197")), map[string]any{
 				SkeletonCountKey: json.Number("1"),
-				SkeletonShapeKey: map[string]any{"9110101000000000001": liveStringPlaceholder},
+				SkeletonShapeKey: map[string]any{syntheticAccountID: liveStringPlaceholder},
 			}),
 			wantReports: 1,
 			because: "a member name inside a shape is still a member name, and the " +
@@ -690,7 +706,7 @@ func TestLiveSkeletonWrapperCarriesNoValue(t *testing.T) {
 		{
 			name: "a reading as a count",
 			tree: wrapper(map[string]any{
-				SkeletonCountKey: json.Number("9110101000000000001"),
+				SkeletonCountKey: json.Number(syntheticAccountID),
 				SkeletonShapeKey: shape(),
 			}),
 			wantReports: 0,
@@ -815,7 +831,7 @@ func TestLiveSkeletonKeysCarryNoReading(t *testing.T) {
 		},
 		{
 			name:        "an account id as a key",
-			tree:        map[string]any{"9110101000000000001": leaf},
+			tree:        map[string]any{syntheticAccountID: leaf},
 			wantReports: 1,
 			because: "an account id is a number Webull sent, and as a key the " +
 				"reduction preserves it verbatim",
@@ -859,7 +875,7 @@ func TestLiveSkeletonKeysCarryNoReading(t *testing.T) {
 		},
 		{
 			name:        "a reading as a key at depth",
-			tree:        map[string]any{"data": map[string]any{"9110101000000000001": leaf}},
+			tree:        map[string]any{"data": map[string]any{syntheticAccountID: leaf}},
 			wantReports: 1,
 			because:     "the rule descends, so a nested map cannot hide a key",
 		},
