@@ -448,6 +448,140 @@ func TestWriteCaptureRefusesAnUnindexedSkeleton(t *testing.T) {
 	}
 }
 
+// Captured counts files, and four of the committed ones record an envelope and no
+// element shape at all: trading/GET-trading-orders-get.json is {"orders": []}. A
+// reader who divides the row count by the files would take every captured endpoint
+// for one that answered with data, so the manifest lists the ones that did not and
+// the size block records where the rest of the bytes are.
+func TestLiveManifestAccountsForSkeletonsWithNoElementShape(t *testing.T) {
+	cases := []struct {
+		name        string
+		body        string
+		key         string
+		wantListed  bool
+		wantElement int
+	}{
+		{name: "an envelope with an empty list", body: `{"orders":[]}`,
+			key: "live/trading/orders.json", wantListed: true, wantElement: 0},
+		{name: "an envelope with two empty lists", body: `{"funds":[],"options":[]}`,
+			key: "live/fundamentals/funds.json", wantListed: true, wantElement: 0},
+		{name: "a bare empty array at the top level", body: `[]`,
+			key: "live/fundamentals/splits.json", wantListed: true, wantElement: 0},
+		{name: "an envelope with a populated list", body: `{"orders":[{"id":"1"}]}`,
+			key: "live/trading/orders-get.json", wantElement: 1},
+		{name: "an empty list beside a populated one", body: `{"data":{"rows":[{"a":1}]},"orders":[]}`,
+			key: "live/data/x.json", wantElement: 1},
+		{name: "a nested populated list", body: `{"data":{"rows":[{"a":1}]}}`,
+			key: "live/data/y.json", wantElement: 1},
+		{name: "an object with no list at all", body: `{"symbol":"AAPL"}`,
+			key: "live/quotes/x.json", wantElement: 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			reduced, err := Skeletonify([]byte(tc.body))
+			if err != nil {
+				t.Fatalf("Skeletonify(%s): %v", tc.body, err)
+			}
+			raw, err := encodeSkeleton(reduced)
+			if err != nil {
+				t.Fatalf("encodeSkeleton(%s): %v", tc.body, err)
+			}
+			key := tc.key
+			doc := NewLiveManifest(
+				[]ManifestEntry{{
+					Symbol: "data.GetX", Fixture: "x.json", Skeleton: key, Status: 200,
+					DecodedCleanly: true, Host: "h", ProbedAt: "2026-09-29T04:05:06Z",
+				}},
+				map[string][]byte{key: raw},
+			)
+			listed := len(doc.Totals.WithoutElementShape) == 1 &&
+				doc.Totals.WithoutElementShape[0] == key
+			if listed != tc.wantListed {
+				t.Errorf("withoutElementShape = %v, want listed = %v",
+					doc.Totals.WithoutElementShape, tc.wantListed)
+			}
+			if doc.Size.ArrayElements != tc.wantElement {
+				t.Errorf("size.arrayElements = %d, want %d", doc.Size.ArrayElements, tc.wantElement)
+			}
+			if doc.Size.Reason != liveSizeReason {
+				t.Error("the size block carries no reason, so a reader of a large " +
+					"tree has the numbers and nothing to read them with")
+			}
+		})
+	}
+
+	// The corpus case: two files sharing one element shape, and one shape of their
+	// own. The distinct count is over the whole tree, so a shape both files hold is
+	// counted once - that is what makes it a composition rather than a sum.
+	shared, err := encodeSkeleton(map[string]any{
+		"rows": []any{map[string]any{"a": numberPlaceholder}},
+	})
+	if err != nil {
+		t.Fatalf("encodeSkeleton: %v", err)
+	}
+	own, err := encodeSkeleton(map[string]any{
+		"rows": []any{map[string]any{"b": numberPlaceholder}},
+	})
+	if err != nil {
+		t.Fatalf("encodeSkeleton: %v", err)
+	}
+	doc := NewLiveManifest([]ManifestEntry{
+		{Fixture: "x.json", Skeleton: "live/x.json", Status: 200, Host: "h"},
+		{Fixture: "y.json", Skeleton: "live/y.json", Status: 200, Host: "h"},
+	}, map[string][]byte{"live/x.json": shared, "live/y.json": own})
+	if doc.Size.ArrayElements != 2 {
+		t.Errorf("size.arrayElements = %d, want 2", doc.Size.ArrayElements)
+	}
+	if doc.Size.DistinctElementShapes != 2 {
+		t.Errorf("size.distinctElementShapes = %d, want 2", doc.Size.DistinctElementShapes)
+	}
+	both := NewLiveManifest([]ManifestEntry{
+		{Fixture: "x.json", Skeleton: "live/x.json", Status: 200, Host: "h"},
+		{Fixture: "y.json", Skeleton: "live/y.json", Status: 200, Host: "h"},
+	}, map[string][]byte{"live/x.json": shared, "live/y.json": shared})
+	if both.Size.DistinctElementShapes != 1 {
+		t.Errorf("two files holding one shape between them report %d distinct shapes, "+
+			"want 1: the count is over the tree, not the sum of the counts per file",
+			both.Size.DistinctElementShapes)
+	}
+}
+
+// The manifest's derived accounting has to survive the round trip through JSON,
+// because a field that exists in the Go type and not in the committed file is a
+// claim only the program makes.
+func TestLiveManifestWritesTheSizeAndShapeAccountsToDisk(t *testing.T) {
+	dir := t.TempDir()
+	key := "live/trading/orders-get.json"
+	entry := ManifestEntry{
+		Symbol: "trade.GetOrders", Fixture: "trading/orders-get.json", Skeleton: key,
+		Status: 200, DecodedCleanly: true, Host: "h", ProbedAt: "2026-09-29T04:05:06Z",
+	}
+	skeletons := map[string][]byte{key: []byte("{\n \"orders\": []\n}\n")}
+	if err := WriteCapture(dir, skeletons, []ManifestEntry{entry}); err != nil {
+		t.Fatalf("WriteCapture: %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, liveManifestName)) //nolint:gosec // G304: a fixed name under t.TempDir().
+	if err != nil {
+		t.Fatalf("reading %s: %v", liveManifestName, err)
+	}
+	var written LiveManifest
+	if err := json.Unmarshal(raw, &written); err != nil {
+		t.Fatalf("parsing %s: %v", liveManifestName, err)
+	}
+	if len(written.Totals.WithoutElementShape) != 1 || written.Totals.WithoutElementShape[0] != key {
+		t.Errorf("totals.withoutElementShape = %v on disk, want [%s]",
+			written.Totals.WithoutElementShape, key)
+	}
+	if written.Size.ArrayElements != 0 || written.Size.DistinctElementShapes != 0 {
+		t.Errorf("size on disk = %+v, want zero counts: the one array in the tree is empty",
+			written.Size)
+	}
+	if written.Size.Reason == "" {
+		t.Error("the size block on disk carries no reason")
+	}
+}
+
 // --------------------------------------------------------------------------
 // The capture call
 // --------------------------------------------------------------------------
@@ -586,6 +720,216 @@ func TestCaptureSkipsABodyThatDoesNotReduce(t *testing.T) {
 	if !strings.Contains(entry.NotCaptured, "did not reduce") {
 		t.Errorf("the reason does not say the body did not reduce: %q", entry.NotCaptured)
 	}
+}
+
+// The reduce path is the second of the two places a server's byte could reach a
+// committed manifest, and the first one was closed only on the decode path. It is
+// reachable rather than theoretical: isJSONMediaType accepts a missing header and
+// text/plain, so an unlabelled HTML error page is refused by neither the media
+// type nor the body and lands in reduceFailure.
+//
+// The reviewer's reproduction is the body below, and the byte that would have
+// leaked is the '<' at offset 0.
+func TestCaptureKeepsAByteOfTheBodyOutOfNotCaptured(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// net/http sniffs the body and sets Content-Type for the writer, so the
+		// header is suppressed rather than merely left unset: a nil slice is the
+		// documented way to stop the sniffing, and an undeclared header is the
+		// case isJSONMediaType accepts.
+		w.Header()["Content-Type"] = nil
+		_, _ = w.Write([]byte(`<html>Access denied for account 9110101000000000001</html>`))
+	}))
+	defer srv.Close()
+
+	skeleton, entry, err := captureThroughServer(t, srv, orderEndpoint, 200)
+	if err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+	if skeleton != nil {
+		t.Errorf("a skeleton was written for a body that does not reduce: %s", skeleton)
+	}
+	if !strings.Contains(entry.NotCaptured, "did not reduce") {
+		t.Fatalf("the reason does not say the body did not reduce: %q", entry.NotCaptured)
+	}
+	// The finding survives: a reader learns the body was not well-formed JSON and
+	// roughly where it stopped, which is what the sentence is for.
+	if !strings.Contains(entry.NotCaptured, "byte offset") {
+		t.Errorf("the reason lost the offset, which is the safe part of the message: %q",
+			entry.NotCaptured)
+	}
+	for _, leaked := range []string{"invalid character", "<", "html", "Access denied",
+		"9110101000000000001"} {
+		if strings.Contains(entry.NotCaptured, leaked) {
+			t.Errorf("notCaptured carries %q from the body: %q", leaked, entry.NotCaptured)
+		}
+	}
+}
+
+// reduceFailure is exercised directly as well, because the reachable path above
+// depends on a body that is not JSON and a decoder that classifies it, and a
+// table pins the classification itself.
+func TestReduceFailureQuotesNothingFromTheBody(t *testing.T) {
+	cases := []struct {
+		name  string
+		err   error
+		want  string
+		never []string
+	}{
+		{
+			name:  "an HTML body with no media type",
+			err:   SkeletonifyErr(t, `<html>denied for 9110101000000000001</html>`),
+			want:  "not well-formed JSON",
+			never: []string{"html", "denied", "9110101000000000001", "<"},
+		},
+		{
+			name:  "a document that stops mid-value",
+			err:   SkeletonifyErr(t, `{"account":"9110101000000000001","lots":[{"a":1`),
+			want:  "ended before the JSON document closed",
+			never: []string{"account", "lots", "9110101000000000001"},
+		},
+		{
+			name:  "trailing data after the document",
+			err:   SkeletonifyErr(t, `{"account":"9110101000000000001"} {"b":2}`),
+			want:  "more than one JSON document",
+			never: []string{`{"account"`, "9110101000000000001", `{"b"`},
+		},
+		{
+			name: "an error carrying raw bytes",
+			err:  &echoingError{value: "raw-bytes-9110101000000000001"},
+			want: "not recorded",
+			// The classified default branch, which is where a TextUnmarshaler
+			// error carrying the raw bytes falls.
+			never: []string{"raw-bytes", "9110101000000000001", "not a decimal"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := reduceFailure(tc.err)
+			if !strings.Contains(got, tc.want) {
+				t.Errorf("reduceFailure = %q, want it to contain %q", got, tc.want)
+			}
+			for _, leaked := range tc.never {
+				if strings.Contains(got, leaked) {
+					t.Errorf("reduceFailure = %q, which carries %q from the body", got, leaked)
+				}
+			}
+		})
+	}
+}
+
+// SkeletonifyErr is Skeletonify's error for a body, or a failure, so the table
+// above can hold an error the real decoder produced rather than one a test wrote.
+func SkeletonifyErr(t *testing.T, body string) error {
+	t.Helper()
+	_, err := Skeletonify([]byte(body))
+	if err == nil {
+		t.Fatalf("Skeletonify(%q) reduced, so this case has no error to render", body)
+	}
+	return err
+}
+
+// The Content-Type a server sent is a server-supplied string, and the manifest is
+// committed, so nothing derived from the header may reach a file. A recognised
+// media type is recorded by name from the probe's own table and every parameter
+// is dropped; anything else is reported as unnamed with the token left out
+// entirely. The corpus is the real forms plus two a careless or hostile gateway
+// could send, and the assertion that matters is the one at the bottom.
+func TestDescribeContentTypeRecordsNoServerSuppliedString(t *testing.T) {
+	recognised := []string{
+		"text/html", "text/html; charset=utf-8", "  TEXT/HTML  ",
+		// Parameters are stripped, so a value hiding in one is dropped with them.
+		`text/html; charset="utf-8"; boundary=9110101000000000001`,
+		"application/xhtml+xml", "application/xml", "text/xml",
+		"application/octet-stream", "text/csv", "image/png", "application/pdf",
+		"application/x-www-form-urlencoded", "text/event-stream",
+	}
+	for _, header := range recognised {
+		t.Run("recognised "+header, func(t *testing.T) {
+			got := describeContentType(header)
+			if want := strings.ToLower(strings.TrimSpace(strings.SplitN(header, ";", 2)[0])); got != want {
+				t.Errorf("describeContentType(%q) = %q, want %q", header, got, want)
+			}
+			if strings.Contains(got, "9110101000000000001") {
+				t.Errorf("describeContentType(%q) = %q, which kept a parameter", header, got)
+			}
+		})
+	}
+	if got := describeContentType(""); got != "no media type at all" {
+		t.Errorf("describeContentType(\"\") = %q, want the missing-header token", got)
+	}
+
+	// A media type outside the set is reported as unnamed. Nothing derived from
+	// the header survives - not the type, not the subtype, not a parameter - which
+	// is the whole point: quoting an unrecognised token would put the server's own
+	// string back into a committed manifest.
+	unnamed := []string{
+		"application/vnd.webull.internal+error; note=9110101000000000001",
+		"application/x-" + strings.Repeat("z", 200),
+		"text/plain-ish",
+		"not-a-media-type-at-all; account=9110101000000000001",
+	}
+	for _, header := range unnamed {
+		t.Run("unnamed "+header, func(t *testing.T) {
+			got := describeContentType(header)
+			if got != "a media type this probe does not name" {
+				t.Errorf("describeContentType(%q) = %q, want the unnamed classification", header, got)
+			}
+			for _, leaked := range []string{"9110101000000000001", "boundary=", "note=",
+				"account=", "; ", "webull", "not-a-media-type"} {
+				if strings.Contains(got, leaked) {
+					t.Errorf("describeContentType(%q) = %q, which carries %q from the header",
+						header, got, leaked)
+				}
+			}
+		})
+	}
+}
+
+// The reason a non-JSON 200 is recorded must not quote the header either, so the
+// classification is asserted on the row a real capture produces rather than on
+// the function alone.
+func TestCaptureRecordsAContentTypeClassificationNotItsText(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type",
+			"application/vnd.webull.internal+error; note=9110101000000000001")
+		_, _ = w.Write([]byte("upstream is unwell"))
+	}))
+	defer srv.Close()
+
+	skeleton, entry, err := captureThroughServer(t, srv, orderEndpoint, 200)
+	if err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+	if skeleton != nil {
+		t.Errorf("a skeleton was written for a non-JSON body: %s", skeleton)
+	}
+	if !strings.Contains(entry.NotCaptured, "not a JSON media type") {
+		t.Errorf("the reason does not say the body was not JSON: %q", entry.NotCaptured)
+	}
+	if !strings.Contains(entry.NotCaptured, "does not name") {
+		t.Errorf("the reason does not report the media type as unnamed: %q", entry.NotCaptured)
+	}
+	for _, leaked := range []string{"9110101000000000001", "note=", "webull.internal"} {
+		if strings.Contains(entry.NotCaptured, leaked) {
+			t.Errorf("notCaptured carries %q from the header: %q", leaked, entry.NotCaptured)
+		}
+	}
+	// The recognised form is still named, which is the part of the finding a
+	// reader needs.
+	t.Run("a recognised media type is still named", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte("<html>502</html>"))
+		}))
+		defer srv.Close()
+		_, row, err := captureThroughServer(t, srv, orderEndpoint, 200)
+		if err != nil {
+			t.Fatalf("Capture: %v", err)
+		}
+		if !strings.Contains(row.NotCaptured, "text/html") {
+			t.Errorf("the reason does not name the media type: %q", row.NotCaptured)
+		}
+	})
 }
 
 // A body past the bound is refused rather than truncated. A prefix of a JSON

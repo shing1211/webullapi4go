@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -50,10 +51,22 @@ import (
 // What is committed is a shape, not a reading. Skeletonify reduces a live body
 // to a value-free tree - every member name kept, every value replaced by a typed
 // placeholder - and this file writes that tree out. Nothing else from the
-// response is recorded: not a header, not a length of the original body, not the
-// server's message, and not the account id, symbol, price or timestamp the
-// request carried. A skeleton in the repository is a file of "1", -1, true and
-// null, so committing 55 of them puts 55 shapes in git and zero readings.
+// response reaches a file: not a length of the original body, not the server's
+// message, not the account id, symbol, price or timestamp the request carried,
+// and not the server's Content-Type, which is recorded as a classification this
+// probe recognises rather than as the string the server sent (see
+// describeContentType). A skeleton in the repository is a file of "1", -1, true
+// and null, so committing 55 of them puts 55 shapes in git and zero readings
+// beyond the placeholders themselves.
+//
+// The one qualification is a member name, and it is stated here because this
+// file is where a reader looks first. The reduction keeps every name verbatim, so
+// a name is the one place a reading can survive it, and the leak gate checks
+// names as well as leaves: a key that is a JSON number, or one of the four
+// placeholders, is refused. A key that is a string reading - a ticker, an order
+// id - is not separable from a member name by any rule over the document, since
+// in JSON it is the same token; keyCarriesAReading states that limit rather than
+// implying the tree excludes one.
 //
 // Two trees now sit under conformance/testdata. The documentation fixtures are
 // derived from Webull's published OpenAPI JSON by tools/conformance, and
@@ -118,9 +131,14 @@ var errBodyTooLarge = errors.New("live-probe: the response body exceeds " +
 //
 // No field carries a value the server sent. NotCaptured is this probe's own
 // sentence about what it saw, DecodeErr is a reconstruction from the decoder's
-// own type rather than its message (see decodeFailure), and the four fields that
-// could plausibly have held a reading - a body, a length, a header value, an
-// account id - do not exist on this struct.
+// own type rather than its message (see decodeFailure), and the three fields
+// that could plausibly have held a reading - a body, a length, an account id -
+// do not exist on this struct. NotCaptured quotes no part of the response
+// either: the one place a server string would have reached it, a
+// Content-Type, is recorded as a classification this probe recognises (see
+// describeContentType). What does reach NotCaptured verbatim is a member name
+// and an SDK symbol, and both are code, not readings: member names are the
+// evidence the tree exists to carry.
 type ManifestEntry struct {
 	// Symbol is the SDK method the documentation manifest maps this endpoint to.
 	Symbol string `json:"symbol"`
@@ -206,6 +224,37 @@ type LiveTotals struct {
 	// SkeletonBytes is the combined length of the written skeletons, so the
 	// tree's size is on the record rather than only in a diff.
 	SkeletonBytes int `json:"skeletonBytes"`
+	// WithoutElementShape names the captured skeletons that record no array
+	// element shape: every array in them is empty, so the file carries the name
+	// of an envelope or of a list and nothing about what a list holds.
+	// trading/GET-trading-orders-get.json is `{"orders": []}` and is the clearest
+	// case. The list is here because Captured counts files and not shapes, so a
+	// reader who divides the row count by the files has read would otherwise take
+	// all 55 for endpoints that answered with data. Sorted, so the field is a
+	// function of the run.
+	WithoutElementShape []string `json:"withoutElementShape,omitempty"`
+}
+
+// LiveSize records what the tree's bytes are spent on, in the shape
+// conformance/testdata/manifest.json uses for its own sizeTripwire block.
+//
+// The documentation fixtures and this tree are not the same artifact and the
+// reason is recorded rather than borrowed: a fixture is a minimal instance of a
+// published schema, so its size is a property of the generator, while a skeleton
+// is whatever the sandbox answered, so its size is a property of the responses.
+// No bound is imposed here and none is proposed; the block exists so a reader who
+// finds the tree large has the composition of the bytes instead of a guess.
+type LiveSize struct {
+	// ArrayElements is every element of every array in the written skeletons.
+	ArrayElements int `json:"arrayElements"`
+	// DistinctElementShapes is how many distinct reduced shapes those elements
+	// take, counted over the whole tree. Two elements are the same shape when
+	// their compact encodings are equal, and encoding/json writes a map's members
+	// in sorted order, so the comparison does not depend on member order.
+	DistinctElementShapes int `json:"distinctElementShapes"`
+	// Reason states what the two numbers mean, and is the one place the tree's
+	// size is characterised rather than merely reported.
+	Reason string `json:"reason"`
 }
 
 // LiveManifest is the whole of conformance/testdata/live-manifest.json: the
@@ -232,6 +281,10 @@ type LiveManifest struct {
 	Environment string `json:"environment,omitempty"`
 	// Totals summarises the run.
 	Totals LiveTotals `json:"totals"`
+	// Size records what the tree's bytes are, so a reader who finds it large is
+	// not left with a number to guess at. It is beside Totals rather than inside
+	// it because SkeletonBytes, which is the size itself, is a total.
+	Size LiveSize `json:"size"`
 	// Census is the reachability census this run is a subset of, so the 55 rows
 	// below can be read against the 193 they were drawn from and against the
 	// status mix of the ones that were left out.
@@ -246,11 +299,21 @@ type LiveManifest struct {
 const liveKind = "live-response-skeletons"
 
 // liveWarning is what a reader has to know before the entries.
+//
+// It says "no reading other than a placeholder" rather than "no value", and the
+// weaker phrase is the accurate one. A placeholder is a fixed literal, so a
+// server that sent -1 as a price, or "1" as a symbol, has produced bytes
+// identical to the placeholder and no test can separate the two: the literal
+// carries one bit, so it carries no information about whether the server sent it.
+// What is true, and what the tree rests on, is that every leaf is a constant the
+// reduction chose rather than a literal the body carried.
 const liveWarning = "These files hold the SHAPE of a live Webull response - every member " +
 	"name the sandbox sent, and no value it sent. Every leaf is a placeholder: a string " +
-	"is \"1\", a number is -1, a boolean is true, a null is null. Nothing in this tree is a " +
-	"price, a size, a timestamp, an account id or a symbol, and there is no reading in it to " +
-	"recover."
+	"is \"1\", a number is -1, a boolean is true, a null is null. No reading in this tree " +
+	"is recoverable other than a placeholder, so there is no price, size, timestamp, " +
+	"account id or symbol here to recover. A placeholder is a fixed literal and a server " +
+	"can send the same one, so a placeholder is not proof of what the body held - the " +
+	"claim is that every leaf is the constant the reduction chose."
 
 // liveScope states the boundary of the capture.
 const liveScope = "Only endpoints the reachability census recorded as HTTP 200 are captured. " +
@@ -279,6 +342,25 @@ func liveGeneratorBlock() LiveGenerator {
 	}
 }
 
+// liveSizeReason states what the size block's two counts mean. It is a constant
+// rather than prose beside the code because it is written into every manifest and
+// is what the next reader of a 1.9 MB tree will look for.
+//
+// It corrects a claim this tree previously implied and did not make. Bounding an
+// array and moving the tree are not the only two things that could be done to the
+// size, and treating them as the whole set was wrong: the numbers below show where
+// the bytes are, and what they rule in as well as out. Nothing here proposes an
+// action, and no bound is imposed.
+const liveSizeReason = "totals.skeletonBytes is the whole tree, and most of it is repetition: " +
+	"arrayElements is every element of every array in the written skeletons, distinctElementShapes " +
+	"is how many distinct reduced shapes those elements take, and the difference is the elements " +
+	"repeating a shape the tree already holds elsewhere in it. The sandbox answers with hundreds of " +
+	"rows of a handful of shapes where one row would carry the same names and kinds. These files " +
+	"are live data rather than minimal instances, so the documentation fixtures' sizeTripwire does " +
+	"not apply to them; the tree's size is a fact about the responses that produced it, no bound is " +
+	"imposed on it here, and nothing in this manifest claims the size could not be reduced without " +
+	"losing a member name or a kind."
+
 // NewLiveManifest assembles the manifest for one capture run from its rows and
 // the skeletons they produced.
 //
@@ -286,6 +368,11 @@ func liveGeneratorBlock() LiveGenerator {
 // supplies and a total the rows do not agree on is a manifest that misreports
 // its own tree. entries is copied and sorted, so a caller's slice is neither
 // reordered nor aliased.
+//
+// The size block and the WithoutElementShape list are derived from the skeleton
+// bytes for the same reason: they describe the tree, so reading them off the tree
+// is the only way they cannot disagree with it. Both walk the committed form
+// rather than the reduced tree, because the committed form is what a reader sees.
 func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveManifest {
 	doc := LiveManifest{
 		Kind:      liveKind,
@@ -293,14 +380,34 @@ func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveM
 		Generator: liveGeneratorBlock(),
 		Scope:     liveScope,
 		Entries:   append([]ManifestEntry(nil), entries...),
+		Size:      LiveSize{Reason: liveSizeReason},
 	}
 	sort.Slice(doc.Entries, func(i, j int) bool { return doc.Entries[i].Fixture < doc.Entries[j].Fixture })
+
+	// One set across the whole tree, so DistinctElementShapes is the number of
+	// shapes the tree holds rather than the sum of the number each file holds.
+	shapes := map[string]bool{}
 
 	for _, e := range doc.Entries {
 		doc.Totals.Considered++
 		if e.Skeleton != "" {
 			doc.Totals.Captured++
-			doc.Totals.SkeletonBytes += len(skeletons[e.Skeleton])
+			raw, present := skeletons[e.Skeleton]
+			doc.Totals.SkeletonBytes += len(raw)
+			if !present {
+				// checkIndexed refuses this before any write; returning a manifest
+				// that silently omits the accounting is worse than recording what
+				// was actually there.
+				continue
+			}
+			found, elements, carries := surveySkeleton(raw)
+			for shape := range found {
+				shapes[shape] = true
+			}
+			doc.Size.ArrayElements += elements
+			if !carries {
+				doc.Totals.WithoutElementShape = append(doc.Totals.WithoutElementShape, e.Skeleton)
+			}
 		}
 		if e.NotCaptured != "" {
 			doc.Totals.NotCaptured++
@@ -318,7 +425,61 @@ func NewLiveManifest(entries []ManifestEntry, skeletons map[string][]byte) LiveM
 			doc.Host = e.Host
 		}
 	}
+	sort.Strings(doc.Totals.WithoutElementShape)
+	doc.Size.DistinctElementShapes = len(shapes)
 	return doc
+}
+
+// surveySkeleton reads one committed skeleton and reports the three facts the
+// manifest records about it: the distinct array element shapes it holds, how many
+// array elements it holds in all, and whether it holds any element at all.
+//
+// The shapes are keyed by the compact encoding of the element. encoding/json
+// writes a map's members in sorted order, so two elements with the same shape have
+// the same encoding and the keying does not depend on the order the members happen
+// to appear in. UseNumber is on so a number element keeps the literal it was
+// written with rather than a float64 round trip.
+//
+// A skeleton that does not parse is reported as carrying an element, and a
+// skeleton with no array at all is reported as carrying one too. Both are the
+// conservative direction: the field this feeds is a list of skeletons whose every
+// array is empty, and adding a skeleton that holds a member-name-and-kind shape to
+// that list would tell a reader it holds nothing when it holds something.
+func surveySkeleton(raw []byte) (shapes map[string]bool, elements int, carriesElement bool) {
+	shapes = map[string]bool{}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	var tree any
+	if err := dec.Decode(&tree); err != nil {
+		return shapes, 0, true
+	}
+	var sawArray, sawPopulatedArray bool
+	var walk func(any)
+	walk = func(v any) {
+		switch node := v.(type) {
+		case map[string]any:
+			for _, member := range node {
+				walk(member)
+			}
+		case []any:
+			sawArray = true
+			if len(node) > 0 {
+				sawPopulatedArray = true
+			}
+			for _, element := range node {
+				elements++
+				encoded, err := json.Marshal(element)
+				if err == nil {
+					shapes[string(encoded)] = true
+				}
+				walk(element)
+			}
+		}
+	}
+	walk(tree)
+	// A populated array anywhere in the tree counts, whatever order the map walk
+	// reached it in, so an empty list visited after a populated one cannot undo it.
+	return shapes, elements, !sawArray || sawPopulatedArray
 }
 
 // WriteCapture writes the skeletons and the live manifest for one run under
@@ -336,13 +497,19 @@ func WriteCapture(dir string, skeletons map[string][]byte, entries []ManifestEnt
 // conformance/testdata directory.
 //
 // The guard is the reason this function exists as a function and not as a
-// `os.WriteFile` at each call site. Everything is validated before anything is
-// written, so a rejected run leaves the tree exactly as it found it rather than
-// half-updated; then the skeletons are written; then the manifest; then the tree
-// is walked to prove it holds nothing but what this run wrote. A file under live/
-// that the manifest does not name is an error and not a deletion: it is either
-// evidence from an earlier run that this one failed to reproduce, which a
-// reader must look at, or a file somebody put there by hand.
+// `os.WriteFile` at each call site. Every key is resolved and the manifest is
+// held against the file set before a byte is written, so a run refused by either
+// of those checks leaves the tree exactly as it found it rather than half-updated.
+// Then the skeletons are written; then the manifest; then the tree is walked to
+// prove it holds nothing but what this run wrote. That last check is the one that
+// runs after the writes, so a run failing it has already updated the tree and left
+// the file it objects to in place. That is deliberate and it is not the same
+// guarantee: a file under live/ that the manifest does not name is an error and
+// not a deletion, because it is either evidence from an earlier run that this one
+// failed to reproduce, which a reader must look at, or a file somebody put there
+// by hand. So the two failure classes differ - a bad key or an unindexed skeleton
+// writes nothing, a stale file leaves the tree written and asks a question - and
+// the error says which happened by naming the file.
 //
 // Every key must name a file under live/. That is the whole of the refusal, and
 // it is a refusal with teeth: conformance/testdata holds 193 committed
@@ -585,6 +752,16 @@ func readBounded(r io.Reader) ([]byte, error) {
 	return raw, nil
 }
 
+// mediaTypeOf strips a Content-Type's parameters and normalises it, so a
+// classification below is about the media type rather than about its spelling.
+func mediaTypeOf(header string) string {
+	mediaType := header
+	if index := strings.IndexByte(mediaType, ';'); index >= 0 {
+		mediaType = mediaType[:index]
+	}
+	return strings.ToLower(strings.TrimSpace(mediaType))
+}
+
 // isJSONMediaType reports whether a Content-Type header names a JSON media type.
 //
 // It is a check on the declaration, not on the bytes, and it is what separates
@@ -597,34 +774,87 @@ func readBounded(r io.Reader) ([]byte, error) {
 // Skeletonify is the real arbiter of whether the body is JSON. Refusing here on a
 // missing header would lose an endpoint for a reason the body does not bear out.
 func isJSONMediaType(header string) bool {
-	mediaType := header
-	if index := strings.IndexByte(mediaType, ';'); index >= 0 {
-		mediaType = mediaType[:index]
-	}
-	switch strings.ToLower(strings.TrimSpace(mediaType)) {
+	mediaType := mediaTypeOf(header)
+	switch mediaType {
 	case "", "application/json", "text/json", "application/x-json", "text/plain":
 		return true
 	}
 	// The vendor and structured-suffix forms: anything/json,
 	// application/vnd.webull+json.
-	return strings.HasSuffix(strings.ToLower(strings.TrimSpace(mediaType)), "json")
+	return strings.HasSuffix(mediaType, "json")
+}
+
+// contentTypeClassifications is the fixed set of media types describeContentType
+// is willing to name in a committed manifest.
+//
+// The set is the media types a 200 has actually been answered with in the error
+// cases, not a registry: this is a classification for a human reading a manifest,
+// and inventing a token for a form nobody has seen would be a name with no
+// evidence behind it. An entry's key and its value are the same string, which is
+// deliberate - the table records the media type's own spelling, so a reader can
+// match it against what the endpoint declares without this file restating it.
+var contentTypeClassifications = map[string]string{
+	"text/html":                         "text/html",
+	"application/xhtml+xml":             "application/xhtml+xml",
+	"text/xml":                          "text/xml",
+	"application/xml":                   "application/xml",
+	"application/octet-stream":          "application/octet-stream",
+	"application/x-www-form-urlencoded": "application/x-www-form-urlencoded",
+	"text/csv":                          "text/csv",
+	"text/event-stream":                 "text/event-stream",
+	"application/pdf":                   "application/pdf",
+	"application/zip":                   "application/zip",
+	"image/png":                         "image/png",
+	"image/jpeg":                        "image/jpeg",
+	"image/gif":                         "image/gif",
+}
+
+// describeContentType returns the token a manifest records in place of a
+// Content-Type, or a sentence saying the media type is outside the set above.
+//
+// The header is server-supplied and the manifest is committed, so quoting it would
+// put an unvalidated server-supplied string in the repository - the same hazard as
+// a value in a skeleton, one layer up, and the reason the probe already
+// reconstructs a decode error rather than quoting it. The finding does not need
+// the raw string: what a reader has to know is which media type the endpoint
+// answered with, and that is a value from a fixed set. So a recognised form is
+// named from this file's own table and everything else is reported as unnamed.
+//
+// Nothing derived from an unrecognised header reaches the result, which is the
+// stricter half of the rule: the server's own spelling is left out entirely,
+// because quoting an unrecognised token would reintroduce the server-supplied
+// string this function exists to remove. The cost is that a reader learns an
+// endpoint answered with a media type the probe does not recognise rather than
+// which one it was, and the answer to that is the gateway, not the manifest.
+//
+// A missing header is its own token rather than a member of the set: an endpoint
+// that answered 200 with no declaration is a different fact from one that answered
+// with a recognised type, and lumping it into "unnamed" would hide which happened.
+func describeContentType(header string) string {
+	mediaType := mediaTypeOf(header)
+	if mediaType == "" {
+		return "no media type at all"
+	}
+	if name, known := contentTypeClassifications[mediaType]; known {
+		return name
+	}
+	return "a media type this probe does not name"
 }
 
 // decodeFailure renders why a live body did not unmarshal into an SDK response
 // type, without quoting anything the body said.
 //
-// This is the one place in the probe where a server's bytes could reach a
-// committed file through an error message, and it is closed. json.Unmarshal
-// returns three error types of its own, and two of them are safe to render from
-// their fields: an UnmarshalTypeError names the JSON kind, the field path and
-// the Go type it wanted, all three of which are properties of the SDK type and
-// the wire names rather than of any reading, and a SyntaxError names a byte
-// offset. The third is everything else - and everything else is the problem.
-// encoding/json returns an UnmarshalJSON error verbatim, so a DTO that fails to
-// parse a price can return an error containing the price, and
-// money.Money.UnmarshalJSON is exactly such a DTO. Rendering that message would
-// put a live reading in a committed manifest, so it is classified by type and
-// not quoted.
+// This is the first of two places in the probe where a server's bytes could reach
+// a committed file through an error message. json.Unmarshal returns three error
+// types of its own, and two of them are safe to render from their fields: an
+// UnmarshalTypeError names the JSON kind, the field path and the Go type it
+// wanted, all three of which are properties of the SDK type and the wire names
+// rather than of any reading, and a SyntaxError names a byte offset. The third is
+// everything else - and everything else is the problem. encoding/json returns an
+// UnmarshalJSON error verbatim, so a DTO that fails to parse a price can return an
+// error containing the price, and money.Money.UnmarshalJSON is exactly such a DTO.
+// Rendering that message would put a live reading in a committed manifest, so it is
+// classified by type and not quoted.
 //
 // The UnmarshalTypeError branch also carries more signal than the message did:
 // Field is the wire path the decoder stopped at, which is a member name, and
@@ -644,9 +874,8 @@ func decodeFailure(err error) string {
 		return fmt.Sprintf("json: cannot unmarshal a JSON %s into a value of Go type %s",
 			found, typeErr.Type)
 	}
-	var syntaxErr *json.SyntaxError
-	if errors.As(err, &syntaxErr) {
-		return fmt.Sprintf("the body is not well-formed JSON, at byte offset %d", syntaxErr.Offset)
+	if rendered, ok := renderSyntaxError(err); ok {
+		return rendered
 	}
 	var invalidErr *json.InvalidUnmarshalError
 	if errors.As(err, &invalidErr) {
@@ -657,6 +886,70 @@ func decodeFailure(err error) string {
 	// custom UnmarshalJSON returned may name the value it was handed.
 	return fmt.Sprintf("the SDK response type rejected the body (%T); the decoder's own "+
 		"message is not recorded because a custom UnmarshalJSON may name the value it was given",
+		err)
+}
+
+// renderSyntaxError renders the offset of a *json.SyntaxError and nothing else.
+//
+// It is shared with reduceFailure because both paths can reach the same error type
+// and because the reason a syntax error is safe is a property of the type: a
+// SyntaxError carries an Offset and its message quotes the offending byte, so the
+// offset is the whole of it that is safe and the message is the whole of it that
+// is not.
+func renderSyntaxError(err error) (string, bool) {
+	var syntaxErr *json.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		return fmt.Sprintf("the body is not well-formed JSON, at byte offset %d", syntaxErr.Offset), true
+	}
+	return "", false
+}
+
+// reduceFailure renders why a live body did not reduce to a type skeleton, without
+// quoting anything the body said.
+//
+// It exists because decodeFailure closed the leak on one path only, and this is
+// the other one. It is reachable: isJSONMediaType accepts a missing header and
+// text/plain, so a 200 carrying an HTML error page or an unlabelled body lands
+// here rather than being refused by the media type, and then a json.SyntaxError
+// carrying the message "invalid character '<' looking for beginning of value"
+// puts one byte of the live body into a committed manifest. Nothing in the
+// committed tree exercises it - every captured body reduced - which is exactly why
+// a latent path is the one worth closing rather than the one a commit already
+// shows.
+//
+// The classification is the same shape as decodeFailure's and for the same reason:
+// a SyntaxError's offset is a property of the document's position and not of its
+// content, an UnmarshalTypeError cannot arise from decoding into `any`, and
+// anything else is named by type and never quoted.
+func reduceFailure(err error) string {
+	if rendered, ok := renderSyntaxError(err); ok {
+		return rendered
+	}
+	// A truncated document is not a SyntaxError: the decoder runs out of input
+	// before the value closes and returns io.ErrUnexpectedEOF, whose own message
+	// is value-free but which says nothing a reader could act on. Naming it here
+	// is what tells "the body stopped mid-document" apart from "the body is not
+	// JSON at all", which are different statements about an endpoint.
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		return "the body ended before the JSON document closed"
+	}
+	// The probe's own refusal, rendered by identity rather than by text: it is
+	// this file's prose and carries nothing from the body, so quoting it is safe
+	// and it names a real finding - a body with two documents in it.
+	if errors.Is(err, errTrailingData) {
+		return "the body holds more than one JSON document"
+	}
+	var typeErr *json.UnmarshalTypeError
+	if errors.As(err, &typeErr) {
+		found := typeErr.Value
+		if found == "" {
+			found = "value"
+		}
+		return fmt.Sprintf("the reduction read a JSON %s it cannot represent at %s",
+			found, typeErr.Field)
+	}
+	return fmt.Sprintf("the body did not reduce to a type skeleton (%T); the decoder's own "+
+		"message is not recorded because a JSON syntax error quotes a byte of the body",
 		err)
 }
 
@@ -804,19 +1097,15 @@ func Capture(ctx context.Context, cl *client.Client, ep Endpoint, prev Outcome) 
 
 	contentType := resp.Header.Get("Content-Type")
 	if !isJSONMediaType(contentType) {
-		declared := strings.TrimSpace(contentType)
-		if declared == "" {
-			declared = "none"
-		}
-		entry.NotCaptured = "the 200 response declares Content-Type " + declared + ", which is " +
-			"not a JSON media type, so there is no response shape to reduce and the bytes were " +
-			"not committed"
+		entry.NotCaptured = "the 200 response declares " + describeContentType(contentType) +
+			", which is not a JSON media type, so there is no response shape to reduce and " +
+			"the bytes were not committed"
 		return nil, entry, nil
 	}
 	reduced, reduceErr := Skeletonify(raw)
 	if reduceErr != nil {
 		entry.NotCaptured = "the 200 response body did not reduce to a type skeleton: " +
-			reduceErr.Error() + "; the bytes were not committed rather than committed as an " +
+			reduceFailure(reduceErr) + "; the bytes were not committed rather than committed as an " +
 			"empty shape, which would read as an endpoint that answered with nothing"
 		return nil, entry, nil
 	}

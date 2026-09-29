@@ -44,6 +44,14 @@ const boolPlaceholder = true
 // balance is a real reading, so a leaked 0 would look like data.
 const numberPlaceholder = json.Number("-1")
 
+// errTrailingData is returned when a body holds more than one JSON value.
+//
+// It is a sentinel rather than an inline errors.New because reduceFailure renders
+// it: the sentence a committed manifest records for it is this probe's own prose,
+// which carries nothing from the body, so naming it recovers a real finding that
+// the classified default branch would have flattened.
+var errTrailingData = errors.New("live-probe: trailing data after the JSON body")
+
 // Skeletonify decodes raw as JSON and reduces it to a value-free type skeleton.
 //
 // The reduction keeps every name the server sent and discards every value. An
@@ -69,7 +77,8 @@ const numberPlaceholder = json.Number("-1")
 // A reduced tree therefore carries no reading in a leaf position: it holds every
 // name the server sent and none of its values. A consumer may serialise it,
 // write it to a committed fixture, and put it in the repository, and what it
-// writes is names, kinds, and the fixed literals of the placeholders.
+// writes is names, kinds, and the fixed literals of the four placeholders - none
+// of which is a live account number, a price or a timestamp.
 //
 // The member-name position is the qualification, and it belongs here rather than
 // only in the leak gate because a name is the one thing the reduction keeps
@@ -78,7 +87,7 @@ const numberPlaceholder = json.Number("-1")
 //
 //   - No leaf is a reading. Every leaf is a constant this function chose, and the
 //     type carries the kind.
-//   - No member name is a JSON number and no member name is one of the
+//   - No member name is a JSON number and no member name is one of the four
 //     placeholders. The leak gate checks names for exactly this reason, and the
 //     rule is the JSON number grammar rather than a list of readings.
 //   - A member name that is a string reading - a ticker, an order id - is not
@@ -109,6 +118,12 @@ const numberPlaceholder = json.Number("-1")
 // which case a valid value never fails to reduce. The decoder's error is
 // returned unwrapped, so errors.As still reaches the *json.SyntaxError and
 // *json.UnmarshalTypeError it carries.
+//
+// A caller must not put that error into a committed file by calling Error() on
+// it. A json.SyntaxError's message embeds the offending byte, so the rendered
+// sentence contains a piece of the body - "invalid character '<'" names the first
+// byte of an HTML error page. reduceFailure reconstructs the sentence from the
+// error's type for that reason.
 func Skeletonify(raw []byte) (any, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
@@ -121,7 +136,7 @@ func Skeletonify(raw []byte) (any, error) {
 	// would describe part of what was sent while appearing to describe all of
 	// it, which is the kind of quiet success this probe exists to rule out.
 	if dec.More() {
-		return nil, errors.New("live-probe: trailing data after the JSON body")
+		return nil, errTrailingData
 	}
 	return reduceValue(v), nil
 }
