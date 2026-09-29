@@ -11,6 +11,42 @@ newest installable version.
 
 ## [Unreleased]
 
+## [2.1.38] - 2026-09-30
+
+**Release records, and the OpenSpec assistant scaffolding.** No SDK code changed
+and nothing is live-verified. This tag exists because `v2.1.37` was cut before its
+own release records were committed, which left the tag's own tree failing
+`TestReleaseRecordsAreComplete`. Rather than rewrite a published tag, the records
+land here.
+
+### Added
+
+- **The OpenSpec assistant scaffolding for all six tools.** `openspec init` wrote a
+  skills-and-commands layer into `.opencode/`, `.claude/`, `.cursor/`, `.agents/`,
+  `.github/prompts/` and `.github/skills/`, and it was untracked, so a fresh clone
+  received the change workflow in `openspec/` with no way to drive it. All 55 files
+  are CLI-generated (`generatedBy: 1.13.2`) and regenerate with
+  `openspec init --tools ...`. The six tools differ only in invocation, which each
+  directory records: `/opsx-propose` for OpenCode, Cursor and GitHub Copilot,
+  `/opsx:propose` for Claude Code, and the `openspec-propose` skill for Codex, which
+  gets no commands because the CLI resolves it from the skills directory.
+
+### Fixed
+
+- **The `v2.1.37` release records.** `TestReleaseRecordsAreComplete` reports that a
+  tag existing which the status-document headers do not name is exactly the state
+  the gate exists to prevent, and that state is invisible to build, vet, lint, the
+  docs build and the citations check — none of which read release records. Both
+  headers now name `v2.1.38` and `docs/runs/index.md` carries a row for `v2.1.37`,
+  which is the record its own tag was missing.
+
+### Note for anyone reading this tag
+
+`v2.1.37` itself still fails `TestReleaseRecordsAreComplete` when checked out. That
+is left in place deliberately: the tag is a published object and moving it would
+rewrite it on two remotes. The failure is a record gap in a historical snapshot,
+not a defect in the SDK, and it is fixed for every tree from this tag onward.
+
 ## [2.1.37] - 2026-09-30
 
 **The demonstrated defect from v2.1.36 is fixed, and two release gates were
@@ -3570,7 +3606,7 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.37...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.38...HEAD
 [2.1.1]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.1
 [2.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.0
 [2.0.9]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.9
