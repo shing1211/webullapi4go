@@ -980,7 +980,7 @@ SDK defects.
   not only against a page, and it found one demonstrated defect the documented
   comparison is structurally blind to.** One authorised walk of all 193 documented
   endpoints against `api.sandbox.webull.hk` on 2026-09-29 recorded one outcome per
-  endpoint (`examples/live-probe/census.go:635`); the 55 that answered HTTP 200
+  endpoint (`examples/live-probe/census.go:652`); the 55 that answered HTTP 200
   (`conformance/testdata/live-manifest.json:210`) were reduced to value-free
   skeletons and committed under `conformance/testdata/live/`, and each was then
   compared against the SDK type **and** against the documentation

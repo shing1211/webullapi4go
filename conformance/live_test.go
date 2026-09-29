@@ -944,6 +944,47 @@ func TestLoadLiveReadsTheCommittedTree(t *testing.T) {
 	}
 }
 
+// TestReadLiveSkeletonRefusesARowThatCapturedNothing is the latent crash, named.
+//
+// A row whose capture produced no body names no file, and the empty string is a
+// name this package's own types permit. CompareAllLive built the path from it
+// unconditionally, so such a row read the tree root: an error reading "is a
+// directory", once per row, naming no endpoint. The committed manifest has no such
+// row, so nothing reached it - which is why the assertion is on the sentence and
+// not on the error existing, since the unguarded code also returned an error.
+//
+// The second half is the guard not having become a refusal of everything: the
+// comparison is useless if it reads nothing, so a real row is read here too.
+func TestReadLiveSkeletonRefusesARowThatCapturedNothing(t *testing.T) {
+	_, err := readLiveSkeleton(liveEntry{Symbol: "data.GetNothing", Fixture: "market-data-stock/GET-x.json"})
+	if err == nil {
+		t.Fatal("readLiveSkeleton read a row that names no skeleton")
+	}
+	for _, want := range []string{"data.GetNothing", "no skeleton", "nothing to compare"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal does not say %q: %v", want, err)
+		}
+	}
+	for _, never := range []string{"is a directory", testdataDir} {
+		if strings.Contains(err.Error(), never) {
+			t.Errorf("the refusal carries %q, which is what the unguarded read produced: %v",
+				never, err)
+		}
+	}
+
+	manifest := readLiveManifest(t)
+	if len(manifest.Entries) == 0 {
+		t.Fatal("the live manifest records no entries")
+	}
+	raw, err := readLiveSkeleton(manifest.Entries[0])
+	if err != nil {
+		t.Fatalf("readLiveSkeleton on a captured row: %v", err)
+	}
+	if len(raw) == 0 {
+		t.Error("readLiveSkeleton returned an empty body for a captured row")
+	}
+}
+
 // TestLoadLiveRefusesAMissingTree is the refusal half: a harness that reported
 // zero skeletons rather than an error would compare nothing and pass.
 //

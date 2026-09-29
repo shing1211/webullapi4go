@@ -340,6 +340,15 @@ func isAccountParam(name string) bool {
 // collapsed to a single underscore. A page that spells the same parameter
 // accountId and account_id documents one parameter, and a refusal that could be
 // walked past with a capital letter would not be a refusal.
+//
+// This is NOT conformance.fold, which lives in the conformance package and does
+// the opposite thing with the same intent: it DELETES every underscore and
+// upper-cases the rest, so "instrumentId" and "instrument_id" both become
+// "INSTRUMENTID" and compare equal. The two normalisers answer different
+// questions - "is this one parameter name?" against a page, and "is this one wire
+// member?" against a body encoding/json already declined to match - so they have
+// different rules and neither is a substitute for the other. See conformance.fold
+// for the side that says which.
 func normaliseParamName(name string) string {
 	var b strings.Builder
 	b.Grow(len(name))

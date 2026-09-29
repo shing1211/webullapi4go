@@ -369,6 +369,20 @@ func foldsTo(got, want string) bool {
 }
 
 // fold is the case-and-underscore-insensitive form of a wire name.
+//
+// It is NOT the probe's normaliseParamName (examples/live-probe/census.go), and
+// the two differ in the one rule that matters here: this DELETES the underscore
+// and upper-cases the rest, while that one keeps a single underscore between
+// words. So "instrumentId" and "instrument_id" fold to the same string here and
+// stay different names there.
+//
+// Both exist because encoding/json is stricter than either: it matches a member
+// exactly, then case-insensitively, and an underscore is not a case, so a server
+// that camelCases a snake_case name is invisible to it. This side exists to REPORT
+// that as a near miss in a finding, and the probe's side exists to decide whether
+// a documented page names one parameter or two - which is a question about a page
+// and never about a body. Using either for the other's question would either lose
+// the distinction the probe depends on or invent a near miss that does not exist.
 func fold(name string) string {
 	var b strings.Builder
 	b.Grow(len(name))
@@ -958,18 +972,16 @@ func CompareAllLive() LiveRun {
 			run.Coverage.DecodeRejected = append(run.Coverage.DecodeRejected, e.Symbol)
 		}
 
-		raw, err := fixturesFS.ReadFile(testdataDir + "/" + e.Skeleton)
-		if err == nil {
-			survey := SurveySkeleton(raw)
-			run.Coverage.LiveArrayElements += survey.ArrayElements
-			run.Coverage.TreeBytes += len(raw)
-			for shape := range survey.DistinctElementShapes {
-				distinctShapes[shape] = true
-			}
-		}
+		raw, err := readLiveSkeleton(e)
 		if err != nil {
 			run.Errs = append(run.Errs, err)
 			continue
+		}
+		survey := SurveySkeleton(raw)
+		run.Coverage.LiveArrayElements += survey.ArrayElements
+		run.Coverage.TreeBytes += len(raw)
+		for shape := range survey.DistinctElementShapes {
+			distinctShapes[shape] = true
 		}
 
 		f, ok := byFixture[e.Fixture]
@@ -1080,6 +1092,32 @@ type liveEntry struct {
 	Fixture        string `json:"fixture"`
 	Skeleton       string `json:"skeleton"`
 	DecodedCleanly bool   `json:"decodedCleanly"`
+}
+
+// readLiveSkeleton reads the skeleton one live manifest entry names, and refuses
+// a row that names none.
+//
+// A row the capture produced no body for carries an empty skeleton: the probe
+// writes the field only where a response reduced, and a NotCaptured row is
+// exactly a row with nothing to read. Building the path unconditionally turned
+// that into a read of the tree root, which an fs.FS answers with "is a
+// directory" - true, and no use at all to a reader holding a live manifest and
+// wanting to know which endpoint is missing. Every other row in the same function
+// is reported by name for the same reason.
+//
+// It is unreachable from the committed tree, which holds 55 captured rows and no
+// NotCaptured one. It is here because the code's own types permit the shape: a
+// future capture that reduces fewer bodies than it considered writes exactly this
+// manifest, and the gate would then report a directory rather than the endpoints
+// it could not read.
+func readLiveSkeleton(e liveEntry) ([]byte, error) {
+	if e.Skeleton == "" {
+		return nil, fmt.Errorf("conformance: %s: the manifest records no skeleton for %s, so the "+
+			"capture produced no body for it and there is nothing to compare. The file records a "+
+			"notCaptured reason for that row, which this package does not read", liveManifestFile,
+			e.Symbol)
+	}
+	return fixturesFS.ReadFile(testdataDir + "/" + e.Skeleton)
 }
 
 // liveEntries reads the live manifest's entries from an fs.

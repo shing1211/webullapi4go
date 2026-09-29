@@ -366,8 +366,11 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 // endpoints that can change state, which of the two conditions were satisfied,
 // and which variable decides. It is the line an operator reads before believing
 // any number below it, because the numbers mean different things depending on the
-// answer: 155 reachable with the gate closed is a complete census of the read
-// surface, and the same 155 with it open is a census that placed orders.
+// answer: 158 reachable with the gate closed is a complete census of the read
+// surface, and the same 158 with it open is a census that placed orders. (158 is
+// the run recorded in conformance/testdata/live-manifest.json: the host answered
+// 158 of 193, and 55 of those answered HTTP 200 - three different numbers that
+// are never added.)
 //
 // The line names WHICH condition failed rather than only that the gate is closed,
 // because the two failures call for different actions. A run that was never

@@ -55,10 +55,16 @@ count beside each**:
 "data": {
  "$array": [
   {"$count": 997, "$shape": {"symbol": "1", "close": "1"}},
-  {"$count": 3,   "$shape": {"symbol": "1", "close": "1", "volume": "-1"}}
+  {"$count": 3,   "$shape": {"symbol": "1", "close": "1", "volume": -1}}
  ]
 }
 ```
+
+The leaves are bare and typed, never quoted: a string leaf is the string `"1"` and
+a number leaf is the bare `-1`, because `ExpandSkeleton` decodes with
+`UseNumber` and a quoted `-1` would come back as a Go `string` and every numeric
+comparison against it would be reported as agreement with a string. Pasting this
+block into the tree as a quoted number would also be rejected by the gate.
 
 Three properties make that lossless for what the harness reads, and each is
 pinned by a test in `conformance/liveskeleton_test.go`:
