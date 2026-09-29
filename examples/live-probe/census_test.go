@@ -47,6 +47,12 @@ const (
 // the discovered value reached the wire in preference to the page's example.
 const probeDiscoveredAccount = "live-probe-discovered-account"
 
+// probePageExampleAccount stands in for the account_id a published page puts in
+// its schema, which is an account nobody holds. It is obviously synthetic so
+// the case reads as "the page's value and the discovered value differ" without
+// this file carrying an identifier Webull issued.
+const probePageExampleAccount = "live-probe-page-example-account"
+
 // newProbeTestClient returns a client aimed at baseURL. Auto-token is off and
 // retry is off so that a case observes exactly one request and one status.
 func newProbeTestClient(t *testing.T, baseURL string) *client.Client {
@@ -366,10 +372,15 @@ func TestParameterNumericExampleKeepsItsLiteral(t *testing.T) {
 }
 
 // account_id is the caller's identity and the pages publish an example for it
-// that is a fabricated account. Param deliberately lets the example win
+// that is an account nobody holds. Param deliberately lets the example win
 // (params_test.go:274) and its own comment names the fix: "a discovered account
 // threaded in ahead of this call". The census is where that threading happens,
 // so it intercepts the name before Param and never sends the page's value.
+//
+// The page's example is written as an obviously synthetic value rather than the
+// identifier the published schema carries. The case only needs the two to
+// differ, and no hand-written file in this repository should carry an
+// identifier Webull issued, however well published it is.
 func TestCensusThreadsTheDiscoveredAccountAheadOfThePageExample(t *testing.T) {
 	t.Cleanup(func() { SetAccountID("") })
 	SetAccountID(probeDiscoveredAccount)
@@ -379,12 +390,12 @@ func TestCensusThreadsTheDiscoveredAccountAheadOfThePageExample(t *testing.T) {
 		"path":   "/trading/orders/cancel",
 		"parameters": []any{
 			map[string]any{"name": "account_id", "in": "query", "required": true,
-				"schema": map[string]any{"type": "string"}, "example": "93IUJ28O9VO2KBGHDHR4H9"},
+				"schema": map[string]any{"type": "string"}, "example": probePageExampleAccount},
 		},
 		"requestBody": jsonRequestBody(map[string]any{
 			"type":       "object",
 			"required":   []any{"account_id"},
-			"properties": map[string]any{"account_id": map[string]any{"type": "string", "example": "93IUJ28O9VO2KBGHDHR4H9"}},
+			"properties": map[string]any{"account_id": map[string]any{"type": "string", "example": probePageExampleAccount}},
 		}),
 		"responses": map[string]any{},
 	}
