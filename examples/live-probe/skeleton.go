@@ -33,6 +33,17 @@ const stringPlaceholder = "1"
 // check.
 const boolPlaceholder = true
 
+// numberPlaceholder is what a JSON number reduces to. It is one fixed literal
+// for every number, so a committed fixture is a file of this number repeated
+// rather than of readings, and any other number in a reduced tree proves the
+// tree did not come from Skeletonify.
+//
+// The literal is -1 because it is not a figure Webull sends for a price, a
+// size, a timestamp, a ratio or a count, so a reduced tree cannot be read as a
+// snapshot. 0 would be the obvious alternative and the wrong one: a zero
+// balance is a real reading, so a leaked 0 would look like data.
+const numberPlaceholder = json.Number("-1")
+
 // Skeletonify decodes raw as JSON and reduces it to a value-free type skeleton.
 //
 // The reduction keeps every name the server sent and discards every value. An
@@ -41,7 +52,7 @@ const boolPlaceholder = true
 // reduces to a typed placeholder carrying its kind and nothing else:
 //
 //   - a JSON string  -> the Go string "1"
-//   - a JSON number  -> the json.Number itself
+//   - a JSON number  -> the json.Number "-1"
 //   - a JSON boolean -> the Go bool true
 //   - a JSON null    -> a nil interface
 //
@@ -55,19 +66,23 @@ const boolPlaceholder = true
 // placeholder above is a value jsonKind classifies as exactly the kind it stands
 // for, so a reduced tree is fixture-shaped input to that comparison unchanged.
 //
-// A number keeps the literal text the server sent. The comparison reads only the
-// kind, and preserving the text is what a float64 round trip would destroy: a
-// 40-digit integer and 1e400 are both numbers a float64 cannot represent, and
-// 1e400 is not a float64 at all. A consumer that commits a reduced tree verbatim
-// would therefore commit a number the server sent, so a consumer must extract
-// kinds rather than serialise the tree.
+// A reduced tree therefore contains no value the server sent: it carries every
+// name and no reading. A consumer may serialise it, write it to a committed
+// fixture, and put it in the repository, and nothing it writes is a live
+// account number, a price, or a timestamp. That is a property of the
+// representation rather than an obligation on the consumer, and it is why every
+// leaf is synthetic: the literal a number decoded to is evidence of what the
+// server sent, and evidence is what the reduction consumes, not what it emits.
 //
 // The decoder is configured with UseNumber, so a JSON integer is neither widened
 // to a float64 nor reported as something a decimal could equally be. The SDK's
 // own permissiveness must not be allowed to mask what the server sent:
 // money.Money and data.QuoteTime each decode a JSON string or a number, and a
 // skeleton that called both a string would hide a wire change the SDK would
-// absorb silently.
+// absorb silently. UseNumber is what makes the discard above possible rather
+// than merely tidy: without it a 40-digit integer is rounded to a float64 that
+// no longer equals the integer, and 1e400 is a decode error, which drops the
+// body from the evidence set instead of reducing it.
 //
 // An array reduces to a slice and never to nil, so an empty body stays
 // distinguishable from a body whose top-level kind is wrong. A repeated member
@@ -146,9 +161,12 @@ func reduceValue(v any) any {
 	case string:
 		return stringPlaceholder
 	case json.Number:
-		// The literal text is the kind's evidence, not a value: it is what keeps
-		// a 40-digit integer and 1e400 numbers rather than a decode failure.
-		return t
+		// The literal is evidence, not output. Its type already carries the
+		// kind, which is all the comparison reads, so returning it would buy no
+		// accuracy and would put a price, a share count, a timestamp or an
+		// account number into every fixture this tree is written to. A live
+		// value in a committed file cannot be taken back out of the history.
+		return numberPlaceholder
 	case bool:
 		return boolPlaceholder
 	}

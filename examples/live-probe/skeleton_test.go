@@ -33,23 +33,28 @@ func TestSkeletonify(t *testing.T) {
 		// conflating them is the one mistake this function exists to prevent. The
 		// kind is carried by the json.Number itself, because the consumer
 		// classifies a value by its Go type and a leaf spelled "number" would be
-		// read as a string.
-		{"number is not string", `{"close":385.6}`, map[string]any{"close": json.Number("385.6")}},
+		// read as a string. The literal is the shared placeholder, not 385.6: the
+		// kind is identical either way and the server's figure is not carried.
+		{"number is not string", `{"close":385.6}`, map[string]any{"close": numberPlaceholder}},
 		// A present-but-null field is a name the SDK may not carry, so it must
 		// survive as a null rather than vanish. A nil is what the consumer
 		// classifies as "null"; the string "null" would be classified "string".
 		{"null is recorded", `{"outstanding":null}`, map[string]any{"outstanding": nil}},
-		{"array of objects", `[{"a":1}]`, []any{map[string]any{"a": json.Number("1")}}},
+		{"array of objects", `[{"a":1}]`, []any{map[string]any{"a": numberPlaceholder}}},
 		{"empty array is not a wrong kind", `[]`, []any{}},
 		{"bool", `{"ok":true}`, map[string]any{"ok": true}},
 		{"nested", `{"d":{"e":[]}}`, map[string]any{"d": map[string]any{"e": []any{}}}},
-		// UseNumber is load-bearing for a reason 1 and 1.0 cannot show: 1e400 is
-		// valid JSON that a float64 decoder cannot represent, so without
-		// UseNumber this body fails to decode and the probe records an
-		// unparseable live body instead of a skeleton. That is a body silently
-		// dropped from the evidence set, which is the one failure this harness
-		// cannot detect about itself.
-		{"number a float64 cannot hold", `{"big":1e400}`, map[string]any{"big": json.Number("1e400")}},
+		// This one case proves two things. Without UseNumber, 1e400 is valid
+		// JSON that a float64 decoder cannot represent, so the body fails to
+		// decode and the probe records an unparseable live body instead of a
+		// skeleton: a body silently dropped from the evidence set, which is the
+		// one failure this harness cannot detect about itself. With UseNumber and
+		// a synthetic leaf, the same body decodes and reduces to a number, which
+		// is why the expected value is the placeholder and not "1e400". The
+		// literal the decoder preserved is discarded by the reduction; the case
+		// keeps the input precisely because it is the one that proves the
+		// preservation was necessary first.
+		{"number a float64 cannot hold", `{"big":1e400}`, map[string]any{"big": numberPlaceholder}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -91,8 +96,11 @@ func TestSkeletonifyTopLevelScalar(t *testing.T) {
 		want any
 	}{
 		{"null", `null`, nil},
-		{"integer stays a number", `42`, json.Number("42")},
-		{"decimal", `385.6`, json.Number("385.6")},
+		// Three inputs, one output. A scalar body is a number as surely as a
+		// member is, so it reduces to the same placeholder and carries no
+		// reading either.
+		{"integer stays a number", `42`, numberPlaceholder},
+		{"decimal", `385.6`, numberPlaceholder},
 		{"quoted number is a string", `"385.6"`, "1"},
 		{"bool", `true`, true},
 		// The boolean placeholder does not echo its input. Emitting one
@@ -101,8 +109,10 @@ func TestSkeletonifyTopLevelScalar(t *testing.T) {
 		// than assumed.
 		{"false is the same placeholder as true", `false`, true},
 		// A scalar body of a number no float64 could hold reduces like any
-		// other, which is the top-level half of the UseNumber argument.
-		{"unrepresentable number", `1e400`, json.Number("1e400")},
+		// other, which is the top-level half of the UseNumber argument. The
+		// overflow is the input that needs UseNumber; the placeholder is the
+		// output that proves the reduction threw the literal away.
+		{"unrepresentable number", `1e400`, numberPlaceholder},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -130,7 +140,7 @@ func TestSkeletonifyMixedKindArray(t *testing.T) {
 		{
 			"every element kind is kept",
 			`[1,"1",true,null,[],{}]`,
-			[]any{json.Number("1"), "1", true, nil, []any{}, map[string]any{}},
+			[]any{numberPlaceholder, "1", true, nil, []any{}, map[string]any{}},
 		},
 		{
 			"a null element is an element",
@@ -140,7 +150,7 @@ func TestSkeletonifyMixedKindArray(t *testing.T) {
 		{
 			"nested arrays reduce element-wise",
 			`[[1,["2"]],[]]`,
-			[]any{[]any{json.Number("1"), []any{"1"}}, []any{}},
+			[]any{[]any{numberPlaceholder, []any{"1"}}, []any{}},
 		},
 	}
 	for _, tc := range cases {
@@ -157,19 +167,23 @@ func TestSkeletonifyMixedKindArray(t *testing.T) {
 }
 
 // The property the whole harness rests on: a reduced tree can carry a name the
-// server sent and cannot carry a value it sent. The walk is the assertion, and
-// the corpus is chosen for the inputs that break a reduction rather than for
-// tidiness.
+// server sent and cannot carry a value it sent, so a consumer may write one to
+// a committed fixture without a leak. The walk is the assertion, and the corpus
+// is chosen for the inputs that break a reduction rather than for tidiness.
 func TestSkeletonifyNoLiveValueSurvives(t *testing.T) {
 	corpus := []struct {
 		name string
 		in   string
 	}{
 		// A 40-digit integer is exact as a json.Number and already rounded as a
-		// float64, so it is where a widened decode would show first.
+		// float64, so it is where a widened decode would show first. It is also
+		// the most account-number-shaped literal available, which is why it is
+		// in the corpus: it is the number a reader of a committed fixture would
+		// have to notice.
 		{"forty digit integer", `{"id":1234567890123456789012345678901234567890,"acct":"9110101000000000001"}`},
 		// 1e400 overflows float64 to +Inf and is a decode error without
-		// UseNumber, so it is the case that makes the option load-bearing.
+		// UseNumber, so it is the case that makes the option load-bearing. With
+		// it, both numbers decode and neither literal may survive.
 		{"overflowing number", `{"big":1e400,"small":1e-400}`},
 		// Escapes are where a reduction that decoded and re-encoded a string
 		// could change its bytes, and where a live value hides most cheaply.
@@ -229,10 +243,15 @@ func TestSkeletonifyNoLiveValueSurvives(t *testing.T) {
 // this reduction emits, so one appearing means the value was widened on the way
 // through, which is what a decode without UseNumber does. A bool leaf cannot
 // carry a value, because the reduction emits one unconditional placeholder, so
-// `false` is a failure: it proves the tree did not come from Skeletonify. A
-// json.Number is accepted and is the one leaf that keeps the server's own text;
-// the caller must extract kinds from a tree rather than serialise it, which is
-// the recorded consequence of the representation.
+// `false` is a failure: it proves the tree did not come from Skeletonify.
+//
+// A number leaf must be the number placeholder, and this is the assertion that
+// used to be missing. The kind is carried by the type, so a server literal buys
+// no accuracy, and a reduced tree is about to be written to a committed fixture
+// for every endpoint: a surviving number is a committed account number, which
+// is a value in git history rather than a mistake that can be deleted. So every
+// number leaf is compared against the one literal the reduction emits, and the
+// message names both the path and the literal that got through.
 func assertNoLiveValue(t *testing.T, v any, path string) {
 	t.Helper()
 	switch leaf := v.(type) {
@@ -249,8 +268,9 @@ func assertNoLiveValue(t *testing.T, v any, path string) {
 			t.Errorf("%s = %q: a live string survived the reduction", path, leaf)
 		}
 	case json.Number:
-		// The literal text is the kind's evidence, and this is the only leaf
-		// type that keeps anything the server wrote.
+		if leaf != numberPlaceholder {
+			t.Errorf("%s = %s: a live number survived the reduction", path, leaf)
+		}
 	case bool:
 		if !leaf {
 			t.Errorf("%s = false: the reduction emits %v for every boolean, so this leaf was not reduced", path, boolPlaceholder)
@@ -270,12 +290,18 @@ func TestSkeletonKind(t *testing.T) {
 		want string
 	}{
 		{"object", map[string]any{"a": "1"}, "object"},
-		{"array", []any{json.Number("1")}, "array"},
+		{"array", []any{numberPlaceholder}, "array"},
 		{"string placeholder", "1", "string"},
-		{"number", json.Number("385.6"), "number"},
+		{"number placeholder", numberPlaceholder, "number"},
 		{"boolean", true, "boolean"},
 		{"empty array is still an array", []any{}, "array"},
 		{"nil is null", nil, "null"},
+		// The consumer classifies a number by its Go type and never reads the
+		// literal, which is the whole reason the reduction can throw the literal
+		// away without losing anything: 1e400 and the placeholder are the same
+		// answer. Pinned so a future change to jsonKind is caught here rather
+		// than in a fixture 193 endpoints deep.
+		{"any number is a number", json.Number("1e400"), "number"},
 		// The guard is closed. An int is what the brief's stale interface line
 		// promised and no reduction emits; a float64 is what a decode without
 		// UseNumber would have left; a struct is a type the consumer never
