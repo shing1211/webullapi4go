@@ -129,10 +129,18 @@ make conformance-gate
   green.
 - `make conformance-gate` compares each SDK response type against the documented
   wire shape in `conformance/testdata`; `make conformance-report` prints the
-  observed divergence set. That tree is a committed, reviewable snapshot of
-  Webull's published response schemas, derived from the same docgen cache
-  `tools/webull-docgen` uses, so read a fixture change rather than regenerating
-  past it. `make conformance-fixtures` regenerates in memory and fails on any
+  observed divergence set. That tree holds **two** kinds of file, described by
+  **two** indexes. Everything outside `conformance/testdata/live/` is
+  documented-response schemas derived from the same docgen cache
+  `tools/webull-docgen` uses, described by `testdata/manifest.json`. Everything
+  under `live/` is a value-free **live** response shape written by
+  `examples/live-probe` from a sandbox run, described by
+  `testdata/live-manifest.json` — a different author, a different input and a
+  different consumer, and merging the two would put a live reading next to a
+  documented example in one index. The gate reads only the former, so a live
+  skeleton never contributes to the conformance verdict. Read a documentation
+  fixture change rather than regenerating past it.
+  `make conformance-fixtures` regenerates in memory and fails on any
   difference, which makes drift from the documentation a signal instead of a
   silent refresh; `make conformance-fixtures-update` is the only way to adopt
   new output. Both skip with exit 0 when the cache is absent, so a fresh
