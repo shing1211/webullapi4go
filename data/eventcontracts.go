@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 // Event contract instrument discovery endpoints.
@@ -138,8 +139,15 @@ func (c *Client) GetEventContractCategories(ctx context.Context) ([]EventContrac
 // GetEventContractSeries retrieves event contract series, optionally filtered
 // by category and symbols.
 //
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
 // Reference: https://developer.webull.com/apis/docs/reference/event-categories-list.md
-func (c *Client) GetEventContractSeries(ctx context.Context, q EventContractSeriesQuery) ([]EventContractSeries, error) {
+func (c *Client) GetEventContractSeries(ctx context.Context, q EventContractSeriesQuery) (*types.Page[EventContractSeries], error) {
 	query := make(url.Values)
 	if q.Category != "" {
 		query.Set("category", q.Category)
@@ -150,11 +158,11 @@ func (c *Client) GetEventContractSeries(ctx context.Context, q EventContractSeri
 	if q.PaginationKey != "" {
 		query.Set("pagination_key", q.PaginationKey)
 	}
-	var out []EventContractSeries
+	var out types.Page[EventContractSeries]
 	if err := c.get(ctx, pathEventContractSeries, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetEventContractEvents retrieves events within a series, optionally filtered
@@ -182,8 +190,15 @@ func (c *Client) GetEventContractEvents(ctx context.Context, q EventContractEven
 // GetEventContractMarkets retrieves tradable event contract markets, optionally
 // filtered by series, event, symbols, and expiration date.
 //
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
 // Reference: https://developer.webull.com/apis/docs/reference/event-categories-list.md
-func (c *Client) GetEventContractMarkets(ctx context.Context, q EventContractMarketsQuery) ([]EventContractMarket, error) {
+func (c *Client) GetEventContractMarkets(ctx context.Context, q EventContractMarketsQuery) (*types.Page[EventContractMarket], error) {
 	query := make(url.Values)
 	if q.SeriesSymbol != "" {
 		query.Set("series_symbol", q.SeriesSymbol)
@@ -200,9 +215,9 @@ func (c *Client) GetEventContractMarkets(ctx context.Context, q EventContractMar
 	if q.PaginationKey != "" {
 		query.Set("pagination_key", q.PaginationKey)
 	}
-	var out []EventContractMarket
+	var out types.Page[EventContractMarket]
 	if err := c.get(ctx, pathEventContractMarkets, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }

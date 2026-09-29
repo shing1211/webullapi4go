@@ -19,6 +19,7 @@ import (
 	"net/url"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 // Screener endpoints.
@@ -149,6 +150,10 @@ type GainersLosersQuery struct {
 	SortBy ScreenerSortBy
 	// Direction is the sort direction. Empty uses the server default.
 	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // MostActiveQuery parameterizes [Client.GetMostActive]. Category is required;
@@ -165,6 +170,10 @@ type MostActiveQuery struct {
 	SortBy ScreenerSortBy
 	// Direction is the sort direction. Empty uses the server default.
 	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // MarketSector represents a market sector overview.
@@ -186,6 +195,10 @@ type MarketSectorDetailQuery struct {
 	SortBy ScreenerSortBy
 	// Direction is the sort direction. Empty uses the server default.
 	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // HighDividendQuery parameterizes [Client.GetHighDividendRank].
@@ -341,20 +354,43 @@ func (c *Client) GetMostActive(ctx context.Context, q MostActiveQuery) ([]Screen
 // GetMarketSectors retrieves the list of market sectors with their aggregate
 // statistics and constituent stocks.
 //
+// Pass an empty paginationKey for the first page, then the
+// [types.Page.PaginationKey] of the page just read. The cursor is opaque and
+// server-issued, so it is passed back unmodified and cannot be constructed.
+//
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
 // Reference: https://developer.webull.hk/apis/docs/reference/get-market-sectors.md
-func (c *Client) GetMarketSectors(ctx context.Context) ([]MarketSector, error) {
-	var out []MarketSector
-	if err := c.get(ctx, pathMarketSectors, nil, &out); err != nil {
+func (c *Client) GetMarketSectors(ctx context.Context, paginationKey string) (*types.Page[MarketSector], error) {
+	query := url.Values{}
+	if paginationKey != "" {
+		query.Set("pagination_key", paginationKey)
+	}
+
+	var out types.Page[MarketSector]
+	if err := c.get(ctx, pathMarketSectors, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetMarketSectorDetail retrieves the constituent stocks of a single market
 // sector, with optional sorting.
 //
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
 // Reference: https://developer.webull.hk/apis/docs/reference/get-market-sector-detail.md
-func (c *Client) GetMarketSectorDetail(ctx context.Context, q MarketSectorDetailQuery) ([]ScreenerStock, error) {
+func (c *Client) GetMarketSectorDetail(ctx context.Context, q MarketSectorDetailQuery) (*types.Page[ScreenerStock], error) {
 	query := url.Values{}
 	if q.SectorName != "" {
 		query.Set("sector", q.SectorName)
@@ -369,11 +405,15 @@ func (c *Client) GetMarketSectorDetail(ctx context.Context, q MarketSectorDetail
 		query.Set("direction", string(q.Direction))
 	}
 
-	var out []ScreenerStock
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+
+	var out types.Page[ScreenerStock]
 	if err := c.get(ctx, pathMarketSectorDetail, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetHighDividendRank retrieves US stocks ranked by dividend yield.

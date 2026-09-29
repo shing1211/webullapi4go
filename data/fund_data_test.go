@@ -139,7 +139,9 @@ func TestGetFundDividends_pathAndQuery(t *testing.T) {
 			t.Errorf("start_date = %q, want %q", q.Get("start_date"), "2026-01-01")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`[]`))
+		// An empty page is still an envelope, with the empty cursor that signals the
+		// end of pagination.
+		_, _ = w.Write([]byte(`{"data":[],"pagination_key":""}`))
 	}))
 	defer srv.Close()
 
@@ -155,7 +157,11 @@ func TestGetFundDividends_pathAndQuery(t *testing.T) {
 
 func TestGetFundDividends_responseFields(t *testing.T) {
 	t.Parallel()
-	const body = `[{"symbol":"SPY","name":"SPDR S&P 500 ETF","currency":"USD","exchange":"NYSE","amount":"1.89","ex_date":"2026-09-19","pay_date":"2026-09-22","record_date":"2026-09-19","frequency":"QUARTERLY"}]`
+	// The documented 200 body is a {data, pagination_key} envelope, not a bare
+	// array. Serving a bare array here is why the test was green while the method
+	// could not read a conforming response at all.
+	const body = `{"data":[{"symbol":"SPY","name":"SPDR S&P 500 ETF","currency":"USD","exchange":"NYSE","amount":"1.89","ex_date":"2026-09-19","pay_date":"2026-09-22","record_date":"2026-09-19","frequency":"QUARTERLY"}],` +
+		`"pagination_key":"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0="}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -167,11 +173,15 @@ func TestGetFundDividends_responseFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetFundDividends() error = %v", err)
 	}
-	if len(divs) != 1 {
-		t.Fatalf("len(divs) = %d, want 1", len(divs))
+	if len(divs.Data) != 1 {
+		t.Fatalf("len(divs.Data) = %d, want 1", len(divs.Data))
 	}
-	if divs[0].Amount.Cmp(money.Must(money.NewFromString("1.89"))) != 0 || divs[0].Frequency != "QUARTERLY" {
-		t.Errorf("div = %+v", divs[0])
+	if divs.Data[0].Amount.Cmp(money.Must(money.NewFromString("1.89"))) != 0 || divs.Data[0].Frequency != "QUARTERLY" {
+		t.Errorf("div = %+v", divs.Data[0])
+	}
+	if divs.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			divs.PaginationKey)
 	}
 }
 

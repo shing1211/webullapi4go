@@ -127,7 +127,10 @@ func TestGetMostActive(t *testing.T) {
 	}
 }
 
-const marketSectorsBody = `[{"sector_name":"Technology",` +
+// The documented 200 body is a {data, pagination_key} envelope, not a bare array.
+// This constant used to be the bare array, which is why the test was green while the
+// method could not read a conforming response at all.
+const marketSectorsBody = `{"data":[{"sector_name":"Technology",` +
 	`"change_ratio":"0.015","volume":"1234567","market_value":"5000000000",` +
 	`"stocks":[{"instrument_id":"913256135","symbol":"AAPL",` +
 	`"name":"Apple Inc.","exchange_code":"NSQ","currency_code":"USD",` +
@@ -135,7 +138,8 @@ const marketSectorsBody = `[{"sector_name":"Technology",` +
 	`"close":"385.6","price":"385.6","change":"5.4","change_ratio":"0.0142",` +
 	`"volume":"12345678","turnover":"4756789012","turnover_rate":"0.0013",` +
 	`"market_value":"3650000000000","amplitude":"0.0226",` +
-	`"relative_volume_10d":"11.91"}]}]`
+	`"relative_volume_10d":"11.91"}]}],` +
+	`"pagination_key":"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0="}`
 
 func TestGetMarketSectors(t *testing.T) {
 	t.Parallel()
@@ -157,14 +161,14 @@ func TestGetMarketSectors(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	got, err := c.GetMarketSectors(context.Background())
+	got, err := c.GetMarketSectors(context.Background(), "")
 	if err != nil {
 		t.Fatalf("GetMarketSectors() error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("got %d sectors, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("got %d sectors, want 1", len(got.Data))
 	}
-	sector := got[0]
+	sector := got.Data[0]
 	if sector.SectorName != "Technology" {
 		t.Errorf("SectorName = %q, want Technology", sector.SectorName)
 	}
@@ -177,6 +181,10 @@ func TestGetMarketSectors(t *testing.T) {
 	if sector.Stocks[0].Symbol != "AAPL" {
 		t.Errorf("stock Symbol = %q, want AAPL", sector.Stocks[0].Symbol)
 	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
+	}
 }
 
 func TestGetMarketSectorsEmpty(t *testing.T) {
@@ -184,17 +192,24 @@ func TestGetMarketSectorsEmpty(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`[]`))
+		// An empty page is still an envelope, and a last page carries an empty
+		// cursor: that empty string is the documented end-of-pagination signal, so
+		// this asserts the two together rather than a non-empty key.
+		_, _ = w.Write([]byte(`{"data":[],"pagination_key":""}`))
 	}))
 	defer srv.Close()
 
 	c := newTestClient(t, srv.URL)
-	got, err := c.GetMarketSectors(context.Background())
+	got, err := c.GetMarketSectors(context.Background(), "")
 	if err != nil {
 		t.Fatalf("GetMarketSectors() error = %v", err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("got %d sectors, want 0", len(got))
+	if len(got.Data) != 0 {
+		t.Fatalf("got %d sectors, want 0", len(got.Data))
+	}
+	if got.PaginationKey != "" {
+		t.Errorf("PaginationKey = %q, want empty: an empty cursor is the documented "+
+			"end-of-pagination signal", got.PaginationKey)
 	}
 }
 
@@ -219,7 +234,12 @@ func TestGetMarketSectorDetail(t *testing.T) {
 			t.Errorf("direction = %q, want %q", got, want)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(screenerBody))
+		// The documented body is a {data, pagination_key} envelope. The constant
+		// below is the non-Display screener's bare array, so this wraps it rather
+		// than reusing it: a shared bare-array fixture is how a page-shape defect
+		// stays invisible to a green test.
+		_, _ = w.Write([]byte(`{"data":` + screenerBody + `,"pagination_key":"` +
+			"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" + `"}`))
 	}))
 	defer srv.Close()
 
@@ -233,11 +253,15 @@ func TestGetMarketSectorDetail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetMarketSectorDetail() error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("got %d stocks, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("got %d stocks, want 1", len(got.Data))
 	}
-	if got[0].Symbol != "AAPL" {
-		t.Errorf("Symbol = %q, want AAPL", got[0].Symbol)
+	if got.Data[0].Symbol != "AAPL" {
+		t.Errorf("Symbol = %q, want AAPL", got.Data[0].Symbol)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 

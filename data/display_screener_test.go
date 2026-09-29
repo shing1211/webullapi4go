@@ -25,13 +25,17 @@ import (
 	"github.com/shing1211/webullapi4go/display"
 )
 
-const dsScreenerBody = `[{"instrument_id":"913256135","symbol":"AAPL",` +
+// The documented 200 body is a {data, pagination_key} envelope, not a bare array. This
+// constant used to be the bare array, which is why the test was green while the method
+// could not read a conforming response at all.
+const dsScreenerBody = `{"data":[{"instrument_id":"913256135","symbol":"AAPL",` +
 	`"name":"Apple Inc.","exchange_code":"NSQ","currency_code":"USD",` +
 	`"pre_close":"380.2","open":"382.0","high":"388.6","low":"380.0",` +
 	`"close":"385.6","price":"385.6","change":"5.4","change_ratio":"0.0142",` +
 	`"volume":"12345678","turnover":"4756789012","turnover_rate":"0.0013",` +
 	`"market_value":"3650000000000","amplitude":"0.0226",` +
-	`"relative_volume_10d":"11.91"}]`
+	`"relative_volume_10d":"11.91"}],` +
+	`"pagination_key":"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0="}`
 
 type dsScreenerVars struct {
 	path      string
@@ -116,14 +120,18 @@ func TestGetDisplayGainersLosers(t *testing.T) {
 	if sv.direction != "ASC" {
 		t.Errorf("direction = %q, want %q", sv.direction, "ASC")
 	}
-	if len(got) != 1 {
-		t.Fatalf("got %d stocks, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("got %d stocks, want 1", len(got.Data))
 	}
-	if got[0].Symbol != "AAPL" || got[0].InstrumentID != "913256135" {
-		t.Errorf("identity = %q/%q, want AAPL/913256135", got[0].Symbol, got[0].InstrumentID)
+	if got.Data[0].Symbol != "AAPL" || got.Data[0].InstrumentID != "913256135" {
+		t.Errorf("identity = %q/%q, want AAPL/913256135", got.Data[0].Symbol, got.Data[0].InstrumentID)
 	}
-	if got[0].ChangeRatio != "0.0142" || got[0].RelativeVolume10D != "11.91" {
-		t.Errorf("decoded ratios = %+v", got[0])
+	if got.Data[0].ChangeRatio != "0.0142" || got.Data[0].RelativeVolume10D != "11.91" {
+		t.Errorf("decoded ratios = %+v", got.Data[0])
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 
@@ -157,11 +165,15 @@ func TestGetDisplayTopActive(t *testing.T) {
 	if sv.direction != "DESC" {
 		t.Errorf("direction = %q, want %q", sv.direction, "DESC")
 	}
-	if len(got) != 1 {
-		t.Fatalf("got %d stocks, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("got %d stocks, want 1", len(got.Data))
 	}
-	if got[0].Symbol != "AAPL" {
-		t.Errorf("Symbol = %q, want AAPL", got[0].Symbol)
+	if got.Data[0].Symbol != "AAPL" {
+		t.Errorf("Symbol = %q, want AAPL", got.Data[0].Symbol)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 

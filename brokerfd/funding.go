@@ -19,6 +19,7 @@ import (
 	"net/url"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 const (
@@ -218,14 +219,17 @@ type Transfer struct {
 }
 
 // ListFDTransfers retrieves all fund transfers for a broker FD account.
-func (c *Client) ListFDTransfers(ctx context.Context, accountID string) ([]Transfer, error) {
+func (c *Client) ListFDTransfers(ctx context.Context, accountID, paginationKey string) (*types.Page[Transfer], error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []Transfer
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[Transfer]
 	if err := c.get(ctx, pathFDTransfers, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetFDTransferDetail retrieves details for a specific transfer by its ID.

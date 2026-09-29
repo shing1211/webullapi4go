@@ -59,8 +59,12 @@ func TestGetEventContractCategories(t *testing.T) {
 func TestGetEventContractSeries(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"series_symbol":"AAPL_PREDICTION","category":"PREDICTION",` +
-		`"name":"AAPL Price Prediction","status":"ACTIVE"}]`
+	// The documented 200 body is a {data, pagination_key} envelope, not a bare
+	// array. Serving a bare array here is why the test was green while the method
+	// could not read a conforming response at all.
+	const body = `{"data":[{"series_symbol":"AAPL_PREDICTION","category":"PREDICTION",` +
+		`"name":"AAPL Price Prediction","status":"ACTIVE"}],` +
+		`"pagination_key":"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0="}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.URL.Path, "/trading/instruments/event-contracts/series/list"; got != want {
@@ -89,11 +93,11 @@ func TestGetEventContractSeries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventContractSeries() error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("len = %d, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("len = %d, want 1", len(got.Data))
 	}
-	if got[0].SeriesSymbol != "AAPL_PREDICTION" || got[0].Status != "ACTIVE" {
-		t.Errorf("series[0] = %+v", got[0])
+	if got.Data[0].SeriesSymbol != "AAPL_PREDICTION" || got.Data[0].Status != "ACTIVE" {
+		t.Errorf("series[0] = %+v", got.Data[0])
 	}
 }
 
@@ -141,9 +145,13 @@ func TestGetEventContractEvents(t *testing.T) {
 func TestGetEventContractMarkets(t *testing.T) {
 	t.Parallel()
 
-	const body = `[{"symbol":"AAPL_P450","event_symbol":"AAPL_PREDICTION_2026Q4",` +
+	// The documented 200 body is a {data, pagination_key} envelope, not a bare
+	// array. Serving a bare array here is why the test was green while the method
+	// could not read a conforming response at all.
+	const body = `{"data":[{"symbol":"AAPL_P450","event_symbol":"AAPL_PREDICTION_2026Q4",` +
 		`"series_symbol":"AAPL_PREDICTION","status":"TRADEABLE",` +
-		`"strike_price":"450.00","expiration_date":"2026-12-31"}]`
+		`"strike_price":"450.00","expiration_date":"2026-12-31"}],` +
+		`"pagination_key":"eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0="}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.URL.Path, "/trading/instruments/event-contracts/markets/list"; got != want {
@@ -180,13 +188,13 @@ func TestGetEventContractMarkets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEventContractMarkets() error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("len = %d, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("len = %d, want 1", len(got.Data))
 	}
-	if got[0].Symbol != "AAPL_P450" || got[0].Status != "TRADEABLE" {
-		t.Errorf("market[0] = %+v", got[0])
+	if got.Data[0].Symbol != "AAPL_P450" || got.Data[0].Status != "TRADEABLE" {
+		t.Errorf("market[0] = %+v", got.Data[0])
 	}
-	if got[0].StrikePrice.Cmp(money.Must(money.NewFromString("450.00"))) != 0 || got[0].ExpirationDate != "2026-12-31" {
-		t.Errorf("strike/expiration = %q/%q", got[0].StrikePrice, got[0].ExpirationDate)
+	if got.Data[0].StrikePrice.Cmp(money.Must(money.NewFromString("450.00"))) != 0 || got.Data[0].ExpirationDate != "2026-12-31" {
+		t.Errorf("strike/expiration = %q/%q", got.Data[0].StrikePrice, got.Data[0].ExpirationDate)
 	}
 }

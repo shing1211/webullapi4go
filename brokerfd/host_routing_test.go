@@ -160,7 +160,7 @@ func TestBrokerHostUnconfiguredIsAConfigError(t *testing.T) {
 	}
 	defer func() { _ = core.Close() }()
 
-	_, err = New(core).ListFDAccounts(context.Background())
+	_, err = New(core).ListFDAccounts(context.Background(), "")
 	if err == nil {
 		t.Fatal("want an error when BrokerHTTP is unconfigured, got nil")
 	}

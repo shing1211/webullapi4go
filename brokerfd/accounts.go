@@ -17,6 +17,8 @@ package brokerfd
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 const (
@@ -71,12 +73,16 @@ type FDAccount struct {
 }
 
 // ListFDAccounts returns all Broker FD accounts associated with the authenticated user.
-func (c *Client) ListFDAccounts(ctx context.Context) ([]FDAccount, error) {
-	var out []FDAccount
-	if err := c.get(ctx, pathFDAccountList, nil, &out); err != nil {
+func (c *Client) ListFDAccounts(ctx context.Context, paginationKey string) (*types.Page[FDAccount], error) {
+	q := url.Values{}
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDAccount]
+	if err := c.get(ctx, pathFDAccountList, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetFDAccountDetail returns the details of a specific Broker FD account by its ID.

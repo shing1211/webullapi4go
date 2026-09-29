@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 const (
@@ -42,14 +43,17 @@ type FDStockInstrument struct {
 }
 
 // GetFDStockInstruments retrieves fractional share stock instruments by symbol list.
-func (c *Client) GetFDStockInstruments(ctx context.Context, symbols []string) ([]FDStockInstrument, error) {
+func (c *Client) GetFDStockInstruments(ctx context.Context, symbols []string, paginationKey string) (*types.Page[FDStockInstrument], error) {
 	q := url.Values{}
 	q.Set("symbols", strings.Join(symbols, ","))
-	var out []FDStockInstrument
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDStockInstrument]
 	if err := c.get(ctx, pathFDStockInstruments, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // FDStockLocate represents locate (borrowed shares) information for a fractional share.
@@ -164,14 +168,17 @@ type FDECInstrument struct {
 }
 
 // GetFDECInstruments retrieves event contract instruments by event ID.
-func (c *Client) GetFDECInstruments(ctx context.Context, eventID string) ([]FDECInstrument, error) {
+func (c *Client) GetFDECInstruments(ctx context.Context, eventID, paginationKey string) (*types.Page[FDECInstrument], error) {
 	q := url.Values{}
 	q.Set("event_id", eventID)
-	var out []FDECInstrument
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDECInstrument]
 	if err := c.get(ctx, pathFDECInstruments, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetFDECInstrumentDetail retrieves details for a specific event contract by its symbol.

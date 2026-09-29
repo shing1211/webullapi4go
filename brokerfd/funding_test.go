@@ -214,8 +214,11 @@ func TestListFDTransfers(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]Transfer{
-			{TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []Transfer{
+				{TransferID: "T1", AccountID: "A1", Type: "DEPOSIT", Amount: money.Must(money.NewFromString("1000")), Currency: "USD", Status: "completed", CreateTime: "2026-01-01"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -226,15 +229,19 @@ func TestListFDTransfers(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.ListFDTransfers(context.Background(), "A1")
+	got, err := c.ListFDTransfers(context.Background(), "A1", "")
 	if err != nil {
 		t.Fatalf("ListFDTransfers error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("len(got) = %d, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("len(got.Data) = %d, want 1", len(got.Data))
 	}
 	if capturedReq.URL.Path != pathFDTransfers {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDTransfers)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 

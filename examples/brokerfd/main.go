@@ -76,14 +76,18 @@ func main() {
 
 	accountID := os.Getenv("WEBULL_TRADE_ACCOUNT_ID")
 	if accountID != "" {
-		orders, err := bfd.GetFDOpenOrders(ctx, accountID)
+		orders, err := bfd.GetFDOpenOrders(ctx, accountID, "")
 		if err != nil {
 			log.Printf("GetFDOpenOrders error: %v", err)
 		} else {
 			fmt.Printf("Open Orders for account %s:\n", accountID)
-			for _, o := range orders {
+			for _, o := range orders.Data {
 				fmt.Printf("  order_id=%s symbol=%s side=%s qty=%s filled=%s status=%s\n",
 					o.OrderID, o.Symbol, o.Side, o.Quantity, o.FilledQuantity, o.Status)
+			}
+			if orders.PaginationKey != "" {
+				fmt.Printf("  (more pages: pass this cursor back to continue) %s\n",
+					orders.PaginationKey)
 			}
 		}
 	}

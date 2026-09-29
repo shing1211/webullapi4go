@@ -29,9 +29,12 @@ func TestListFDAccounts(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]FDAccount{
-			{AccountID: "A1", AccountNumber: "123", AccountType: "CASH", AccountClass: "INDIVIDUAL_CASH", Status: "active", Currency: "USD", CreateTime: "2026-01-01"},
-			{AccountID: "A2", AccountNumber: "456", AccountType: "MARGIN", AccountClass: "INDIVIDUAL_MRGN", Status: "active", Currency: "USD", CreateTime: "2026-01-02"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []FDAccount{
+				{AccountID: "A1", AccountNumber: "123", AccountType: "CASH", AccountClass: "INDIVIDUAL_CASH", Status: "active", Currency: "USD", CreateTime: "2026-01-01"},
+				{AccountID: "A2", AccountNumber: "456", AccountType: "MARGIN", AccountClass: "INDIVIDUAL_MRGN", Status: "active", Currency: "USD", CreateTime: "2026-01-02"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -42,15 +45,19 @@ func TestListFDAccounts(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.ListFDAccounts(context.Background())
+	got, err := c.ListFDAccounts(context.Background(), "")
 	if err != nil {
 		t.Fatalf("ListFDAccounts error = %v", err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("len(got) = %d, want 2", len(got))
+	if len(got.Data) != 2 {
+		t.Fatalf("len(got.Data) = %d, want 2", len(got.Data))
 	}
 	if capturedReq.URL.Path != pathFDAccountList {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDAccountList)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 

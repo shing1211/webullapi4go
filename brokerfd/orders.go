@@ -19,6 +19,7 @@ import (
 	"net/url"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 const (
@@ -144,23 +145,29 @@ func (c *Client) GetFDOrderDetail(ctx context.Context, orderID string) (*FDOrder
 }
 
 // GetFDOrderHistory returns all filled and cancelled fractional orders for an account.
-func (c *Client) GetFDOrderHistory(ctx context.Context, accountID string) ([]FDOrder, error) {
+func (c *Client) GetFDOrderHistory(ctx context.Context, accountID, paginationKey string) (*types.Page[FDOrder], error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []FDOrder
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDOrder]
 	if err := c.get(ctx, pathFDOrderHistory, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // GetFDOpenOrders returns all open (unfilled) fractional orders for an account.
-func (c *Client) GetFDOpenOrders(ctx context.Context, accountID string) ([]FDOrder, error) {
+func (c *Client) GetFDOpenOrders(ctx context.Context, accountID, paginationKey string) (*types.Page[FDOrder], error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []FDOrder
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDOrder]
 	if err := c.get(ctx, pathFDOrderOpen, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }

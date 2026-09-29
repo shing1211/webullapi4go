@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 // pathFundNav is the fund NAV history endpoint.
@@ -168,6 +169,10 @@ type FundDividendsQuery struct {
 	StartDate string
 	EndDate   string
 	PageSize  int
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // FundDividend represents a fund or ETF dividend event.
@@ -183,8 +188,16 @@ type FundDividend struct {
 	Frequency  string      `json:"frequency"`
 }
 
+//
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+
 // GetFundDividends retrieves dividend history for a fund or ETF.
-func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]FundDividend, error) {
+func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) (*types.Page[FundDividend], error) {
 	query := url.Values{}
 	if q.Symbol != "" {
 		query.Set("symbol", q.Symbol)
@@ -199,11 +212,15 @@ func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]
 		query.Set("page_size", strconv.Itoa(q.PageSize))
 	}
 
-	var out []FundDividend
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+
+	var out types.Page[FundDividend]
 	if err := c.get(ctx, pathFundDividends, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // FundListQuery parameterizes [Client.GetFundList].

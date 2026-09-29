@@ -9,6 +9,84 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [2.1.35] - 2026-09-28
+
+**Breaking release. Fourteen methods could not read a conforming response at all, and
+none of them could page.** Each of the fourteen documented its 200 body as
+`{"data": [...], "pagination_key": "..."}` and decoded a bare slice, so
+`encoding/json` reported `cannot unmarshal object into Go value of type []T` and the
+call failed. That is a loud failure rather than a silent zero, so it is not the class
+of defect the response-contract gate was built to catch quietly -- but it means these
+methods had never succeeded against a conforming server, and `pagination_key` was
+unreachable while twelve of the fourteen could not even send one. Root baseline 81 to
+**25 rows over 12 symbols**, and the `missing-declared-name` class is now **empty** for
+the first time: it held 104 rows when opened, 28 after v2.1.34, and its last 28 were
+these same fourteen wrapper names. No fixture changed. Nothing is live-verified.
+
+### Migration
+
+Every one of the fourteen follows the same shape, so the change is one line each:
+
+| | before | after |
+|---|---|---|
+| rows | `out[i]` | `out.Data[i]` |
+| rows length | `len(out)` | `len(out.Data)` |
+| next page | impossible | pass `out.PaginationKey` |
+
+- **`data.GetMarketSectors`** gains a trailing `paginationKey string` parameter:
+  `GetMarketSectors(ctx)` becomes `GetMarketSectors(ctx, "")`.
+- **The other six `data` methods** take a cursor on their existing query struct, which
+  gained a `PaginationKey` field: `GetDisplayGainersLosers`, `GetDisplayTopActive`,
+  `GetMarketSectorDetail`, `GetFundDividends`, `GetEventContractMarkets`,
+  `GetEventContractSeries`. No call site changes; the result does.
+- **The seven `brokerfd` methods** take a trailing `paginationKey string`, so both the
+  call and the result change: `ListFDAccounts(ctx)` becomes `ListFDAccounts(ctx, "")`,
+  and `ListFDTransfers`, `GetFDActivities`, `GetFDECInstruments`, `GetFDOpenOrders`,
+  `GetFDOrderHistory` and `GetFDStockInstruments` gain the parameter alongside the one
+  they already take.
+- **`types.Page[T]` is the new shared return type**, in `pkg/types`. One generic
+  covers all eleven distinct element types instead of fourteen near-identical result
+  structs, and it is the shape `GetStockProfilesV3` and `GetCorporateActions` already
+  modelled locally. A Page is one response, not the whole collection: send
+  `PaginationKey` back to get the next page and stop when it comes back empty. There
+  is no total count and no page number on the wire.
+
+### Fixed - tests
+
+- **Fourteen tests encoded the SDK's own bare slice and decoded it.** That is why
+  fourteen broken methods shipped with a green suite: a round-trip is green whether the
+  shape is right or wrong. Each now serves the documented envelope, and each asserts
+  the cursor arrives, because reading a cursor is only half of pagination and sending
+  it is the half that fails silently. That second half is not hypothetical -- the first
+  pass of this change built the query in `GetMarketSectors`, wrote the cursor into it,
+  and then passed `nil` to `c.get`, and the only thing that caught it was a compile
+  error about an undefined variable. `TestEnvelopeCursorIsSent`,
+  `TestFDCursorIsSent`, `TestEnvelopeOmitCursorOnFirstPage` and
+  `TestEnvelopeRoundTripsAcrossTwoPages` now cover all fourteen, in both directions.
+
+### Noted
+
+- **The `DeclaredNameCoverage` bite test has been rebuilt rather than repointed.** It
+  had outlived four subjects across four releases -- `GetFDCorporateActions`,
+  `GetFundInfo`, `GetMarketSectors`, `GetMarketSectorDetail` -- each time because the
+  release drained the class it was pinned to. A bite coupled to the class under repair
+  expires exactly when the repair succeeds, which is the wrong moment. It now
+  manufactures its condition the way `LeafType` already did: the missing-name state is
+  created by stripping a tag from a type that otherwise matches its page, so the bite
+  holds whatever the baseline says. It also asserts a repaired row reports nothing,
+  which is a stronger claim than the one it replaced.
+- **One new test helper, `withPageElem`.** The decode target is now a `types.Page`
+  struct wrapping a slice, and `withField` only descends into a slice, so a tag inside
+  `Data` could not be reached for the bite to strip.
+- **11 container-kind rows and 11 decode rows remain**, over 10 symbols, and none of
+  them is the envelope family. Five sit on a page whose name ends `-list` and four of
+  those document a single item's own fields at the top level of a list path, which is
+  implausible and is the strongest documentation-error candidate in the set. They stay
+  recorded: the harness has no basis to prefer the page over the type, and a wrapper
+  there would be a decision rather than a reading.
+- `brokerfd.GetFDOrderDetail` keeps its 2 required-name rows, and
+  `brokerfd.ListAccountForms` keeps its free-form row, both recorded deliberately.
+
 ## [2.1.34] - 2026-09-28
 
 **The evidence here is weaker than in v2.1.33, and the release leads with that.** Every

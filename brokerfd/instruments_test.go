@@ -30,8 +30,11 @@ func TestGetFDStockInstruments(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]FDStockInstrument{
-			{Symbol: "AAPL", Name: "Apple Inc.", Exchange: "NASDAQ", Currency: "USD", LotSize: "100", Status: "active"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []FDStockInstrument{
+				{Symbol: "AAPL", Name: "Apple Inc.", Exchange: "NASDAQ", Currency: "USD", LotSize: "100", Status: "active"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -42,18 +45,22 @@ func TestGetFDStockInstruments(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.GetFDStockInstruments(context.Background(), []string{"AAPL"})
+	got, err := c.GetFDStockInstruments(context.Background(), []string{"AAPL"}, "")
 	if err != nil {
 		t.Fatalf("GetFDStockInstruments error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("len(got) = %d, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("len(got.Data) = %d, want 1", len(got.Data))
 	}
 	if capturedReq.URL.Path != pathFDStockInstruments {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDStockInstruments)
 	}
-	if got[0].Symbol != "AAPL" {
-		t.Fatalf("Symbol = %s, want AAPL", got[0].Symbol)
+	if got.Data[0].Symbol != "AAPL" {
+		t.Fatalf("Symbol = %s, want AAPL", got.Data[0].Symbol)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 
@@ -156,8 +163,11 @@ func TestGetFDECInstruments(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedReq = r
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]FDECInstrument{
-			{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: money.Must(money.NewFromString("150.00")), ExpirationDate: "2026-06-20", Status: "active"},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []FDECInstrument{
+				{Symbol: "EC2026AAPL", EventID: "EVT1", SeriesID: "SER1", StrikePrice: money.Must(money.NewFromString("150.00")), ExpirationDate: "2026-06-20", Status: "active"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -168,18 +178,22 @@ func TestGetFDECInstruments(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.GetFDECInstruments(context.Background(), "EVT1")
+	got, err := c.GetFDECInstruments(context.Background(), "EVT1", "")
 	if err != nil {
 		t.Fatalf("GetFDECInstruments error = %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("len(got) = %d, want 1", len(got))
+	if len(got.Data) != 1 {
+		t.Fatalf("len(got.Data) = %d, want 1", len(got.Data))
 	}
 	if capturedReq.URL.Path != pathFDECInstruments {
 		t.Fatalf("path = %s, want %s", capturedReq.URL.Path, pathFDECInstruments)
 	}
-	if got[0].EventID != "EVT1" {
-		t.Fatalf("EventID = %s, want EVT1", got[0].EventID)
+	if got.Data[0].EventID != "EVT1" {
+		t.Fatalf("EventID = %s, want EVT1", got.Data[0].EventID)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 

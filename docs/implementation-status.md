@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-28
 
-- Latest repository tag: **`v2.1.34`** (2026-09-28)
+- Latest repository tag: **`v2.1.35`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -536,8 +536,8 @@ reconciles as a clean path match and is still defective.
 Of the 154 compared rows, 63 carry at least one recorded divergence and 91 record
 none; 5 of those 91 are rows the harness reports as not comparable, because the
 method sends a path other than the one the page documents, so 86 comparable rows
-record no divergence. All 81 divergences fall on 26 symbols, in three packages:
-`brokerfd` 39, `data` 42, `trade` 0. The `trade` column is now **empty**: the four
+record no divergence. All 25 divergences fall on 12 symbols, in three packages:
+`brokerfd` 11, `data` 14, `trade` 0. The `trade` column is now **empty**: the four
 rows it held were all `missing-required-name` on `trade.BatchPlaceOrder`, whose page
 documents `total`, `success`, `failed` and `batch_orders` where the SDK had a single
 `results` field appearing on no page. They are all carried now. The remaining `trade`
@@ -623,83 +623,53 @@ rather than a property of the class today. Depth scoping is deliberately not
   name, for the 89 `brokerfd` rows; HK sandbox credentials for the 29 `data` rows,
   less the US-only `data` surfaces among them, which need the same US grant; and the
   same HK credentials for the 4 `trade` rows.
-- **`missing-declared-name` - 28 rows across 14 symbols, and every one is now
-the
-same two names.** A property the page declares but does not mark `required`
-has no
-matching json tag in the type the method decodes into, so a response
-carrying it
-would decode the value to its zero value and report no error. The mechanism
-is
-identical to the class above and the severity is the same; **what differs is
-the
-evidence, and the count must not be added to the 2 as if it were.** A
-`required` name
-is a promise the page makes; a declared name is a description of one
-response, so a
-name absent from a page that does not require it may be optional,
-conditionally sent,
-or simply absent from the example the page chose. Each of the 28 reasons
-says so, per
-entry. The check runs only where a page publishes no `required` list, which
-is
-exactly where the class above cannot run at all, and it is a separate check
-and a
-separate kind so the two strengths never collapse into one number.
+- **`missing-declared-name` - 0 rows. The class is closed.** A property the
+page
+declares but does not mark `required` has no matching json tag in the type
+the method
+decodes into, so a response carrying it would decode the value to its zero
+value and
+report no error. The mechanism is identical to the class above and the
+severity is the
+same; what differs is the evidence, and the two must never be summed as one
+figure. A
+`required` name is a promise the page makes; a declared name is a
+description of one
+response, so a name absent from a page that does not require it may be
+optional,
+conditionally sent, or simply absent from the example the page chose. The
+check runs
+only where a page publishes no `required` list, which is exactly where the
+class above
+cannot run at all, and it is a separate check and a separate kind so the two
+strengths
+never collapse into one number.
 
-**This class was 104 rows across 30 symbols, and 76 of them were fixed in
-v2.1.33
-and v2.1.34.** They were genuine gaps in the same sense as the required half
--- a
-caller reading a name the page publishes got an empty string, a zero or an
-empty
-slice -- but on the weaker evidence, and each field added says so in its own
-GoDoc
-rather than being presented as a documented requirement. The 28 that remain
-are all
-`data` and `pagination_key` on the 14 methods that return a bare slice where
-the page
-documents a `{data, pagination_key}` envelope. So the class is now
-homogeneous: the
-name check has stopped finding missing fields and has started reporting the
+**It held 104 rows across 30 symbols, and it closed in three releases.** 76
+of them
+were added as fields in v2.1.33 and v2.1.34 -- genuine gaps in the same
+sense as the
+required half, since a caller reading a name the page publishes got an empty
+string, a
+zero or an empty slice -- but on the weaker evidence, and each field says so
+in its own
+GoDoc rather than being presented as a documented requirement. The remaining
+28 were
+not fields at all: every one was `data` or `pagination_key` on the 14
+methods that
+returned a bare slice where the page documents a `{data, pagination_key}`
+envelope, so
+the name check had stopped finding missing fields and started reporting the
 same
-missing wrapper 28 times, which is a signal to fix the wrapper rather than
-to keep
-adding fields. **That is the next piece of work, and it is a functional gap
-rather
-than a readability one:** `pagination_key` is unreachable, and 12 of the 14
-methods
-cannot send one either, so these endpoints cannot be paged at all. It is
-also 14
-public signatures, which is why it is a release of its own.
+missing wrapper 28 times. v2.1.35 gave those methods the envelope, and the
+class went
+to zero. **The count reaching zero is a statement about this class only, not
+about the
+surface: it means no page's declared property is now unreachable, which is a
+narrower
+claim than the surface being correct.**
 
-- - **The 28 rows are recorded rather than suppressed, and the obvious
-    suppression is
-still wrong.** Every row also records a container-kind mismatch, and 14 of
-the 28 are
-the `data`/`pagination_key` pair a bare-array SDK cannot carry. Suppressing
-the two
-wrapper names per row would make the class look empty while leaving the
-endpoints
-unpageable, and no per-name test exists: the manifest records no type per
-declared
-name, and `propertyNameCountInFixture` is 0 on these rows because the
-committed
-minimal instances are empty, since the pages publish no `required` list for
-them.
-This is the same treatment the 25 `decode-failure` rows already get.
 
-- - **The floor applies here too, and is not printed.** 28 is a floor for
-    the reason
-the required half is: the union of tags at every depth counts a name as
-covered.
-Unlike the required half, the depth accounting is deliberately not reported
-per row,
-because `tagsOf` is called with the slice type on an array row, so the
-element's own
-fields land one level down and the same test would fire on nearly every
-declared name
-of every array row as a false "reached from below".
 - **`declared-inventory-empty` — 1 row, 1 symbol, and it is a hole rather than a
   defect.** `brokerfd.ListAccountForms` on `broker-fd-us/GET-broker-forms-list`
   declares no property name at all, so neither name check had anything to look at. It
@@ -709,38 +679,68 @@ of every array row as a false "reached from below".
   already carried a container-kind and a `decode-failure` row, so this adds no new
   divergent row; it makes an existing one say why it cannot be examined further.
   Unblock: a written answer from Webull, or one captured body.
-- **Container kind — 27 rows across 27 symbols** (26 `top-level-shape-mismatch` and
-  1 `element-type-mismatch`). The documented top level, or an array's element kind,
-  and the type the method decodes into disagree: 23 of the 27 are a documented bare
-  object against an SDK array, 3 are the inverse, and 1 is an element kind. Unlike
-  the class above, this fails loudly, at decode time, with an `encoding/json` type
-  error. That is the same loud-versus-silent distinction the
-  `brokerfd.GetFDPositions` bullet draws for its adjacent finding, and it is why the
-  two severities must not be merged into one number.
-  **19 of the 27 are indeterminate, and are more likely documentation errors than
-  SDK defects.** 19 sit on pages whose fixture name ends `-list`, and they divide
-  three ways: 12 document a `{data, pagination_key}` pagination envelope that the
-  SDK does not unwrap, 4 document a single item's own fields at the top level of a
-  path ending `/list` (`data.GetDSLatestNews`, `data.GetDSMarketNews`,
-  `data.GetDSSymbolNews`, `data.GetLogos`) — implausible for a list endpoint, and
-  the strongest documentation-error candidate in the set — and 3 are the inverse or
-  element-kind rows. The harness has no basis to prefer the page over the type, so
-  it records all 27 as open. **Do not read all 27 as SDK defects**: one live body
-  per pattern would settle them, and the 4 single-item pages are the ones to put to
-  Webull first. The other 8 sit on pages whose name does not end `-list`;
-  `brokerfd.GetFDAssetsDetail` is among them and is already recorded as the
-  adjacent finding above. Minimal fix direction: establish the direction first, then
-  either unwrap the documented envelope in the SDK or correct the page — a retag is
-  not the fix in this class. Unblock: the same credentials, plus a written answer
-  from Webull on the 4 pages that document a single item where the path says list.
-- **`decode-failure` — 27 rows across 27 symbols, the weakest check.** A decode
-  that succeeds is consistent with a type that ignores every documented name, and a
-  decode that fails is usually the same defect one of the other checks already
-  named, which is why this check runs last. All 29 rows restate a row for the same
-  symbol: 27 duplicate a container-kind row and 2 duplicate a `leaf-type-mismatch`
-  row. They are recorded so the count stays stable, not because they are 29
-  additional defects, and no separate work is attached to them. This is the
-  arithmetic reason the class totals must not be read as 81 independent problems.
+- - **Container kind - 10 rows across 10 symbols** (9
+    `top-level-shape-mismatch` and 1
+`element-type-mismatch`). The documented top level, or an array's element
+kind, and
+the type the method decodes into disagree. Unlike the name classes, this
+fails loudly,
+at decode time, with an `encoding/json` type error. That is the same
+loud-versus-silent distinction the `brokerfd.GetFDPositions` bullet draws
+for its
+adjacent finding, and it is why the two severities must not be merged into
+one number.
+**All 10 are indeterminate, and are more likely documentation errors than
+SDK
+defects.** 5 sit on pages whose fixture name ends `-list`:
+`data.GetDSLatestNews`,
+`data.GetDSMarketNews`, `data.GetDSSymbolNews` and `data.GetLogos` document
+a single
+item's own fields at the top level of a path ending `/list`, which is
+implausible for
+a list endpoint and is the strongest documentation-error candidate in the
+set, and
+`data.GetDSNewsSummary` documents a `ChatStreamResponse` the SDK does not
+model. The
+other 5 sit on pages whose name does not end `-list`:
+`brokerfd.GetAgreementDetail`,
+`brokerfd.GetFDCorporateActions` and `data.GetCapitalFlow` document an array
+where the
+SDK returns one object, `brokerfd.GetFDTransferFees` documents one object
+where the SDK
+returns an array, and `brokerfd.ListAccountForms` is the free-form row. The
+12 that
+used to be an unwrapped `{data, pagination_key}` envelope are gone: v2.1.35
+unwrapped
+it. The harness has no basis to prefer the page over the type, so it records
+all 10 as
+open. **Do not read all 10 as SDK defects**: one live body per pattern would
+settle
+them, and the 4 single-item pages are the ones to put to Webull first.
+Minimal fix
+direction: establish the direction first, then correct whichever side is
+wrong - a
+retag is not the fix in this class. Unblock: the same credentials, plus a
+written
+answer from Webull on the 4 pages that document a single item where the path
+says
+list.
+
+- - **`decode-failure` - 11 rows across 11 symbols, the weakest check.** A
+    decode that
+succeeds is consistent with a type that ignores every documented name, and a
+decode
+that fails is usually the same defect one of the other checks already named,
+which is
+why this check runs last. All 11 restate a row for the same symbol: 10
+duplicate a
+container-kind row and 1 duplicates a `declared-inventory-empty` row. They
+are recorded
+so the count stays stable, not because they are 11 additional defects, and
+no separate
+work is attached to them. This is the arithmetic reason the class totals
+must not be
+read as 25 independent problems.
 - **`leaf-type-mismatch` — no rows.** The class had two, both
 `data.Quote.QuoteTime`, and both are fixed; see item 25. It is the only class in
 this table that is now empty, which is worth stating plainly rather than leaving
@@ -771,18 +771,18 @@ grouped by check, and `conformance/doc.go` states what the instrument covers and
 - **Item 21 — the response contracts across the API surface are now measured, and
   they are largely divergent.** The five bullets above are one host, some path
   literals, a verb and body, a request shape, and one response DTO. This entry is
-  the class that last one belongs to, taken across the surface: 81 recorded
-    divergences on 26 symbols, in `brokerfd` (39), `data` (42), and `trade` (0).
+  the class that last one belongs to, taken across the surface: 25 recorded
+    divergences on 12 symbols, in `brokerfd` (11), `data` (14), and `trade` (0).
 
   | Class | Rows | Symbols | `brokerfd` | `data` | `trade` | How it fails |
   |---|---:|---:|---:|---:|---:|---|
 | `missing-required-name` | 2 | 1 | 2 | 0 | 0 | **Silently** - the documented value decodes to its zero value, no error reported |
-| `missing-declared-name` | 28 | 14 | 14 | 14 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
+| `missing-declared-name` | 0 | 0 | 0 | 0 | 0 | **Silently**, on weaker evidence - a name the page describes but does not require |
 | `declared-inventory-empty` | 1 | 1 | 1 | 0 | 0 | Nothing was examined; the page declares no property at all |
-| Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 25 | 25 | 11 | 14 | 0 | Loudly, at decode time |
-| `decode-failure` | 25 | 25 | 11 | 14 | 0 | Restates a container-kind or leaf-type row for the same symbol |
+| Container kind (`top-level-shape-mismatch` 26, `element-type-mismatch` 1) | 11 | 11 | 4 | 7 | 0 | Loudly, at decode time |
+| `decode-failure` | 11 | 11 | 4 | 7 | 0 | Restates a container-kind or leaf-type row for the same symbol |
 | `leaf-type-mismatch` | 0 | 0 | 0 | 0 | 0 | **Empty.** Both rows were `data.Quote.QuoteTime`, fixed by a type that reads both shapes Webull publishes; see item 25 |
-| **Total** | **81** | **26** | **39** | **42** | **0** |
+| **Total** | **25** | **12** | **11** | **14** | **0** |
 
   Three caveats travel with those numbers. **The name checks report a floor,
 not a
@@ -799,17 +799,20 @@ figure.** The
 2 required-name rows rest on a promise the page makes, and the 28
 declared-name rows
 on a description of one response, and only the first is a defect of the same
-certainty as the class above. All 28 of the second sit on rows that also
-record a
-container-kind mismatch, because they are the `data`/`pagination_key` pair a
-bare-array SDK cannot carry; they restate that mismatch rather than adding a
-finding, and the envelope fix will remove both together. **19 of the 27 container-kind rows
-  are indeterminate, and are more likely documentation errors than SDK defects**:
-  19 sit on pages whose name ends `-list`, of which 12 document a
-  `{data, pagination_key}` envelope the SDK does not unwrap and 4 document a single
-  item where the path says list. The harness has no basis to prefer the page over
-  the type, so it records them as open; do not read all 27 as
-  SDK defects.
+certainty as the class above. The declared half is now empty, so the 25 rows
+are
+the 2 required-name rows and the 23 container-kind and decode rows. **All 10
+of the
+container-kind rows are indeterminate, and are more likely documentation
+errors than SDK
+defects**: 5 sit on pages whose name ends `-list`, of which 4 document a
+single item
+where the path says list, and the other 5 sit elsewhere. The envelope group
+that used to
+make up 12 of the 27 is gone: v2.1.35 unwrapped it. The harness has no basis
+to prefer
+the page over the type, so it records them as open; do not read all 10 as
+SDK defects.
   - Impact: every SDK response type in `brokerfd`, and much of `data`. The strong
     name check could bite on only 64 of the 154 compared rows, the ones whose page
     publishes a `required` list, and it fired on 29 of those 64. The weak name
@@ -836,9 +839,8 @@ finding, and the envelope fix will remove both together. **19 of the 27 containe
   - **Nothing here is live-verified.** No endpoint was called and no credential was
     used. The static comparison is certain; which side a live server honours is
     unverified for every row, exactly as for the `brokerfd.GetFDPositions` bullet.
-  - Not 81 defects: 25 rows are the `decode-failure` class restating another
-    row
-    for the same symbol, 68 are declared-name rows resting on a container-kind row
+  - - Not 25 defects: 11 rows are the `decode-failure` class restating another
+    row for the same symbol, 2 are required-name rows resting on a container-kind row
     for the same symbol, 19 are the indeterminate container-kind rows, and 1 is an
     evidence-base hole.
   - Minimal fix direction: settle the direction per class before changing a tag, as
@@ -974,7 +976,7 @@ finding, and the envelope fix will remove both together. **19 of the 27 containe
   and `data.GetDisplaySnapshot` needs a paid Display Solution entitlement plus a
   maintainer decision on versioning a breaking public API change.
 - **Those five are not the complete list.** Item 21 records a sixth entry covering
-  81 measured response-contract divergences on 26 symbols, of which 76 were
+  25 measured response-contract divergences on 12 symbols, of which 23 were
   previously unwritten. Most of that class fails silently, which is worse than
   failing loudly. It now spans two silent name classes on different evidence, 119
   resting on a `required` promise and 104 on a name the page merely describes, and

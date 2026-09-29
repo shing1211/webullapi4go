@@ -19,6 +19,7 @@ import (
 	"net/url"
 
 	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 const (
@@ -40,12 +41,15 @@ type FDActivity struct {
 
 // GetFDActivities retrieves all account activities for a fractional shares account,
 // including trades, deposits, withdrawals, and other transactions.
-func (c *Client) GetFDActivities(ctx context.Context, accountID string) ([]FDActivity, error) {
+func (c *Client) GetFDActivities(ctx context.Context, accountID, paginationKey string) (*types.Page[FDActivity], error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
-	var out []FDActivity
+	if paginationKey != "" {
+		q.Set("pagination_key", paginationKey)
+	}
+	var out types.Page[FDActivity]
 	if err := c.get(ctx, pathFDActivities, q, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }

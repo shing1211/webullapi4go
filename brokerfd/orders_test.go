@@ -265,9 +265,12 @@ func TestGetFDOrderHistory(t *testing.T) {
 			t.Errorf("expected account_id acc1 in query, got %s", r.URL.Query().Get("account_id"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]FDOrder{
-			{OrderID: "ord1", AccountID: "acc1", Symbol: "AAPL", Status: "FILLED"},
-			{OrderID: "ord2", AccountID: "acc1", Symbol: "TSLA", Status: "CANCELLED"},
+		json.NewEncoder(w).Encode(map[string]any{
+			"data": []FDOrder{
+				{OrderID: "ord1", AccountID: "acc1", Symbol: "AAPL", Status: "FILLED"},
+				{OrderID: "ord2", AccountID: "acc1", Symbol: "TSLA", Status: "CANCELLED"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -278,15 +281,19 @@ func TestGetFDOrderHistory(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.GetFDOrderHistory(context.Background(), "acc1")
+	got, err := c.GetFDOrderHistory(context.Background(), "acc1", "")
 	if err != nil {
 		t.Fatalf("GetFDOrderHistory failed: %v", err)
 	}
-	if len(got) != 2 {
-		t.Errorf("expected 2 orders, got %d", len(got))
+	if len(got.Data) != 2 {
+		t.Errorf("expected 2 orders, got %d", len(got.Data))
 	}
-	if got[0].Symbol != "AAPL" {
-		t.Errorf("expected first symbol AAPL, got %s", got[0].Symbol)
+	if got.Data[0].Symbol != "AAPL" {
+		t.Errorf("expected first symbol AAPL, got %s", got.Data[0].Symbol)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }
 
@@ -302,8 +309,11 @@ func TestGetFDOpenOrders(t *testing.T) {
 			t.Errorf("expected account_id acc1 in query, got %s", r.URL.Query().Get("account_id"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]FDOrder{
-			{OrderID: "ord1", AccountID: "acc1", Symbol: "AAPL", Status: "SUBMITTED"},
+		json.NewEncoder(w).Encode(map[string]any{
+			"data": []FDOrder{
+				{OrderID: "ord1", AccountID: "acc1", Symbol: "AAPL", Status: "SUBMITTED"},
+			},
+			"pagination_key": "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=",
 		})
 	}))
 	defer srv.Close()
@@ -314,14 +324,18 @@ func TestGetFDOpenOrders(t *testing.T) {
 	}
 	c := New(cl)
 
-	got, err := c.GetFDOpenOrders(context.Background(), "acc1")
+	got, err := c.GetFDOpenOrders(context.Background(), "acc1", "")
 	if err != nil {
 		t.Fatalf("GetFDOpenOrders failed: %v", err)
 	}
-	if len(got) != 1 {
-		t.Errorf("expected 1 order, got %d", len(got))
+	if len(got.Data) != 1 {
+		t.Errorf("expected 1 order, got %d", len(got.Data))
 	}
-	if got[0].Status != "SUBMITTED" {
-		t.Errorf("expected status SUBMITTED, got %s", got[0].Status)
+	if got.Data[0].Status != "SUBMITTED" {
+		t.Errorf("expected status SUBMITTED, got %s", got.Data[0].Status)
+	}
+	if got.PaginationKey != "eyJ2IjoxLCJsYXN0SWQiOiIwIiwicGFnZU9mZnNldCI6MX0=" {
+		t.Errorf("PaginationKey = %q, want the documented cursor: without it the endpoint cannot be paged",
+			got.PaginationKey)
 	}
 }

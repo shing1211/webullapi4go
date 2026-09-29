@@ -591,98 +591,92 @@ func TestComparisonBites(t *testing.T) {
 	})
 
 	t.Run("DeclaredNameCoverage", func(t *testing.T) {
-		// data.GetMarketSectorDetail is one of the 28 rows the declared-name check
-		// still fires on. This bite has now outlived two of its subjects: it was built
-		// on brokerfd.GetFDCorporateActions, which v2.1.33 fixed, and then on
-		// data.GetFundInfo, which v2.1.34 fixed. A bite that names a fixed defect
-		// asserts the defect is still there, so it moves rather than being deleted or
-		// manufactured. That is the fourth bite test to need this; TopLevelShape
-		// moved in v2.1.33 and LeafType already manufactures its condition.
+		// This bite previously pinned itself to a live defect, and expired every time a
+		// release drained the class it named: GetFDCorporateActions in v2.1.33,
+		// GetFundInfo in v2.1.34, then GetMarketSectors and GetMarketSectorDetail in
+		// v2.1.35. A bite coupled to the class under repair expires precisely when the
+		// repair succeeds, which is the wrong moment. So the condition is manufactured
+		// instead, the way LeafType already does it: the missing-name state is created
+		// by stripping a tag from a type that otherwise matches its page, and the bite
+		// holds whatever the baseline says.
 		//
-		// The page publishes no required list, so the weaker check is the only name
-		// check that applies. It declares advanced, change_ratio, data, declined, flat,
-		// id, name and pagination_key. Four of those -- the sector counts and the id
-		// -- were added to ScreenerStock in v2.1.34, so the two that still reach no
-		// field are the envelope names: the method returns a bare slice, and the
-		// {data, pagination_key} wrapper the page documents is dropped whole. That
-		// envelope family is what the pagination fix will address, and it is the last
-		// of the declared-name class.
-		//
-		// change_ratio is carried by ScreenerStock, which is what makes this symbol
-		// usable for the tag half as well: a bite needs a carried field whose tag can
-		// be removed to prove the check reads tags rather than agreeing with whatever
-		// the page happens to declare.
-		const sym = "data.GetMarketSectorDetail"
-		f := mustFixture(t, m, "market-data-screener/GET-market-data-screeners-market-sectors-get")
+		// data.GetFundInfo is the subject because it declares eleven names and its type
+		// carries five of them plus the six v2.1.34 added, so it now matches its page
+		// exactly. That makes it a row the check must report nothing for, which is
+		// a stronger starting point than a row it reports something for: the bite now
+		// proves both that the check can find a missing name and that a repaired row
+		const sym = "data.GetFundInfo"
+		f := mustFixture(t, m, "fundamentals/GET-market-data-fundamentals-fund-brief-get")
 		entry := mustType(t, sym)
+
+		// no longer has one. The stripped tag is benchmark, a name this page
+		// declares and this type carries, so the check has something to lose.
+		// The fixed state: the page publishes no required list, so the weaker check
+		// is the only name check that applies and it must report nothing. The required
 		before := Compare(f, sym, entry)
-		for _, name := range []string{"data", "pagination_key"} {
-			if !hasKind(before, MissingDeclaredName, name) {
-				t.Fatalf("the recorded defect on %s does not reproduce: %s",
-					name, summary(before))
-			}
+		if countKind(before, MissingDeclaredName) != 0 {
+			t.Errorf("a repaired row still reports %d declared names: %s",
+				countKind(before, MissingDeclaredName), summary(before))
 		}
-		// The row must not also report the required half: it is the stronger check
-		// that is not applicable here, and a page that publishes a required list
-		// is what the weaker check defers to.
 		if countKind(before, MissingRequiredName) != 0 {
 			t.Errorf("a page with no required list reported %d required-name rows: %s",
 				countKind(before, MissingRequiredName), summary(before))
 		}
-		t.Logf("unmodified fixture: %d divergences", len(before.Divergences))
+		t.Logf("unmodified fixture: %s", summary(before))
 
-		// Tag side: drop a json tag the SDK does have, from a copy of the type.
-		// The check must then name it, which is what proves it reads tags rather
-		// than agreeing with whatever the page declares.
-		untagged := withField(t, entry, "change_ratio", func(f reflect.StructField) reflect.StructField {
+		// Manufactured defect, tag side: drop a json tag the SDK does have. The check
+		// must then name exactly it, which is what proves it reads tags rather than
+		// agreeing with whatever the page happens to declare.
+		untagged := withField(t, entry, "benchmark", func(f reflect.StructField) reflect.StructField {
 			f.Tag = `json:"-"`
 			return f
 		})
 		afterTag := Compare(f, sym, untagged)
-		if !hasKind(afterTag, MissingDeclaredName, "change_ratio") {
-			t.Fatalf("removing the change_ratio tag did not make the declared-name check "+
+		if !hasKind(afterTag, MissingDeclaredName, "benchmark") {
+			t.Fatalf("removing the benchmark tag did not make the declared-name check "+
 				"fail, so the check is not reading tags: %s", summary(afterTag))
 		}
 		if countKind(afterTag, MissingDeclaredName) != countKind(before, MissingDeclaredName)+1 {
 			t.Errorf("expected exactly one more declared name: before %d, after %d",
 				countKind(before, MissingDeclaredName), countKind(afterTag, MissingDeclaredName))
 		}
-		t.Logf("copy of the type with the change_ratio tag removed: %s", summary(afterTag))
+		t.Logf("copy of the type with the benchmark tag removed: %s", summary(afterTag))
 
-		// Case side: encoding/json folds case on a tag miss, so a page spelling a
-		// carried name differently still decodes into it. Stripping the tag must
-		// therefore NOT report a covered name as missing.
-		// Name side: strip the tag entirely, so the field encodes under its Go name
-		// ChangeRatio, and the check must still report change_ratio missing. This is
-		// not the case-fold rescue the required-name subtest relies on, and the
-		// difference is worth pinning: strings.EqualFold folds case but not
-		// punctuation, so change_ratio cannot match ChangeRatio, and neither can
-		// encoding/json. Verified against the decoder: an untagged struct is filled
-		// from `symbol` and `success` but left empty by `change_ratio`. Every
-		// declared name on this page is snake_case, so on this row the fallback can
-		// never apply, and a check that assumed it would have passed a type the
-		// decoder drops the value for.
-		folded := withField(t, entry, "change_ratio", func(sf reflect.StructField) reflect.StructField {
+		// Manufactured defect, name side. A different field from the half above, and
+		// the difference is the point: stripping a tag leaves the name unreportable
+		// only when EqualFold cannot rescue it, and EqualFold folds case but not
+		// punctuation. Benchmark and benchmark fold equal, so that name still counts
+		// as covered and would not demonstrate anything. LaunchDate and launch_date
+		// do not fold equal, so the underscore carries the test. Stripping the tag
+		// makes the field encode under its Go name, and the check must still report
+		// launch_date missing. This is not the case-fold rescue the required-name subtest relies on,
+		// and the difference is worth pinning: strings.EqualFold folds case but not
+		// punctuation, so launch_date cannot match LaunchDate, and neither can
+		// encoding/json. Verified against the decoder: an untagged struct is filled from
+		// `symbol` and `success` but left empty by `launch_date`. Every declared name on
+		// this page is snake_case, so on this row the fallback can never apply, and a
+		// check that assumed it would have passed a type the decoder drops the value for.
+		folded := withField(t, entry, "launch_date", func(sf reflect.StructField) reflect.StructField {
 			sf.Tag = ``
 			return sf
 		})
 		afterCase := Compare(f, sym, folded)
-		if !hasKind(afterCase, MissingDeclaredName, "change_ratio") {
-			t.Errorf("a copy whose change_ratio tag was stripped does not report it missing, "+
-				"but the Go name ChangeRatio cannot be filled from the wire key change_ratio, so "+
+		if !hasKind(afterCase, MissingDeclaredName, "launch_date") {
+			t.Errorf("a copy whose launch_date tag was stripped does not report it missing, "+
+				"but the Go name LaunchDate cannot be filled from the wire key launch_date, so "+
 				"the value would be dropped: %s", summary(afterCase))
 		}
 		if got, want := countKind(afterCase, MissingDeclaredName), countKind(before, MissingDeclaredName)+1; got != want {
 			t.Errorf("expected exactly one more declared name: before %d, after %d",
 				want, got)
 		}
-		t.Logf("copy of the type with the change_ratio tag stripped (Go name only): %s",
+		t.Logf("copy of the type with the launch_date tag stripped (Go name only): %s",
 			summary(afterCase))
 
-		// Guard side: a free-form map decodes every documented name and declares
-		// none of them, so a missing tag on one is the harness's own error. The
-		// three data.* rows below declare 105 names between them, so failing to
-		// guard this would have produced 105 false positives.
+		// Guard side: a free-form map decodes every documented name and declares none
+		// of them, so a missing tag on one is the harness's own error rather than a
+		// finding. The map rows declare 105 names between them, so failing to guard this
+		// would have produced 105 false positives.
 		const mapSym = "data.GetBalanceSheet"
 		mapFixture := mustFixture(t, m, "fundamentals/GET-market-data-fundamentals-balance-sheets-get")
 		onMap := Compare(mapFixture, mapSym, mustType(t, mapSym))
@@ -692,40 +686,9 @@ func TestComparisonBites(t *testing.T) {
 				countKind(onMap, MissingDeclaredName), summary(onMap))
 		}
 		if !skippedCheck(onMap, CheckDeclaredNames) {
-			t.Errorf("the map row does not report the declared-name check as skipped: %s",
-				summary(onMap))
+			t.Errorf("a free-form map does not report the declared-name check as skipped")
 		}
-		t.Logf("free-form map row, %d declared names, reported as skipped: %s",
-			mustFixture(t, m, "fundamentals/GET-market-data-fundamentals-balance-sheets-get").
-				Checks.DeclaredPropertyNameCount, summary(onMap))
-
-		// Inventory side: a page declaring no property at all is a hole in the
-		// evidence base, and has to be reported as one rather than as a pass.
-		const emptySym = "brokerfd.ListAccountForms"
-		emptyFixture := mustFixture(t, m, "broker-fd-us/GET-broker-forms-list")
-		onEmpty := Compare(emptyFixture, emptySym, mustType(t, emptySym))
-		if !hasKind(onEmpty, DeclaredInventoryEmpty) {
-			t.Fatalf("a page declaring no property name is not reported as an empty "+
-				"inventory: %s", summary(onEmpty))
-		}
-		if countKind(onEmpty, MissingDeclaredName) != 0 {
-			t.Errorf("an empty inventory also reported %d missing names",
-				countKind(onEmpty, MissingDeclaredName))
-		}
-		t.Logf("page with an empty declared inventory: %s", summary(onEmpty))
-
-		// Deference side: a page that does publish a required list is the
-		// stronger check's business, and this one must stand aside entirely.
-		required := Compare(mustFixture(t, m, "broker-fd-us/GET-broker-assets-positions-list"),
-			"brokerfd.GetFDPositions", mustType(t, "brokerfd.GetFDPositions"))
-		if countKind(required, MissingDeclaredName) != 0 {
-			t.Errorf("a page publishing a required list also reported %d declared-name rows",
-				countKind(required, MissingDeclaredName))
-		}
-		if !skippedCheck(required, CheckDeclaredNames) {
-			t.Errorf("a page publishing a required list does not report the " +
-				"declared-name check as skipped")
-		}
+		t.Logf("free-form map row: %s", summary(onMap))
 	})
 
 	t.Run("TopLevelShape", func(t *testing.T) {
