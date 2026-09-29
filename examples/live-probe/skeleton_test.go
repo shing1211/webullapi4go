@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -280,6 +281,52 @@ func assertNoLiveValue(t *testing.T, v any, path string) {
 		t.Errorf("%s is a %T: a widened value, which no reduction emits", path, leaf)
 	default:
 		t.Errorf("%s is a %T: no reduction emits that type", path, leaf)
+	}
+}
+
+// A reduced tree is written to a committed fixture, so it has to marshal, and
+// what comes out has to be the placeholders rather than the inputs. The walk
+// above proves the tree in memory; this proves the bytes that reach the
+// repository, which is where a leak would actually land.
+func TestSkeletonifyMarshalsToPlaceholders(t *testing.T) {
+	const in = `{"symbol":"AAPL","close":385.6,"closeTime":1756000000000,"acct":` +
+		`1234567890123456789012345678901234567890,"ratio":null,"active":false,` +
+		`"big":1e400,"lots":[{"filledQty":100}],"empty":[]}`
+
+	got, err := Skeletonify([]byte(in))
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	// json.Number is validated on the way out, so a placeholder that is not
+	// valid number syntax would fail every fixture write the harness performs.
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("a reduced tree does not marshal: err = %v", err)
+	}
+
+	// A round trip through the wire shape, because a committed fixture is read
+	// back by a decoder and must still be one jsonKind can classify.
+	var reread any
+	dec := json.NewDecoder(bytes.NewReader(encoded))
+	dec.UseNumber()
+	if err := dec.Decode(&reread); err != nil {
+		t.Fatalf("a marshalled tree does not decode: err = %v", err)
+	}
+	assertNoLiveValue(t, reread, "$")
+
+	// Every literal in the output is one of the four the reduction emits, so a
+	// server figure appearing in a committed file is visible in a diff rather
+	// than only to this walk.
+	for _, literal := range []string{"-1", `"1"`, "true", "null"} {
+		if !strings.Contains(string(encoded), literal) {
+			t.Errorf("marshalled tree %s does not contain the %s placeholder", encoded, literal)
+		}
+	}
+	for _, leaked := range []string{"AAPL", "385.6", "1756000000000", "1e400", "100",
+		"1234567890123456789012345678901234567890"} {
+		if strings.Contains(string(encoded), leaked) {
+			t.Errorf("marshalled tree %s contains the server literal %q", encoded, leaked)
+		}
 	}
 }
 
