@@ -14,3 +14,12 @@
 conformance/testdata/** -text
 conformance/live-divergences.json -text
 conformance/known-divergences.json -text
+
+# The same failure reached the linter, for the same reason. gofmt, and therefore
+# golangci-lint's gofmt and goimports checks, reject a CRLF working-tree copy, and
+# `make lint` is a release gate. Rather than enumerate the Go files one CRLF
+# checkout at a time -- the linter reports at most three by default, so the list
+# would grow invisibly -- one rule sets the working-tree ending for all of them.
+# eol=lf rather than -text, because unlike the fixtures above these are ordinary
+# source that git should keep normalizing on commit.
+*.go text eol=lf
