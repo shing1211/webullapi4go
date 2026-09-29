@@ -60,7 +60,13 @@ not.
   `docs/implementation-status.md`.
 - **2 of the 25 open documentation rows could be settled; 23 could not**, because
   21 sit on endpoints the HK sandbox does not serve and 2 on the one endpoint it
-  answered `504`. Until this run that was an assertion; it is now measured.
+  answered `504`. Until this run that was an assertion; it is now measured. Every
+  **per-area** figure behind that split is re-derivable from the committed
+  `conformance/testdata/live-manifest.json`, which carries a `census.area` block of
+  per-area statuses; the **per-endpoint** attribution is not, because the statuses
+  of the endpoints that were never captured live only in the gitignored
+  `examples/live-probe/census.json`. A reader with only the committed tree can
+  check the areas and not the rows.
 - **Nothing here is production evidence.** One run, one host, one day, and the
   census is not reproducible from a clean checkout: request schemas exist only in
   the gitignored docgen cache.
