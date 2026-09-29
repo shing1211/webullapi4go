@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 - Latest repository tag: **`v2.1.35`** (2026-09-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
@@ -21,6 +21,12 @@ Last updated: 2026-09-28
 - Live verification: partial historical evidence only; the current hardening
   was not newly live-verified. The repository tag is not a published
   Go-semver v2 module.
+- Live evidence recorded 2026-09-29: one authorised reachability walk of all 193
+  documented endpoints against the HK sandbox, a value-free capture of the 55
+  response shapes that answered HTTP 200, and a comparison of each against the SDK
+  type and the documentation. **Of 55 probed, 2 disagree with their documentation
+  and 12 disagree with the SDK.** It measures response contracts, not the
+  repository-tagged hardening, and it is one host on one day — see item 28.
 
 ## How to read this page
 
@@ -181,6 +187,13 @@ Earlier v0.x and v1.0 milestones remain recorded in the root `IMPLEMENTATION_STA
 
 Previously exercised HK paths include core tokens, selected AAPL data and fundamentals, watchlists, accounts, balances, positions, order previews, MQTT streaming, and Trading Events. That does not cover all 209 endpoints or the current hardening.
 
+The 2026-09-29 run is the first to walk the documented surface systematically rather
+than by hand, and it changes two of those statements rather than one: it reached
+**55** of the 193 documented endpoints, so "selected" is now a measured 55 rather
+than a list of examples; and 6 of the 18 `display-solution` endpoints answered HTTP
+200 from the core sandbox host, which is new, is not a statement about the
+`display/` package, and does not bear on the Display Solution host named below.
+
 Neither this list nor the live-blocked defects below is the complete set of known
 divergences. Both are request-side or single-DTO findings. The response contracts
 across the whole API surface have now been measured, and they are largely
@@ -190,11 +203,18 @@ measurement, and it is a limit of the evidence rather than of the SDK: 90 of the
 check now runs over the property names those pages do declare, and it is not a
 formality - it produced 104 further rows, 9 of them on rows that had recorded no
 divergence at all - but 6 of the 90 remain unnameable and the evidence on the rest
-is a description rather than a promise. That is item 22.
+is a description rather than a promise. That is item 22. A **third** set now exists
+and is also not in this list: 13 findings measured against a live server rather
+than against a page, recorded separately because a live finding is a claim about
+Webull's server rather than about this SDK. That is item 28.
 
 Blocked or unverified areas:
 
-- Display Solution: host-level `403`.
+- Display Solution: host-level `403` on the Display Solution host. Measured on
+  2026-09-29: 6 of the 18 `display-solution` endpoints answered HTTP 200 from the
+  **core** sandbox host `api.sandbox.webull.hk`, so the `403` is a property of that
+  host and not of every Display Solution endpoint; whether the core host's answers
+  are the same contract is a question for Webull.
 - US-only crypto, fund, screener, and Broker FD: no US sandbox credentials.
 - Broker API HK: missing scope (`401 ROUTE_NOT_PERMITTED`).
 - Footprint: missing entitlement (`403`).
@@ -956,6 +976,195 @@ SDK defects.
   - **Nothing here is live-verified.** No endpoint was called and no credential was
     used.
 
+- **Item 28 — a live run now measures the response contracts against a server and
+  not only against a page, and it found one demonstrated defect the documented
+  comparison is structurally blind to.** One authorised walk of all 193 documented
+  endpoints against `api.sandbox.webull.hk` on 2026-09-29 recorded one outcome per
+  endpoint (`examples/live-probe/census.go:635`); the 55 that answered HTTP 200
+  (`conformance/testdata/live-manifest.json:210`) were reduced to value-free
+  skeletons and committed under `conformance/testdata/live/`, and each was then
+  compared against the SDK type **and** against the documentation
+  (`conformance/live.go:234`). In one line: **of 55 probed, 2 disagree with their
+  documentation and 12 disagree with the SDK.** That is 14 directional observations
+  over **13 distinct findings**, because the one finding both runs reported is
+  counted in each figure. The 13 are recorded one per row in
+  `conformance/live-divergences.json:31`, each with a `reason` saying why it is
+  recorded rather than fixed and an `unblock` saying what would close it, and the
+  gate fails in both directions: a new finding is not recorded, and a recorded one
+  that stops reproducing also fails, because a fixed finding and a check that
+  changed meaning look identical from the gate.
+  - **The set is separate from `known-divergences.json` on purpose.** A live finding
+    is a claim about Webull's server. Recording one in the SDK's own backlog would
+    make the documented rows and the live rows read as one list of defects, when
+    the live rows are not claims about this SDK. The documented baseline is
+    byte-unchanged by this run, and it stays the authority on the documented
+    comparison.
+  - **The census, and the bound it puts on this item.** 193 endpoints walked;
+    the host answered 158 of them and 55 of those answered HTTP 200. The other 35
+    are accounted for rather than missing: 34 are mutating endpoints the walk
+    deliberately did not call
+    (`conformance/testdata/live-manifest.json:40`) and 1 is blocked because no JSON
+    request body is documented for it, so the probe must not invent one. Of the 103
+    non-200 answers, 73 were `404`
+    (`conformance/testdata/live-manifest.json:212`), 13 `417`, 9 `500`, 7 `403` and
+    1 `504`; a non-200 body is Webull's error shape, so reducing one would compare
+    an error against a documented success response and manufacture a divergence. By
+    area, the surfaces that stayed unreachable are `broker-fd-us` (32 endpoints, all
+    `404`), `broker-hk` (18, all `404`), `event-contracts` (11 `404`, 8 `500`),
+    `display-solution` (6 `200`, 9 `404`, 2 `417`, 1 `504`), `market-data-crypto`
+    (2 `403`, 1 `500`), `market-data-stock` (3 `200`, 3 `403`, 1 `417`),
+    `market-data-futures` (5 `200`, 2 `403`, 1 `417`), `market-data-option`
+    (1 `200`, 3 `417`) and `market-data-watchlist` (2 `200`, 6 `417`).
+  - **The census cannot be reproduced from a clean checkout, and every coverage
+    sentence here carries that.** The committed manifest is the endpoint inventory
+    and is response-only; the request schemas the walk needs — query parameters,
+    required fields, bodies — exist only in the gitignored docgen cache, which the
+    probe reads at `examples/live-probe/census.go:1128` and refuses to proceed
+    without. A fresh checkout can read the census and the captures and can
+    re-derive every number in this item from them; it cannot re-derive them from a
+    second run.
+  - **The 13 are not 13 defects, and each row's `reason` says which one it is.** A
+    reader who quotes the count as a defect count is misreading it.
+    - **4 are decode rejections**, one per captured body the SDK's own type could
+      not unmarshal, and all four are top-level-kind mismatches: the sandbox
+      answered a bare array where the SDK decodes an object or a page.
+      `data.GetDisplayGainersLosers` and `data.GetDisplayTopActive` decode
+      `types.Page[data.ScreenerStock]`, `data.GetFuturesBars` decodes
+      `data.BatchBars`, and `data.GetStockInstruments` decodes
+      `[]data.StockInstrument` against an object. A decode that fails is the
+      strongest signal this harness can produce, and it is the one class a
+      documented comparison cannot see at all: a page and a fixture made to agree
+      with each other decode cleanly whether or not either matches the server. It
+      is not 4 demonstrated SDK defects either — whether the SDK should read the
+      bare payload or the endpoint should wrap it is a question for Webull.
+    - **3 are one container disagreement seen from three angles**, all on
+      `data.GetStockInstruments`, where the live body is an object carrying `data`
+      and `pagination_key` and the SDK decodes a slice. The shape check names the
+      inversion, the decode check reports what a caller experiences, and the name
+      check reports the two names an element type has nowhere to put. One
+      disagreement, three rows, one fix.
+    - **3 are absence of evidence rather than disagreement**, and are documentation
+      observations. Two are on `trade.GetOrderDetail`, where the page requires
+      `client_order_id` and `combo_type` and the sandbox held no order for the
+      probed `client_order_id`, answering `{"orders": []}` — a statement about one
+      probe against an empty account. One is on `trade.GetPositions`, where the
+      page marks `option_strategy` required on the positions list and the probed
+      account held an equity position, so the field is option-only and absent for
+      every non-option holding: a required list naming a field the server does not
+      send for equities is a promise the page does not keep, and that is a claim
+      about the page.
+    - **2 are the one documentation divergence this run settled**, below.
+    - **1 is the single demonstrated defect**, below.
+  - **The demonstrated defect: `data.GetFuturesTick` decodes `instrument_id` to `""`
+    on every response it gets.** The page requires `instrument_id` and
+    `data.StockTicks` tags the field `instrument_id` (`data/tick.go:66`), so the
+    documented comparison is green and stays green — its fixture carries the name
+    the page documents
+    (`conformance/testdata/market-data-futures/GET-market-data-futures-ticks-list.json:1`).
+    The sandbox sent `instrumentId`
+    (`conformance/testdata/live/market-data-futures/GET-market-data-futures-ticks-list.json:3`).
+    `encoding/json` matches a member name exactly and then case-insensitively, and
+    an underscore is not a case, so the tag matches neither what the server sent nor
+    what the page documents: `GetFuturesTick` (`data/futures_market.go:47`) returns
+    a `StockTicks` whose `InstrumentID` is the empty string, with no error and
+    nothing to indicate a value was missed. A doc-versus-SDK harness reports this
+    endpoint as clean forever, because the fixture and the type were made to match
+    each other.
+    - **Why this row and not the other twelve.** It is the only one whose mechanism
+      is provable from the committed tree without first deciding which side is
+      right. The wire name cannot match the tag; that is a fact about
+      `encoding/json`, not an inference about either party's intent. Every other row
+      records an observation and a direction that is still undecided.
+    - **Why it is recorded and not fixed.** Changing a public DTO's wire name is a
+      breaking change for anyone already written against `StockTicks.InstrumentID`,
+      and one host's answer cannot establish whether `instrumentId` is specific to
+      this endpoint or the spelling this environment uses across the surface.
+      Unblock: one probe of the same endpoint against a second host. Nothing else is
+      needed to fix it, and nothing else will decide it. **No tag is changed by this
+      item**, and none should be until that probe exists.
+  - **What the run settled in the documented set, and what it could not.** Item 21's
+    25 recorded documentation divergences cover 12 symbols, and the census reached
+    **2 of the 25 rows**.
+    - **`data.GetCapitalFlow` is settled, in the direction that the page is the
+      outlier.** The page documents an object, the SDK decodes
+      `[]data.CapitalFlowEntry`, and the sandbox answered an array — so the server
+      and the SDK agree and the documentation is the odd one out. This is the one
+      row the run **decides** rather than leaves open: item 21 recorded all 10
+      container-kind rows as "more likely documentation errors than SDK defects"
+      with no basis to choose, and this is one body that chooses. Both rows on that
+      symbol now carry the direction, and the documented half closes when the page
+      is corrected, which needs no credential.
+    - **The other 23 rows could not be reached.** 11 sit on the `brokerfd` US-only
+      surface, whose 32 probed endpoints all answered `404`. The other 12 sit on six
+      `display-solution` symbols, in an area whose 18 probed endpoints answered
+      6 `200`, 9 `404`, 2 `417` and 1 `504`: 10 of the 12 rows are on the `404`s and
+      the remaining 2 on the single `504`. That last attribution is a property of the
+      run rather than something a reader can re-derive — the committed tree carries
+      the per-area status counts but not a per-endpoint status map for the endpoints
+      that were never captured, because the census run artefact is gitignored. Until
+      this run, "those endpoints are not reachable from the HK sandbox" was an
+      assertion in this document; it is now a measurement with a per-row blocker.
+  - **The reachable count is a bound, not a total, and what it leaves out is named
+    here rather than discovered later.** The live tree covers 55 of the 193
+    documented endpoints; the 138 it does not cover are the 34 mutating, 1 blocked
+    and 103 non-200 already accounted for. Three further exclusions belong on the
+    record.
+    - **The 29 `broker/` rows have no live coverage whatever.** They are part of the
+      193 walked, and every one of them falls in the `404` or not-called part of the
+      census, so that module's separately recorded divergences are exactly as
+      live-unverified as they were before this run.
+    - **5 of the 7 `data` methods v2.1.35 gave their documented
+      `{data, pagination_key}` envelope were reachable, and 2 of those 5 do not
+      decode the live body** — `data.GetDisplayGainersLosers`
+      (`data/display_screener.go:42`) and `data.GetDisplayTopActive`
+      (`data/display_screener.go:77`), which now return
+      `types.Page[data.ScreenerStock]` where the sandbox answered a bare array. The
+      other 3 decode cleanly, and the 7 `brokerfd` methods are in the unreachable
+      part. So a breaking change two days old was exercised against a server for
+      the first time here, and on 2 of its 14 methods the server answers a different
+      shape than the page.
+    - **The 34 mutating endpoints were not called**, deliberately: a census that
+      reported its own refusals as the server's would report a sandbox restriction
+      as a Webull behaviour. They are the one part of the documented surface this
+      run says nothing about beyond their existence, and they are the reason a
+      re-run of the census needs an explicit decision rather than a credential.
+  - **What this evidence is, stated so it cannot be quoted as more than it is.**
+    - **One run, one environment, one day.** Every figure here comes from one
+      authorised walk of `api.sandbox.webull.hk` on 2026-09-29, and there is no second
+      run to compare it against. A finding here is what that host answered once.
+      Nothing here says what production answers, and a sandbox is a different
+      deployment from the one a caller uses — which is the same reason the
+      live-blocked defects above are not closed by it.
+    - **The value-free tree is not provably value-free.** Every leaf is a fixed
+      placeholder the reduction chose — `"1"`, `-1`, `true`, `null` — and a body that
+      happened to contain those literals reduces to the same bytes as any other
+      reading of that kind, so a positive integer a server sent is indistinguishable
+      from a count the reduction wrote. The claim is that every leaf is the constant
+      the reduction chose
+      (`conformance/testdata/live-manifest.json:3`), and it is held by the reducer
+      and by no one hand-editing the file, not by a proof. Do not describe the tree
+      as proven to hold nothing.
+    - **A live finding is an observation, not a verdict.** That is what the separate
+      file, the per-row `reason` and the separate `unblock` requirements all encode.
+  - Minimal fix direction: none of the 13 has a fix applied. The order is
+    `data.GetFuturesTick` first, because it is the only one whose fix is known and
+    whose remaining obstacle is a maintainer's decision rather than more evidence;
+    then the four decode rejections, which need Webull to say which contract the
+    host honours before any type changes; then the `data.GetStockInstruments`
+    container question, which is a path decision first and a shape decision second.
+    **No retag in this class should be applied on the strength of one sandbox body
+    alone**, which is item 20's argument again, and the `instrumentId` row is the
+    case where the tempting move is exactly that.
+  - Unblock: a second host for the futures tick wire name, which is the only single
+    question standing between the demonstrated defect and a fix; US sandbox or
+    production credentials for the futures, screener and Broker FD rows; a paid
+    Display Solution entitlement for the two `GetDisplay*` rows and the six
+    `display-solution` pages; a written answer from Webull on the 4 pages that
+    document a single item where the path says list; and an account holding at
+    least one order and one option position for the two absence-of-evidence rows. A
+    second run of the census needs no new credential at all — it needs the docgen
+    cache, which is gitignored and has to be rebuilt.
+
 ## Remaining risks
 
 - Current v2.1.1 repository-tagged behavior has not been newly live-verified;
@@ -999,6 +1208,19 @@ SDK defects.
   same checks and carry **59 further recorded divergences of their own**.
 - Nested coverage and strict docs are not CI gates; percentages are measurements,
   not behavior guarantees.
+- **A third divergence set now exists and is measured against a server, not against
+  a page.** Item 28 records 13 findings from one HK sandbox walk on 2026-09-29, and
+  the document above is right that the other entries are not the complete list: the
+  13 are not in the live-blocked set either, because a live finding is a claim about
+  Webull's server. **Only one of the 13 is a demonstrated SDK defect** —
+  `data.GetFuturesTick` sends `instrumentId` where `data.StockTicks` tags
+  `instrument_id`, so the field decodes to `""` silently and a documented
+  comparison reports the endpoint as clean forever. The other 12 are observations:
+  4 decode rejections whose direction is undecided, 3 rows of one container
+  disagreement, 3 absence-of-evidence rows against an empty account and an equity
+  position, and the 2 rows of the one documentation divergence the run settled. The
+  run covers 55 of 193 documented endpoints, so it bounds rather than closes the
+  surface, and it is one host on one day.
 
 ## Next steps
 
@@ -1009,3 +1231,4 @@ SDK defects.
 5. **Withdrawn, and do not perform it as written.** It proposed resolving the four summary-only matches to the OpenAPI JSON paths, which would move `client.CreateToken` off the path every authenticated call depends on. All four are the `/openapi/*` namespace and the SDK matches the official `llms.txt` summary in each; the OpenAPI JSON records a path reorganisation. The only genuinely open path is the Broker FD assets summary, which is the `/broker-fd/*` item. The label fix that cleared the false unresolved flags is in `tools/webull-docgen/`; do not hand-edit the generated report.
 7. Decide whether Broker FD needs public subscribe-bitmask, richer raw metadata, and all-runs lifecycle APIs before release.
 8. Run module-aware race, vet, formatting, lint, and `mkdocs build --strict` before any separately approved release tag.
+9. Probe `data.GetFuturesTick` against a second host, and only then decide the `instrumentId` retag. It is the one demonstrated defect the 2026-09-29 run produced (item 28), and the second host is the only thing that decides whether the camelCase spelling is endpoint-specific or this environment's convention. Do not retag on one host's answer: `data.StockTicks` is a public type and the tag is a breaking change for anyone reading it.

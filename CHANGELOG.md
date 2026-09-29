@@ -9,6 +9,65 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
+## [Unreleased]
+
+No repository tag carries this section yet. Every `## [x.y.z]` heading below is a
+Git tag that exists; this one is not, and it exists so a change is not left
+unrecorded while it waits for one. The `v2.x` entries are tag facts and this is
+not.
+
+### Added
+
+- **`examples/live-probe`**: a reachability census and a value-free response-shape
+  capture. One authorised walk of all 193 documented endpoints against the HK
+  sandbox recorded one outcome per endpoint, and the 55 that answered HTTP 200 were
+  reduced to member-name skeletons -- every leaf a fixed placeholder the reduction
+  chose -- and committed under `conformance/testdata/live/`. The census records
+  73 `404`, 13 `417`, 9 `500`, 7 `403` and 1 `504` across the rest, 34 mutating
+  endpoints deliberately not called, and 1 blocked because no JSON request body is
+  documented for it.
+- **`conformance.CompareAllLive`** and the **third divergence set**,
+  `conformance/live-divergences.json`. Each captured shape is compared against the
+  SDK type *and* against the documentation, which is the class a documented
+  comparison is structurally blind to: a page and a fixture made to agree with each
+  other report an endpoint as clean whether or not either matches the server. The
+  set is separate from `known-divergences.json` on purpose, because a live finding
+  is a claim about Webull's server rather than about this SDK. **Of 55 probed, 2
+  disagree with their documentation and 12 disagree with the SDK** -- 14 directional
+  observations over 13 distinct findings. The documented baseline is unchanged.
+- **`TestLiveReportCountsBothDirections`**: the phase-4 report gate. It renders
+  "of N probed, X disagree with their documentation and Y disagree with the SDK"
+  from the run, reads the numbers back out of the rendered text, and cross-checks
+  each direction against the raw rows, so a report and the set it describes cannot
+  drift apart.
+
+### The findings, and what they are not
+
+- **One demonstrated SDK defect: `data.GetFuturesTick` decodes `instrument_id` to
+  `""` on every response.** The page requires `instrument_id` and `data.StockTicks`
+  tags the field `instrument_id`, so the documented comparison is green. The sandbox
+  sends `instrumentId`, and `encoding/json` matches neither exactly nor
+  case-insensitively because the underscore is not a case. **Not fixed here**: a
+  public DTO's wire name is a breaking change, and one host cannot establish
+  whether the camelCase spelling is endpoint-specific. Unblock is one probe of the
+  same endpoint against a second host.
+- **The other 12 are observations, not defects.** 4 decode rejections whose
+  direction is undecided, 3 rows of one container disagreement seen from three
+  angles, 3 absence-of-evidence rows against an empty account and an equity
+  position, and the 2 rows of the one documentation divergence the run settled
+  (`data.GetCapitalFlow`, where the server and the SDK agree and the page is the
+  outlier). Written up as item 28 in `IMPLEMENTATION_STATUS.md` and
+  `docs/implementation-status.md`.
+- **2 of the 25 open documentation rows could be settled; 23 could not**, because
+  21 sit on endpoints the HK sandbox does not serve and 2 on the one endpoint it
+  answered `504`. Until this run that was an assertion; it is now measured.
+- **Nothing here is production evidence.** One run, one host, one day, and the
+  census is not reproducible from a clean checkout: request schemas exist only in
+  the gitignored docgen cache.
+
+No `.go` file outside `conformance/` and `examples/live-probe/` changed, and no SDK
+behaviour changed at all.
+
 ## [2.1.35] - 2026-09-28
 
 **Breaking release. Fourteen methods could not read a conforming response at all, and

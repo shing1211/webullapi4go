@@ -17,6 +17,7 @@ package conformance
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -1013,6 +1014,168 @@ func assertSkeletonLeavesAreTyped(t *testing.T, v any, path, symbol string) {
 				"classify it a string and the comparison would read it as agreement", symbol, path)
 		}
 	}
+}
+
+// The report is the sentence the status documents quote: "of N probed, X disagree
+// with their documentation and Y disagree with the SDK". It is the deliverable
+// phase 4 is gated on, because the gate is on Y: a run in which nothing disagreed
+// with the SDK closes a question, and a run in which something did opens a defect
+// item per disagreeing endpoint.
+//
+// It lives in a test file because it is a report, not a library surface. Nothing
+// calls it and no non-test code depends on it, so exporting it would put a
+// sentence format into the package's public contract for no reason.
+
+// liveReport holds the two counts, derived rather than written down.
+type liveReport struct {
+	// Probed is the number of captured responses the run compared.
+	Probed int
+	// Docs is how many findings were observed against the documentation, so the
+	// SDK and the page disagree.
+	Docs int
+	// SDK is how many were observed against the live wire, so the SDK and the
+	// server disagree.
+	SDK int
+	// Both is how many of the findings each direction contributed, which is what
+	// keeps Docs and SDK from being added into a total.
+	Both int
+}
+
+// summariseLive derives the report from a run.
+//
+// Every count comes from the classifications or from the raw rows, never from a
+// literal, so a report and the set it describes cannot drift apart. The two
+// directions are read from different places on purpose: the classification bucket
+// says which side *carried* a finding and the raw row's Direction says which
+// *body* it was observed against, and a classifier that quietly changed what a
+// bucket means would move one and not the other.
+func summariseLive(run LiveRun) liveReport {
+	rep := liveReport{Probed: run.Coverage.Probed}
+	for _, c := range run.Classifications {
+		switch c.Bucket {
+		case LiveDocsOnly:
+			rep.Docs++
+		case LiveOnly:
+			rep.SDK++
+		case LiveBoth, LiveBothDetailChanged:
+			// One finding, observed on both sides. It is counted in both
+			// directions because it is a disagreement with each, and separately
+			// because Docs+SDK would otherwise over-count the set by one.
+			rep.Docs++
+			rep.SDK++
+			rep.Both++
+		default:
+			// BucketCounts already requires every bucket to be accounted for; a
+			// fifth bucket here would be a new meaning rather than a new count.
+			panic("conformance: live report does not know bucket " + string(c.Bucket))
+		}
+	}
+	return rep
+}
+
+// Line renders the one sentence the status documents quote.
+func (r liveReport) Line() string {
+	return "of " + itoa(r.Probed) + " probed, " + itoa(r.Docs) +
+		" disagree with their documentation and " + itoa(r.SDK) +
+		" disagree with the SDK"
+}
+
+// reportLineRE reads the two counts back out of a rendered line, so a renderer
+// holding a literal rather than the derived count fails here instead of in a
+// document.
+var reportLineRE = regexp.MustCompile(`^of (\d+) probed, (\d+) disagree with their documentation and (\d+) disagree with the SDK$`)
+
+// TestLiveReportCountsBothDirections is the report gate.
+//
+// It asserts three things. The two directions are distinguished, so a reader
+// cannot collapse "disagrees with the page" into "disagrees with the server". The
+// numbers the line prints are the counts the run found, checked by reading them
+// back out of the rendered text, so a constant in the renderer fails here rather
+// than in a status document. And the run has a non-zero count in each direction,
+// which is the claim phase 4 rests on: Y is not zero, so a defect item is opened
+// per disagreeing endpoint rather than the question being declared closed.
+//
+// The way to break this test is a renderer that formats literals, or a summary
+// that reads one direction twice, and both are the arithmetic errors a report
+// makes when a person writes the sentence by hand.
+func TestLiveReportCountsBothDirections(t *testing.T) {
+	run := CompareAllLive()
+	for _, err := range run.Errs {
+		t.Errorf("the run could not compare an endpoint, so the report would be "+
+			"a report on a subset that does not say so: %v", err)
+	}
+
+	rep := summariseLive(run)
+
+	// The two counts are computed from independent sources: the buckets say which
+	// side carried each finding, the raw rows say which body it was observed
+	// against. Agreement between them is the check that the classifier still means
+	// what the report claims it means.
+	byDirection := map[LiveDirection]int{}
+	for _, r := range run.Rows {
+		byDirection[r.Direction]++
+	}
+	if byDirection[LiveDocsDirection] != rep.Docs {
+		t.Errorf("%d row(s) carry the documentation direction but the report counts "+
+			"%d; the two are read from different places and must agree",
+			byDirection[LiveDocsDirection], rep.Docs)
+	}
+	if byDirection[LiveSDKDirection] != rep.SDK {
+		t.Errorf("%d row(s) carry the live direction but the report counts %d; the "+
+			"two are read from different places and must agree",
+			byDirection[LiveSDKDirection], rep.SDK)
+	}
+
+	// Everything found is in exactly one bucket, and the overlap between the two
+	// counts is exactly the findings both directions contributed. Without this a
+	// finding could be in neither count and the report would still print.
+	if sum := rep.Docs + rep.SDK - rep.Both; sum != len(run.Classifications) {
+		t.Errorf("the two directions account for %d finding(s) between them, the "+
+			"run classified %d; a finding in neither count is missing from the "+
+			"report", sum, len(run.Classifications))
+	}
+	if rep.Both == rep.Docs || rep.Both == rep.SDK {
+		t.Errorf("every finding is in both directions (%d docs, %d SDK, %d both), so "+
+			"the report cannot be distinguishing them", rep.Docs, rep.SDK, rep.Both)
+	}
+
+	// The rendered numbers must be the derived ones. Reading them back is what
+	// makes this a check rather than a restatement.
+	m := reportLineRE.FindStringSubmatch(rep.Line())
+	if m == nil {
+		t.Fatalf("the report line does not have the expected shape: %q", rep.Line())
+	}
+	for _, c := range []struct {
+		what string
+		got  string
+		want int
+	}{
+		{"probed", m[1], rep.Probed},
+		{"documentation", m[2], rep.Docs},
+		{"SDK", m[3], rep.SDK},
+	} {
+		if c.got != itoa(c.want) {
+			t.Errorf("the report prints %s = %s; the run found %d", c.what, c.got, c.want)
+		}
+	}
+
+	// The claim the phase-4 gate rests on, in both directions. Y is not zero, so
+	// the run did not close the question and each disagreeing endpoint is opened
+	// as a defect item; X is not zero either, so the documented half is not a
+	// clean row either.
+	if rep.SDK == 0 {
+		t.Error("no finding disagreed with the SDK, so the report would claim the " +
+			"gate closed the question; the committed tree disagrees with that")
+	}
+	if rep.Docs == 0 {
+		t.Error("no finding disagreed with the documentation, so the report would " +
+			"claim the documented comparison found nothing to say about the SDK")
+	}
+	if rep.Probed != run.Coverage.Compared {
+		t.Errorf("the report prints %d probed and the run compared %d; the line is "+
+			"what a reader would take as the denominator", rep.Probed, run.Coverage.Compared)
+	}
+	t.Log(rep.Line())
 }
 
 func itoa(n int) string {
