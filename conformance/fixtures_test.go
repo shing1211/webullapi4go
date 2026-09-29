@@ -295,7 +295,10 @@ const (
 // committed, so a price, a share count, a timestamp or an account number in one
 // is in git history, which is not a mistake anyone can delete. The reduction is
 // what prevents that, and this asserts the result rather than the intent: every
-// leaf in every committed file is the placeholder for its kind and nothing else.
+// leaf in every committed file is the placeholder for its kind and nothing else,
+// and no key in any of them is a reading. The key half is half the tree - a
+// member name is kept verbatim by the reduction, so a name that is a value is a
+// leak this walk would otherwise pass - and its rule is keyCarriesAReading.
 //
 // Four leaf types are accepted and two are rejected, and the rejections are the
 // interesting half. A float64 or an int is a value a decode without UseNumber
@@ -328,13 +331,98 @@ func TestLiveSkeletonsCarryNoValue(t *testing.T) {
 	}
 }
 
-// assertNoLiveValue walks one decoded skeleton and fails on any leaf that could
-// carry something the server sent.
-func assertNoLiveValue(t *testing.T, value any, path, file string) {
+// liveValueSink is where assertNoLiveValue reports. *testing.T satisfies it, and
+// so does recordingSink below, which is what lets the key rule be exercised
+// against a body that really does carry a reading: such a body cannot go into
+// the committed tree in order to be walked, so the failing case has to be
+// driven from here.
+type liveValueSink interface {
+	Helper()
+	Errorf(format string, args ...any)
+}
+
+// recordingSink collects what assertNoLiveValue reports rather than failing the
+// test that drives it.
+type recordingSink struct{ messages []string }
+
+func (r *recordingSink) Helper() {}
+
+func (r *recordingSink) Errorf(format string, args ...any) {
+	r.messages = append(r.messages, fmt.Sprintf(format, args...))
+}
+
+// keyCarriesAReading reports whether an object member name could itself be a
+// value the server sent.
+//
+// The reduction keeps every member name verbatim and replaces every value, so a
+// name is the one place a reading can survive the reduction. The rule is the
+// narrow one the manifest's warning states - no key may be a value Webull sent -
+// and two forms of key are refused.
+//
+//   - A key that is a well-formed JSON number. Every reading Webull sends that is
+//     a number - an account id, an instrument id, a timestamp in milliseconds, a
+//     price, a size, a count - is one of these when it appears as a key, and no
+//     Webull member name is. The form is decided by the JSON number grammar alone,
+//     so the rule needs no vocabulary of names and holds for any endpoint.
+//   - A key that is one of the four placeholders, or the empty string. A key a
+//     reader cannot tell from a value is the ambiguity the representation exists
+//     to remove, and an empty key is indistinguishable from an empty string
+//     reading.
+//
+// # What the rule cannot see, which is most of the class
+//
+// It cannot see a key that is a string reading: a ticker, an order id, a company
+// name. A JSON object member name and a JSON string value are the same token in
+// the same grammar, so nothing in the document, and nothing in the reduced tree,
+// distinguishes them. That is a property of JSON rather than a gap in this walk,
+// and it bounds what the tree may be claimed to hold: no key is a numeric reading
+// and no key is a placeholder; a string-valued key is neither detectable here nor
+// excluded.
+//
+// A numeric reading written in a form the JSON grammar rejects is not caught
+// either, because the rule is the grammar's rather than a looser approximation of
+// it: "01", ".5" and "1 " are not well-formed JSON numbers and pass. Webull
+// writes numbers canonically, so the narrower rule is the one that cannot be
+// talked out of its own grammar.
+//
+// # The one false positive, and why it is left in
+//
+// A member name that is itself a bare number fails the gate. A macro series keyed
+// by period is the shape that would do it, and no captured endpoint is one. The
+// failure is left in rather than carved out because an exception for a shape
+// nobody has observed would be a special case inside a safety check, whereas a
+// real one shows up loudly and is a question for the maintainer: the rule, not the
+// key, is what would be reconsidered.
+func keyCarriesAReading(name string) bool {
+
+	if name == "" {
+		return true
+	}
+	switch name {
+	case liveStringPlaceholder, liveNumberPlaceholder, "true", "null":
+		return true
+	}
+	_, err := json.Marshal(json.Number(name))
+	return err == nil
+}
+
+// assertNoLiveValue walks one decoded skeleton and fails on any key or leaf that
+// could carry something the server sent.
+//
+// The map case checks the key before it descends, so the invariant is asserted
+// over the whole tree and not over its leaves alone. keyCarriesAReading holds the
+// rule and states what it cannot see.
+func assertNoLiveValue(t liveValueSink, value any, path, file string) {
 	t.Helper()
 	switch leaf := value.(type) {
 	case map[string]any:
 		for name, member := range leaf {
+			if keyCarriesAReading(name) {
+				t.Errorf("%s holds the member name %q at %s: no Webull member name is a "+
+					"JSON number or one of the four placeholders, so a key in either form "+
+					"is a reading that reached a committed file",
+					file, name, path+"."+name)
+			}
 			assertNoLiveValue(t, member, path+"."+name, file)
 		}
 	case []any:
@@ -362,6 +450,131 @@ func assertNoLiveValue(t *testing.T, value any, path, file string) {
 			file, leaf, path)
 	default:
 		t.Errorf("%s holds a %T at %s: no reduction emits that type", file, leaf, path)
+	}
+}
+
+// TestLiveSkeletonKeysCarryNoReading is the key half of the invariant on its own,
+// driven from a table because a body whose key is a reading cannot be committed
+// to be walked.
+//
+// Every tree below carries placeholder leaves, so the only thing that can report
+// is the key rule, which is what makes the counts readable: a case expecting one
+// report is a case where a key was caught, and a case expecting none is a case
+// where every key is a member name. The last row is the rule's stated limit
+// pinned deliberately - a string-valued key is not detectable, so a ticker key is
+// expected to pass, and this case fails if the rule ever quietly narrows its own
+// claim.
+func TestLiveSkeletonKeysCarryNoReading(t *testing.T) {
+	var (
+		leaf   = map[string]any{"symbol": liveStringPlaceholder, "close": json.Number(liveNumberPlaceholder)}
+		nested = map[string]any{"orders": []any{map[string]any{"symbol": liveStringPlaceholder}}}
+	)
+	cases := []struct {
+		name        string
+		tree        any
+		wantReports int
+		because     string
+	}{
+		{
+			name:        "a member name",
+			tree:        nested,
+			wantReports: 0,
+			because:     "a name is evidence and must survive",
+		},
+		{
+			name:        "a camelCase member name",
+			tree:        map[string]any{"instrumentId": liveStringPlaceholder},
+			wantReports: 0,
+			because: "the rule is not a snake_case rule; instrumentId is the one " +
+				"non-snake_case member name the whole committed tree carries",
+		},
+		{
+			name:        "a dotted member name",
+			tree:        map[string]any{"net.asset.value": liveStringPlaceholder},
+			wantReports: 0,
+			because:     "a dot is not evidence of a reading",
+		},
+		{
+			name:        "an account id as a key",
+			tree:        map[string]any{"9110101000000000001": leaf},
+			wantReports: 1,
+			because: "an account id is a number Webull sent, and as a key the " +
+				"reduction preserves it verbatim",
+		},
+		{
+			name:        "an instrument id as a key",
+			tree:        map[string]any{"9132750001": leaf},
+			wantReports: 1,
+			because:     "an endpoint answering {\"9132750001\": {...}} commits the id",
+		},
+		{
+			name:        "a timestamp as a key",
+			tree:        map[string]any{"1756000000000": leaf},
+			wantReports: 1,
+			because:     "a millisecond epoch is a number like any other",
+		},
+		{
+			name:        "a price as a key",
+			tree:        map[string]any{"385.6": leaf},
+			wantReports: 1,
+			because:     "the fraction is still the JSON number grammar",
+		},
+		{
+			name:        "the string placeholder as a key",
+			tree:        map[string]any{liveStringPlaceholder: leaf},
+			wantReports: 1,
+			because: "a key a reader cannot tell from a leaf is the ambiguity the " +
+				"representation exists to remove",
+		},
+		{
+			name:        "the number placeholder as a key",
+			tree:        map[string]any{liveNumberPlaceholder: leaf},
+			wantReports: 1,
+			because:     "caught by the number rule as well, and both agreeing is the point",
+		},
+		{
+			name:        "an empty key",
+			tree:        map[string]any{"": leaf},
+			wantReports: 1,
+			because:     "an empty key is indistinguishable from an empty string reading",
+		},
+		{
+			name:        "a reading as a key at depth",
+			tree:        map[string]any{"data": map[string]any{"9110101000000000001": leaf}},
+			wantReports: 1,
+			because:     "the rule descends, so a nested map cannot hide a key",
+		},
+		{
+			name:        "a ticker as a key",
+			tree:        map[string]any{"AAPL": leaf, "MSFT": leaf},
+			wantReports: 0,
+			because: "the stated limit, pinned: a JSON member name and a JSON string " +
+				"value are the same token, so a string reading as a key is not " +
+				"detectable and keyCarriesAReading says so rather than implying it is",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &recordingSink{}
+			assertNoLiveValue(rec, tc.tree, "$", "planted.json")
+			if got := len(rec.messages); got != tc.wantReports {
+				t.Errorf("assertNoLiveValue reported %d time(s), want %d: %v; %s",
+					got, tc.wantReports, rec.messages, tc.because)
+			}
+			for _, message := range rec.messages {
+				if !strings.Contains(message, "member name") {
+					t.Errorf("a report does not identify the key as the problem: %s", message)
+				}
+			}
+		})
+	}
+
+	// The rule is not vacuous, and the table above is not the only evidence of
+	// that: the committed tree is walked by TestLiveSkeletonsCarryNoValue, so a
+	// rule that reported on every key would fail there instead.
+	if keyCarriesAReading("symbol") || keyCarriesAReading("instrumentId") {
+		t.Error("the key rule reports ordinary member names, so it would fail the " +
+			"committed tree rather than describe a leak")
 	}
 }
 

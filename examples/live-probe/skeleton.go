@@ -66,13 +66,30 @@ const numberPlaceholder = json.Number("-1")
 // placeholder above is a value jsonKind classifies as exactly the kind it stands
 // for, so a reduced tree is fixture-shaped input to that comparison unchanged.
 //
-// A reduced tree therefore contains no value the server sent: it carries every
-// name and no reading. A consumer may serialise it, write it to a committed
-// fixture, and put it in the repository, and nothing it writes is a live
-// account number, a price, or a timestamp. That is a property of the
-// representation rather than an obligation on the consumer, and it is why every
-// leaf is synthetic: the literal a number decoded to is evidence of what the
-// server sent, and evidence is what the reduction consumes, not what it emits.
+// A reduced tree therefore carries no reading in a leaf position: it holds every
+// name the server sent and none of its values. A consumer may serialise it,
+// write it to a committed fixture, and put it in the repository, and what it
+// writes is names, kinds, and the fixed literals of the placeholders.
+//
+// The member-name position is the qualification, and it belongs here rather than
+// only in the leak gate because a name is the one thing the reduction keeps
+// verbatim. So the guarantee has three parts of unequal strength, and they are
+// unequal rather than nested:
+//
+//   - No leaf is a reading. Every leaf is a constant this function chose, and the
+//     type carries the kind.
+//   - No member name is a JSON number and no member name is one of the
+//     placeholders. The leak gate checks names for exactly this reason, and the
+//     rule is the JSON number grammar rather than a list of readings.
+//   - A member name that is a string reading - a ticker, an order id - is not
+//     excluded, because it is not distinguishable from a member name. A JSON
+//     object member name and a JSON string value are the same token in the same
+//     grammar, so no rule over the document and none over the reduced tree can
+//     separate them. The gate says so in its own words rather than leaving the
+//     reader to infer a guarantee it does not make.
+//
+// Evidence is what the reduction consumes, not what it emits: the literal a number
+// decoded to is the evidence, and the literal the file carries is the placeholder.
 //
 // The decoder is configured with UseNumber, so a JSON integer is neither widened
 // to a float64 nor reported as something a decimal could equally be. The SDK's

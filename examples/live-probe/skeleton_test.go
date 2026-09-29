@@ -235,16 +235,68 @@ func TestSkeletonifyNoLiveValueSurvives(t *testing.T) {
 	})
 }
 
-// assertNoLiveValue walks a reduced tree and fails on any leaf that could carry
-// something the server sent.
+// liveValueSink is where assertNoLiveValue reports. *testing.T satisfies it, and
+// so does recordingSink below, which is what lets the key rule be exercised
+// against a reduced tree that does carry a reading as a key: such a tree cannot
+// be committed in order to be walked, so the failing case has to be driven here.
+type liveValueSink interface {
+	Helper()
+	Errorf(format string, args ...any)
+}
+
+// recordingSink collects what assertNoLiveValue reports rather than failing the
+// test driving it.
+type recordingSink struct{ messages []string }
+
+func (r *recordingSink) Helper() {}
+
+func (r *recordingSink) Errorf(format string, args ...any) {
+	r.messages = append(r.messages, fmt.Sprintf(format, args...))
+}
+
+// keyCarriesAReading reports whether an object member name could itself be a
+// value the server sent.
+//
+// The reduction keeps every member name verbatim and replaces every value, so a
+// name is the one place a reading can survive it. Two forms of key are refused,
+// and the rule is deliberately the JSON number grammar rather than a list of
+// readings: a key that is a well-formed JSON number is an account id, an
+// instrument id, a millisecond timestamp, a price, a size or a count when it is
+// one of those things, and no Webull member name is; a key that is one of the
+// four placeholders, or the empty string, is a key a reader cannot tell from a
+// value.
+//
+// The rule cannot see a key that is a string reading, and that is stated rather
+// than implied: a JSON member name and a JSON string value are the same token in
+// the same grammar, so nothing in the document or the reduced tree separates
+// them. What the tree therefore carries is no numeric reading and no
+// placeholder, and a string-valued key is not excluded - see the identical rule
+// and its limits in conformance/fixtures_test.go, which holds the committed
+// bytes to it as well.
+func keyCarriesAReading(name string) bool {
+	if name == "" {
+		return true
+	}
+	switch name {
+	case stringPlaceholder, string(numberPlaceholder), "true", "null":
+		return true
+	}
+	_, err := json.Marshal(json.Number(name))
+	return err == nil
+}
+
+// assertNoLiveValue walks a reduced tree and fails on any key or leaf that could
+// carry something the server sent.
 //
 // A string leaf must be the string placeholder, so a symbol or an account id
-// surviving is a failure and the path names the member it survived in. A
-// float64 or an int is a failure too, and of a different kind: neither is a type
-// this reduction emits, so one appearing means the value was widened on the way
-// through, which is what a decode without UseNumber does. A bool leaf cannot
-// carry a value, because the reduction emits one unconditional placeholder, so
-// `false` is a failure: it proves the tree did not come from Skeletonify.
+// surviving is a failure and the path names the member it survived in. A key is
+// checked before the walk descends, because a member name is kept verbatim and a
+// name that is a reading is a leak the leaf checks cannot see. A float64 or an
+// int is a failure too, and of a different kind: neither is a type this reduction
+// emits, so one appearing means the value was widened on the way through, which
+// is what a decode without UseNumber does. A bool leaf cannot carry a value,
+// because the reduction emits one unconditional placeholder, so `false` is a
+// failure: it proves the tree did not come from Skeletonify.
 //
 // A number leaf must be the number placeholder, and this is the assertion that
 // used to be missing. The kind is carried by the type, so a server literal buys
@@ -253,11 +305,16 @@ func TestSkeletonifyNoLiveValueSurvives(t *testing.T) {
 // is a value in git history rather than a mistake that can be deleted. So every
 // number leaf is compared against the one literal the reduction emits, and the
 // message names both the path and the literal that got through.
-func assertNoLiveValue(t *testing.T, v any, path string) {
+func assertNoLiveValue(t liveValueSink, v any, path string) {
 	t.Helper()
 	switch leaf := v.(type) {
 	case map[string]any:
 		for name, member := range leaf {
+			if keyCarriesAReading(name) {
+				t.Errorf("%s holds the member name %q: no Webull member name is a JSON "+
+					"number or one of the four placeholders, so a key in either form is a "+
+					"reading that survived the reduction", path, name)
+			}
 			assertNoLiveValue(t, member, path+"."+name)
 		}
 	case []any:
@@ -281,6 +338,75 @@ func assertNoLiveValue(t *testing.T, v any, path string) {
 		t.Errorf("%s is a %T: a widened value, which no reduction emits", path, leaf)
 	default:
 		t.Errorf("%s is a %T: no reduction emits that type", path, leaf)
+	}
+}
+
+// The key half of the invariant, on its own. The corpus in TestSkeletonify proves
+// the rule holds for the reduced trees real bodies produce; this table is what
+// proves the rule fires, because it is the only place a key that is a reading can
+// be presented at all.
+//
+// The last row pins the stated limit. A ticker key is a string reading, and a
+// string reading is not distinguishable from a member name, so it passes and the
+// case fails if the rule ever quietly narrows its own claim.
+func TestSkeletonifyRejectsAReadingCarriedAsAKey(t *testing.T) {
+	cases := []struct {
+		name        string
+		in          string
+		wantReports int
+		because     string
+	}{
+		{name: "member names", in: `{"symbol":"AAPL","orders":[{"symbol":"AAPL"}]}`,
+			wantReports: 0, because: "a name is evidence and must survive"},
+		{name: "a camelCase member name", in: `{"instrumentId":"9132750001"}`,
+			wantReports: 0, because: "the rule is not a snake_case rule"},
+		{name: "an account id as a key", in: `{"9110101000000000001":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "an account id as a key is committed verbatim"},
+		{name: "an instrument id as a key", in: `{"9132750001":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "a ten digit id is the JSON number grammar"},
+		{name: "a timestamp as a key", in: `{"1756000000000":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "a millisecond epoch is a number like any other"},
+		{name: "a price as a key", in: `{"385.6":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "the fraction is still that grammar"},
+		{name: "the string placeholder as a key", in: `{"1":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "a key indistinguishable from a leaf is the ambiguity " +
+				"the representation exists to remove"},
+		{name: "the number placeholder as a key", in: `{"-1":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "caught by the number rule too, and both agreeing is the point"},
+		{name: "an empty key", in: `{"":{"symbol":"AAPL"}}`,
+			wantReports: 1, because: "an empty key is indistinguishable from an empty string reading"},
+		{name: "a reading as a key at depth", in: `{"data":{"9110101000000000001":{"symbol":"AAPL"}}}`,
+			wantReports: 1, because: "the walk descends, so a nested map cannot hide a key"},
+		{name: "a ticker as a key", in: `{"AAPL":{"symbol":"AAPL"},"MSFT":{"symbol":"AAPL"}}`,
+			wantReports: 0, because: "the stated limit, pinned: a JSON member name and a " +
+				"JSON string value are the same token, so a string reading as a key is " +
+				"not detectable and keyCarriesAReading says so"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// The reduction itself preserves every key, which is what makes the
+			// planted bodies above a fair test of the walk rather than of a fixture.
+			got, err := Skeletonify([]byte(tc.in))
+			if err != nil {
+				t.Fatalf("err = %v", err)
+			}
+			if _, isObject := got.(map[string]any); !isObject {
+				t.Fatalf("the corpus reduced to %T, want an object", got)
+			}
+			rec := &recordingSink{}
+			assertNoLiveValue(rec, got, "$")
+			if n := len(rec.messages); n != tc.wantReports {
+				t.Errorf("assertNoLiveValue reported %d time(s), want %d: %v; %s",
+					n, tc.wantReports, rec.messages, tc.because)
+			}
+		})
+	}
+
+	// The rule is not vacuous, and TestSkeletonify is the other half of that
+	// evidence: it walks every reduced tree a real body produces.
+	if keyCarriesAReading("symbol") || keyCarriesAReading("orders") {
+		t.Error("the key rule reports ordinary member names, so it would fail every " +
+			"reduction rather than describe a leak")
 	}
 }
 
