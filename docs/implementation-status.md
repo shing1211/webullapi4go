@@ -412,8 +412,13 @@ confirmed without it.
   request shape, and therefore a maintainer decision on how to version a
   breaking change on a module that stays on the v1 import path (an added field
   with a deprecation window, a new method alongside the retained old one, or a
-  `/v2` migration declined by decision so far). The path can still be aligned
-  once probed; interim, restore an explicit unverified marker. Unblock: a paid
+   `/v2` migration declined by decision so far). The path can still be aligned
+   once probed. The explicit unverified marker this line used to recommend
+   interim is already in place, added by commit `3478a6f` (2026-09-27): the
+   `pathDSSnapshot` comment names it the one unverified constant in the block and
+   the `GetDisplaySnapshot` GoDoc states that the verb and request shape are
+   unverified, so the divergence is not silent. What remains undecided is the
+   request shape, not whether the SDK flags it. Unblock: a paid
   Display Solution entitlement; the host returns `403` without one. Probing alone
   does not settle which contract the host honours, because the page contradicts
   itself and a second cached page for the same path, `reference/snapshot.md`,
