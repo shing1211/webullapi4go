@@ -9,12 +9,16 @@ the v1 import path by decision, so the module proxy serves only the `v1.x` line
 and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
 newest installable version.
 
-## [Unreleased]
+## [2.1.36] - 2026-09-29
 
-No repository tag carries this section yet. Every `## [x.y.z]` heading below is a
-Git tag that exists; this one is not, and it exists so a change is not left
-unrecorded while it waits for one. The `v2.x` entries are tag facts and this is
-not.
+**First live evidence in the repository.** Until this release the conformance
+harness could only compare the SDK against fixtures generated from Webull's
+published OpenAPI JSON, so it could say whether the SDK matched the
+*documentation* and never whether it matched the *server*. This release calls
+the sandbox, reduces each response to a value-free shape, and compares those
+shapes against the SDK type. No SDK code changed and no existing exported symbol
+was removed, so this is a patch release; the one demonstrated defect is recorded
+rather than fixed, because fixing it changes a public DTO's wire name.
 
 ### Added
 
@@ -3501,7 +3505,7 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.36...HEAD
 [2.1.1]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.1
 [2.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.0
 [2.0.9]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.9
