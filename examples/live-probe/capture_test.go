@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1300,6 +1301,193 @@ func TestRunCaptureRefusesAnOpenMutationGate(t *testing.T) {
 	if !strings.Contains(err.Error(), "refusing to capture") {
 		t.Errorf("the refusal does not say why: %v", err)
 	}
+}
+
+// The refusal above is checked by calling runCapture directly, which cannot see
+// the thing that matters: WHEN it is reached. A check the walk has already
+// passed is not a refusal, and the version of this gate that lived only in
+// runCapture refused a -capture run after the census had already called every
+// mutating endpoint an open gate allows. Six reviews missed it because no test
+// drove run.
+//
+// So this drives run itself, against a server that records every request, and
+// asserts on the requests: with the gate open, nothing reached a mutating path.
+// Asserting on the error text or on a return value would pass just as well with
+// the gate checked after the walk, which is the defect.
+//
+// The paired case is what makes it non-vacuous. The same corpus with the gate
+// open and no -capture does put its POST on the wire, so a zero in the first
+// case is a refusal and not a corpus that could not have sent a mutating
+// request at all. Without that control the test would also pass against a
+// version that refused everything.
+func TestRunRefusesAnOpenMutationGateBeforeItCallsAnEndpoint(t *testing.T) {
+	// Both of the gate's conditions, against a host the SDK derives no sandbox
+	// for: the run is authorised and is pointed somewhere that is not a sandbox,
+	// which is the configuration the refusal exists for.
+	t.Setenv(MutateOptInEnv, MutateOptInValue)
+	t.Setenv(NonSandboxOverrideEnv, NonSandboxOverrideValue)
+	t.Setenv("WEBULL_APP_KEY", probeTestCredentialA)
+	t.Setenv("WEBULL_APP_SECRET", probeTestCredentialB)
+	t.Setenv("WEBULL_ENVIRONMENT", "sandbox")
+	t.Cleanup(func() { SetAccountID("") })
+
+	const mutatingPath = "/broker/accounts/create"
+	rec := newRequestRecorder(t)
+	manifest, cache := writeProbeCorpus(t, []probeEndpointDoc{
+		{ID: "broker-hk/POST-accounts-create", Method: "POST", Path: mutatingPath,
+			Doc: `{"method":"post","path":"/broker/accounts/create","responses":{}}`},
+		{ID: "market-data-stock/GET-quote", Method: "GET", Path: "/market-data/quote",
+			Doc: `{"method":"get","path":"/market-data/quote","responses":{}}`},
+	})
+	out := filepath.Join(t.TempDir(), "census.json")
+
+	err := run(t.Context(), []string{
+		"-capture", "-base", rec.URL, "-accounts", probeDiscoveredAccount,
+		"-manifest", manifest, "-cache", cache, "-out", out,
+	})
+	if err == nil {
+		t.Fatal("run performed a -capture with the mutation gate open")
+	}
+	for _, want := range []string{
+		"refusing to capture",
+		// The operator has to learn WHICH condition opened the gate, not only
+		// that it is open: the two are fixed by different actions.
+		MutateOptInEnv, NonSandboxOverrideEnv, "NOT a sandbox host",
+		// And that the run produced nothing, so an absent census.json is the
+		// refusal rather than a failure to explain.
+		"no request was sent",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal does not say %q: %v", want, err)
+		}
+	}
+	for _, got := range rec.mutatingRequests() {
+		t.Errorf("a %s reached a mutating path before the refusal: %s", got, err)
+	}
+	if _, statErr := os.Stat(out); statErr == nil {
+		t.Error("the refused run wrote a census, so it produced something after refusing to")
+	}
+	if names := rec.allRequests(); len(names) == 0 {
+		t.Log("the run sent no request at all before refusing")
+	}
+
+	// The control. Same corpus, same open gate, no -capture: the walk runs and
+	// the mutating endpoint is called, because a census is what the gate is for.
+	// If this does not happen then the zero above proves nothing, so it is an
+	// assertion and not a note.
+	control := newRequestRecorder(t)
+	if err := run(t.Context(), []string{
+		"-base", control.URL, "-accounts", probeDiscoveredAccount,
+		"-manifest", manifest, "-cache", cache, "-out", filepath.Join(t.TempDir(), "census.json"),
+	}); err != nil {
+		t.Fatalf("the control run failed, so the corpus is not exercising the gate: %v", err)
+	}
+	if got := control.mutatingRequests(); len(got) == 0 {
+		t.Errorf("an open gate called no mutating path, so the refused run's zero proves "+
+			"nothing: the recorded requests were %v", control.allRequests())
+	}
+}
+
+// probeEndpointDoc is one documented endpoint for writeProbeCorpus: the manifest
+// row and the cached page it names.
+type probeEndpointDoc struct {
+	ID     string
+	Method string
+	Path   string
+	Doc    string
+}
+
+// writeProbeCorpus writes a temporary documentation manifest and a temporary
+// docgen cache holding one endpoint per entry, and returns the two paths.
+//
+// run reads the committed manifest and the gitignored cache, so a test that
+// drives it has to supply both or it would depend on a cache no checkout has.
+// The page is written in the same shape readPage expects -- one ```json block
+// carrying the single-endpoint document -- so the corpus is a real one as far as
+// every layer of run is concerned.
+func writeProbeCorpus(t *testing.T, docs []probeEndpointDoc) (manifest, cache string) {
+	t.Helper()
+	dir := t.TempDir()
+	cache = filepath.Join(dir, "cache")
+	if err := os.MkdirAll(cache, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]string, 0, len(docs))
+	for _, d := range docs {
+		url := "https://example.test/reference/" + d.ID + ".md"
+		page := "```json\n" + d.Doc + "\n```\n"
+		if err := os.WriteFile(filepath.Join(cache, cacheFilename(url)), []byte(page), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, `{"id":"`+d.ID+`","fixture":"`+d.ID+`.json",`+
+			`"area":"`+strings.ReplaceAll(d.ID, "/", "-")+`","sdkSymbol":"probe.`+d.Method+d.Path+`",`+
+			`"source":{"url":"`+url+`"},"documented":{"method":"`+d.Method+`","path":"`+d.Path+`"}}`)
+	}
+	manifest = filepath.Join(dir, "manifest.json")
+	body := `{"kind":"test","fixtures":[` + strings.Join(rows, ",") + `]}`
+	if err := os.WriteFile(manifest, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return manifest, cache
+}
+
+// requestRecorder is an httptest server that records the method and path of every
+// request and answers each one, so a test can assert on what was sent rather
+// than on what a function returned.
+type requestRecorder struct {
+	*httptest.Server
+	mu    sync.Mutex
+	paths []string
+}
+
+// newRequestRecorder starts a server that records requests and answers the token
+// exchange with a NORMAL token, which is what run needs before it will call an
+// endpoint at all. Every other path is answered 200 with an empty object, so a
+// census row is a 200 and a capture has a body to reduce.
+func newRequestRecorder(t *testing.T) *requestRecorder {
+	t.Helper()
+	rec := &requestRecorder{}
+	rec.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec.mu.Lock()
+		rec.paths = append(rec.paths, r.Method+" "+r.URL.Path)
+		rec.mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/auth/token/create") {
+			_, _ = w.Write([]byte(`{"token":"0123456789abcdef0123456789abcdef",` +
+				`"expires_at":4102444800000,"status":"NORMAL"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(rec.Close)
+	return rec
+}
+
+// allRequests is every request the server saw, in order.
+func (rec *requestRecorder) allRequests() []string {
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	return append([]string(nil), rec.paths...)
+}
+
+// mutatingRequests is the recorded requests that reached a path the gate
+// governs: a method outside the safe set, on a path in a mutating area. The
+// recorder cannot ask the gate which rows it would have refused, because it
+// holds paths and not endpoints, so it applies the same two rules by hand - a
+// POST to the broker and trading paths is a mutating request under any reading.
+func (rec *requestRecorder) mutatingRequests() []string {
+	var out []string
+	for _, entry := range rec.allRequests() {
+		method, path, ok := strings.Cut(entry, " ")
+		if !ok || method == "GET" || method == "HEAD" || method == "OPTIONS" || method == "TRACE" {
+			continue
+		}
+		if strings.HasPrefix(path, "/broker/") || strings.HasPrefix(path, "/trading/") {
+			out = append(out, entry)
+		}
+	}
+	return out
 }
 
 // The one clock reading per run is what keeps a re-run's manifest diffable, so

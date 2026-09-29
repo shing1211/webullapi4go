@@ -57,6 +57,12 @@
 // plus live-manifest.json under the -out directory. It is refused outright if
 // the mutation gate is open, because a capture re-calls the endpoints that
 // answered 200 and an open gate would put the order-placing ones among them.
+// The refusal is reached before the token exchange, before account discovery and
+// before the walk, so a refused run sends no request of any kind and produces no
+// census at all. runCapture holds the same check a second time, so a caller that
+// reached the capture phase another way is refused there too; the gate in run is
+// the one that has to come first, because a check the walk has already passed is
+// not a refusal.
 // With -capture, -out names a conformance/testdata directory rather than a
 // census file, and the census is printed rather than written: the per-endpoint
 // rows are a run-local artefact, and a run-local artefact has no business inside
@@ -192,6 +198,29 @@ func run(ctx context.Context, args []string) error {
 	}
 	defer func() { _ = cl.Close() }()
 
+	// The host is resolved once, here, and the gate with it, because the gate is
+	// judged on the host this run resolved rather than on one read again later.
+	host := hostOf(cl)
+
+	// The refusal comes before the token exchange, before phase 0 and before the
+	// walk, and that position is the whole point. A capture re-calls every
+	// endpoint a census recorded as a 200, so with the gate open that set includes
+	// the endpoints that place an order, cancel one and move money - and the walk
+	// that precedes runCapture would already have called them. The check in
+	// runCapture is the second barrier, not the only one: by the time it is
+	// reached the census has been taken, so a refusal there protects the capture
+	// and nothing before it.
+	//
+	// Refusing here also settles what a refused run has and has not got. It has
+	// no census: not one request was sent, so there is no per-endpoint evidence to
+	// write and no artefact for an operator to mistake for one. That is the
+	// intended behaviour rather than a side effect, and the refusal says so.
+	if *capture {
+		if gate := ResolveMutationGate(host); gate.Open() {
+			return captureRefusal(gate)
+		}
+	}
+
 	// Authentication is resolved before a single endpoint is called, and a
 	// failure here is a top-level auth failure with a non-zero exit. It cannot be
 	// mistaken for a conformance finding, which is the whole reason it is
@@ -238,12 +267,12 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	// The gate is resolved once here, after the walk, and from the same host the
-	// walk resolved it from. Reading the environment again inside Census would be
-	// a second source of truth that could disagree with the rows; reading it here
-	// is the same reading, labelled with the same value, so the mutationGate line
-	// above the table and the rows beneath it are decided by one fact.
-	host := hostOf(cl)
+	// The gate is not read here. It is resolved once, above, before anything was
+	// called, and reading the environment again at this point would be a second
+	// source of truth that could disagree with the rows below - and a check
+	// reached after the walk is not a check the walk obeyed. Census resolves the
+	// same gate from the same client host, so the mutationGate line above the
+	// table and the rows beneath it are decided by one fact.
 	summary := Summarise(outcomes)
 	if *capture {
 		return runCapture(ctx, cl, endpoints, outcomes, summary, *out, host,

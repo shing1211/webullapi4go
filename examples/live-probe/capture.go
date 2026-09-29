@@ -1188,6 +1188,12 @@ func recordDecode(entry *ManifestEntry, symbol string, raw []byte) {
 // which is the difference between an operator who was told and an operator who
 // has to notice.
 //
+// This is the second of two refusals, and the first is in main's run, before the
+// token exchange and before the walk. A check that only lived here would be
+// reached with the census already taken, so it would protect the capture and
+// leave the 34 mutating requests the walk made behind it. Two checks, one
+// message, and neither of them claims the other is unnecessary.
+//
 // The census is a precondition rather than an input: runCapture receives the
 // outcomes phase 1 produced and calls each 200 endpoint a second time. Two calls
 // to one endpoint is a deliberate cost, and it buys the thing that matters -
@@ -1201,10 +1207,7 @@ func recordDecode(entry *ManifestEntry, symbol string, raw []byte) {
 func runCapture(ctx context.Context, cl *client.Client, endpoints []Endpoint, outcomes []Outcome,
 	summary CensusSummary, root, host, region, environment string) error {
 	if gate := ResolveMutationGate(host); gate.Open() {
-		return fmt.Errorf("live-probe: refusing to capture: the mutation gate is open (%s). A "+
-			"capture run re-calls every endpoint the census recorded as a 200, and with the "+
-			"gate open that set includes the endpoints that can place an order, cancel one or "+
-			"move money. The gate is for a census; this run does not need it", mutationNote("live", gate))
+		return captureRefusal(gate)
 	}
 
 	SetProbedAt(time.Now())
@@ -1270,6 +1273,48 @@ func runCapture(ctx context.Context, cl *client.Client, endpoints []Endpoint, ou
 			strings.Join(failures, "; "))
 	}
 	return nil
+}
+
+// captureRefusal is the error a -capture run exits with when the mutation gate
+// is open. Both refusal sites build it, so the sentence an operator reads is the
+// same one whichever of the two caught the run.
+//
+// It states the conditions that opened the gate rather than reusing
+// mutationNote, and that is not a preference. mutationNote is the line a census
+// prints after the walk, so it has to report what the walk did and it reads
+// "every endpoint in the mutating class was called". A refusal has to say the
+// opposite: the two call sites are at different points in the run, and the
+// message that says nothing was sent would be false of the census and the
+// message that says everything was sent would be false of the refusal. So the
+// two report the same gate in their own tense.
+//
+// It also says what the run does not have, because a refused -capture produces
+// no census and no skeleton and an operator who expected a file needs to know
+// that its absence is the refusal rather than a crash.
+func captureRefusal(gate MutationGate) error {
+	return fmt.Errorf("live-probe: refusing to capture: the mutation gate is open, because %s. "+
+		"A capture re-calls every endpoint a census recorded as a 200, and with the gate open "+
+		"that set includes the endpoints that can place an order, cancel one or move money. "+
+		"This refusal is made before the token exchange, before the census walk and before the "+
+		"capture, so no request was sent and this run produced neither a census nor a skeleton. "+
+		"Close the gate - unset %s, or point the run at a sandbox host - and run the capture again",
+		openGateConditions(gate), MutateOptInEnv)
+}
+
+// openGateConditions states which of the gate's conditions held, and which
+// variable decides each, for a gate that is already known to be open.
+//
+// Only the open case is spelled, because a closed gate cannot be the reason for
+// this sentence: Open() requires the opt-in, so the two branches below are the
+// only two ways to get here. The two failures the gate does not open on are
+// reported by mutationNote, which is the line a census prints.
+func openGateConditions(gate MutationGate) string {
+	if gate.SandboxHost {
+		return MutateOptInEnv + "=" + MutateOptInValue + " is set and " + gate.Host +
+			" is a sandbox host the SDK derives for a region it knows"
+	}
+	return MutateOptInEnv + "=" + MutateOptInValue + " and " + NonSandboxOverrideEnv + "=" +
+		NonSandboxOverrideValue + " are set and " + gate.Host + " is NOT a sandbox host"
 }
 
 // printCapture reports what the run wrote, in the order an operator needs it:
