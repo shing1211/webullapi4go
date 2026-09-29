@@ -81,7 +81,7 @@ The foundation everything else depends on, and the only component that decides w
 **Interfaces:**
 - Consumes: nothing. Standard library only.
 - Produces:
-  - `func Skeletonify(raw []byte) (any, error)` — decodes `raw` with `json.Decoder` using `UseNumber()`, returns the reduced tree: `map[string]any`, `[]any`, `string` (one of `"object"`, `"array"`, `"string"`, `"number"`, `"boolean"`, `"null"`), `int` (array length, to keep an empty array distinguishable from a wrong kind), `bool`, or `nil`. Returns an error only when `raw` is not valid JSON.
+  - `func Skeletonify(raw []byte) (any, error)` — decodes `raw` with `json.Decoder` using `UseNumber()`, returns the reduced tree as `map[string]any`, `[]any`, or a **typed placeholder** leaf, and returns an error only when `raw` is not valid JSON. **The leaf representation was revised during Task 1**; the tree is no longer spelled with kind strings. The binding form is in the Task 1 report at `.superpowers/sdd/2026-09-29-live-evidence-harness/task-1-report.md`, and it is the form a later task must code against. Briefly: a JSON string becomes the Go string `"1"`, a JSON number becomes a fixed synthetic `json.Number`, a JSON boolean becomes `true`, and a JSON null becomes a nil interface; an empty array is `[]any{}` and never nil. Two properties drive it and both matter downstream. `UseNumber()` is still required at decode time, or a body carrying a value outside `float64` range (`1e400`, a 40-digit integer) is a decode error and the whole body is silently dropped from the evidence set. And the number leaf is synthetic rather than the server's literal text, which is what makes a reduced tree safe to serialise into the committed files Task 4 writes — `conformance.jsonKind` classifies by Go type, not by a number's digits, so the kind is readable straight off the placeholder and a committed fixture can contain no value the server sent.
   - `func SkeletonKind(v any) string` — the kind name for a reduced value; used by `census.go` to print a one-line summary.
 
 - [ ] **Step 1: Create the module and write the failing test**
@@ -157,7 +157,7 @@ The kind names are exactly the strings in the test: `object`, `array`, `string`,
 
 Arrays reduce to `[]any` of the reduced element. An empty array reduces to `[]any{}`, never `nil`, so an empty body is distinguishable from a wrong top-level kind.
 
-`SkeletonKind` returns `"object"` for a map, `"array"` for a slice, `""` for nil, and the string itself for the kind names.
+`SkeletonKind` returns `"object"` for a map, `"array"` for a slice, `"string"` for the string placeholder, `"number"` for a `json.Number`, `"boolean"` for a bool, and `"null"` for a nil, and `""` for any other value. It classifies by Go type, so a kind is never an arbitrary string echoed back from the input. **This superseded the brief's original wording** ("the string itself for the kind names"), which failed open on an unreduced string; see the Task 1 report.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
