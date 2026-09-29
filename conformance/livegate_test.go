@@ -176,8 +176,8 @@ func TestLiveBaselineRecordsEveryBucketAndItsCounts(t *testing.T) {
 // TestLiveBaselineNamesTheFourDecodeRejections is the payload assertion.
 //
 // The four bodies the SDK's own type could not unmarshal are the strongest signal
-// this harness can produce, and the review that established they are all
-// top-level-kind mismatches is only worth anything if the four stay visible. A
+// this harness can produce, and the finding that each is a container-kind
+// disagreement with the server is only worth anything if the four stay visible. A
 // finding that is not in the recorded set is a finding nobody has agreed to look
 // at, so this asserts each one has an entry rather than trusting that it happens
 // to be there.

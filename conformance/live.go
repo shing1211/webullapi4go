@@ -94,13 +94,22 @@ import (
 // The consequence for the strongest signal in the tree is worth stating plainly.
 // When the server's top-level kind differs from the SDK's, the top-level check
 // cannot see it, and the *decode* check is what reports it -- which is exactly
-// why live-manifest.json records decodedCleanly, and why all four captured
-// bodies the SDK type could not decode are top-level-kind mismatches. The live
-// evidence for a container-kind disagreement arrives as a decode rejection, not
-// as a shape mismatch, and the two are recorded as different kinds because they
-// are different checks. A reader looking for a TopLevelMismatch and finding none
-// for those four rows has not been given a false negative: the shape check never
-// could have reported them.
+// why live-manifest.json records decodedCleanly. The live evidence for a
+// container-kind disagreement arrives as a decode rejection, and the two are
+// recorded as different kinds because they are different checks.
+//
+// What a reader finds under a TopLevelMismatch is not uniform across the four,
+// and a sentence claiming it was would be wrong in both directions. Three of them
+// -- data.GetDisplayGainersLosers, data.GetDisplayTopActive and
+// data.GetFuturesBars -- carry none: each page records an object and each SDK
+// type decodes one, so the check has no disagreement of its own to report, and
+// the server is what answered a bare array. data.GetStockInstruments carries
+// one, because its page records an object and []data.StockInstrument decodes an
+// array -- and the live body is an object too, so that row is a claim about the
+// page that the server happens to agree with. A reader looking for a
+// TopLevelMismatch, finding it on that row and finding none on the other three,
+// has been given neither a false negative nor live corroboration of the one: the
+// shape check reads the page, and it has now said so about a body it never read.
 //
 // # Where the checks come from
 //

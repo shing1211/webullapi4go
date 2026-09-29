@@ -59,8 +59,12 @@ func readLiveManifest(t *testing.T) testLiveManifest {
 }
 
 // decodeRejected is the live manifest's record that the SDK's own type could not
-// unmarshal a live body. Four rows carry it, and each is a top-level-kind
-// disagreement the documented comparison is structurally blind to.
+// unmarshal a live body. Four rows carry it, and each is a container-kind
+// disagreement between the server's answer and the SDK's type, which is the class
+// the documented comparison is structurally blind to. Three of the four are also
+// invisible to the shape check, because for them the page and the SDK agree and
+// only the server differs; data.GetStockInstruments is the fourth and carries a
+// top-level-shape-mismatch as well, since there the page disagrees with the type.
 func (m testLiveManifest) decodeRejected() []string {
 	var out []string
 	for _, e := range m.Entries {

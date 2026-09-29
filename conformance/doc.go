@@ -224,12 +224,24 @@
 // the documented baseline's recorded failure was a reason repeated across many
 // entries, which satisfies a required-field check perfectly.
 //
-// Four of the 13 are the captured bodies the SDK's own type could not decode, and
-// that is the class the documented comparison is structurally blind to: a page
-// and a fixture made to agree with each other decode cleanly whether or not
-// either matches the server. One of the four -- data.GetFuturesTick -- is a name
-// the page and the SDK agree on and the server spells differently, which no
-// amount of reading the documentation could have found.
+// Four of the 13 are the captured bodies the SDK's own type could not decode --
+// data.GetDisplayGainersLosers, data.GetDisplayTopActive, data.GetFuturesBars and
+// data.GetStockInstruments -- and that is the class the documented comparison is
+// structurally blind to: a page and a fixture made to agree with each other decode
+// cleanly whether or not either matches the server.
+//
+// data.GetFuturesTick is not one of the four, and the difference is the whole
+// reason it is the more interesting finding. Its live body unmarshalled into the
+// SDK's own type without error, so the decode check has nothing to say about it:
+// what it carries instead is the class that check cannot see. The page requires
+// instrument_id, data.StockTicks tags the field instrument_id, the server sends
+// instrumentId, and encoding/json matches neither exactly nor case-insensitively
+// because the underscore is not a case -- so the field is left at its zero value
+// on every response and the body that carried it decodes cleanly. A decode
+// rejection reports a server and a type that disagree about the body; this row is
+// a type that accepted a body and dropped one of its members, which no amount of
+// reading the documentation could have found and no failure in unmarshalling can
+// report.
 //
 // Everything here rests on one authorised run against one sandbox. A finding is
 // what api.sandbox.webull.hk answered once, and nothing in this package says what

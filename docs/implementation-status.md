@@ -984,7 +984,7 @@ SDK defects.
   (`conformance/testdata/live-manifest.json:210`) were reduced to value-free
   skeletons and committed under `conformance/testdata/live/`, and each was then
   compared against the SDK type **and** against the documentation
-  (`conformance/live.go:234`). In one line: **of 55 probed, 2 disagree with their
+  (`conformance/live.go:243`). In one line: **of 55 probed, 2 disagree with their
   documentation and 12 disagree with the SDK.** That is 14 directional observations
   over **13 distinct findings**, because the one finding both runs reported is
   counted in each figure. The 13 are recorded one per row in
@@ -1026,12 +1026,16 @@ SDK defects.
   - **The 13 are not 13 defects, and each row's `reason` says which one it is.** A
     reader who quotes the count as a defect count is misreading it.
     - **4 are decode rejections**, one per captured body the SDK's own type could
-      not unmarshal, and all four are top-level-kind mismatches: the sandbox
-      answered a bare array where the SDK decodes an object or a page.
-      `data.GetDisplayGainersLosers` and `data.GetDisplayTopActive` decode
-      `types.Page[data.ScreenerStock]`, `data.GetFuturesBars` decodes
-      `data.BatchBars`, and `data.GetStockInstruments` decodes
-      `[]data.StockInstrument` against an object. A decode that fails is the
+      not unmarshal, and all four are container-kind disagreements with the SDK.
+      Three of them the sandbox answered a bare array where the SDK decodes an
+      object: `data.GetDisplayGainersLosers` and `data.GetDisplayTopActive` decode
+      `types.Page[data.ScreenerStock]` and `data.GetFuturesBars` decodes
+      `data.BatchBars`, and for those three the page and the SDK agree with each
+      other, which is why they carry no `top-level-shape-mismatch` and the shape
+      check cannot see them. The fourth is the other way round — the sandbox
+      answered the documented object and `data.GetStockInstruments` decodes
+      `[]data.StockInstrument`, so there the page disagrees with the type and the
+      row is recorded as a `top-level-shape-mismatch` as well. A decode that fails is the
       strongest signal this harness can produce, and it is the one class a
       documented comparison cannot see at all: a page and a fixture made to agree
       with each other decode cleanly whether or not either matches the server. It
