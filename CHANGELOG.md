@@ -11,6 +11,12 @@ newest installable version.
 
 ## [Unreleased]
 
+## [2.1.37] - 2026-09-30
+
+**The demonstrated defect from v2.1.36 is fixed, and two release gates were
+repaired for Windows.** Patch release: no exported symbol changed signature, no
+existing behaviour was removed, and nothing is live-verified.
+
 ### Fixed
 
 - **`data.StockTicks` now decodes either instrument-identifier spelling.** The 2026-09-29
@@ -29,14 +35,20 @@ newest installable version.
   single endpoint it was found on: a decoder that read one name for futures and
   another for stocks would leave the same silent zero reachable through two other
   methods.
-- **The conformance fixture tree no longer fails its byte-exactness checks on
-  Windows.** `text=auto` normalized these files on commit but still wrote CRLF into
-  the working tree wherever `core.autocrlf` is true, so re-encoding a committed
-  fixture produced different bytes than the file held — 55 live fixtures plus the two
-  baseline files, and four tests failing for a reason unrelated to the SDK. The
-  fixture trees and the two divergence baselines are now marked `-text` in
-  `.gitattributes`, so the bytes on disk are the bytes in the blob on every
-  platform.
+- **The conformance gates no longer fail for a reason unrelated to the SDK.**
+  `text=auto` normalized these files on commit but still wrote CRLF into the working
+  tree wherever `core.autocrlf` is true, so re-encoding a committed fixture produced
+  different bytes than the file held — 55 live fixtures plus the two baseline files,
+  failing `TestEncodeSkeletonIsIdempotent`, `TestExpandSkeletonIsTheInverseOfEncode`,
+  `TestLiveBaselineIsCanonical` and `TestLiveDivergenceBaseline`. The fixture trees
+  and the two divergence baselines are now marked `-text`, so the bytes on disk are
+  the bytes in the blob on every platform.
+- **`make lint` passes on Windows.** gofmt rejects a CRLF working-tree copy, and the
+  same `core.autocrlf` behaviour was putting CRLF into 157 Go files. golangci-lint
+  reports at most three issues per run by default, so this presented as three files
+  rather than 157. One `*.go text eol=lf` rule replaces the per-file listing that
+  would otherwise have had to be grown one checkout at a time. No source content
+  changed: the blobs already held LF.
 
 ### Changed
 
@@ -54,6 +66,13 @@ newest installable version.
   question: it would establish whether the camelCase spelling is endpoint-specific
   or this environment's convention, which is a question about the server and not
   something this SDK can answer.
+- **Item 19's status text no longer reads as pending work.** The document recommended
+  restoring an explicit unverified marker for `data.GetDisplaySnapshot`; commit
+  `3478a6f` had already done it two days earlier, and the sentence survived the
+  commit that implemented it. The marker is in place and is now recorded as done.
+- **OpenSpec is now the project's change workflow.** `openspec/` holds the first
+  change, `fix-futures-tick-instrument-id`, with its proposal, spec delta, design and
+  tasks, and `openspec validate --strict` passes.
 
 ## [2.1.36] - 2026-09-29
 
@@ -3551,7 +3570,7 @@ Initial public release.
 - Runnable examples under `examples/` for auth, market data, streaming, and
   watchlists.
 
-[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.36...HEAD
+[Unreleased]: https://github.com/shing1211/webullapi4go/compare/v2.1.37...HEAD
 [2.1.1]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.1
 [2.1.0]: https://github.com/shing1211/webullapi4go/releases/tag/v2.1.0
 [2.0.9]: https://github.com/shing1211/webullapi4go/releases/tag/v2.0.9
