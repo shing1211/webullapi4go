@@ -614,10 +614,15 @@ func sortedKeys(v url.Values) []string {
 // The gate is on sending, not on building. [prepare] stays pure, so a dry run
 // still measures whether a mutating endpoint's request is constructible, and that
 // is the only place the constructibility of the 34 is measurable at all - a live
-// run that does not opt in learns nothing about them beyond their existence.
+// run that does not open the gate learns nothing about them beyond their
+// existence.
 //
-// The opt-in is read once, before the loop, so a process that changed its own
-// environment mid-walk could not end up with a half-open gate.
+// The gate is resolved ONCE, before the loop, and from this client's own base URL
+// rather than from the environment, so a process that changed its own
+// environment or reconfigured its client mid-walk could not end up with a
+// half-open gate - and so the two conditions are judged against the host these
+// requests will actually be sent to. [ResolveMutationGate] takes [hostOf] of
+// this very client.
 //
 // Endpoints are walked sequentially. The rate limits are per App Key and the
 // token endpoint allows ten requests per thirty seconds, so a concurrent walk
@@ -631,7 +636,7 @@ func Census(ctx context.Context, cl *client.Client, endpoints []Endpoint) ([]Out
 	if cl == nil {
 		return nil, errors.New("live-probe: Census needs a client")
 	}
-	mutateAllowed := MutationOptedIn()
+	gate := ResolveMutationGate(hostOf(cl))
 	outcomes := make([]Outcome, 0, len(endpoints))
 	for _, ep := range endpoints {
 		outcome := Outcome{
@@ -642,10 +647,12 @@ func Census(ctx context.Context, cl *client.Client, endpoints []Endpoint) ([]Out
 			Path:     ep.Path,
 			Mutating: IsMutating(ep),
 		}
-		if outcome.Mutating && !mutateAllowed {
-			outcome.Skipped = skippedMutationReason
-			outcomes = append(outcomes, outcome)
-			continue
+		if outcome.Mutating {
+			if reason := gate.SkipReason(); reason != "" {
+				outcome.Skipped = reason
+				outcomes = append(outcomes, outcome)
+				continue
+			}
 		}
 		request := prepare(ep)
 		if request.Blocked != "" {

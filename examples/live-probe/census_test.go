@@ -20,6 +20,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -70,6 +71,65 @@ func newProbeTestClient(t *testing.T, baseURL string) *client.Client {
 	}
 	t.Cleanup(func() { _ = cl.Close() })
 	return cl
+}
+
+// probeSandboxBaseURL is the base URL of the one sandbox host AGENTS.md permits in
+// committed material, written as a constant so the tests that need to present a
+// sandbox cannot drift from the host the live run will use and cannot be
+// read as an arbitrary string.
+const probeSandboxBaseURL = "https://api.sandbox.webull.hk"
+
+// newProbeTestClientPresenting returns a client whose base URL is presentedURL
+// while every request it sends is dialled at target.
+//
+// The mutating gate judges the host in the base URL, so a test that exercises the
+// gate's OPEN path has to present a host the SDK derives for a sandbox. A client
+// aimed straight at 127.0.0.1 presents "127.0.0.1", which the gate correctly
+// refuses as not a sandbox - so with only that helper the open path could be
+// reached only through the override, and the case a live run actually takes
+// (opt-in plus the sandbox host) would go unproven.
+//
+// The DIAL is redirected, not the name resolved: no DNS lookup happens and no
+// request leaves the process, and the SDK still signs over the presented host,
+// which is what a live run signs and what these tests are about. Presenting the
+// host is the point; where the bytes land is the test server's business.
+func newProbeTestClientPresenting(t *testing.T, presentedURL string, target *httptest.Server) *client.Client {
+	t.Helper()
+	targetURL, err := url.Parse(target.URL)
+	if err != nil {
+		t.Fatalf("parsing the test server URL: %v", err)
+	}
+	cl, err := client.New(
+		client.WithCredentials(probeTestCredentialA, probeTestCredentialB),
+		client.WithRegion(client.HK),
+		client.WithEnvironment(client.Sandbox),
+		client.WithBaseURL(presentedURL),
+		client.WithHTTPClient(&http.Client{Transport: &dialAtTarget{
+			target: targetURL,
+			next:   http.DefaultTransport,
+		}}),
+		client.WithAutoToken(false),
+		client.WithoutRetry(),
+	)
+	if err != nil {
+		t.Fatalf("client.New: %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+	return cl
+}
+
+// dialAtTarget sends every request to one address whatever host its URL carries,
+// so a client can present a Webull host while the bytes go to a test server.
+type dialAtTarget struct {
+	target *url.URL
+	next   http.RoundTripper
+}
+
+func (d *dialAtTarget) RoundTrip(req *http.Request) (*http.Response, error) {
+	redirected := req.Clone(req.Context())
+	redirected.URL.Scheme = d.target.Scheme
+	redirected.URL.Host = d.target.Host
+	return d.next.RoundTrip(redirected)
 }
 
 // The loop's job is to record outcomes, so the case that matters most is the one
@@ -178,9 +238,12 @@ func TestCensusRecordsTheRequestItAttempted(t *testing.T) {
 // are asserted byte for byte rather than through a decode.
 //
 // The gate is opened here, and only here, because the case is about the bytes on
-// the wire and a request that is never sent produces no bytes. It is a local
-// httptest server and the opt-in is set for this test alone; the gate's own
-// behaviour is pinned in mutate_test.go against the same server.
+// the wire and a request that is never sent produces no bytes. Both of the gate's
+// conditions are satisfied for this test alone - the opt-in is set, and the
+// client presents the sandbox host while its dial is redirected at a local
+// httptest server, so nothing leaves the process. t.Setenv scopes the variable to
+// this test; the gate's own behaviour is pinned in mutate_test.go against the
+// same server.
 func TestCensusSendsTheDocumentedQueryAndBody(t *testing.T) {
 	t.Setenv(MutateOptInEnv, MutateOptInValue)
 	t.Cleanup(func() { SetAccountID("") })
@@ -206,7 +269,8 @@ func TestCensusSendsTheDocumentedQueryAndBody(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	cl := newProbeTestClient(t, srv.URL)
+	cl := newProbeTestClientPresenting(t, probeSandboxBaseURL, srv)
+
 	outcomes, err := Census(context.Background(), cl, []Endpoint{{
 		Symbol:  "trade.PreviewOrder",
 		Fixture: "trading/POST-trading-orders-preview.json",

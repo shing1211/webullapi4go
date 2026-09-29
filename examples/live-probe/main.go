@@ -28,10 +28,16 @@
 // numbers and are never summed.
 //
 // 34 of the 193 documented endpoints can place an order, cancel one, move money
-// or modify an account. The probe does not call any of them unless
-// WEBULL_TRADE_MUTATE=1 is set, the same opt-in the mutating sandbox tests use,
-// and a refused endpoint is reported as skipped rather than as any status: a run
-// that did not ask must not be recorded as one that was told no.
+// or modify an account. The probe does not call any of them unless BOTH of the
+// gate's conditions hold: WEBULL_TRADE_MUTATE=1, the same opt-in the mutating
+// sandbox tests use, AND a resolved base URL on a host the SDK derives for a
+// sandbox. Two conditions because one is not enough: a shell set up to run the
+// mutating tests already exports the first variable, and the base URL comes from
+// the environment too, so the opt-in alone would let a run pointed at production
+// place real orders. A run that genuinely needs a non-sandbox base URL sets
+// WEBULL_LIVE_PROBE_MUTATE_NON_SANDBOX=1 to say so by name. A refused endpoint is
+// reported as skipped rather than as any status: a run that did not ask must not
+// be recorded as one that was told no.
 //
 // Usage:
 //
@@ -40,8 +46,8 @@
 //
 // A run needs WEBULL_APP_KEY and WEBULL_APP_SECRET, and it reads them from the
 // environment through client.WithEnv. A -dry-run needs neither and contacts
-// nothing. There is no flag that opens the mutating gate: the environment
-// variable is the only door, so the closed default cannot be widened by a
+// nothing. There is no flag that opens the mutating gate: the two environment
+// variables are the only door, so the closed default cannot be widened by a
 // mistyped argument.
 package main
 
@@ -69,10 +75,13 @@ import (
 // carry userinfo, and the key and secret never reach this struct at all.
 //
 // Mutation is the one field that is always written, never omitted. It says
-// whether the run was allowed to call the endpoints that can change state, so a
-// census that called them can never be read as one that did not - the ambiguity
-// a shared opt-in variable creates, and the reason the field is not derived from
-// the counts after the fact.
+// whether the run was allowed to call the endpoints that can change state and,
+// when it was not, WHICH of the gate's two conditions was unmet - so a census
+// that called them can never be read as one that did not, and a census that was
+// refused for pointing at a non-sandbox host can never be read as one that was
+// merely un-authorised. Both of those are the ambiguities a shared opt-in
+// variable creates, and the field is the reason they are recorded rather than
+// derived from the counts after the fact.
 type report struct {
 	Mode        string                   `json:"mode"`
 	Host        string                   `json:"host,omitempty"`
@@ -208,17 +217,19 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	// Read once, after the walk, and label the report with the same value the
-	// walk used. Reading it again here would be a second source of truth that
-	// could disagree with the rows.
-	mutateAllowed := MutationOptedIn()
+	// The gate is resolved once here, after the walk, and from the same host the
+	// walk resolved it from. Reading the environment again inside Census would be
+	// a second source of truth that could disagree with the rows; reading it here
+	// is the same reading, labelled with the same value, so the mutationGate line
+	// above the table and the rows beneath it are decided by one fact.
+	host := hostOf(cl)
 	built := report{
 		Mode:        "live",
-		Host:        hostOf(cl),
+		Host:        host,
 		Region:      cl.Region().String(),
 		Environment: cl.Environment().String(),
 		Account:     accountDiscovery,
-		Mutation:    mutationNote("live", mutateAllowed),
+		Mutation:    mutationNote("live", ResolveMutationGate(host)),
 		Endpoints:   len(endpoints),
 		Summary:     Summarise(outcomes),
 		Outcomes:    outcomes,
@@ -285,7 +296,7 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 	built := report{
 		Mode:        "dry-run: no request was sent and no credential was read",
 		Account:     accountNote,
-		Mutation:    mutationNote("dry-run", false),
+		Mutation:    mutationNote("dry-run", MutationGate{}),
 		Endpoints:   len(endpoints),
 		Summary:     Summarise(outcomes),
 		Outcomes:    outcomes,
@@ -295,22 +306,42 @@ func runDryRun(endpoints []Endpoint, out string, assumeDiscovered bool) error {
 }
 
 // mutationNote states, in one line, whether this run was allowed to call the
-// endpoints that can change state, and names the variable that decides. It is
-// the line an operator reads before believing any number below it, because the
-// numbers mean different things depending on the answer: 155 reachable with the
-// gate closed is a complete census of the read surface, and the same 155 with it
-// open is a census that placed orders.
-func mutationNote(mode string, allowed bool) string {
+// endpoints that can change state, which of the two conditions were satisfied,
+// and which variable decides. It is the line an operator reads before believing
+// any number below it, because the numbers mean different things depending on the
+// answer: 155 reachable with the gate closed is a complete census of the read
+// surface, and the same 155 with it open is a census that placed orders.
+//
+// The line names WHICH condition failed rather than only that the gate is closed,
+// because the two failures call for different actions. A run that was never
+// authorised needs one variable; a run that was authorised against a non-sandbox
+// host needs its base URL changed, or the override set on purpose. Reporting both
+// as "closed" would leave a run pointed at production looking merely un-approved.
+func mutationNote(mode string, gate MutationGate) string {
 	if isDryRun(mode) {
 		return "not applicable: a dry run sends no request, so no endpoint that can mutate was " +
-			"called; a live run needs " + MutateOptInEnv + "=" + MutateOptInValue + " to call any"
+			"called; a live run needs " + MutateOptInEnv + "=" + MutateOptInValue + " and a sandbox " +
+			"base URL to call any"
 	}
-	if allowed {
-		return "OPEN: " + MutateOptInEnv + "=" + MutateOptInValue + " was set, so every endpoint in " +
-			"the mutating class was called and may have changed account state"
+	switch {
+	case !gate.OptedIn:
+		return "closed: " + MutateOptInEnv + "=" + MutateOptInValue + " is not set, so no endpoint in " +
+			"the mutating class was called"
+	case gate.SandboxHost:
+		return "OPEN: " + MutateOptInEnv + "=" + MutateOptInValue + " was set and " + gate.Host +
+			" is a sandbox host, so every endpoint in the mutating class was called and may have " +
+			"changed sandbox account state"
+	case gate.Overridden:
+		return "OPEN BY OVERRIDE: " + NonSandboxOverrideEnv + "=" + NonSandboxOverrideValue +
+			" was set and " + MutateOptInEnv + "=" + MutateOptInValue + " was set, so every endpoint " +
+			"in the mutating class was called against " + gate.Host + ", which is NOT a sandbox host, " +
+			"and may have changed real account state"
+	default:
+		return "closed: " + MutateOptInEnv + "=" + MutateOptInValue + " was set but " + gate.Host +
+			" is not a sandbox host, so no endpoint in the mutating class was called; point the run " +
+			"at a sandbox, or set " + NonSandboxOverrideEnv + "=" + NonSandboxOverrideValue +
+			" to call them anyway"
 	}
-	return "closed: " + MutateOptInEnv + "=" + MutateOptInValue + " is not set, so no endpoint in " +
-		"the mutating class was called"
 }
 
 // isDryRun reports whether a mode string names a dry run. Both report builders
@@ -392,8 +423,10 @@ func printSummary(built report) {
 	if s.Skipped > 0 {
 		fmt.Printf("\nskipped: %d endpoint(s) were not called. A skipped row is a statement about\n", s.Skipped)
 		fmt.Println("this probe, not about the endpoint: it is not a 404, a 403 or any other status,")
-		fmt.Printf("because no request was sent. Re-run with %s=%s to call them.\n",
+		fmt.Println("because no request was sent. Calling them needs two things, both deliberate:")
+		fmt.Printf("%s=%s, and a base URL on a sandbox host. To call them against a\n",
 			MutateOptInEnv, MutateOptInValue)
+		fmt.Printf("non-sandbox host as well, set %s=%s.\n", NonSandboxOverrideEnv, NonSandboxOverrideValue)
 	}
 	if len(s.Errs) > 0 {
 		fmt.Println("\nrequests that produced no status, by SDK error code:")

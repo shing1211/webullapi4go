@@ -14,9 +14,16 @@
 
 package main
 
-import "os"
+import (
+	"net/url"
+	"os"
+	"strings"
 
-// MutateOptInEnv names the environment variable that opens the mutating gate.
+	"github.com/shing1211/webullapi4go/client"
+)
+
+// MutateOptInEnv names the environment variable that is the FIRST of the two
+// conditions that open the mutating gate.
 //
 // The name is the one this repository already uses for the same class of action:
 // the mutating trade sandbox test (trade/orders_sandbox_test.go:119) and the
@@ -26,15 +33,23 @@ import "os"
 // "this run may change state" - rather than a second spelling of the same idea
 // that a reader has to learn separately.
 //
-// It is also a real hazard, and the reason the gate state is written into
-// census.json rather than left implicit. A shell that exports
-// WEBULL_TRADE_MUTATE=1 to run the mutating tests has, by the same variable,
-// opted a census into calling the 34 endpoints below. The report therefore always
-// records whether the gate was open for the run that produced it, so a census
-// that called them can never be read as one that did not.
+// IT IS NOT SUFFICIENT. A shell that exports WEBULL_TRADE_MUTATE=1 to run the
+// mutating tests has, by that one variable alone, opened nothing: the second
+// condition - a base URL on a host the SDK derives for a sandbox - is also
+// required, with the one deliberate exception of [NonSandboxOverrideEnv]. See
+// [ResolveMutationGate]. The reason is the hazard the shared name creates, which
+// a second condition removes rather than merely documents: the base URL comes
+// from the environment too, so exporting the mutate variable and pointing the SDK
+// at production would otherwise issue the 34 endpoints below - three of them
+// scalar-bodied, and therefore made inert by no other rule - against a real
+// account.
+//
+// The gate state is still written into census.json rather than left implicit, so
+// a census that called them can never be read as one that did not.
 const MutateOptInEnv = "WEBULL_TRADE_MUTATE"
 
-// MutateOptInValue is the only value of MutateOptInEnv that opens the gate.
+// MutateOptInValue is the only value of MutateOptInEnv that satisfies the first
+// condition.
 //
 // "1" and nothing else, exactly as both existing readers compare it
 // (`os.Getenv("WEBULL_TRADE_MUTATE") != "1"`). A looser reading - any non-empty
@@ -42,6 +57,33 @@ const MutateOptInEnv = "WEBULL_TRADE_MUTATE"
 // collision this gate has to avoid rather than the convenience it would buy.
 // An unset variable and an empty one are both closed.
 const MutateOptInValue = "1"
+
+// NonSandboxOverrideEnv names the environment variable that waives the SECOND of
+// the two conditions, the sandbox-host one, and only that one.
+//
+// It is a deliberately separate name. Reinterpreting WEBULL_TRADE_MUTATE=1 to
+// mean "yes, really, not a sandbox" would leave a run pointed at production with
+// one variable set and nothing in the shell to show that a second and larger
+// decision had been made. Two names, both deliberately set, is what makes the
+// intent legible at the moment of the mistake rather than afterwards.
+//
+// The name is scoped to this program (WEBULL_LIVE_PROBE_...) because the
+// concession is not one the trade sandbox tests are making: they always run
+// against a sandbox, so a variable of theirs would name a situation that cannot
+// arise for them. It is also the census-specific half of the pair, so a reader
+// who has learned WEBULL_TRADE_MUTATE from the mutating trade test is not misled
+// about what this one does.
+const NonSandboxOverrideEnv = "WEBULL_LIVE_PROBE_MUTATE_NON_SANDBOX"
+
+// NonSandboxOverrideValue is the only value of NonSandboxOverrideEnv that
+// waives the sandbox-host condition.
+//
+// The same single token as [MutateOptInValue], and deliberately so: both
+// variables are read with the same exact comparison, so a reader who has learned
+// one has learned the other, and a value that opens one of them cannot quietly
+// do something else. The two variables remain separately named and separately
+// required; sharing a value shares no meaning.
+const NonSandboxOverrideValue = MutateOptInValue
 
 // safeMethods are the HTTP methods that cannot change server state by definition
 // (RFC 9110 §9.2.1). A documented method outside this set is treated as unsafe,
@@ -74,10 +116,10 @@ var mutatingAreas = map[string]struct{}{
 }
 
 // IsMutating reports whether an endpoint is in the mutating class: one this
-// probe must not call unless a run has explicitly opted in through
-// MutateOptInEnv.
+// probe must not call unless a run has satisfied both conditions of
+// [ResolveMutationGate].
 //
-// THE RULE, in two conditions, both read from committed or cached
+// THE CLASSIFICATION, in two conditions, both read from committed or cached
 // documentation rather than from a list written here:
 //
 //  1. the documented HTTP method is not a safe one; and
@@ -114,11 +156,6 @@ var mutatingAreas = map[string]struct{}{
 //     and inert, /broker/accounts/create is gated with nothing to empty, and a
 //     market-data-watchlist POST is called with an empty array and protected by
 //     nothing else. Both barriers are required, and neither is sufficient alone.
-//   - The host. The gate does not check that the run is pointed at a sandbox, so
-//     WEBULL_TRADE_MUTATE=1 with a production credential calls these 34 for
-//     real. That is why the default is closed: the operator who opens the gate is
-//     the operator who chose the base URL, and the closed default means a
-//     mistaken credential or a mistaken WEBULL_BASE_URL does nothing.
 func IsMutating(ep Endpoint) bool {
 	if _, safe := safeMethods[ep.Method]; safe {
 		return false
@@ -127,20 +164,243 @@ func IsMutating(ep Endpoint) bool {
 	return mutating
 }
 
-// MutationOptedIn reports whether this process has opted into calling the
-// mutating class. It reads MutateOptInEnv once per call and compares the value
-// exactly, so a shell variable set for another purpose, a stray "true" or a
-// padded " 1" all leave the gate closed.
+// knownRegions are the regions the SDK publishes, listed so that a sandbox host
+// in ANY of them is recognised rather than only the one AGENTS.md names as the
+// host that may appear in committed material.
+//
+// The list is a list of the SDK's own region identifiers, never of hosts: every
+// host it yields is derived through [client.EndpointsFor], so there is no host
+// string in this file that can drift from the SDK's own knowledge of where
+// Webull serves each region.
+//
+// The SDK exposes no enumeration of its regions, so the identifiers have to be
+// named, and a region added to the SDK after this was written is not on the list.
+// That direction is safe: such a census is REFUSED for a non-sandbox host, and
+// the operator sees the not-a-sandbox-host reason, rather than being let through.
+// TestKnownRegionsAreAllValidAndYieldNoProductionHost pins every entry against
+// the SDK, so a typo here cannot silently shrink or widen the set.
+var knownRegions = []client.Region{
+	client.HK, client.US, client.JP, client.SG, client.TH, client.AU,
+	client.MY, client.UK, client.BR, client.MX, client.ZA, client.EU,
+}
+
+// IsSandboxHost reports whether host is a service host the SDK derives for the
+// sandbox environment of a region it knows.
+//
+// Both the REST host and the broker REST host are considered for every region.
+// The census addresses every documented path, including the /broker/... ones,
+// through the single REST base URL - it calls [client.Client.DoStream], never
+// [client.Client.DoBroker] - so checking only the REST host would be the narrower
+// of the two readings of "where is this run pointed", and either host is a
+// sandbox Webull published.
+//
+// The comparison is EXACT, after normalisation, against hosts derived from the
+// SDK - not a substring test for the word "sandbox". A heuristic here would be a
+// way to switch the gate off by choosing a similar-looking host, which is the
+// precise failure this function exists to prevent. It also means a host that
+// merely contains the label, such as sandbox.attacker.example, is refused.
+//
+// WHY THE CONFIGURED ENVIRONMENT IS NOT CONSULTED. [client.Client.Environment] can
+// disagree with the base URL the run will actually use: [client.WithEnv] applies
+// WEBULL_BASE_URL after WEBULL_ENVIRONMENT and overwrites only
+// Config.Endpoints.HTTP, so WEBULL_ENVIRONMENT=sandbox together with
+// WEBULL_BASE_URL=https://api.webull.hk resolves to a client that reports
+// "sandbox" and talks to production. A gate that read the environment field would
+// open on exactly the configuration that must not open it. Only the host answers
+// the question being asked.
+func IsSandboxHost(host string) bool {
+	normalised := normaliseHost(host)
+	if normalised == "" {
+		return false
+	}
+	for _, region := range knownRegions {
+		sandbox := client.EndpointsFor(region, client.Sandbox)
+		if normalised == hostnameOf(sandbox.HTTP) || normalised == hostnameOf(sandbox.BrokerHTTP) {
+			return true
+		}
+	}
+	return false
+}
+
+// hostnameOf returns the host of a URL with any port, userinfo and path removed,
+// and "" when raw is not a URL with a host. It is a second reading of the same
+// field [hostOf] reports, and the difference is deliberate: the report's `host`
+// shows the operator exactly what was configured, while a comparison needs the
+// name alone, so a base URL written with an explicit port still matches.
+func hostnameOf(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return parsed.Hostname()
+}
+
+// normaliseHost reduces a host to the form the comparison in [IsSandboxHost] is
+// written in: lower case, no port, no trailing dot, no surrounding whitespace.
+//
+// host is a host, optionally with a port, as [hostOf] returns it; a full base URL
+// is accepted too and reduced to its host, because refusing to recognise a known
+// sandbox because it arrived as a URL rather than as a bare name would be a false
+// refusal for no gain - the accepted SET is the same either way, and this function
+// cannot add to it. A DNS name is case-insensitive and a fully qualified one may
+// carry a trailing dot, and an operator writing a base URL by hand may use either.
+// Normalising them is not leniency about WHICH host it is - the comparison
+// afterwards is still exact equality against a set derived from the SDK - it is
+// only refusing to fail in the safe direction over a capital letter. The gate's
+// cost when it is wrong in the unsafe direction is an irreversible request; its
+// cost when it is wrong in the safe direction is one visible reason string and an
+// override.
+func normaliseHost(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return ""
+	}
+	// A URL is read as a URL; anything else is read as a host:port authority,
+	// which is what drops the port and unwraps an IPv6 literal's brackets.
+	if parsed, err := url.Parse(host); err == nil && parsed.Host != "" {
+		host = parsed.Host
+	} else if parsed, err := url.Parse("//" + host); err == nil {
+		if name := parsed.Hostname(); name != "" {
+			host = name
+		}
+	}
+	return strings.TrimSuffix(host, ".")
+}
+
+// MutationOptedIn reports whether this process has satisfied the FIRST of the two
+// gate conditions: MutateOptInEnv carries MutateOptInValue.
+//
+// It reads the variable once per call and compares the value exactly, so a shell
+// variable set for another purpose, a stray "true" or a padded " 1" all leave the
+// condition unmet. It is deliberately a predicate on ONE condition and not a
+// predicate on the gate: the gate is [ResolveMutationGate], and a reader who needs
+// "may this run mutate anything" wants that.
 func MutationOptedIn() bool {
 	return os.Getenv(MutateOptInEnv) == MutateOptInValue
 }
 
-// skippedMutationReason is the Skipped text of every endpoint the gate declined
-// to call. It names the variable that opens the gate, because a row that says
-// only "skipped" leaves a reader with a hole in the census and no way to fill
-// it, and this is the one class of skipped row there is.
-const skippedMutationReason = "mutating endpoint: the probe did not call it because " +
-	MutateOptInEnv + "=" + MutateOptInValue + " is not set"
+// NonSandboxOverridden reports whether this process has satisfied the override
+// that waives the sandbox-host condition. It reads NonSandboxOverrideEnv once per
+// call and compares the value exactly, for the same reason [MutationOptedIn] does:
+// one accepted spelling per variable, so neither can acquire a second meaning.
+func NonSandboxOverridden() bool {
+	return os.Getenv(NonSandboxOverrideEnv) == NonSandboxOverrideValue
+}
+
+// MutationGate is the resolved state of the mutating gate for one run: the two
+// conditions, the host they were judged against, and the override.
+//
+// It is a value rather than a package-level bool so that the loop, the report
+// line and the tests cannot disagree about why a run did or did not mutate
+// anything. [ResolveMutationGate] reads the environment once and every consumer
+// reads this struct, so there is exactly one reading of the environment per run.
+type MutationGate struct {
+	// OptedIn reports condition one: MutateOptInEnv is set to MutateOptInValue.
+	OptedIn bool
+	// SandboxHost reports condition two: Host is a host the SDK derives for a
+	// sandbox environment. See [IsSandboxHost] for what "sandbox" means here and
+	// why the configured environment is not consulted instead.
+	SandboxHost bool
+	// Overridden reports that NonSandboxOverrideEnv was set to
+	// NonSandboxOverrideValue, which waives condition two. It cannot waive
+	// condition one.
+	Overridden bool
+	// Host is the base URL host the gate judged, exactly as [hostOf] reported it
+	// and exactly as the report records it, so the reason string and the
+	// artifact's `host` field can never name different deployments. It is empty
+	// only where there is no client to ask, which is a closed gate.
+	Host string
+}
+
+// Open reports whether this run may call the mutating class.
+//
+// Both conditions must hold, except that the second is satisfied either by a
+// sandbox host or by the override:
+//
+//	opted in AND (sandbox host OR override)
+//
+// The override cannot open a run that has not opted in. That is what makes the
+// two conditions independent rather than two ways in, and it is why a run that
+// forgot the opt-in is skipped with the not-opted-in reason even when it is
+// pointed at a sandbox and even when the override is set.
+func (g MutationGate) Open() bool {
+	if !g.OptedIn {
+		return false
+	}
+	return g.SandboxHost || g.Overridden
+}
+
+// SkipReason is the text to record as an [Outcome.Skipped] for a mutating
+// endpoint this gate refuses, and "" when the gate is open.
+//
+// The two reasons are different FACTS and a reader has to be able to tell them
+// apart: "nobody opted in" is fixed by setting one variable, while "this was not
+// a sandbox host" says the run may be pointed at real account state and is fixed
+// by pointing it somewhere else, or by setting the override on purpose. Reporting
+// one as the other would send an operator to make the wrong change - and would let
+// a production run be read as merely un-authorised, which is the confusion this
+// whole gate exists to remove.
+//
+// The opt-in is reported first when both are unmet, because it is the condition
+// that holds regardless of where the run is pointed and is therefore the more
+// basic of the two.
+func (g MutationGate) SkipReason() string {
+	if g.Open() {
+		return ""
+	}
+	if !g.OptedIn {
+		return skippedNotOptedIn()
+	}
+	return skippedNotSandbox(g.Host)
+}
+
+// skippedNotOptedIn is the Skipped text of every mutating endpoint this gate
+// declined because MutateOptInEnv is not set to MutateOptInValue.
+//
+// It names the variable that opens the gate, because a row that says only
+// "skipped" leaves a reader with a hole in the census and no way to fill it. It
+// deliberately does not name the host, the override variable, or anything else:
+// this reason says the run was not authorised, and adding the conditions that
+// were not the problem would blur exactly the distinction the two reasons exist
+// to keep.
+func skippedNotOptedIn() string {
+	return "mutating endpoint: not opted in - " + MutateOptInEnv + "=" + MutateOptInValue +
+		" is not set, so the probe did not call it"
+}
+
+// skippedNotSandbox is the Skipped text of every mutating endpoint this gate
+// declined because the run is not pointed at a sandbox host and the override was
+// not set.
+//
+// It names the host that was judged - so a reader can see which deployment the
+// gate thought it was protecting, and so an operator who expected a sandbox is
+// told which host is actually configured - and it names the override variable as
+// the deliberate way past this condition, because a run that genuinely needs a
+// non-sandbox base URL should have to ask for it by name rather than discover it
+// by relaxing the opt-in.
+func skippedNotSandbox(host string) string {
+	judged := host
+	if strings.TrimSpace(judged) == "" {
+		judged = "the configured base URL"
+	}
+	return "mutating endpoint: not a sandbox host - the probe is pointed at " + judged +
+		", which is not a sandbox host the SDK derives, so it did not call it; set " +
+		NonSandboxOverrideEnv + "=" + NonSandboxOverrideValue + " to override this condition"
+}
+
+// ResolveMutationGate reads both conditions once, for a run pointed at host, and
+// returns the resolved gate. [Census] and main both call it with the same
+// [hostOf] of the same client, so the rows in the artifact and the mutationGate
+// line above them are decided by one reading of the environment and cannot
+// disagree.
+func ResolveMutationGate(host string) MutationGate {
+	return MutationGate{
+		OptedIn:     MutationOptedIn(),
+		SandboxHost: IsSandboxHost(host),
+		Overridden:  NonSandboxOverridden(),
+		Host:        host,
+	}
+}
 
 // gateClosed reports whether the gate refused this outcome. It is a named
 // predicate rather than a field comparison so the loop, the summary and the
