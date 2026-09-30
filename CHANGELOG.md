@@ -11,6 +11,32 @@ newest installable version.
 
 ## [Unreleased]
 
+## [2.1.39] - 2026-09-30
+
+**Documentation-only patch.** No SDK code changed and no new live verification was
+performed. This tag records the Session 2 investigation and the GoDoc comments
+added to six brokerfd methods that cannot be live-verified without US credentials.
+
+### Added
+
+- **GoDoc comments on six brokerfd methods with no Webull documentation page.**
+  `GetFDStockLocate`, `GetFDECInstrumentDetail`, `ListDocuments`, `GetDocumentDetail`,
+  `GetFDAchAccountDetail`, and `GetFDBankAccountDetail` all use paths in the
+  `/broker-fd/` namespace that does not appear in any cached HK documentation page.
+  `DownloadDocument` is documented at `/broker/documents/download` but returns raw
+  bytes and is correctly classified as unnameable. Each comment cites
+  `IMPLEMENTATION_STATUS.md` item 17 (no documented endpoint) or item 22
+  (unnameable) so a future developer can trace the finding. `brokerfd/`.
+
+### Session 2 HK sandbox live census
+
+A census with the published HK test credentials confirmed all 55 live fixtures
+in `conformance/testdata/live/` are byte-identical to a run with those keys.
+The HK trading surface (`trade.*`) remains live-verified working. HK Broker
+(`broker.*`) returns 404 across all 29 endpoints — confirmed as an OAuth scope
+issue in the HK sandbox, not an SDK defect. The 4 decode-rejection findings
+are unchanged and correctly recorded in `live-divergences.json`.
+
 ## [2.1.38] - 2026-09-30
 
 **Release records, and the OpenSpec assistant scaffolding.** No SDK code changed
