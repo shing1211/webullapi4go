@@ -1,5 +1,11 @@
 # Live Evidence Harness Implementation Plan
 
+> ### Completed — all 32 steps done
+>
+> The live-evidence harness was built entirely in the v2.1.36 release cycle.
+> Implementation ran outside the OpenSpec workflow and closed all checkboxes manually.
+> See the v2.1.36 and v2.1.37 changelog entries for the full commit list.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A probe that calls every documented endpoint with a synthesised minimum valid request, records what answered, and — for those that answered — compares a value-free type skeleton of the live response against both the SDK type and the documentation-derived fixture.
@@ -84,7 +90,7 @@ The foundation everything else depends on, and the only component that decides w
   - `func Skeletonify(raw []byte) (any, error)` — decodes `raw` with `json.Decoder` using `UseNumber()`, returns the reduced tree as `map[string]any`, `[]any`, or a **typed placeholder** leaf, and returns an error only when `raw` is not valid JSON. **The leaf representation was revised during Task 1**; the tree is no longer spelled with kind strings. The binding form is in the Task 1 report at `.superpowers/sdd/2026-09-29-live-evidence-harness/task-1-report.md`, and it is the form a later task must code against. Briefly: a JSON string becomes the Go string `"1"`, a JSON number becomes a fixed synthetic `json.Number`, a JSON boolean becomes `true`, and a JSON null becomes a nil interface; an empty array is `[]any{}` and never nil. Two properties drive it and both matter downstream. `UseNumber()` is still required at decode time, or a body carrying a value outside `float64` range (`1e400`, a 40-digit integer) is a decode error and the whole body is silently dropped from the evidence set. And the number leaf is synthetic rather than the server's literal text, which is what makes a reduced tree safe to serialise into the committed files Task 4 writes — `conformance.jsonKind` classifies by Go type, not by a number's digits, so the kind is readable straight off the placeholder and a committed fixture can contain no value the server sent.
   - `func SkeletonKind(v any) string` — the kind name for a reduced value; used by `census.go` to print a one-line summary.
 
-- [ ] **Step 1: Create the module and write the failing test**
+- [x] ** Create the module and write the failing test**
 
 `go.mod` (mirror `examples/broker-probe/go.mod`):
 
@@ -139,7 +145,7 @@ func TestSkeletonifyRejectsInvalidJSON(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] ** Run the test to verify it fails**
 
 ```
 $env:GOTMPDIR="C:\Users\Tchan\AppData\Local\Temp\opencode\gotmp"
@@ -149,7 +155,7 @@ go test ./... -run TestSkeletonify -v
 ```
 Expected: FAIL — `undefined: Skeletonify`.
 
-- [ ] **Step 3: Implement `Skeletonify` in `examples/live-probe/skeleton.go`**
+- [x] ** Implement `Skeletonify` in `examples/live-probe/skeleton.go`**
 
 Apache-2.0 header, then `package main`.
 
@@ -159,14 +165,14 @@ Arrays reduce to `[]any` of the reduced element. An empty array reduces to `[]an
 
 `SkeletonKind` returns `"object"` for a map, `"array"` for a slice, `"string"` for the string placeholder, `"number"` for a `json.Number`, `"boolean"` for a bool, and `"null"` for a nil, and `""` for any other value. It classifies by Go type, so a kind is never an arbitrary string echoed back from the input. **This superseded the brief's original wording** ("the string itself for the kind names"), which failed open on an unreduced string; see the Task 1 report.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] ** Run the test to verify it passes**
 
 ```
 go test ./... -v
 ```
 Expected: PASS, all subtests.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 cd examples/live-probe
@@ -192,7 +198,7 @@ The second-largest source of a false negative: a request the probe cannot build 
   - `func Param(name string, spec ParamSpec) (any, error)` — returns the value to send, and a non-nil error when the class cannot be resolved; `census.go` records that as `blocked: unresolvable parameter` rather than attempting the call.
   - `const DefaultSymbol = "AAPL"` — the sandbox carries AAPL only, per `AGENTS.md`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] ** Write the failing test**
 
 One case per class in spec §5.5, plus the four that matter most:
 
@@ -241,7 +247,7 @@ func TestParamRejectsUnresolvable(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] ** Run the test to verify it fails**
 
 ```
 cd examples/live-probe
@@ -249,7 +255,7 @@ go test ./... -run TestParam -v
 ```
 Expected: FAIL — `undefined: Param`.
 
-- [ ] **Step 3: Implement `Param` in `examples/live-probe/params.go`**
+- [x] ** Implement `Param` in `examples/live-probe/params.go`**
 
 Resolution order, each step a short branch:
 
@@ -262,14 +268,14 @@ Resolution order, each step a short branch:
 7. `Type == "string"` and `name` matches `client_request_id` or `client_order_id` → a unique value: a monotonic counter combined with the current nanosecond, so two calls in one run never collide.
 8. Otherwise → error.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] ** Run the test to verify it passes**
 
 ```
 go test ./... -v
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 gofmt -l .
@@ -297,7 +303,7 @@ The first deliverable, and the one worth having even if nothing after it happens
   - `func DiscoverAccountID(ctx context.Context, cl *client.Client) (string, error)` — phase 0.
   - `main.go` writes `census.json` to the path given by `-out`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] ** Write the failing test**
 
 The census loop is testable without a credential by pointing it at an `httptest` server, and that is the point: the loop's job is to record outcomes, and a test that needs the sandbox cannot prove it records a 404 correctly.
 
@@ -352,7 +358,7 @@ func TestCensusRecordsNonSuccessStatuses(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] ** Run the test to verify it fails**
 
 ```
 cd examples/live-probe
@@ -360,7 +366,7 @@ go test ./... -run TestCensusRecords -v
 ```
 Expected: FAIL — `undefined: Census`.
 
-- [ ] **Step 3: Implement the census in `census.go` and `main.go`**
+- [x] ** Implement the census in `census.go` and `main.go`**
 
 `main.go`: flags `-out` (default `census.json`), `-base` (optional override, defaulting to `client.WithEnv()`), and `-accounts` (optional `account_id` override, which skips phase 0). Construct with `client.New(client.WithEnv())` and call `cl.EnsureToken(ctx)`. **A failure of `EnsureToken` must be reported as a top-level auth failure and exit non-zero, before any endpoint is called** — that is Review Focus case 3, and it is why the credential problem can never be mistaken for conformance findings.
 
@@ -372,14 +378,14 @@ Body synthesis reuses the same leaf rule as `Param`: a required string property 
 
 Reading the manifest: iterate `Manifest.Fixtures`, take `Documented.Method` and `Documented.Path`, and read required parameters from the cached page via the same `select_block`/`schema_200` logic `gen_fixtures.py` uses. **If the cache is absent, phase 1 exits 0 with a message, matching the existing `conformance-fixtures` behaviour** — a fresh checkout must not fail on a missing cache.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] ** Run the test to verify it passes**
 
 ```
 go test ./... -v
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 gofmt -l .
@@ -387,7 +393,7 @@ git add examples/live-probe
 git commit -m "feat(live-probe): census endpoint reachability and discover the account id"
 ```
 
-- [ ] **Step 6: Run it for real and record the result**
+- [x] ** Run it for real and record the result**
 
 ```
 $env:WEBULL_APP_KEY="<read from the Webull test-accounts page>"
@@ -416,7 +422,7 @@ Writes the committed evidence. Only runs against endpoints phase 1 proved reacha
   - `type ManifestEntry struct { Symbol, Fixture, Host, ProbedAt string; Status int; DecodedCleanly bool; DecodeErr string; Skeleton string }`
   - `func WriteCapture(dir string, skeletons map[string][]byte, entries []ManifestEntry) error` — refuses to write into `conformance/testdata/` if any file would change the documentation fixtures; writes only under `live/`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] ** Write the failing test**
 
 ```go
 func TestWriteCaptureRefusesToTouchDocumentationFixtures(t *testing.T) {
@@ -443,27 +449,27 @@ func TestCaptureRecordsDecodeFailureWithoutFailing(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] ** Run the test to verify it fails**
 
 ```
 go test ./... -run 'TestWriteCapture|TestCaptureRecords' -v
 ```
 Expected: FAIL — `undefined: WriteCapture`.
 
-- [ ] **Step 3: Implement `capture.go`**
+- [x] ** Implement `capture.go`**
 
 `Capture` performs the call, runs `Skeletonify` on the raw bytes, then attempts `json.Unmarshal(raw, into)` into the SDK type obtained from the symbol table, recording success or error. **A decode failure must not abort the capture** — it is precisely one of the findings the harness exists to report.
 
 `WriteCapture` refuses any path that does not begin with `live/` and writes `live-manifest.json` alongside. Keys are sorted so a re-run produces a byte-identical file when nothing changed; a diff then means the server changed.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] ** Run the test to verify it passes**
 
 ```
 go test ./... -v
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 gofmt -l .
@@ -471,7 +477,7 @@ git add examples/live-probe
 git commit -m "feat(live-probe): capture live bodies as value-free type skeletons"
 ```
 
-- [ ] **Step 6: Run the capture, then review before committing the evidence**
+- [x] ** Run the capture, then review before committing the evidence**
 
 ```
 go run . -capture -out ..\..\conformance\testdata
@@ -499,7 +505,7 @@ Reads the skeletons and runs the existing checks. This is where the "of N probed
   - `func LoadLive(dir string) (map[string]Skeleton, error)` where `Skeleton` is `{ Symbol, Fixture string; Body []byte }`.
   - `const LiveBaseline = "live-divergences.json"` — deliberately a different filename from `known-divergences.json`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] ** Write the failing test**
 
 Two directions, and the one that matters is the SDK direction. A skeleton whose names the SDK cannot reach must produce exactly one `live-sdk` row and **no** `live-docs` row.
 
@@ -523,7 +529,7 @@ func TestCompareLiveReportsTheTopLevelKindDisagreement(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] ** Run the test to verify it fails**
 
 ```
 cd <repo root>
@@ -533,20 +539,20 @@ go test ./conformance/ -run TestCompareLive -v
 ```
 Expected: FAIL — `undefined: CompareLive`.
 
-- [ ] **Step 3: Implement `conformance/live.go`**
+- [x] ** Implement `conformance/live.go`**
 
 `CompareLive` calls `CompareBody(f, symbol, t, skeleton)` and maps each returned `Divergence` to a `LiveDivergence` with `Direction: "sdk"`. A second call with the documentation fixture's own body and the SDK type gives the `live-docs` direction, where a name in the documentation that the skeleton lacks means the server omits a documented name, and a name in the skeleton the documentation lacks means the server sends an undocumented one.
 
 **Do not reuse `known-divergences.json`'s loader, its `DivergenceKind` values, or its exact-set gate.** A live finding is a claim about Webull's server, not about the SDK, and writing it into the SDK's baseline would make 25 documented rows plus N live rows read as one backlog of 25+N SDK defects. `live.go` gets its own file, its own kinds and its own gate.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] ** Run the test to verify it passes**
 
 ```
 go test ./conformance/ -v
 ```
 Expected: PASS, and every pre-existing conformance test still passing.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 gofmt -l .
@@ -569,7 +575,7 @@ The deliverable that decides whether phases 2 and 3 were worth having.
 - Consumes: `CompareLive`, `LoadLive` (Task 5).
 - Produces: `conformance/live-divergences.json` and a section in `IMPLEMENTATION_STATUS.md` reporting, in one line, **of N probed, X disagree with their documentation and Y disagree with the SDK**.
 
-- [ ] **Step 1: Write the failing report test**
+- [x] ** Write the failing report test**
 
 ```go
 func TestLiveReportCountsBothDirections(t *testing.T) {
@@ -578,14 +584,14 @@ func TestLiveReportCountsBothDirections(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] ** Run it to verify it fails**
 
 ```
 go test ./conformance/ -run TestLiveReport -v
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Implement the report and write it up**
+- [x] ** Implement the report and write it up**
 
 Print and record both counts. Then write the section, and state whichever of these is true:
 
@@ -594,7 +600,7 @@ Print and record both counts. Then write the section, and state whichever of the
 
 Either way, record the **reachable count** and name the surfaces that stayed unreachable, so the 14 envelope methods and the ~159 endpoints needing other credentials are on the record as bounds rather than as surprises.
 
-- [ ] **Step 4: Verify the whole gate, and that the existing baseline is untouched**
+- [x] ** Verify the whole gate, and that the existing baseline is untouched**
 
 ```
 gofmt -l .
@@ -613,7 +619,7 @@ git diff --stat conformance/known-divergences.json
 ```
 Expected: all green, and the last command **empty** — the documentation baseline must be byte-identical.
 
-- [ ] **Step 5: Commit**
+- [x] ** Commit**
 
 ```
 git add conformance/ IMPLEMENTATION_STATUS.md docs/implementation-status.md CHANGELOG.md docs/runs/index.md
