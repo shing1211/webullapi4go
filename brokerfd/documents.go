@@ -54,6 +54,13 @@ func (c *Client) UploadDocument(ctx context.Context, req UploadDocumentRequest) 
 }
 
 // DownloadDocument returns the raw binary content of a document identified by documentID.
+//
+// The path is /broker/documents/download, which is documented. This method is
+// unnameable because it returns raw bytes ([]byte) rather than JSON, so the
+// conformance harness cannot analyze its response shape. The divergence is not
+// a missing endpoint but a missing response type.
+//
+// See IMPLEMENTATION_STATUS.md item 22 "unnameable" class.
 func (c *Client) DownloadDocument(ctx context.Context, documentID string) ([]byte, error) {
 	q := url.Values{}
 	q.Set("document_id", documentID)
@@ -65,6 +72,13 @@ func (c *Client) DownloadDocument(ctx context.Context, documentID string) ([]byt
 }
 
 // ListDocuments returns all documents associated with the given accountID.
+//
+// No Webull documentation page exists for the /broker-fd/documents path. The
+// cached pages cover only /broker/documents/upload and /broker/documents/download.
+// Whether GET /broker-fd/documents is the right path or is an internal routing
+// artifact has not been verified.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) ListDocuments(ctx context.Context, accountID string) ([]Document, error) {
 	q := url.Values{}
 	q.Set("account_id", accountID)
@@ -76,6 +90,13 @@ func (c *Client) ListDocuments(ctx context.Context, accountID string) ([]Documen
 }
 
 // GetDocumentDetail returns the full details of a single document identified by documentID.
+//
+// No Webull documentation page exists for the /broker-fd/documents/detail path. The
+// cached pages cover only /broker/documents/upload and /broker/documents/download.
+// Whether GET /broker-fd/documents/detail is the right path or an internal routing
+// artifact has not been verified.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) GetDocumentDetail(ctx context.Context, documentID string) (*Document, error) {
 	q := url.Values{}
 	q.Set("document_id", documentID)

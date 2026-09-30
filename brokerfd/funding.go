@@ -85,6 +85,14 @@ func (c *Client) ListFDBankAccounts(ctx context.Context, accountID string) ([]Ba
 }
 
 // GetFDBankAccountDetail retrieves details for a specific bank account by its ID.
+//
+// No Webull documentation page exists for the /broker-fd/funding/bank-account/detail
+// path. The cached pages cover only /broker/funding/bank-relationships/list (list),
+// /broker/funding/bank-relationships/create (add) and
+// /broker/funding/bank-relationships/delete (remove). Whether GET
+// /broker-fd/funding/bank-account/detail is the right path has not been verified.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) GetFDBankAccountDetail(ctx context.Context, bankID string) (*BankAccount, error) {
 	q := url.Values{}
 	q.Set("bank_id", bankID)
@@ -160,6 +168,14 @@ func (c *Client) ListFDAchAccounts(ctx context.Context, accountID string) ([]ACH
 }
 
 // GetFDAchAccountDetail retrieves details for a specific ACH account by its ID.
+//
+// No Webull documentation page exists for the /broker-fd/funding/ach-account/detail
+// path. The cached pages cover only /broker/funding/ach-relationships/list (list),
+// /broker/funding/ach-relationships/create (add) and
+// /broker/funding/ach-relationships/delete (remove). Whether GET
+// /broker-fd/funding/ach-account/detail is the right path has not been verified.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) GetFDAchAccountDetail(ctx context.Context, achID string) (*ACHAccount, error) {
 	q := url.Values{}
 	q.Set("ach_id", achID)

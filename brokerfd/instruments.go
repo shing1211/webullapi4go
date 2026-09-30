@@ -65,6 +65,12 @@ type FDStockLocate struct {
 }
 
 // GetFDStockLocate retrieves locate information for a fractional share symbol.
+//
+// No Webull documentation page exists for this endpoint. The path uses the
+// /broker-fd/ namespace which does not appear in any cached page. This method
+// was added from inference and has not been verified against a live response.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) GetFDStockLocate(ctx context.Context, symbol string) ([]FDStockLocate, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)
@@ -182,6 +188,13 @@ func (c *Client) GetFDECInstruments(ctx context.Context, eventID, paginationKey 
 }
 
 // GetFDECInstrumentDetail retrieves details for a specific event contract by its symbol.
+//
+// No Webull documentation page exists for this endpoint. The path uses the
+// /broker-fd/ namespace which does not appear in any cached page. The cached
+// /broker/instruments/event-contracts/markets/list page covers GetFDECInstruments
+// only; it does not name a /broker-fd/instruments/event-contract/detail endpoint.
+//
+// See IMPLEMENTATION_STATUS.md item 17 "no documented endpoint" class.
 func (c *Client) GetFDECInstrumentDetail(ctx context.Context, symbol string) (*FDECInstrument, error) {
 	q := url.Values{}
 	q.Set("symbol", symbol)
