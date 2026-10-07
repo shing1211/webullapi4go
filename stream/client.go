@@ -36,9 +36,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// password is sent as the MQTT password. Webull documents that any value is
-// accepted; the App Key is carried as the user name.
-const password = "webullapi4go"
+// mqttPasswordAnyValue is the MQTT password. Webull accepts any non-empty
+// value; the App Key is carried as the user name (cfg.AppKey). The literal
+// string is an arbitrary placeholder and carries no authentication weight.
+const mqttPasswordAnyValue = "webullapi4go"
 
 // streamMetrics holds the OTel instruments for stream telemetry.
 // All fields are nil when neither an explicit nor inherited meter is available.
@@ -156,7 +157,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 		Broker:               broker,
 		ClientID:             cfg.sessionID,
 		Username:             cl.Config().AppKey,
-		Password:             password,
+		Password:             mqttPasswordAnyValue,
 		KeepAlive:            cfg.keepAlive,
 		ConnectTimeout:       cfg.connectTimeout,
 		WriteTimeout:         cfg.writeTimeout,
