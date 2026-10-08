@@ -277,7 +277,9 @@ func (c *Client) Close() error {
 			c.chanReg.stopAll()
 		}
 		if c.mqtt != nil {
-			_ = c.mqtt.Close()
+			if err := c.mqtt.Close(); err != nil {
+				slog.Debug("mqtt close failed", "err", err)
+			}
 		}
 	})
 	return nil
