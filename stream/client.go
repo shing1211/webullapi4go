@@ -401,7 +401,11 @@ func (c *Client) State() State {
 	if c.state.Load() == nil {
 		c.state.Store(StateDisconnected)
 	}
-	value, _ := c.state.Load().(State)
+	value, ok := c.state.Load().(State)
+	if !ok {
+		c.state.Store(StateDisconnected)
+		return StateDisconnected
+	}
 	return value
 }
 
@@ -410,7 +414,12 @@ func (c *Client) setState(next State) {
 	c.State()
 	var prev State
 	for {
-		prev, _ = c.state.Load().(State)
+		prevVal, ok := c.state.Load().(State)
+		if !ok {
+			prev = StateDisconnected
+		} else {
+			prev = prevVal
+		}
 		if prev == StateClosed && next != StateClosed {
 			return
 		}
@@ -424,7 +433,10 @@ func (c *Client) setState(next State) {
 func (c *Client) setStateIfCurrent(expected, next State) bool {
 	c.State()
 	for {
-		prev, _ := c.state.Load().(State)
+		prev, ok := c.state.Load().(State)
+		if !ok {
+			return false
+		}
 		if prev != expected || (prev == StateClosed && next != StateClosed) {
 			return false
 		}
