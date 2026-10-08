@@ -93,13 +93,11 @@ func (c *Client) executeStream(ctx context.Context, method, reqPath string, quer
 		result.response = resp
 	}
 	if err != nil {
-		if resp != nil && resp.Body != nil {
-			_ = resp.Body.Close()
-		}
 		result.response = nil
 		return result, errs.Wrap(errs.CodeTransport, method+" "+reqPath, err)
 	}
 	if resp == nil {
+		result.response = nil
 		return result, errs.New(errs.CodeTransport, method+" "+reqPath+" returned nil response")
 	}
 
@@ -109,7 +107,6 @@ func (c *Client) executeStream(ctx context.Context, method, reqPath string, quer
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		data, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
 		result.response = nil
 		if readErr != nil {
 			return result, errs.Wrap(errs.CodeTransport, "reading response body", readErr)
