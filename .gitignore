@@ -28,3 +28,8 @@ go.work.sum
 site/
 .cache/
 __pycache__/
+
+# OpenCode and OpenSpec local artifacts
+.omo/
+.opencode/
+openspec/
