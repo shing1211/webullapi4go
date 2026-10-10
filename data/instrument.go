@@ -123,6 +123,19 @@ type StockInstrument struct {
 	// MarginRequirementLong is the margin requirement ratio for a long
 	// position, as a decimal string.
 	MarginRequirementLong string `json:"margin_requirement_long"`
+
+	// The two fields below are declared by the v3 profiles page but not marked
+	// required, so they were absent here and a response carrying them decoded the
+	// value to the zero value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent. The page documents IsADR as
+	// a string spelling a boolean, so it is carried as string and a caller reads
+	// "true" rather than true.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	IsADR   string `json:"is_adr"`
+	Subtype string `json:"subtype"`
 	// MarginRequirementShort is the margin requirement ratio for a short
 	// position, as a decimal string.
 	MarginRequirementShort string `json:"margin_requirement_short"`

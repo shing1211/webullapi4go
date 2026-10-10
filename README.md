@@ -1,40 +1,65 @@
 # webullapi4go
 
-An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.com/apis/docs/).
-It wraps Webull's HTTP and MQTT services in typed Go, starting with the Hong Kong
-region. The v0.1 release covers authentication, a core signed REST client, the
-Market Data HTTP API, and real-time Market Data streaming over MQTT. The v0.2
-release adds the Trading HTTP API: v0.2.1 introduced account listing, balances,
-and positions, v0.2.2 adds the stock-order lifecycle (preview, place, replace,
-cancel) and order queries, v0.2.3 adds market-specific order rules for US, HK,
-and CN, including Hong Kong BCAN party IDs, v0.2.4 adds single-leg options
-orders, and v0.2.5 adds US combo orders. The v0.3 release adds real-time Trading
-events over gRPC. The v0.4 release adds Market Data fundamentals: capital flows,
-industry comparisons, earnings and dividend calendars, SEC filings, and financial
-statements.
+An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
+It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
+repository tag is **`v2.1.4`** (2026-09-26); the current request, OMS,
+streaming, telemetry, and documentation hardening is tagged in repository
+`v2.1.4` and was introduced in `v2.1.1`. This is a repository patch release, not a published Go-semver v2
+module: the root module path remains `github.com/shing1211/webullapi4go` and
+stays on the v1 import path **by decision**, with no `/v2` migration planned.
+The tagged tree is therefore not an installable published v2 module.
 
 - Module: `github.com/shing1211/webullapi4go`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
 
-## Feature matrix (v0.4)
+## Feature matrix
 
-| Area | Status | Details |
-|------|--------|---------|
-| Authentication | Supported | HMAC-SHA1 request signing, token create/check/ensure, automatic token injection |
-| Market Data (HTTP) | Supported | Instruments, company profile, analyst data, fundamentals (capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements), futures static, snapshot, tick, quotes/depth, bars (single and batch), footprint, NOII, screener, watchlists, options, news |
-| Market Data (MQTT streaming) | Supported | QUOTE, SNAPSHOT, and TICK pushes over MQTT or MQTT-over-WebSocket, with auto-reconnect and auto-resubscribe |
-| Trading (HTTP) | Supported | Accounts, balances, and positions (v0.2.1); stock order preview, place, replace, cancel, and order queries (v0.2.2); US/HK/CN order-type rules, Hong Kong BCAN, trading-session and at-auction validation (v0.2.3); single-leg options orders (v0.2.4); US combo orders — take-profit/stop-loss, OTO, OCO, and OTOCO (v0.2.5) |
-| Trading events (gRPC) | Supported | Order, event-contract position, and option status-change streams over server-streaming gRPC with HMAC-SHA256 signing, typed JSON payloads, and auto-reconnect/re-subscribe (v0.3.0) |
-| Display Solution | Not yet | Planned for v0.4 |
-| Broker API | Not yet | Planned for v0.5 |
+Status distinguishes implementation and live availability. “Implemented” does
+not mean every endpoint is live-verified; see the
+[implementation status](IMPLEMENTATION_STATUS.md) for verification boundaries.
+
+| Area | Implementation | Verification | Details |
+|---|---|---|---|
+| Authentication | Implemented | Offline-tested; core token flow live-verified in HK | HMAC-SHA1 REST signing, token create/check/ensure, automatic token injection |
+| Market Data HTTP | Implemented | Offline-tested; selected HK calls live-verified | Instruments, fundamentals, futures, snapshot, tick, quotes/depth, bars, watchlists, options, news, event contracts, crypto/funds, and Display routes |
+| Market Data MQTT | Implemented | Offline-tested; basic HK stream path previously live-verified | QUOTE, SNAPSHOT, and TICK over MQTT or MQTT-over-WebSocket, reconnect/resubscribe, health state, and bounded channels |
+| Trading HTTP + OMS | Implemented | Offline-tested; selected HK account/preview paths live-verified | Accounts, assets, stock/single-leg/multi-leg/futures/event order validation, order queries, guardrails, and local order-state reconciliation |
+| Trading events | Implemented | Offline-tested; basic stream path previously exercised | Order, position, and option streams over server-streaming gRPC, reconnect, correlation, spans, and metrics |
+| Broker API HK | Implemented and offline-tested | Live blocked | Scope-protected virtual accounts, instruments, assets, orders, funding, journals, and events; separate `broker/` module |
+| Broker FD API US | Implemented and offline-tested | Live blocked without US credentials | Agreements, accounts, documents, assets, activity, funding, instruments, orders, journals, and master data |
+| Broker FD events | Implemented and offline-tested | Live blocked without US credentials | Broker FD event stream over gRPC using `grpc.event.EventService` |
+| Display Solution | Implemented and offline-tested | Live blocked by host/entitlement | Company profile, analyst data, news, streaming, screeners, and quotes; HK host returns `403` |
+| Connect OAuth | Implemented and offline-tested | US live access unavailable | Authorization-code URL builder and token exchange/refresh |
 
 ## Install
 
+The module path is `github.com/shing1211/webullapi4go` and does not include the
+`/v2` suffix required by Go's semantic import versioning; it stays that way by
+decision, and no `/v2` migration is planned. The module proxy therefore serves
+only the `v1.x` line. The `v2.1.4` repository tag does not make the tagged tree
+installable, and an unqualified `go get` installs `v1.1.1`, which predates it.
+
+To install the current tree, pin a commit:
+
 ```sh
-go get github.com/shing1211/webullapi4go
+go get github.com/shing1211/webullapi4go@78c164c
 ```
+
+Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
+the time of writing). A commit pin moves only when you change it, whereas
+`@main` tracks the newest code.
+
+To pin the released v1.x line instead:
+
+```sh
+go get github.com/shing1211/webullapi4go@v1.1.1
+```
+
+The `broker/` package is a separate Broker API HK module. Its `go.mod` replaces
+the root module with `../`; it is not a nested package that root
+`go build ./...` traverses.
 
 ## Quickstart
 
@@ -233,29 +258,38 @@ order. Common options:
 | `WithRegion(client.HK)` | Select the deployment region |
 | `WithEnvironment(client.Sandbox)`, `WithSandbox()` | Select the environment |
 | `WithBaseURL`, `WithEndpoints` | Override resolved service endpoints |
-| `WithHTTPClient`, `WithTimeout`, `WithUserAgent` | Tune the HTTP transport |
-| `WithRetry(RetryConfig)`, `WithoutRetry()` | Configure transient-failure retries |
+| `WithHTTPClient`, `WithHTTPTransport`, `WithTimeout`, `WithUserAgent` | Tune HTTP transport and connection pooling |
+| `WithRetry(RetryConfig)`, `WithoutRetry()`, `WithResiliencePreset` | Configure transient-failure handling |
 | `WithRateLimiter`, `NewRateLimiter(rate, burst)` | Throttle requests per path |
 | `WithBreaker`, `NewBreaker(threshold, cooldown)` | Add a circuit breaker |
+| `WithClockDriftCorrection` | Learn a bounded signing-clock offset from response `Date` headers |
+| `WithInterceptor`, `WithHooks` | Add request-pipeline behavior and lifecycle callbacks |
 | `WithAPIVersion("v2"\|"v3")`, `WithAPIVersionFor(prefix, version)` | Select the `x-version` header |
-| `WithAutoToken(true)` | Obtain a token automatically (sandbox) before the first request |
+| `WithAutoToken(true)` | Obtain a sandbox token automatically before the first token-consuming request |
+| `WithLogger`, `WithTracerProvider`, `WithMeterProvider`, `WithPropagator` | Configure structured logs and OpenTelemetry |
 | `WithEnv()` | Fill configuration from the environment |
 
 Streaming is configured with `stream.WithSessionID`, `WithMQTTURL`,
 `WithWebSocket`, `WithAutoReconnect`, `WithAutoResubscribe`,
 `WithResubscribeTimeout`, `WithKeepAlive`, `WithConnectTimeout`,
-`WithWriteTimeout`, `WithMessageChannelDepth`, `WithCleanSession`, and
-`WithTLSConfig`.
+`WithWriteTimeout`, `WithMessageChannelDepth`, `WithCleanSession`,
+`WithTLSConfig`, `WithHealthWatchdog`, and `WithMeter`.
 
-Trading is configured with `trade.WithMaxOrderNotional` and
-`trade.WithMaxOrderQuantity`, advisory order guardrails that the order methods
-enforce before an order is built.
+Trading is configured with `trade.WithMaxOrderNotional`,
+`trade.WithMaxOrderQuantity`, and `trade.WithAutoClientOrderID`. The first two
+are advisory configuration guardrails enforced before placement. The notional
+cap does not cover multi-leg option orders, which have no single top-level
+notional; the quantity cap still applies. Auto client-order IDs are stable for
+the same logical place request and do not mutate the caller's request.
 
 Trading events are configured with `events.WithSubscribeTypes`,
 `events.WithAccounts`, `events.WithGRPCEndpoint`, `events.WithGRPCPort`,
 `events.WithTLS`, `events.WithDialTimeout`, `events.WithGRPCDialOption`,
 `events.WithAutoReconnect`, `events.WithReconnectBaseDelay`,
 `events.WithReconnectMaxDelay`, and `events.WithMaxReconnectAttempts`.
+
+See [Observability](docs/observability.md) for OTel setup, metric names, event
+spans, and correlation propagation.
 
 ## Sandbox testing
 
@@ -268,15 +302,15 @@ export WEBULL_APP_KEY="your-sandbox-app-key"
 export WEBULL_APP_SECRET="your-sandbox-app-secret"
 ```
 
-The integration tests are skipped unless explicitly enabled and require sandbox
-credentials. Never commit the values.
+Core, data, stream, and events sandbox tests are skipped unless explicitly
+enabled. Use the actual `Sandbox` test selector, and never commit credentials:
 
 ```sh
 # macOS / Linux
 WEBULL_SANDBOX=1 \
 WEBULL_APP_KEY=your-sandbox-app-key \
 WEBULL_APP_SECRET=your-sandbox-app-secret \
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
 
 ```powershell
@@ -284,41 +318,76 @@ go test ./... -run Integration
 $env:WEBULL_SANDBOX = "1"
 $env:WEBULL_APP_KEY = "your-sandbox-app-key"
 $env:WEBULL_APP_SECRET = "your-sandbox-app-secret"
-go test ./... -run Integration
+go test ./... -run Sandbox
 ```
 
-MQTT over WebSocket tests additionally read `WEBULL_MQTT_WEBSOCKET=1`. See the
-[sandbox documentation](https://shing1211.github.io/webullapi4go/sandbox/) and
-[troubleshooting guide](https://shing1211.github.io/webullapi4go/troubleshooting/)
-for known sandbox limitations (a single supported symbol, entitlement-gated
-footprint data, empty depth outside market hours, and network blocking of plain
-MQTT on port 1883).
+Trading-package sandbox tests use separate credentials and the
+`WEBULL_TRADE_SANDBOX=1`, `WEBULL_TRADE_APP_KEY`,
+`WEBULL_TRADE_APP_SECRET`, and `WEBULL_TRADE_ACCOUNT_ID` variables:
+
+```sh
+WEBULL_TRADE_SANDBOX=1 \
+WEBULL_TRADE_APP_KEY=your-trading-sandbox-app-key \
+WEBULL_TRADE_APP_SECRET=your-trading-sandbox-app-secret \
+WEBULL_TRADE_ACCOUNT_ID=your-trading-account-id \
+go test ./trade -run Sandbox
+```
+
+The mutating trade test additionally requires `WEBULL_TRADE_MUTATE=1`. The
+mutating order-event test uses the generic `WEBULL_SANDBOX` credentials plus
+`WEBULL_TRADE_ACCOUNT_ID` and `WEBULL_TRADE_MUTATE=1`. MQTT over WebSocket
+tests additionally read `WEBULL_MQTT_WEBSOCKET=1`. See the local
+[sandbox guide](docs/sandbox.md) and [troubleshooting guide](docs/troubleshooting.md)
+for the complete gates and known limitations (a single supported symbol,
+entitlement-gated footprint data, empty depth outside market hours, and network
+blocking of plain MQTT on port 1883). HTTP 417 is mapped to the historical
+`INVALID_TOKEN` category for compatibility, but Webull also uses it for invalid
+symbols and other business validation; inspect the API message before treating
+it as a token failure.
 
 ## Package map
 
 | Package | Purpose |
 |---------|---------|
-| `client` | Core SDK: configuration, options, signing, tokens, transport, and `Client.Do` |
-| `data` | Market Data HTTP endpoints (typed requests and responses) |
-| `stream` | Market Data streaming over MQTT, with reconnect and resubscribe |
-| `trade` | Trading HTTP endpoints (accounts, balances, positions, stock, single-leg options, and US combo orders, and order queries) |
-| `events` | Trading events over gRPC: order, position, and option streams with typed payloads and reconnect |
-| `gen/webull/marketdata/v1` | Generated protobuf types for streamed messages |
-| `gen/webull/trade/events/v1` | Generated protobuf types for the gRPC event service |
-| `pkg/types` | Shared public domain types (markets, instrument types) |
-| `internal/*` | Implementation details: signing, token lifecycle, region endpoints, transport, resilience, MQTT |
+| `client` | Canonical core SDK: configuration, signing, tokens, HTTP transport, request pipeline, and resilience |
+| `data` | Canonical Market Data HTTP client and DTOs |
+| `stream` | Canonical Market Data MQTT client with reconnect, health, and channel policies |
+| `trade` | Canonical Trading HTTP client and OMS tracking integration |
+| `events` | Canonical Trading Events gRPC client |
+| `connect` | OAuth 2.0 authorization-code flow for third-party apps (US only) |
+| `display` | Display Solution client-to-server authentication and token management |
+| `broker` | Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go => ../`) |
+| `brokerfd` | Broker FD US HTTP endpoints (accounts, orders, funding, instruments, etc.) |
+| `brokerfd/events` | Broker FD US events over gRPC |
+| `webull` | Optional thin aliases for the core client; service clients remain in their root packages |
+| `pkg/errors` | Public typed errors, codes, and sentinels |
+| `pkg/observability` | OpenTelemetry handles, span helpers, shared instruments, and sanitized telemetry error text |
+| `pkg/resilience` | Public retry, rate-limit, circuit-breaker, and clock primitives |
+| `pkg/transport` | Public HTTP transport and MQTT transport |
+| `pkg/domain/money` | `money.Money`, the public DTO decimal type |
+| `pkg/domain/order` | Public order state machine and reconciliation model |
+| `pkg/types` | Shared public market/instrument types |
+| `gen/webull/...` | Committed generated protobuf types; do not hand-edit |
+| `internal/*` | Non-public authentication and compatibility implementation details |
 
-## Roadmap
+## Roadmap and release status
 
 | Version | Scope | Status |
-|---------|-------|--------|
-| v0.1 | Authentication, core HTTP client, Market Data HTTP + MQTT streaming | Done |
-| v0.2 | Trading (HTTP): accounts, balances, positions (v0.2.1), stock orders (v0.2.2), market-specific rules and HK BCAN (v0.2.3), single-leg options orders (v0.2.4), US combo orders (v0.2.5), then a Market Data news SSE refactor (v0.2.6) | Done |
-| v0.3 | Trading events over gRPC | Done |
-| v0.4 | Market Data fundamentals: capital flows, industry comparisons, earnings/dividend calendars, SEC filings, financial statements | Done |
-| v0.5 | Fund data, crypto data, screener v2, corporate actions, instrument v3 migration | Planned |
-| v0.6 | Broker API | Planned |
-| v1.0 | Stable public API, full documentation, semver guarantees | Planned |
+|---|---|---|
+| v0.x–v1.0 | Core API, Trading, Events, full endpoint coverage, examples, and API stabilization | Released |
+| v1.1.1 | Production test/security tooling, multi-OS CI, leak checks, and fuzzing | Released |
+| v2.0.0–v2.0.2 | Public error/resilience/transport foundations, OMS domain, `money.Money`, and thin `webull` aliases; root services retained | Historical tag; not a published v2 module |
+| v2.0.3–v2.0.4 | Context hygiene, structured resilience, clock correction, idempotency, and transport tuning | Historical tag; not a published v2 module |
+| v2.0.5–v2.0.7 | Request interceptors/hooks, initial OMS, stream state/channels, slog, OTel tracing, and metrics | Historical tag; not a published v2 module |
+| v2.0.8–v2.0.9 | Context and typed-error hardening | Historical tag; not a published v2 module |
+| v2.1.0 | `go vet` mutex-copy fixes | Historical tag; not a published v2 module |
+| v2.1.1 | Error matching specificity, request-pipeline parity, OMS reconciliation, stream/MQTT lifecycle hardening, gRPC event telemetry, cancellation/leak coverage, and documentation reconciliation | Repository tag; not a published v2 module; offline-tested and not newly live-verified |
+
+The next version number is intentionally unassigned for future work. The
+current hardening is represented by repository tag `v2.1.4`. The module-path
+decision is settled (stay on the v1 import path, no `/v2` migration); live
+verification remains a separate follow-up decision. See
+[CHANGELOG.md](CHANGELOG.md) and [PLAN.md](PLAN.md) for the decision record.
 
 ## Links
 
@@ -330,8 +399,34 @@ MQTT on port 1883).
 - `events` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/events
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](docs/adr/index.md)
+- Implementation status: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+- Observability: [docs/observability.md](docs/observability.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Development
+
+| Target | Description |
+|--------|-------------|
+| `make build` | compile the root module and every nested module listed by the Makefile |
+| `make vet` | vet the root module and every nested module listed by the Makefile |
+| `make test` | unit tests across those modules (sandbox tests remain environment-gated) |
+| `make test-race` | tests with the race detector across those modules |
+| `make cover` | coverage profiling across those modules |
+| `make lint` | `golangci-lint` (includes `gosec`) |
+| `make fuzz` | fuzz the data deserializers |
+| `make vuln` | `govulncheck` in every module |
+| `make docs` | build the MkDocs site (`mkdocs build --strict`) |
+
+Root `go build ./...` and `go test ./...` cover only the root module; use the
+Makefile targets for module-aware verification. The 2026-09-26 offline run
+measured 73.6% aggregate coverage in the root module and 80.8% in the nested
+`broker/` module. These are reproducible measurements, not behavior or release
+guarantees; CI's 60% gate is root-only.
+
+The current hardening was not newly live-verified. Historical live results are
+listed separately and must not be read as verification of the `v2.1.1`
+repository tag.
 
 ## License
 

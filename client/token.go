@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Token endpoint paths, relative to the configured HTTP base URL.
@@ -291,11 +291,12 @@ func (c *Client) SetTokenPollTimeout(d time.Duration) {
 //
 // INTEGRATION SEAM: this is how the SDK attaches x-access-token without
 // changing the core request pipeline. The hook is an [http.RoundTripper] that
-// wraps the client's existing transport, so it applies to every request sent
-// through [Client.Do] (including the token endpoints, which are deliberately
-// skipped). The header is added after signing and is therefore not part of the
-// signature. If the request pipeline later grows an explicit token hook, it can
-// consult [Client.AccessToken] instead; this wrapper remains compatible.
+// wraps the client's existing transport, so it applies to [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] requests. Token-lifecycle endpoints
+// are deliberately skipped. The header is added after signing and is therefore
+// not part of the signature. If the request pipeline later grows an explicit
+// token hook, it can consult [Client.AccessToken] instead; this wrapper remains
+// compatible.
 func (c *Client) EnableTokenInjection() {
 	c.enableTokenInjection(tokenStateFor(c))
 }
@@ -334,6 +335,16 @@ func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		base = http.DefaultTransport
 	}
 	return base.RoundTrip(req)
+}
+
+func (t *tokenTransport) CloseIdleConnections() {
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	if closer, ok := base.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
 }
 
 // isTokenEndpoint reports whether path is one of the token lifecycle endpoints,

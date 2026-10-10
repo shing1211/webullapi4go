@@ -21,14 +21,23 @@ name: Nightly live sandbox
 #   WEBULL_MQTT_URL           override the MQTT broker address
 #   WEBULL_TRADE_PARTY_ID     HK BCAN party id (HK preview skips without it)
 #
-# When the required secrets are absent the guard step marks the run as skipped
-# and the live steps no-op, so forks and unconfigured clones still succeed.
+# When none of the required secrets are absent the guard marks the run as
+# skipped and the live steps no-op, so forks and unconfigured clones still
+# succeed. A partial configuration is a misconfiguration and fails, because a
+# half-configured run would silently exercise only part of the surface. Pass
+# require_secrets=true to a manual run to turn an unconfigured clone into a
+# hard failure instead of a skip.
 
 on:
   schedule:
     # 06:00 UTC daily.
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      require_secrets:
+        description: "Fail when the required sandbox secrets are missing instead of skipping"
+        type: boolean
+        default: false
 
 # Least privilege: the job only reads the repository.
 permissions:
@@ -72,17 +81,61 @@ jobs:
 
       - name: Check required secrets
         id: guard
+        env:
+          REQUIRE_SECRETS: ${{ inputs.require_secrets }}
         run: |
+          required=(WEBULL_APP_KEY WEBULL_APP_SECRET WEBULL_TRADE_APP_KEY \
+                    WEBULL_TRADE_APP_SECRET WEBULL_TRADE_ACCOUNT_ID)
           missing=""
-          for name in WEBULL_APP_KEY WEBULL_APP_SECRET WEBULL_TRADE_APP_KEY WEBULL_TRADE_APP_SECRET WEBULL_TRADE_ACCOUNT_ID; do
-            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          present=0
+          for name in "${required[@]}"; do
+            if [ -z "${!name-}" ]; then
+              missing="$missing $name"
+            else
+              present=$((present + 1))
+            fi
           done
-          if [ -n "$missing" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Skipping live sandbox tests; required secrets missing:$missing"
-          else
+          total=${#required[@]}
+
+          {
+            echo "## Nightly live sandbox verification"
+            echo
+            if [ "$present" -eq "$total" ]; then
+              echo "Verdict: **RAN** - all $total required secrets are configured."
+            elif [ "$present" -eq 0 ]; then
+              echo "Verdict: **SKIPPED** - no sandbox secrets are configured, so nothing was verified."
+            else
+              echo "Verdict: **MISCONFIGURED** - only $present of $total required secrets are configured."
+            fi
+            echo
+            echo "| Secret | Configured |"
+            echo "|---|---|"
+            for name in "${required[@]}"; do
+              if [ -z "${!name-}" ]; then
+                echo "| \`$name\` | no |"
+              else
+                echo "| \`$name\` | yes |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$present" -eq "$total" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          if [ "$present" -eq 0 ]; then
+            if [ "$REQUIRE_SECRETS" = "true" ]; then
+              echo "::error::required sandbox secrets are missing and require_secrets was requested:$missing"
+              exit 1
+            fi
+            echo "::warning::No sandbox secrets configured; live sandbox tests were not run. Nothing was verified.$missing"
+            exit 0
+          fi
+
+          echo "::error::only $present of $total required sandbox secrets are configured; a partial run cannot verify the surface. Missing:$missing"
+          exit 1
 
       - name: Trade - read-only queries and previews
         if: steps.guard.outputs.skip == 'false'

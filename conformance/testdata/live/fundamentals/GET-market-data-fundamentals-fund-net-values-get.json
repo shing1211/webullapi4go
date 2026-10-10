@@ -1,0 +1,12 @@
+{
+ "$array": [
+  {
+   "$count": 5,
+   "$shape": {
+    "currency": "1",
+    "date": "1",
+    "net_value": "1"
+   }
+  }
+ ]
+}

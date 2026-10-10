@@ -16,12 +16,14 @@ package events_test
 
 import (
 	"context"
+	"errors"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/shing1211/webullapi4go/events"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // orderEventJSON is a representative order status-change payload, modelled on a
@@ -39,8 +41,11 @@ const optionEventJSON = `{"secAccountId":66600004338,"requestId":"EVENT-REQ-2","
 // orderResponse builds a data response carrying payload with the given event
 // kind.
 func dataResponse(kind uint32, contentType, payload string) *eventsevents.SubscribeResponse {
+	if kind > math.MaxInt32 {
+		panic("event kind exceeds protobuf int32 range")
+	}
 	return &eventsevents.SubscribeResponse{
-		EventType:   eventsevents.EventType(kind),
+		EventType:   eventsevents.EventType(int32(kind)),
 		ContentType: contentType,
 		Payload:     payload,
 	}
@@ -59,9 +64,7 @@ func TestDecodesOrderEvent(t *testing.T) {
 	orders := make(chan *events.OrderEvent, 1)
 	cl.OnOrder(func(ev *events.OrderEvent) { trySend(orders, ev) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	var ev *events.OrderEvent
 	select {
@@ -91,6 +94,9 @@ func TestDecodesOrderEvent(t *testing.T) {
 	if string(ev.Raw) != orderEventJSON {
 		t.Errorf("Raw = %q, want the original payload", ev.Raw)
 	}
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
 }
 
 // TestDecodesPositionAndOptionEvents verifies the position and option routes.
@@ -107,9 +113,7 @@ func TestDecodesPositionAndOptionEvents(t *testing.T) {
 	cl.OnPosition(func(ev *events.PositionEvent) { trySend(positions, ev) })
 	cl.OnOption(func(ev *events.OptionEvent) { trySend(options, ev) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	select {
 	case ev := <-positions:
@@ -131,6 +135,9 @@ func TestDecodesPositionAndOptionEvents(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for OnOption")
 	}
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
 }
 
 // TestMalformedPayloadReportsErrorAndContinues verifies that a malformed JSON
@@ -149,9 +156,7 @@ func TestMalformedPayloadReportsErrorAndContinues(t *testing.T) {
 	cl.OnError(func(err error) { trySend(errCh, err) })
 	cl.OnOrder(func(ev *events.OrderEvent) { trySend(orders, ev) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	select {
 	case err := <-errCh:
@@ -169,6 +174,9 @@ func TestMalformedPayloadReportsErrorAndContinues(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("stream did not continue after the malformed payload")
+	}
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}
 }
 
@@ -188,9 +196,7 @@ func TestNonJSONPayloadSkipsTypedDecode(t *testing.T) {
 	})
 	cl.OnOrder(func(ev *events.OrderEvent) { trySend(orders, ev) })
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = cl.Run(ctx) }()
+	run := startTestRun(t, cl, context.Background())
 
 	select {
 	case got := <-raw:
@@ -200,9 +206,12 @@ func TestNonJSONPayloadSkipsTypedDecode(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for OnEvent")
 	}
+	if err := run.stop(t); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
 	select {
 	case ev := <-orders:
 		t.Errorf("OnOrder fired for a non-JSON payload: %+v", ev)
-	case <-time.After(200 * time.Millisecond):
+	default:
 	}
 }

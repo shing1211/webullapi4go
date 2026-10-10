@@ -16,16 +16,20 @@ package client
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/resilience/breaker"
-	"github.com/shing1211/webullapi4go/internal/resilience/ratelimit"
-	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+	"github.com/shing1211/webullapi4go/pkg/observability"
+	"github.com/shing1211/webullapi4go/pkg/resilience/breaker"
+	"github.com/shing1211/webullapi4go/pkg/resilience/ratelimit"
+	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
 
 // Option mutates a [Config] during [New]. Options are applied in order on top
-// of [DefaultConfig], so a later option overrides an earlier one.
+// of [DefaultConfig], so a later option normally overrides an earlier one. A
+// breaker explicitly supplied with [WithBreaker] remains caller-owned when a
+// resilience preset is applied.
 type Option func(*Config)
 
 // WithAppKey sets the Webull OpenAPI app key.
@@ -96,6 +100,15 @@ func WithBaseURL(baseURL string) Option {
 // creates one with the configured timeout.
 func WithHTTPClient(hc *http.Client) Option {
 	return func(c *Config) { c.HTTPClient = hc }
+}
+
+// WithHTTPTransport sets the [http.Transport] used for REST calls. It is
+// applied after [WithHTTPClient]; if no HTTP client has been set, [New] creates
+// one with the configured timeout before applying the transport. This allows
+// callers to tune connection pooling, TLS, timeouts, and other transport-level
+// parameters without replacing the entire HTTP client.
+func WithHTTPTransport(tr *http.Transport) Option {
+	return func(c *Config) { c.httpTransport = tr }
 }
 
 // WithTimeout sets the per-request timeout used when [New] creates the HTTP
@@ -212,9 +225,13 @@ type CircuitBreaker interface {
 }
 
 // WithBreaker sets the circuit breaker consulted before every request attempt.
-// A nil breaker disables circuit breaking (the default).
+// A nil breaker disables circuit breaking (the default). A breaker supplied
+// here remains caller-owned when [WithResiliencePreset] is also used.
 func WithBreaker(b CircuitBreaker) Option {
-	return func(c *Config) { c.breaker = b }
+	return func(c *Config) {
+		c.breaker = b
+		c.breakerExplicit = true
+	}
 }
 
 // NewBreaker returns a circuit breaker that opens after threshold consecutive
@@ -224,4 +241,154 @@ func NewBreaker(threshold int, cooldown time.Duration) CircuitBreaker {
 		breaker.WithThreshold(threshold),
 		breaker.WithCooldown(cooldown),
 	)
+}
+
+// WithClockDriftCorrection enables clock-drift correction. When enabled, the
+// client learns the offset between the local clock and the Webull server's clock
+// by observing the Date response header on each successful request, and applies
+// that offset to subsequent x-timestamp values used in request signing. The
+// offset is clamped to the range [-5 minutes, +5 minutes] to prevent extreme
+// offsets from being injected. Disable with false to opt out.
+func WithClockDriftCorrection(enabled bool) Option {
+	return func(c *Config) {
+		c.clockDriftCorrection = enabled
+	}
+}
+
+// Interceptor is a function that wraps the request pipeline. It receives the next
+// function in the chain and may inspect, decorate, or short-circuit the request.
+// Interceptors are invoked in the order they are supplied to [WithInterceptor]
+// for [Client.Do], [Client.DoBroker], and [Client.DoStream]. The first
+// interceptor in the chain receives a function that performs the underlying
+// HTTP call (signing and sending).
+//
+// For example, a logging interceptor:
+//
+//	func(ctx context.Context, next func(context.Context) error) error {
+//	    start := time.Now()
+//	    err := next(ctx)
+//	    log.Printf("request took %s: %v", time.Since(start), err)
+//	    return err
+//	}
+type Interceptor func(ctx context.Context, next func(context.Context) error) error
+
+// WithInterceptor adds an interceptor to the request pipeline. Interceptors are
+// invoked after rate-limiting and circuit-breaking but before the request is
+// signed and sent, and after the response is received. Multiple interceptors
+// can be added; they fire in the order they are supplied for [Client.Do],
+// [Client.DoBroker], and [Client.DoStream].
+func WithInterceptor(i Interceptor) Option {
+	return func(c *Config) {
+		c.interceptors = append(c.interceptors, i)
+	}
+}
+
+// Hooks holds optional lifecycle callbacks invoked by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] around each request attempt. All
+// fields are optional; nil fields are no-ops.
+//
+// These hooks are the integration point for observability tools (structured
+// logging, OpenTelemetry tracing, Prometheus metrics). Attempt numbers start
+// at one for each logical request and increase for retries.
+type Hooks struct {
+	// OnRequest is called after rate-limiting and circuit-breaking, before
+	// user interceptors, with the HTTP method and path.
+	OnRequest func(method, path string)
+	// OnResponse is called on a successful response (2xx), passing the
+	// actual HTTP status code and the round-trip latency.
+	OnResponse func(status int, latency time.Duration)
+	// OnError is called when the request returns an error or a non-2xx HTTP
+	// status, passing the error and the round-trip latency.
+	OnError func(err error, latency time.Duration)
+	// OnLatency is called after every attempt (success, error, or retry) with
+	// the one-based attempt number and the round-trip latency.
+	OnLatency func(attempt int, latency time.Duration)
+}
+
+// WithHooks installs lifecycle hooks for observability integration.
+func WithHooks(h Hooks) Option {
+	return func(c *Config) {
+		c.hooks = h
+	}
+}
+
+// ResiliencePreset applies a named set of resilience defaults. Presets are
+// composable: each call adds to or overrides the existing configuration.
+type ResiliencePreset string
+
+const (
+	// ProductionPreset applies sensible production defaults: a per-path rate
+	// limiter (10 requests per second, burst 20), a circuit breaker (opens after
+	// 5 consecutive failures, 30-second cooldown), and exponential backoff retry
+	// with full jitter (base 200 ms, cap 2 s, up to 3 attempts).
+	ProductionPreset ResiliencePreset = "production"
+)
+
+// WithResiliencePreset applies a named resilience preset. Currently only
+// [ProductionPreset] is defined. The preset sets a per-path rate limiter and
+// retry policy immediately; its circuit breaker is created by [New] after all
+// options have been applied so the configured meter provider is independent of
+// option order. An explicitly supplied breaker, including nil, is preserved.
+func WithResiliencePreset(preset ResiliencePreset) Option {
+	return func(c *Config) {
+		switch preset {
+		case ProductionPreset:
+			c.resiliencePreset = preset
+			c.rateLimiter = NewRateLimiter(10, 20)
+			c.retry = retry.New(
+				retry.WithMaxAttempts(3),
+				retry.WithBaseDelay(200*time.Millisecond),
+				retry.WithMaxDelay(2*time.Second),
+				retry.WithFullJitter(true),
+				retry.WithIsRetryable(retry.DefaultIsRetryable),
+			)
+		}
+	}
+}
+
+func (c *Config) applyResiliencePreset() {
+	if c.resiliencePreset != ProductionPreset || c.breakerExplicit {
+		return
+	}
+	c.breaker = breaker.NewWithCounter(
+		c.otel.BreakerTransitionsCounter(),
+		breaker.WithThreshold(5),
+		breaker.WithCooldown(30*time.Second),
+	)
+}
+
+// WithLogger sets the structured logger used by [Client.Do],
+// [Client.DoBroker], and [Client.DoStream] for per-request log output. When nil
+// (the default), no structured logging is produced.
+func WithLogger(log *slog.Logger) Option {
+	return func(c *Config) {
+		c.otel.Logger = log
+	}
+}
+
+// WithTracerProvider sets the OpenTelemetry [TracerProvider] used to create
+// spans for [Client.Do], [Client.DoBroker], and [Client.DoStream] requests. When
+// nil (the default), the global no-op tracer is used.
+func WithTracerProvider(tp observability.TracerProvider) Option {
+	return func(c *Config) {
+		c.otel.TracerProvider = tp
+	}
+}
+
+// WithMeterProvider sets the OpenTelemetry [MeterProvider] used to create
+// meters for SDK-level metrics. When nil (the default), the global no-op
+// meter is used.
+func WithMeterProvider(mp observability.MeterProvider) Option {
+	return func(c *Config) {
+		c.otel.MeterProvider = mp
+	}
+}
+
+// WithPropagator sets the OpenTelemetry propagator used to extract and inject
+// trace context on requests. When nil (the default), no trace context
+// propagation is performed.
+func WithPropagator(p observability.TextMapPropagator) Option {
+	return func(c *Config) {
+		c.otel.Propagator = p
+	}
 }

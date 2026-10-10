@@ -1,0 +1,17 @@
+{
+ "$array": [
+  {
+   "$count": 2,
+   "$shape": {
+    "currency": "1",
+    "eps_actual": "1",
+    "eps_est": "1",
+    "expected_publish_date": "1",
+    "fiscal_period": -1,
+    "fiscal_year": -1,
+    "rev_actual": "1",
+    "rev_est": "1"
+   }
+  }
+ ]
+}

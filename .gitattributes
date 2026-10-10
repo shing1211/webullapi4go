@@ -1,2 +1,25 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The committed fixture trees are compared byte for byte against what the
+# generators re-encode, so the bytes on disk have to be the bytes in the blob.
+# `text=auto` above normalizes on commit but still writes CRLF into the working
+# tree wherever core.autocrlf is true, which is every Windows clone. The three
+# byte-exact assertions in conformance (TestEncodeSkeletonIsIdempotent,
+# TestExpandSkeletonIsTheInverseOfEncode, and TestLiveBaselineIsCanonical's
+# re-render check) then fail on all 55 live fixtures and on the live baseline,
+# for a reason that has nothing to do with the SDK. These are data, not source:
+# nothing diffs them line by line, so marking them -text is the narrower fix than
+# turning normalization off for the whole repository.
+conformance/testdata/** -text
+conformance/live-divergences.json -text
+conformance/known-divergences.json -text
+
+# The same failure reached the linter, for the same reason. gofmt, and therefore
+# golangci-lint's gofmt and goimports checks, reject a CRLF working-tree copy, and
+# `make lint` is a release gate. Rather than enumerate the Go files one CRLF
+# checkout at a time -- the linter reports at most three by default, so the list
+# would grow invisibly -- one rule sets the working-tree ending for all of them.
+# eol=lf rather than -text, because unlike the fixtures above these are ordinary
+# source that git should keep normalizing on commit.
+*.go text eol=lf

@@ -1,0 +1,89 @@
+// Copyright 2026 shing1211
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package brokerfd
+
+import (
+	"context"
+	"net/url"
+)
+
+const (
+	pathFDEnums         = "/broker/master-data/enums/list"
+	pathFDTradeCalendar = "/broker/master-data/trading-calendars/list"
+)
+
+// FDEnum represents a key-value pair with a human-readable label, returned by the
+// broker-fd master-data enums endpoint.
+type FDEnum struct {
+	EnumType string `json:"enum_type"`
+	Value    string `json:"value"`
+	Label    string `json:"label"`
+
+	// The three fields below are declared by the page but not marked required, so
+	// they were absent here and a response carrying them decoded the value to the
+	// zero value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent, and nothing here asserts that
+	// a live server sends it.
+	//
+	// The page's Code is the same fact this type spells Value, and Name is the same
+	// fact it spells Label. Both are carried, because which spelling a live server
+	// uses is unverified, for the reason given on [BankAccount.BankRelationshipID].
+	Code       string `json:"code"`
+	Name       string `json:"name"`
+	ParentCode string `json:"parent_code"`
+}
+
+// GetFDEnums returns the list of broker-fd master-data enums.
+// The set of enum types and values is fixed for the lifetime of the API.
+func (c *Client) GetFDEnums(ctx context.Context) ([]FDEnum, error) {
+	var out []FDEnum
+	if err := c.get(ctx, pathFDEnums, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FDTradeCalendarEntry represents a single trading day for a market.
+type FDTradeCalendarEntry struct {
+	Date      string `json:"date"`
+	Market    string `json:"market"`
+	Status    string `json:"status"`
+	OpenTime  string `json:"open_time"`
+	CloseTime string `json:"close_time"`
+
+	// The two fields below are required by the page and were absent here, so they
+	// decoded to false with no error reported. They are the authoritative form of the
+	// same two facts Status encodes as a string: a caller that has to tell a half-day
+	// or an early close from a normal session cannot do it from a status word, because
+	// this type has no vocabulary for those. Not live-verified, for the reason given
+	// on [TransferFee.FeeID].
+	IsTradingDay    bool `json:"is_trading_day"`
+	IsSettlementDay bool `json:"is_settlement_day"`
+}
+
+// GetFDTradeCalendar returns the trading calendar for a given market between startDate and endDate.
+// Dates are in YYYY-MM-DD format. The market parameter identifies the exchange or region.
+func (c *Client) GetFDTradeCalendar(ctx context.Context, market, startDate, endDate string) ([]FDTradeCalendarEntry, error) {
+	q := url.Values{}
+	q.Set("market", market)
+	q.Set("start_date", startDate)
+	q.Set("end_date", endDate)
+	var out []FDTradeCalendarEntry
+	if err := c.get(ctx, pathFDTradeCalendar, q, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

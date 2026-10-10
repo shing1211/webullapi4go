@@ -3,9 +3,49 @@
 This section collects the Architecture Decision Records (ADRs) for `webullapi4go`. Each
 ADR captures one significant decision, the options considered, and the consequences.
 
-The format, status definitions, and conventions are documented in the
-ADR README in the repository source (excluded from the published site; see
-`docs/adr/README.md` on GitHub).
+## Why ADRs
+
+- Decisions are recorded once, in one place, instead of being re-litigated in
+  issues and pull requests.
+- The rationale survives contributor turnover.
+- Superseded decisions stay on disk, so the history of the design is auditable.
+
+## Format
+
+Each ADR is a Markdown file named `NNNN-short-title.md`, where `NNNN` is a
+zero-padded, monotonically increasing number. Numbers are never reused.
+
+Every ADR starts with a metadata block:
+
+```markdown
+---
+Status: Proposed | Accepted | Superseded by ADR-NNNN | Deprecated
+Date: YYYY-MM-DD
+Deciders: <who decided>
+Supersedes: ADR-NNNN   # optional
+---
+```
+
+Status meanings:
+
+- **Proposed** — written up but not yet ratified by the maintainer.
+- **Accepted** — the decision is in force.
+- **Superseded by ADR-NNNN** — replaced; the new one is authoritative.
+- **Deprecated** — no longer recommended, but not yet replaced.
+
+Recommended body sections: `Context`, `Problem`, `Options Considered` (with
+pros/cons), `Decision`, `Rationale`, `Consequences`, `Risks and Unknowns`,
+`Spike Plan` (when follow-up verification is required).
+
+## Conventions
+
+- One decision per ADR. Do not bundle unrelated choices.
+- State facts and inferences separately. Mark anything inferred or unverified
+  explicitly with **Inferred** or **To verify**.
+- Do not fabricate details (message names, field numbers, endpoints). When a
+  detail is unknown, write "to be determined".
+- ADRs are immutable once `Accepted`. To change a decision, add a new ADR that
+  supersedes the old one; do not rewrite history.
 
 ## Records
 

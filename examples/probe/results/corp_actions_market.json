@@ -1,0 +1,7 @@
+{
+  "path": "/market-data/instruments/stocks/corporate-actions/market",
+  "result": {
+    "status": 404,
+    "error": "{\"error_msg\":\"404 Route Not Found\"}\n"
+  }
+}

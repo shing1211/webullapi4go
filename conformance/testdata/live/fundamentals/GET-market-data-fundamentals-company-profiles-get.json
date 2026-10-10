@@ -1,0 +1,19 @@
+{
+ "address": "1",
+ "category": "1",
+ "ceo": "1",
+ "company_name": "1",
+ "employees": "1",
+ "establish_date": "1",
+ "exhibition_code": "1",
+ "industries": {
+  "$array": [
+   {
+    "$count": 2,
+    "$shape": "1"
+   }
+  ]
+ },
+ "profile": "1",
+ "symbol": "1"
+}

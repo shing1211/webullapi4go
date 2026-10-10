@@ -8,6 +8,7 @@ lint:
   # must stay byte-identical, so it cannot be reformatted to satisfy STANDARD.
   ignore:
     - proto/webull/trade/events/v1
+    - proto/webull/brokerfd/events/v1
 breaking:
   use:
     - FILE

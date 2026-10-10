@@ -8,3 +8,50 @@
 | 2026-09-18 | v04-fundamentals | BUILD | released v0.4.0 | 58c4bdf |
 | 2026-09-18 | v05-recon | BUILD | released v0.5 | c37968e |
 | 2026-09-19 | v05-fund-crypto | BUILD | released v0.5 | f41b803 |
+| 2026-09-19 | v05-live-probe | BUILD | in progress | 3c3ff7f |
+| 2026-09-20 | v1-alpha-probe | BUILD | released v0.6.0 | 8500eda |
+| 2026-09-21 | v07-complete-coverage | BUILD | released v0.7.0 | 97a3920 |
+| 2026-09-21 | v08-brokerfd-events-client | BUILD | released v0.8.0 | 956cf4a |
+| 2026-09-22 | v09-quality-polish-derivatives | BUILD | released v0.9.0 | 2068c36 |
+| 2026-09-21 | impl-status-doc | BUILD | done | eb29556 |
+| 2026-09-21 | md-sync | BUILD | done | 2566182 |
+| 2026-09-21 | sandbox-tests | BUILD | released v0.9.0 | f9ae3e2 |
+| 2026-09-21 | test-sweep | BUILD | released v0.9.1 | c3ee5ce |
+| 2026-09-22 | broker-paths-fix | BUILD | released v0.9.2 | 44299b2 |
+| 2026-09-22 | hk-sandbox-probe | BUILD | done (released v1.0.1) | fabd98b |
+| 2026-09-21 | lint-ci | BUILD | done (no-op — already configured) | 1617d1f |
+| 2026-09-22 | sandbox-integration-tests | TEST | 20/20 pass (18 pass + 2 skip) | (post-v1.1.0) |
+| 2026-09-25 | quality-docs-orchestration | BUILD | done; released v2.1.1 through v2.1.6 (deps/CI/docs policy, CI signal, dead code, coverage, nested CI gates, Broker FD metadata, dispatch benchmarks, reconciliation classification, nested-coverage CI fix) | v2.1.5 |
+| 2026-09-26 | recon-docgen-truth | BUILD | released v2.1.7 (docgen status labels, resolver false positives, regenerated reconciliation snapshot, 4 live-blocked defects documented) | v2.1.7 |
+| 2026-09-26 | recon-docgen-truth-followup | BUILD | released v2.1.8 (corrected severity of two live-blocked defects; reconciler path-only caveat) | v2.1.8 |
+| 2026-09-26 | recon-docgen-truth-closeout | BUILD | released v2.1.9 (repaired the stale AGENTS.md release-status paragraph) | v2.1.9 |
+| 2026-09-27 | docgen-cache-safety | BUILD | released v2.1.10 (unverified marker on GetDisplaySnapshot, safe cache refresh, degraded-report guard, dual-symbol manifest notes) | v2.1.10 |
+| 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.11 (corrected two stale manifest citations, recorded a silent response-schema defect in brokerfd.GetFDPositions) | v2.1.11 |
+| 2026-09-27 | docgen-cache-safety-followup | BUILD | released v2.1.12 (recorded two self-corrections from v2.1.11) | v2.1.12 |
+| 2026-09-27 | citations-gate | BUILD | released v2.1.13 (file:line citation validator with a Makefile target and CI job) | v2.1.13 |
+| 2026-09-27 | citation-qualification | BUILD | released v2.1.14 (qualified 35 bare-filename citations; the gate's inference now resolves nothing) | v2.1.14 |
+| 2026-09-27 | wire-conformance | BUILD | released v2.1.15 (wire-conformance harness: 193 documented-shape fixtures, 180 recorded divergences across 54 symbols) | v2.1.15 |
+| 2026-09-27 | conformance-writeup | BUILD | released v2.1.17 (wrote up the 180 recorded response-contract divergences as item 21) | v2.1.17 |
+| 2026-09-27 | wire-conformance | BUILD | released v2.1.16 (repaired the red v2.1.15: baseline details no longer keyed on encoding/json error text, CRLF-neutral fixture comparison) | v2.1.16 |
+| 2026-09-27 | conformance-writeup | BUILD | released v2.1.18 (corrected the trade split's denominator, one low in 6 places across 3 files) | v2.1.18 |
+| 2026-09-28 | declared-name-check | BUILD | released v2.1.19 (envelope tags unquoted at capture; baseline byte-identical at 180) | v2.1.19 |
+| 2026-09-28 | declared-name-check | BUILD | released v2.1.20 (declared-name check: 104 rows over 30 symbols, baseline 180 to 285) | v2.1.20 |
+| 2026-09-28 | release-records | BUILD | released v2.1.21 (recorded v2.1.19 and v2.1.20, four missing index rows, the v2.1.20 has-no-CI-run finding, and the CI tags trigger) | v2.1.21 |
+| 2026-09-28 | release-records | BUILD | released v2.1.22 (red: the new release-record gate could not answer its question in a shallow clone and failed 8 jobs) | v2.1.22 |
+| 2026-09-28 | release-records | BUILD | released v2.1.23 (lint job red: 2 issues in the new gate; 26 of 27 jobs green) | v2.1.23 |
+| 2026-09-28 | release-records | BUILD | released v2.1.24 (cleared G304 and S1039 in the gate; lint verified locally against the pinned v2.9.0 before tagging) | v2.1.24 |
+| 2026-09-28 | fixture-digest | BUILD | released v2.1.25 (per-fixture sha256 in the manifest; closes a length-preserving fixture edit that CI could not see) | v2.1.25 |
+| 2026-09-28 | envelope-fix | BREAKING | released v2.1.35 (14 methods decoded a bare slice where the page documents a {data, pagination_key} envelope, so they could not read a conforming response and could not page; they return types.Page[T] now; declared-name class empty at 0 rows; root baseline 81 to 25 over 12 symbols) | v2.1.35 |
+| 2026-09-28 | declared-name-batch | released v2.1.34 (76 declared names across 17 response types now reach a field, on the weaker evidence that their pages publish no required list; 5 free-form objects carried untyped; the class is now 28 rows and homogeneous, all of them the data/pagination_key envelope) | v2.1.34 |
+| 2026-09-28 | brokerfd-documented-names | BREAKING | released v2.1.33 (58 required names across 18 Broker FD types and 4 on the Display bars types; GetFDAssetsDetail returns the documented envelope with two account-level totals; required-name class 62 rows over 20 symbols down to 2 over 1, left recorded deliberately) | v2.1.33 |
+| 2026-09-28 | event-contract-shapes | BREAKING | released v2.1.32 (GetEventBars and GetEventTick returned the inner array and discarded the grouping key; GetEventDepth returned one object and no no-side book; EventSnapshot gained 10 required names; all three return types change) | v2.1.32 |
+| 2026-09-28 | documented-name-batch | PASS | released v2.1.31 (11 required-name rows closed on three types; trade's column in the class table is now empty; item 26's envelope caution corrected - four event-contract and depth cases are decidable from the page schema and need a public-return-type decision) | v2.1.31 |
+| 2026-09-28 | required-name-metadata | PASS | released v2.1.30 (28 missing-required-name rows closed by 19 additive fields on 8 Broker FD types; a gate on the status document's own class table, which caught a hand-maintained figure on its first run; item 15 found already closed) | v2.1.30 |
+| 2026-09-28 | path-reconciliation | PASS | released v2.1.29 (no SDK change; the four summary-only paths resolved as documentation drift against the official llms.txt summary; all 14 /broker-fd/* literals classified, none alignable; corrected the premise that GetDisplaySnapshot disagrees with both sources; withdrew a next step that would have broken token creation) | v2.1.29 |
+| 2026-09-28 | verb-and-duplicate-tag | PASS | released v2.1.28 (closed the brokerfd host-routing and broker.UpdateVirtualAccount defects without a credential; added a verb check and a whole-module duplicate-json-tag scan; data.QuoteTime reads both shapes Webull publishes) | v2.1.28 |
+| 2026-09-28 | positions-additive | PASS | released v2.1.27 (documented position names carried alongside the SDK's own, so item 20's silent zeroes are closed with no credential; fixed a duplicate json tag that made open P&amp;L silently zero; CI lint extended to all six modules; fuzz seeds 3 to 88) | v2.1.27 |
+| 2026-09-28 | broker-conformance | BUILD | released v2.1.26 (broker/ inside the harness: 29 rows compared, 62 recorded divergences; removed a dead unexported method) | v2.1.26 |
+| 2026-09-29 | live-evidence-harness | BUILD | released v2.1.36 (one authorised HK sandbox run: 193 documented endpoints walked, 55 answered HTTP 200 and were captured as value-free response shapes, 34 mutating not called, 1 blocked; of 55 probed, 2 disagree with their documentation and 12 disagree with the SDK - 13 distinct findings, of which one is a demonstrated defect, data.GetFuturesTick sending instrumentId where the SDK tags instrument_id; a third divergence set in conformance/live-divergences.json; the documented baseline byte-unchanged; written up as item 28) | 30094b7 |
+| 2026-09-30 | instrument-id-decoder | PASS | released v2.1.37 (data.StockTicks decodes instrument_id or instrumentId, closing the one demonstrated SDK defect v2.1.36 found; additive, public tag and all three returning methods unchanged; the live row is retained and the count stays 13 because the name check reads tag inventory; four conformance tests and make lint repaired on Windows, where core.autocrlf put CRLF into the byte-compared fixtures and 157 Go files; OpenSpec adopted as the change workflow) | ae5b9bd |
+| 2026-09-30 | release-records-and-scaffolding | PASS | released v2.1.38 (no SDK code; the v2.1.37 release records that TestReleaseRecordsAreComplete found missing, added after the tag was already published; the 55-file OpenSpec assistant scaffolding for all six tools tracked; v2.1.37 deliberately left failing that one test rather than rewriting a published tag) | 5e94297 |
+| 2026-09-30 | brokerfd-unauthenticated-docs | PASS | released v2.1.39 (GoDoc comments on 6 brokerfd methods with no Webull documentation page; Session 2 HK sandbox census confirmed 55 live fixtures byte-identical; HK trading live-verified; broker scope issue confirmed) | cfdb0e9 |

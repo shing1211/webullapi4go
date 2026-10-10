@@ -18,8 +18,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
-	"github.com/shing1211/webullapi4go/internal/resilience/retry"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/pkg/observability"
+	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
 )
 
 // Defaults applied by [DefaultConfig].
@@ -70,9 +71,9 @@ type Config struct {
 	// overrides registered with [WithAPIVersionFor] take precedence over both.
 	APIVersion string
 
-	// autoToken, when true, makes [Client.Do] obtain an access token
-	// automatically before the first token-consuming request. It is enabled
-	// with [WithAutoToken].
+	// autoToken, when true, makes [Client.Do], [Client.DoBroker], and
+	// [Client.DoStream] obtain an access token automatically before the first
+	// token-consuming request. It is enabled with [WithAutoToken].
 	autoToken bool
 	// versionOverrides apply a per-path x-version override; the longest
 	// matching prefix wins. [Config.APIVersion] is the fallback.
@@ -107,11 +108,37 @@ type Config struct {
 	rateLimiter RateLimiter
 	// breaker, when non-nil, gates outgoing requests.
 	breaker CircuitBreaker
+	// breakerExplicit records whether WithBreaker was supplied, including a nil
+	// breaker that intentionally disables circuit breaking.
+	breakerExplicit bool
+	// resiliencePreset records a preset whose deferred components are resolved
+	// after all options have been applied.
+	resiliencePreset ResiliencePreset
+	// clockDriftCorrection, when true, learns the clock offset between the
+	// client and the Webull server from the Date response header and applies
+	// it to subsequent request signing timestamps.
+	clockDriftCorrection bool
+	// httpTransport, when non-nil, is used as the [http.Transport] for the
+	// HTTP client created by [New] or set by [WithHTTPClient].
+	httpTransport *http.Transport
+	// interceptors are checked after rate-limiting and circuit-breaking but
+	// before the request is signed and sent. Each interceptor receives the
+	// next function in the chain and may inspect, wrap, or short-circuit
+	// the request. Interceptors fire in the order they are supplied.
+	interceptors []Interceptor
+	// hooks exposes lifecycle callbacks for observability integration.
+	hooks Hooks
+	// otel holds OpenTelemetry tracing and metrics handles and the logger.
+	// The default is observability.DefaultConfig() (all no-op). Stored as a
+	// pointer so that returning [Config] by value does not copy the embedded
+	// sync.RWMutex in observability.Config.
+	otel *observability.Config
 }
 
 // DefaultConfig returns a [Config] pre-filled with production Hong Kong
 // endpoints and the SDK's transport defaults.
 func DefaultConfig() Config {
+	otelCfg := observability.DefaultConfig()
 	return Config{
 		Region:      HK,
 		Environment: Production,
@@ -120,12 +147,13 @@ func DefaultConfig() Config {
 		UserAgent:   DefaultUserAgent,
 		APIVersion:  DefaultAPIVersion,
 		retry:       defaultRetrier(),
+		otel:        &otelCfg,
 	}
 }
 
 // Validate reports whether the configuration is usable. It does not make any
 // network calls.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	switch {
 	case c.AppKey == "":
 		return errs.New(errs.CodeInvalidConfig, "app key is required")

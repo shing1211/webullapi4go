@@ -24,7 +24,7 @@ import (
 // pathLogosBatch is the batch logos endpoint.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/market-display-solution-data-api/batch-logo-using-post
-const pathLogosBatch = "/market-data/instruments/logos/batch"
+const pathLogosBatch = "/market-data/fundamentals/logos/list"
 
 // LogoQuery parameterizes [Client.GetLogos].
 type LogoQuery struct {
@@ -35,6 +35,20 @@ type LogoQuery struct {
 type Logo struct {
 	Symbol string `json:"symbol"`
 	Logo   string `json:"logo"`
+
+	// The two fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's LogoURL is this type's Logo, so both are carried and a response
+	// populates whichever it sends. Category is the instrument's market.
+	//
+	// Display Solution requires a paid subscription, so no field here is
+	// live-verified.
+	Category string `json:"category"`
+	LogoURL  string `json:"logo_url"`
 }
 
 // GetLogos retrieves logo image URLs for the specified securities.
@@ -47,7 +61,7 @@ func (c *Client) GetLogos(ctx context.Context, q LogoQuery) ([]Logo, error) {
 	}
 
 	var out []Logo
-	if err := c.do(ctx, http.MethodPost, pathLogosBatch, query, nil, &out); err != nil {
+	if err := c.DisplayService().Do(ctx, http.MethodPost, pathLogosBatch, query, nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

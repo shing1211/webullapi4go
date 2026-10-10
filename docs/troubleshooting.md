@@ -21,14 +21,20 @@ table.
 |---------|--------------|-----|
 | `401 UNAUTHORIZED` | Missing or badly signed request | Confirm `WEBULL_APP_KEY` / `WEBULL_APP_SECRET`; let `Client.Do` sign the request |
 | `403 FORBIDDEN` / `Insufficient permission` | Endpoint requires a paid entitlement (for example footprint) | Use an account with the entitlement; on the sandbox this is expected |
-| `417 INVALID_TOKEN` | Access token missing, expired, or invalid | Call `Client.EnsureToken` and retry |
-| `417 Invalid Symbol` | Symbol not carried by the environment | In the sandbox, use `AAPL` |
+| `417 INVALID_TOKEN` | Access token failure, or the compatibility mapping for another business failure | Read the API message; call `Client.EnsureToken` only for a token error |
+| `417 Invalid Symbol` / unsupported category | Symbol or product not carried by the environment | In the sandbox, use `AAPL` and a supported product |
 | `429 RATE_LIMITED` | Too many requests | Back off; the token endpoint allows 10 requests per 30 seconds |
 | `5xx SERVER_ERROR` | Webull service failure | Transient; retry, or configure `WithRetry` / `WithBreaker` |
 
 Empty order-book depth is not an error: markets push no depth outside regular
 trading hours, so `GetQuotes` or a `QUOTE` subscription may simply have nothing to
 return.
+
+!!! note "HTTP 417 classification"
+    Webull uses status 417 for token and business failures. The SDK preserves
+    the historical `INVALID_TOKEN` code for compatibility, so status/code alone
+    cannot prove that a token refresh is needed. `Error.Message` is for human
+    diagnosis; do not branch on that text.
 
 ## Sandbox-specific limitations
 
@@ -62,6 +68,16 @@ s, err := stream.New(cl, stream.WithWebSocket(true))
 ```
 
 That targets `wss://data-api.sandbox.webull.hk:8883/mqtt` in the sandbox.
+
+### Cancelling or closing during Connect
+
+`stream.Connect(ctx)` does not start a broker attempt when `ctx` is already
+cancelled. If cancellation happens after the attempt starts, the SDK
+disconnects it and returns an error that satisfies
+`errors.Is(err, context.Canceled)`. `stream.Close` and low-level MQTT `Close`
+are idempotent and terminal; they release an in-flight Connect and suppress
+late callbacks. Calls made through the stream after close return
+`invalid_config`.
 
 ### Session id reuse
 

@@ -1,15 +1,46 @@
 # Trading
 
-The `trade` package exposes the Webull Trading HTTP API. It is a thin, typed
+The `trade` package exposes the Webull Trading HTTP API. Requires a live or
+sandbox account with order permissions and a valid token (see
+[Authentication](authentication.md)). It is a thin, typed
 layer over the core [client](api.md#client), so request signing, access-token
 handling, retries, rate limiting, and error classification are shared with the
 rest of the SDK.
 
-The v0.2.1 foundation covers read-only account and asset access. The v0.2.2
-release adds the stock-order lifecycle — preview, place, replace, cancel — and
-order queries. The v0.2.3 release adds the per-market order rules. The v0.2.4
-release adds single-leg options orders, and the v0.2.5 release adds US combo
-orders.
+The guide covers read-only account and asset access, the stock-order lifecycle
+(preview, place, replace, cancel), order queries, per-market order rules,
+single-leg and multi-leg options orders, futures order validation, event
+contract orders, and batch place orders.
+
+Multi-leg strategies, futures rules, and event-contract rules follow the
+official Webull documentation. The HK sandbox accepts only `SINGLE` options
+strategies (`417` for every other strategy) and cannot exercise US-only
+paths, so validate any order with `PreviewOrder` before placing it. See
+[Options orders](#options-orders), [Futures orders](#futures-orders), and
+[Event contract orders](#event-contract-orders).
+
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+    - A trading account with order permissions — see [Sandbox](sandbox.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
+The examples below assume this trusted-constant helper is available:
+
+```go
+import "github.com/shing1211/webullapi4go/pkg/domain/money"
+
+func moneyPtr(value string) *money.Money {
+    parsed := money.MustNew(value)
+    return &parsed
+}
+```
+
+For untrusted input, use `money.NewFromString` and handle its error instead of
+panicking.
 
 ## Authentication
 
@@ -77,10 +108,28 @@ for _, pos := range positions {
 ```
 
 `AssetsBalance` includes a per-currency breakdown in
-`AccountCurrencyAssets`. `Position` carries the held quantity, average cost,
-last price, unrealized P/L, and, for multi-leg option positions, the `Legs`
-slice. Numeric fields such as quantities and prices are strings, preserving the
-precision of the wire values.
+`AssetsCurrencyAssets`. `Position` carries the held quantity, cost price
+(`CostPrice`), last price, unrealized P/L, and, for multi-leg option positions,
+the `Legs` slice. Financial values are `money.Money` in responses and
+`*money.Money` in optional request fields. They still marshal as decimal JSON
+strings, preserving wire precision without using `float64` or raw
+`decimal.Decimal`.
+
+## Cash activities
+
+| Method | Description |
+|--------|-------------|
+| `GetCashActivities(ctx, q)` | First page of cash activities |
+| `GetCashActivitiesPage(ctx, q)` | One page with cursor |
+| `GetAllCashActivities(ctx, q)` | All pages (exhausts pagination) |
+
+`CashActivityQuery` fields: `AccountID`, `ActivityType` (one of
+`CashActivityTypeTrade`, `CashActivityTypeDividend`, `CashActivityTypeInterest`,
+`CashActivityTypeTransfer`), `PaginationKey`.
+
+`CashActivity` fields: `ID`, `AccountID`, `AccountNumber`, `ActivityType`,
+`ActivitySubType`, `Currency`, `Market`, `Symbol`, `TradeDate`, `NetAmount`,
+`BizTime`.
 
 ## Order lifecycle
 
@@ -108,11 +157,11 @@ A stock order moves through five operations:
 | Method | Endpoint | Returns |
 |--------|----------|---------|
 | `PreviewOrder(ctx, req)` | `POST /trading/orders/preview` | `*PreviewResult` |
-| `PlaceOrder(ctx, req)` | `POST /trading/orders/place` | `*PlaceOrderResult` |
+| `PlaceOrder(ctx, req)` | `POST /trading/orders/place` | `*order.Order` with an embedded place result and local state machine |
 | `ReplaceOrder(ctx, req)` | `POST /trading/orders/replace` | `*ReplaceOrderResult` |
 | `CancelOrder(ctx, req)` | `POST /trading/orders/cancel` | `*CancelOrderResult` |
 | `GetOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
-| `GetOpenOrdersPage(ctx, accountID, key)` | `GET /trading/orders/open-orders/list` | `*OrderPage` |
+| `GetOpenOrdersPage(ctx, accountID, paginationKey)` | `GET /trading/orders/open-orders/list` | `*OrderPage` |
 | `GetAllOpenOrders(ctx, accountID)` | `GET /trading/orders/open-orders/list` | `[]OrderGroup` |
 | `GetOrderHistory(ctx, q)` | `GET /trading/orders/historical-orders/list` | `[]OrderGroup` |
 | `GetOrderHistoryPage(ctx, q)` | `GET /trading/orders/historical-orders/list` | `*OrderPage` |
@@ -140,11 +189,11 @@ req := trade.PlaceOrderRequest{
 			Symbol:                "AAPL",
 			OrderType:             trade.OrderTypeLimit,
 			Side:                  trade.OrderSideBuy,
-			Quantity:              "1",
+			Quantity:              moneyPtr("1"),
 			EntrustType:           trade.EntrustTypeQty,
 			TimeInForce:           trade.TimeInForceDay,
 			SupportTradingSession: trade.TradingSessionCore,
-			LimitPrice:            "1.00", // far below market, so it will not fill
+			LimitPrice:            moneyPtr("1.00"), // far below market, so it will not fill
 		},
 	},
 }
@@ -180,7 +229,7 @@ _, err := trading.ReplaceOrder(ctx, trade.ReplaceOrderRequest{
 	ModifyOrders: []trade.ModifyOrderRequest{
 		{
 			ClientOrderID: "demo-aapl-buy-1",
-			LimitPrice:    "1.50",
+			LimitPrice:    moneyPtr("1.50"),
 		},
 	},
 })
@@ -190,6 +239,126 @@ Only the fields set on each `ModifyOrderRequest` are changed. `ClientOrderID` is
 required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
 `StopPrice`, `TriggerPriceType`, `TrailingType`, `TrailingStopStep`,
 `TrailingLimitPriceOffset`, and `ExpireDate` are optional.
+
+## OMS tracking and reconciliation
+
+`PlaceOrder` returns `*order.Order` and registers it under both `AccountID`
+and `ClientOrderID`. `BatchPlaceOrder` registers every successful result. The
+pair is the lookup key, so the same client order ID in two accounts does not
+collide. The snippets use `errs` as the alias for
+`github.com/shing1211/webullapi4go/pkg/errors`.
+
+```go
+tracked, ok := trading.GetTrackedOrder(accountID, placed.ClientOrderID)
+if !ok {
+    return errs.New(errs.CodeNotInitialized, "order is not tracked")
+}
+log.Printf("local state=%s server order=%s",
+    tracked.State(), tracked.OrderID)
+```
+
+A registration is process-local. Restarting the application or constructing a
+new `trade.Client` creates a new empty registry; query the server after such a
+boundary.
+
+### Event-driven transitions
+
+`events.OrderEvent` can update the same tracked order. Map the Webull scene to
+a domain event, then apply it through the trading client:
+
+```go
+import (
+    "github.com/shing1211/webullapi4go/events"
+    "github.com/shing1211/webullapi4go/pkg/domain/order"
+)
+
+ev.OnOrder(func(e *events.OrderEvent) {
+    _, err := trading.ApplyOrderEvent(
+        e.AccountID,
+        e.ClientOrderID,
+        order.SceneTypeToEvent(e.SceneType),
+    )
+    if err != nil {
+        // Classify with errs.Is / errors.Is; do not parse the error string.
+        log.Printf("order event reconciliation failed: %v", err)
+    }
+})
+```
+
+The mapping treats request/failure scenes separately:
+`CANCEL_REQUESTED`, `CANCEL_FAILED`, `REJECT_FAILED`, and `MODIFY_FAILED` do
+not move the order to a successful terminal or replacement state. A
+`FINAL_FILLED` event moves it to `FILLED`.
+
+### Snapshot reconciliation
+
+Event delivery can be delayed, duplicated, or missed. Reconcile an authoritative
+HTTP status snapshot as well:
+
+```go
+state, err := trading.ReconcileOrderStatus(
+    accountID,
+    placed.ClientOrderID,
+    trade.OrderStatusFilled,
+)
+if err != nil {
+    return err
+}
+log.Printf("reconciled state=%s", state)
+```
+
+`ReconcileOrderStatus` accepts a status string, `trade.OrderStatus`, or
+`order.State`. `ReconcileOrderState` accepts an already normalized state. The
+reconciler:
+
+- advances through the smallest valid event path;
+- treats a stale non-terminal snapshot as a no-op;
+- never regresses `FILLED`, `CANCELLED`, `FAILED`, or `EXPIRED`;
+- records an authoritative terminal snapshot when no normal event path exists;
+- returns `errs.CodeValidation` for an unknown status;
+- returns `errs.CodeNotInitialized` for an order not tracked by this client.
+
+A successful `ReplaceOrder` or `CancelOrder` advances a matching tracked order.
+A failed API call leaves local state unchanged. Before sending either action, a
+known terminal order returns `errs.CodeInvalidTransition` without a network
+call. This local check is an optimization, not a replacement for server state;
+an untracked order can still be sent, so reconcile uncertain outcomes from the
+server.
+
+The domain machine is independently usable:
+
+```go
+machine := order.New(order.StatePending)
+machine.SetOnStateChanged(func(from, to order.State) {
+    log.Printf("order state %s -> %s", from, to)
+})
+state, err := machine.ApplyEvent(order.EventAcknowledge)
+```
+
+`Machine` is safe for concurrent use. Its callback runs after the state change
+is committed and without the machine lock; concurrent transitions may invoke
+the callback concurrently.
+
+### Stable automatic client order IDs
+
+`trade.WithAutoClientOrderID(true)` fills missing IDs for `PlaceOrder` and
+`BatchPlaceOrder` from a stable hash of the logical request and order index. It
+does not mutate the caller's request slice, and retrying the same logical
+request produces the same ID.
+
+```go
+trading := trade.New(cl, trade.WithAutoClientOrderID(true))
+```
+
+Keep the original request and application persistence policy if idempotency
+must survive a process restart.
+
+## Batch orders
+
+`BatchPlaceOrder(ctx, req)` submits multiple orders in a single request (max 50,
+EQUITY only). It takes a standard `PlaceOrderRequest` and returns
+`*BatchPlaceOrderResponse` with a `Results` slice of
+`BatchPlaceOrderResult{ClientOrderID, OrderID}`.
 
 ## Order types
 
@@ -218,7 +387,8 @@ for a given market and instrument) is also enforced locally; see
 `TriggerPriceType` selects the market price a touch or stop order triggers on:
 `PRICE` (last trade), `PRICE_BID` (best bid), or `PRICE_ASK` (best ask).
 `TrailingType` is `AMOUNT` for a fixed price spread or `PERCENTAGE` for a
-percentage where `"0.01"` is 1%.
+percentage where a trailing step of `0.01` is 1%. The step itself is a
+`*money.Money`.
 
 ## Market rules
 
@@ -294,14 +464,20 @@ enable the entitlement.
 
 ## Options orders
 
-An options order is a single-leg `SINGLE` order: `instrument_type` is `OPTION`,
-`option_strategy` is `SINGLE`, and `legs` holds exactly one leg. The
-`OrderRequest` still carries the top-level `symbol`, `side`, `order_type`, and
-`quantity`, and the leg repeats the contract fields the API attributes the fill
-to. `OrderRequest.Validate` rejects an option order that carries any other
-strategy, no leg, or more than one leg.
+An options order sets `instrument_type` to `OPTION` and selects an
+`option_strategy`. `SINGLE` is a single-leg order with exactly one `legs`
+entry; every other strategy is a **multi-leg** order carrying two or more
+`legs` entries.
 
-Only the following order types are accepted for options:
+### Single-leg orders
+
+A single-leg order is `option_strategy` `SINGLE` and `legs` holds exactly one
+leg. The `OrderRequest` still carries the top-level `symbol`, `side`,
+`order_type`, and `quantity`, and the leg repeats the contract fields the API
+attributes the fill to. `OrderRequest.Validate` rejects a `SINGLE` order that
+has no leg or more than one leg.
+
+Only the following order types are accepted for single-leg options:
 
 | Order type | Extra fields the SDK requires |
 |------------|-------------------------------|
@@ -325,10 +501,10 @@ Each `OrderLeg` in `legs` carries:
 | `market` | `US` |
 | `symbol` | The option contract symbol; non-blank |
 | `side` | `BUY` or `SELL` |
-| `strike_price` | The strike, a positive decimal string |
+| `strike_price` | A positive `*money.Money`, serialized as a decimal string |
 | `option_expire_date` | Expiration date in `YYYY-MM-DD` form |
 | `option_type` | `CALL` or `PUT` |
-| `quantity` | The leg quantity, a positive decimal string |
+| `quantity` | A positive `*money.Money`, serialized as a decimal string |
 
 The example below previews a non-marketable single-leg AAPL call; placing it
 follows the same pattern as a stock order and mutates the account.
@@ -342,20 +518,20 @@ option := trade.OrderRequest{
 	Symbol:         "AAPL",
 	OrderType:      trade.OrderTypeLimit,
 	Side:           trade.OrderSideBuy,
-	Quantity:       "1",
+	Quantity:       moneyPtr("1"),
 	EntrustType:    trade.EntrustTypeQty,
 	TimeInForce:    trade.TimeInForceDay,
-	LimitPrice:     "0.05", // far below market, so it will not fill
+	LimitPrice:     moneyPtr("0.05"), // far below market, so it will not fill
 	OptionStrategy: trade.OptionStrategySingle,
 	Legs: []trade.OrderLeg{{
 		InstrumentType:   trade.InstrumentTypeOption,
 		Market:           trade.MarketUS,
 		Symbol:           "AAPL",
 		Side:             trade.OrderSideBuy,
-		StrikePrice:      "100.00",
+		StrikePrice:      moneyPtr("100.00"),
 		OptionExpireDate: "2026-01-16",
 		OptionType:       trade.OptionTypeCall,
-		Quantity:         "1",
+		Quantity:         moneyPtr("1"),
 	}},
 }
 
@@ -369,6 +545,89 @@ if err != nil {
 log.Printf("estimated cost=%s", preview.EstimatedCost)
 ```
 
+### Multi-leg orders
+
+A multi-leg order selects one of the strategy values below and supplies two or
+more `legs`. Each leg carries the same fields as a single-leg option leg
+(validated by `OrderLeg.Validate`); the `strategy` names the structure, and the
+SDK validates it structurally rather than pricing it or assessing its risk.
+
+| Strategy | Structure |
+|----------|-----------|
+| `VERTICAL` | Long and short options of the same type and expiration at different strikes |
+| `STRADDLE` | A call and a put at the same strike and expiration |
+| `STRANGLE` | A call and a put at different strikes and the same expiration |
+| `IRON_CONDOR` | A short strangle bracketed by a wider long strangle |
+| `IRON_BUTTERFLY` | A short straddle bracketed by a long strangle |
+| `BUTTERFLY` | A long low strike, two short middle strikes, and a long high strike, all of the same type and expiration |
+| `COLLAR` | A long put financed by a short call on the same underlying |
+| `CALENDAR` | Options of the same type and strike at different expirations |
+| `DIAGONAL` | Options of the same type at different strikes and expirations |
+| `RATIO` | An unequal number of long and short options of the same type |
+
+`OrderRequest.Validate` applies the following rules to a multi-leg order before
+any network call, and returns an `invalid_config` error naming the first
+problem:
+
+- `legs` must contain **at least two** entries, and every leg must be valid on
+  its own (the `OrderLeg` rules above).
+- No two legs may be identical: each leg must differ in symbol, side, strike,
+  expiration, or option type. Strikes that differ only in decimal precision
+  (for example `"220.0"` and `"220.00"`) count as the same leg.
+- The legs must not all share the same side, option type, and strike, which
+  would make the set degenerate.
+- The order type must be `LIMIT` or `STOP_LOSS_LIMIT`. Multi-leg orders do not
+  accept `MARKET` or `STOP_LOSS`.
+- The top-level `side` and `time_in_force` rules still apply: `side` is `BUY`
+  or `SELL` (`SHORT` is rejected), a sell-side order must use `DAY`, and `GTD`
+  is rejected.
+
+```go
+spread := trade.OrderRequest{
+	ClientOrderID:  "demo-aapl-vertical-1",
+	ComboType:      trade.ComboTypeNormal,
+	InstrumentType: trade.InstrumentTypeOption,
+	Market:         trade.MarketUS,
+	Symbol:         "AAPL",
+	OrderType:      trade.OrderTypeLimit,
+	Side:           trade.OrderSideBuy,
+	Quantity:       moneyPtr("1"),
+	EntrustType:    trade.EntrustTypeQty,
+	TimeInForce:    trade.TimeInForceDay,
+	LimitPrice:     moneyPtr("0.05"), // far below market, so it will not fill
+	OptionStrategy: trade.OptionStrategyVertical,
+	Legs: []trade.OrderLeg{
+		{
+			InstrumentType:   trade.InstrumentTypeOption,
+			Market:           trade.MarketUS,
+			Symbol:           "AAPL",
+			Side:             trade.OrderSideBuy,
+			StrikePrice:      moneyPtr("100.00"),
+			OptionExpireDate: "2026-01-16",
+			OptionType:       trade.OptionTypeCall,
+			Quantity:         moneyPtr("1"),
+		},
+		{
+			InstrumentType:   trade.InstrumentTypeOption,
+			Market:           trade.MarketUS,
+			Symbol:           "AAPL",
+			Side:             trade.OrderSideSell,
+			StrikePrice:      moneyPtr("110.00"),
+			OptionExpireDate: "2026-01-16",
+			OptionType:       trade.OptionTypeCall,
+			Quantity:         moneyPtr("1"),
+		},
+	},
+}
+```
+
+!!! warning "Multi-leg strategies in the HK sandbox"
+
+    The multi-leg strategy names and structural rules above follow the official
+    Webull documentation. The HK sandbox accepts only `SINGLE` orders — every
+    multi-leg strategy is rejected with `417` — so validate a multi-leg order
+    with `PreviewOrder` against a US sandbox before placing it.
+
 !!! note "Sandbox option-contract availability"
 
     Sandbox market data is limited to `AAPL`, and the sandbox may not list the
@@ -377,6 +636,80 @@ log.Printf("estimated cost=%s", preview.EstimatedCost)
     illustrative; pick a real listed contract for the account and environment.
     Footprint and other entitlement-gated data may also return `403
     Insufficient permission` in the sandbox.
+
+## Futures orders
+
+A futures order sets `instrument_type` to `FUTURES`. Futures are single
+instrument orders: `option_strategy` and `legs` are option-only and are
+rejected, as are the US-equity session selector `support_trading_session` and
+the Hong Kong equity `no_party_ids`.
+
+`OrderRequest.Validate` enforces the following futures rules before any network
+call:
+
+| Rule | Requirement |
+|------|-------------|
+| Market | `US` or `HK`; `CN` futures are unsupported |
+| Order type | `LIMIT`, `MARKET`, `STOP_LOSS`, or `STOP_LOSS_LIMIT` |
+| `entrust_type` | `QTY` only; `AMOUNT` is rejected |
+| `quantity` | A positive whole-contract integer such as `"1"`; decimals, signs, and `"0"` are rejected |
+| `time_in_force` | `DAY` or `GTC`; `GTD` is rejected |
+
+The `MARKET` and `STOP_LOSS` cases follow the same price-field rules as other
+instruments: `LIMIT` and `STOP_LOSS_LIMIT` require `limit_price`, and
+`STOP_LOSS` and `STOP_LOSS_LIMIT` require `stop_price`.
+
+```go
+futures := trade.OrderRequest{
+	ClientOrderID:  "demo-futures-1",
+	ComboType:      trade.ComboTypeNormal,
+	InstrumentType: trade.InstrumentTypeFutures,
+	Market:         trade.MarketUS,
+	Symbol:         "ESZ5",
+	OrderType:      trade.OrderTypeLimit,
+	Side:           trade.OrderSideBuy,
+	Quantity:       moneyPtr("1"),
+	EntrustType:    trade.EntrustTypeQty,
+	TimeInForce:    trade.TimeInForceDay,
+	LimitPrice:     moneyPtr("1.00"), // far below market, so it will not fill
+}
+```
+
+!!! note "Futures orders are not verified in this environment"
+
+    The futures order-type matrix and the time-in-force, entrust-type, and
+    whole-contract quantity rules follow the official documentation but have
+    not been exercised against a live account in the HK sandbox. Preview a
+    futures order before placing one and treat a rejection as expected until it
+    is confirmed.
+
+## Event contract orders
+
+An event contract order sets `instrument_type` to `EVENT`. Event contracts are
+binary-outcome prediction markets with `yes` and `no` sides. Order validation
+enforces:
+
+| Rule | Requirement |
+|------|-------------|
+| Order type | `LIMIT` only |
+| `entrust_type` | `QTY` only |
+| `quantity` | A positive integer ≤ 50,000 |
+| `time_in_force` | `DAY` only |
+
+!!! note "Event contract orders are US-only"
+
+    Event contract order rules follow the official documentation; event
+    contracts are a US-only product and cannot be exercised in the HK sandbox.
+    Preview an event-contract order before placing it.
+
+Event contract outcomes use the `EventOutcome` type: `EventOutcomeYes` (`"yes"`)
+and `EventOutcomeNo` (`"no"`).
+
+### Hong Kong derivatives order helpers
+
+`ValidateHKDerivativesOrder(req)` checks that HK futures and options orders
+include the required BCAN `PartyID` slice. `BuildHKDerivativesPartyIDs(partyID)`
+constructs the slice with the correct source (`"D"`) and role (`"3"`) constants.
 
 ## Time in force
 
@@ -449,10 +782,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeLimit,
 			Side:           trade.OrderSideBuy,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			LimitPrice:     "1.00", // far below market, so it will not fill
+			LimitPrice:     moneyPtr("1.00"), // far below market, so it will not fill
 		},
 		{
 			ClientOrderID:  "demo-aapl-tpsl-profit",
@@ -462,10 +795,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeLimit,
 			Side:           trade.OrderSideSell,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			LimitPrice:     "999.00",
+			LimitPrice:     moneyPtr("999.00"),
 		},
 		{
 			ClientOrderID:  "demo-aapl-tpsl-loss",
@@ -475,10 +808,10 @@ combo := trade.PlaceOrderRequest{
 			Symbol:         "AAPL",
 			OrderType:      trade.OrderTypeStopLoss,
 			Side:           trade.OrderSideSell,
-			Quantity:       "1",
+			Quantity:       moneyPtr("1"),
 			EntrustType:    trade.EntrustTypeQty,
 			TimeInForce:    trade.TimeInForceDay,
-			StopPrice:      "1.00",
+			StopPrice:      moneyPtr("1.00"),
 		},
 	},
 }
@@ -499,16 +832,22 @@ Every order method validates its request and returns a typed error with code
   at least one order; no two orders may reuse a `client_order_id`.
 - **`OrderRequest`** — `client_order_id`, `combo_type`, `instrument_type`,
   `market`, `symbol`, `order_type`, `side`, `entrust_type`, and `time_in_force`
-  are required. `instrument_type` is `EQUITY`, `OPTION`, or `FUTURES` and
+  are required. `instrument_type` is `EQUITY`, `OPTION`, `FUTURES`, or `EVENT` and
   `market` is `US`, `HK`, or `CN`.
 - **Market rules** — the equity order-type matrix, the Hong Kong BCAN
   `no_party_ids` requirement, the US-only `support_trading_session`, and the
   at-auction price rules are enforced per market; see
   [Market rules](#market-rules).
-- **Option rules** — an `OPTION` order must use `option_strategy` `SINGLE` with
-  exactly one leg, an allowed order type, and a `BUY`/`SELL` side (sell-side
-  only `DAY`); `option_strategy` and `legs` are rejected on a non-option order.
-  See [Options orders](#options-orders).
+- **Option rules** — an `OPTION` order must use a supported `option_strategy`,
+  an allowed order type, and a `BUY`/`SELL` side (sell-side only `DAY`);
+  `SINGLE` takes exactly one leg and every other strategy takes at least two
+  structurally distinct legs. `option_strategy` and `legs` are rejected on a
+  non-option order. See [Options orders](#options-orders).
+- **Futures rules** — a `FUTURES` order must be US or HK, use `LIMIT`,
+  `MARKET`, `STOP_LOSS`, or `STOP_LOSS_LIMIT`, size with `entrust_type` `QTY`
+  and a positive whole-contract integer quantity, and use `DAY` or `GTC`;
+  option and equity-only fields are rejected. See
+  [Futures orders](#futures-orders).
 - **Combo rules** — when any order uses a non-NORMAL `combo_type`, the request
   must be one valid US-equity combo group with a `client_combo_order_id`; see
   [Combo orders (US only)](#combo-orders-us-only).
@@ -516,7 +855,7 @@ Every order method validates its request and returns a typed error with code
   per account. Generate a fresh identifier for each new order.
 - **Size** — when `entrust_type` is `QTY`, `quantity` is required and must be a
   positive decimal; when it is `AMOUNT`, `total_cash_amount` is required and
-  must be a positive decimal. Sizes are strings so precision is preserved;
+  must be a positive decimal. Sizes use `*money.Money` and preserve precision;
   `AMOUNT` supports US fractional share trading.
 - **Prices and expiry** — the conditional fields in the order-type table above
   are required; `expire_date` is required when `time_in_force` is `GTD`.
@@ -551,17 +890,21 @@ not a non-negative, finite number panics at configuration time.
 The notional cap compares `total_cash_amount` for `AMOUNT` orders and
 `quantity` times `limit_price` for orders that carry both. When the notional
 cannot be computed — for example a `MARKET` order with no limit price — the
-notional cap is skipped, but the quantity cap still applies. The guardrails
-apply to preview and place; `ReplaceOrder` is not bounded by them, so re-check
-modified sizes yourself.
+notional cap is skipped, but the quantity cap still applies. A multi-leg option
+order is also skipped by the notional cap, because each leg is priced
+separately and the order has no single top-level notional; the quantity cap
+still applies to it. The guardrails apply to preview and place; `ReplaceOrder`
+is not bounded by them, so re-check modified sizes yourself.
 
 ## Order queries
 
 The query methods return `OrderGroup` values: a client order together with its
 child orders. A `NORMAL` order has a single entry in `OrderGroup.Orders`; combo
-orders carry their legs there. Each `Order` reports its `Status` (`PENDING`,
-`SUBMITTED`, `CANCELLED`, `FILLED`, `FAILED`, or `PARTIAL_FILLED`), quantities
-and prices as decimal strings, and timestamps in ISO8601 UTC form.
+orders carry their legs there. Each HTTP query `trade.Order` reports its `Status`
+(`PENDING`, `SUBMITTED`, `CANCELLED`, `FILLED`, `FAILED`, or
+`PARTIAL_FILLED`), financial values as `money.Money`, and timestamps in ISO8601
+UTC form. It is distinct from the local tracked `*order.Order` returned by
+`PlaceOrder`.
 
 The list endpoints are cursor paginated. The plain getters return the first page;
 the `Page` variants return one page with its `PaginationKey`; the `All` variants

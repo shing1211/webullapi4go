@@ -14,25 +14,20 @@
 
 // Package webullapi4go is an idiomatic Go SDK for the Webull OpenAPI.
 //
-// It wraps the Webull HTTP and MQTT services in typed Go, starting with the
-// Hong Kong region. The v0.1 surface covers authentication, the core REST
-// client, Market Data over HTTP, and Market Data streaming over MQTT.
+// The root module provides the shared client in client and service clients in
+// data, stream, trade, events, connect, display, brokerfd, and brokerfd/events.
+// Broker API HK is provided by the separate broker module. The optional webull
+// package aliases selected core-client types and options; it is not an
+// aggregate service facade.
 //
-// Package layout:
+// Shared public foundations live in pkg/errors, pkg/observability,
+// pkg/resilience, pkg/transport, pkg/types, pkg/domain/money, and
+// pkg/domain/order. Public financial DTOs use money.Money for required and
+// response values, or *money.Money for optional and request values; decimal
+// JSON strings remain the wire representation.
 //
-//   - client: the public client, configuration, options, signing, and transport
-//     entry point.
-//   - data: the Market Data API client (built on client).
-//   - stream: Market Data streaming over MQTT (built on client).
-//   - gen/webull/marketdata/v1: generated protobuf types for streaming pushes.
-//   - pkg/types: shared domain types that are safe for external use.
-//   - internal/auth: request signing and token lifecycle.
-//   - internal/region: deployment regions and their service endpoints.
-//   - internal/errs: the SDK's typed error model.
-//   - internal/transport: the thin HTTP executor.
-//   - internal/mqtt: the low-level MQTT transport used by the stream package.
-//   - internal/resilience: retry, rate limiting, and circuit breaking.
-//
-// Trading over HTTP, gRPC trade events, the Display Solution API, and the
-// Broker API are deferred to later releases and are not part of v0.1.
+// The current request, OMS, streaming, event-telemetry, and documentation
+// hardening is tagged in repository v2.1.1. This is a repository patch release,
+// not a published Go-semver v2 module; v2 module publication remains deferred,
+// and this module remains github.com/shing1211/webullapi4go.
 package webullapi4go

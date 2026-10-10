@@ -14,12 +14,9 @@ copyright: Copyright &copy; webullapi4go contributors &mdash; Apache-2.0
 docs_dir: docs
 
 # Internal run artifacts (docs/runs/**) are workspace-only and must never be
-# published. docs/adr/README.md is the on-GitHub ADR guide; the published site
-# uses docs/adr/index.md instead, and the two cannot both own the adr/ index.
-# `exclude_docs` requires MkDocs >= 1.5.
+# published. `exclude_docs` requires MkDocs >= 1.5.
 exclude_docs: |
   runs/
-  adr/README.md
 
 theme:
   name: material
@@ -50,17 +47,68 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Authentication: authentication.md
-  - Market Data: market-data.md
-  - Fundamentals: fundamentals.md
-  - Streaming: streaming.md
-  - Trading:
-      - Overview: trading.md
-  - Trading Events: events.md
-  - Sandbox: sandbox.md
-  - Errors: errors.md
-  - API Reference: api.md
-  - Troubleshooting: troubleshooting.md
+  # Layer 1 — hand-written SDK guides.
+  - Guides:
+      - Authentication: authentication.md
+      - Market Data: market-data.md
+      - Fundamentals: fundamentals.md
+      - Streaming: streaming.md
+      - Trading: trading.md
+      - Trading Events: events.md
+      - Broker API HK: broker-hk.md
+      - Broker FD US: broker-fd-us.md
+      - Sandbox: sandbox.md
+      - Errors: errors.md
+      - Observability: observability.md
+      - Patterns: patterns.md
+      - Glossary: glossary.md
+      - Troubleshooting: troubleshooting.md
+  # Layer 2 — generated: each official endpoint mapped to its SDK method.
+  - API Reference:
+      - Overview: webull-api.md
+      - Go Packages: api.md
+      - Authentication: webull-api/authentication.md
+      - Market Data — Stock: webull-api/market-data-stock.md
+      - Market Data — Option: webull-api/market-data-option.md
+      - Market Data — Crypto: webull-api/market-data-crypto.md
+      - Market Data — Futures: webull-api/market-data-futures.md
+      - Market Data — News: webull-api/market-data-news.md
+      - Market Data — Screener: webull-api/market-data-screener.md
+      - Market Data — Watchlist: webull-api/market-data-watchlist.md
+      - Fundamentals and Fund Data: webull-api/fundamentals.md
+      - Event Contracts: webull-api/event-contracts.md
+      - Trading API: webull-api/trading.md
+      - Broker API — HK: webull-api/broker-hk.md
+      - Broker API — FD (US): webull-api/broker-fd-us.md
+      - Display Solution: webull-api/display-solution.md
+      - Streaming (MQTT): webull-api/streaming.md
+      - Events (gRPC): webull-api/events.md
+      - Connect API (OAuth): webull-api/connect-api.md
+  # Layer 3 — generated verbatim snapshots of Webull's own documentation.
+  - Official Webull Docs:
+      - Guides: webull-api/master-guides.md
+      - Endpoints: webull-api/master-reference.md
+      - Reference:
+          - Authentication: webull-api/reference/authentication.md
+          - Market Data — Stock: webull-api/reference/market-data-stock.md
+          - Market Data — Option: webull-api/reference/market-data-option.md
+          - Market Data — Crypto: webull-api/reference/market-data-crypto.md
+          - Market Data — Futures: webull-api/reference/market-data-futures.md
+          - Market Data — News: webull-api/reference/market-data-news.md
+          - Market Data — Screener: webull-api/reference/market-data-screener.md
+          - Market Data — Watchlist: webull-api/reference/market-data-watchlist.md
+          - Fundamentals and Fund Data: webull-api/reference/fundamentals.md
+          - Event Contracts: webull-api/reference/event-contracts.md
+          - Trading API: webull-api/reference/trading.md
+          - Broker API — HK: webull-api/reference/broker-hk.md
+          - Broker API — FD (US): webull-api/reference/broker-fd-us.md
+          - Display Solution: webull-api/reference/display-solution.md
+          - Streaming (MQTT): webull-api/reference/streaming.md
+          - Events (gRPC): webull-api/reference/events.md
+          - Connect API (OAuth): webull-api/reference/connect-api.md
+  - Coverage:
+      - SDK ↔ API Reconciliation: reconciliation.md
+      - Implementation Status: implementation-status.md
   - Architecture Decisions:
       - Overview: adr/index.md
       - "0001: Record architecture decisions": adr/0001-record-architecture-decisions.md
@@ -79,3 +127,10 @@ markdown_extensions:
 
 plugins:
   - search
+  # Preserve published URLs across page renames (broker, brokerfd, crypto).
+  - redirects:
+      redirect_maps:
+        broker.md: broker-hk.md
+        brokerfd.md: broker-fd-us.md
+        webull-api/crypto.md: webull-api/market-data-crypto.md
+        webull-api/reference/crypto.md: webull-api/reference/market-data-crypto.md

@@ -1,0 +1,13 @@
+{
+ "$array": [
+  {
+   "$count": 3,
+   "$shape": {
+    "file_name": "1",
+    "publish_date": "1",
+    "type": -1,
+    "url": "1"
+   }
+  }
+ ]
+}

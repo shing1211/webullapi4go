@@ -16,6 +16,7 @@ package data
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"strings"
@@ -37,6 +38,8 @@ const (
 	FuturesCategoryUS FuturesCategory = "US_FUTURES"
 	// FuturesCategoryHK identifies Hong Kong futures.
 	FuturesCategoryHK FuturesCategory = "HK_FUTURES"
+	// FuturesCategoryCN identifies China futures.
+	FuturesCategoryCN FuturesCategory = "CN_FUTURES"
 )
 
 // FuturesContractType distinguishes regular month contracts from continuous
@@ -61,6 +64,32 @@ const (
 	// FuturesSettlementPhysical settles by physical delivery.
 	FuturesSettlementPhysical FuturesSettlement = "Physical"
 )
+
+// StringOrNumber handles JSON values that may be either a string or a numeric
+// type. The Webull API occasionally sends numeric values where a string is
+// expected (for example, the futures instrument unit field).
+type StringOrNumber struct {
+	Str string
+}
+
+func (s *StringOrNumber) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if data[0] == '"' {
+		return json.Unmarshal(data, &s.Str)
+	}
+	n, err := strconv.ParseFloat(string(data), 64)
+	if err != nil {
+		return err
+	}
+	s.Str = strconv.FormatFloat(n, 'f', -1, 64)
+	return nil
+}
+
+func (s StringOrNumber) String() string {
+	return s.Str
+}
 
 // FuturesInstrumentQuery parameterizes [Client.GetFuturesInstruments]. Category
 // is required, and at least one of Symbols or Code must be provided.
@@ -105,8 +134,9 @@ type FuturesInstrument struct {
 	SettlementDate string `json:"settlement_date"`
 	// Size is the contract multiplier, as a decimal string.
 	Size string `json:"size"`
-	// Unit describes the pricing unit and quantity.
-	Unit string `json:"unit"`
+	// Unit describes the pricing unit and quantity. The API returns this as
+	// either a string (e.g., "1-index points") or a bare number.
+	Unit StringOrNumber `json:"unit"`
 	// MinTick is the minimum price increment, as a decimal string.
 	MinTick string `json:"min_tick"`
 	// FirstNoticeDate is the first notice date (YYYY-MM-DD), when applicable.

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetCompanyProfile(t *testing.T) {
@@ -86,7 +87,7 @@ func TestGetAnalystTargetPrice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAnalystTargetPrice() error = %v", err)
 	}
-	if got.Mean != "327.83744" || got.Low != "215" || got.High != "405" || got.Median != "340" {
+	if got.Mean.Cmp(money.Must(money.NewFromString("327.83744"))) != 0 || got.Low.Cmp(money.Must(money.NewFromString("215"))) != 0 || got.High.Cmp(money.Must(money.NewFromString("405"))) != 0 || got.Median.Cmp(money.Must(money.NewFromString("340"))) != 0 {
 		t.Errorf("target price = %+v", got)
 	}
 	if got.Currency != "USD" {
@@ -156,7 +157,7 @@ func TestGetCapitalFlow(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("len(capitalFlow) = %d, want 2", len(got))
 	}
-	if got[0].Date != "20260915" || got[0].LargeIn != "1.78E8" {
+	if got[0].Date != "20260915" || got[0].LargeIn.Cmp(money.Must(money.NewFromString("1.78E8"))) != 0 {
 		t.Errorf("capitalFlow[0] = %+v", got[0])
 	}
 }
@@ -247,7 +248,7 @@ func TestGetDividendCalendar(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("len(dividends) = %d, want 1", len(got))
 	}
-	if got[0].DivType != "CASH_DIVIDEND" || got[0].Amount != "0.25" {
+	if got[0].DivType != "CASH_DIVIDEND" || got[0].Amount.Cmp(money.Must(money.NewFromString("0.25"))) != 0 {
 		t.Errorf("dividend[0] = %+v", got[0])
 	}
 }

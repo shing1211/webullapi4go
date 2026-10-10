@@ -21,6 +21,8 @@
 go.work
 go.work.sum
 
+.gotmp/
+
 # env file
 .env
 
@@ -33,3 +35,16 @@ __pycache__/
 .omo/
 .opencode/
 openspec/
+
+# Python virtual environments
+.venv/
+
+# MkDocs internal run artifacts (workspace-only, excluded from published site)
+docs/runs/
+
+# superpowers subagent-development workspace (ledger, briefs, review packages)
+.superpowers/
+
+# Per-run artefact of the live-probe reachability census: status codes and
+# key names per endpoint, rewritten on every run.
+examples/live-probe/census.json

@@ -1,0 +1,29 @@
+{
+ "$array": [
+  {
+   "$count": 199,
+   "$shape": {
+    "amplitude": "1",
+    "change": "1",
+    "change_ratio": "1",
+    "close": "1",
+    "currency": "1",
+    "currency_code": "1",
+    "exchange_code": "1",
+    "high": "1",
+    "instrument_id": "1",
+    "low": "1",
+    "market_value": "1",
+    "name": "1",
+    "open": "1",
+    "pe_ttm": "1",
+    "pre_close": "1",
+    "price": "1",
+    "relative_volume_10d": "1",
+    "symbol": "1",
+    "turnover_rate": "1",
+    "volume": "1"
+   }
+  }
+ ]
+}

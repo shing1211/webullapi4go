@@ -1,0 +1,30 @@
+{
+ "result": {
+  "$array": [
+   {
+    "$count": 2,
+    "$shape": {
+     "delay_minutes": -1,
+     "instrument_id": "1",
+     "result": {
+      "$array": [
+       {
+        "$count": 200,
+        "$shape": {
+         "close": "1",
+         "high": "1",
+         "low": "1",
+         "open": "1",
+         "time": "1",
+         "trading_session": "1",
+         "volume": "1"
+        }
+       }
+      ]
+     },
+     "symbol": "1"
+    }
+   }
+  ]
+ }
+}

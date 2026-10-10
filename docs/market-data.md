@@ -4,6 +4,14 @@ Market Data is available over two transports: HTTP for on-demand queries and
 MQTT for real-time streaming. Both share the same authentication described in
 [Authentication](authentication.md).
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 ## HTTP
 
 The `data` package exposes the HTTP Market Data API. Build it from the public
@@ -23,11 +31,12 @@ if _, err := cl.EnsureToken(ctx); err != nil {
 market := data.New(cl)
 ```
 
-Coverage in v0.1:
-
 | Group | Methods |
 |-------|---------|
 | Instruments | `GetStockInstruments` |
+| Instrument v3 (Display) | `GetStockProfilesV3` |
+| Logos (Display) | `GetLogos` |
+| Corporate actions (Display) | `GetCorporateActions`, `GetCorporateActionsByMarket` |
 | Profile and analyst | `GetCompanyProfile`, `GetAnalystTargetPrice`, `GetAnalystRating` |
 | Futures static data | `GetFuturesInstruments`, `GetFuturesProductCodes`, `GetFuturesProductClasses` |
 | Snapshot and quotes | `GetSnapshot`, `GetQuotes` |
@@ -35,7 +44,19 @@ Coverage in v0.1:
 | Depth analytics | `GetFootprint`, `GetNOIIBars`, `GetNOIISnapshot` |
 | Discovery | `GetTopGainersLosers`, `GetMostActive` |
 | Watchlists | `GetWatchlists`, `CreateWatchlist`, `UpdateWatchlist`, `DeleteWatchlist`, `GetWatchlistInstruments`, `AddWatchlistInstruments`, `RemoveWatchlistInstruments`, `UpdateWatchlistInstruments` |
-| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetNewsSummary` |
+| Derivatives and news | `GetOptionTick`, `GetOptionSnapshot`, `GetOptionBars`, `GetOptionContracts`, `GetNewsSummary` |
+| Event contracts | `GetEventContractCategories`, `GetEventContractSeries`, `GetEventContractEvents`, `GetEventContractMarkets` |
+| Event contract market data | `GetEventSnapshot`, `GetEventDepth`, `GetEventBars`, `GetEventTick` |
+| Event contracts display | `GetEventContractTags`, `GetEventContractEventsList`, `GetEventContractMilestones`, `GetEventContractSeriesList`, `GetEventContractSportsFilters`, `GetEventGameStats`, `GetEventLiveData`, `GetEventMarketBars`, `GetEventMarketBarsByEvent`, `GetEventMarketDepth`, `GetEventMarketSnapshot` |
+| Futures market data | `GetFuturesTick`, `GetFuturesSnapshot`, `GetFuturesBars`, `GetFuturesDepth`, `GetFuturesFootprint` |
+| Fund data | `GetFundNav`, `GetFundInfo`, `GetFundDividends`, `GetFundList` |
+| Fund extras | `GetFundPerformance`, `GetFundHoldings`, `GetFundRating`, `GetFundSplits`, `GetFundFiles`, `GetFundAllocation` |
+| Non-display screener | `GetMarketSectors`, `GetMarketSectorDetail`, `GetHighDividendRank`, `GetWeek52HighLow` |
+| Crypto US | `GetCryptoSnapshot`, `GetCryptoBars`, `GetCryptoInstruments` |
+| Fundamentals | `GetCapitalFlow`, `GetIndustryComparison`, `GetEarningsCalendar`, `GetDividendCalendar`, `GetFilings`, `GetIncomeStatement`, `GetBalanceSheet`, `GetCashFlow`, `GetFinancialIndicators`, `GetFinancialAlert`, `GetForecastEPS` |
+
+`GetOptionContracts` follows the official option-contract list endpoint. The HK
+sandbox may return `404` for this US-only surface.
 
 Example: snapshot and bars for `AAPL` on the `US` market.
 
@@ -104,6 +125,21 @@ Streaming is scoped to the symbols you subscribe to. In the sandbox the availabl
 symbol set is limited (currently `AAPL`). See [Streaming](streaming.md) for the
 full API and [Troubleshooting](troubleshooting.md) for network and entitlement
 limitations.
+
+## Display Solution
+
+Display Solution endpoints use a separate signing and client-token mechanism
+and are accessed via `data.Client.DisplayService()`. Their paths follow the
+official documentation; the HK sandbox host returns `403 Forbidden` (paid
+entitlement required), so live behaviour could not be verified there.
+
+Coverage: screener (`GetDisplayGainersLosers`, `GetDisplayTopActive`), quotes
+(`GetDisplaySnapshot`, `GetDisplayBars`, `GetDisplayBarsSingle`, `GetDisplayTick`,
+`GetDisplayDepth`), instruments (`GetDSCompanyProfile`, `GetDSAnalystTargetPrice`,
+`GetDSAnalystRating`), news (`GetDSNewsSummary`, `GetDSMarketNews`, `GetDSSymbolNews`,
+`GetDSLatestNews`), streaming (`DSSubscribe`, `DSUnsubscribe`), instruments v3
+(`GetStockProfilesV3`), logos (`GetLogos`), corporate actions (`GetCorporateActions`,
+`GetCorporateActionsByMarket`).
 
 ## Related
 

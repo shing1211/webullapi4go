@@ -1,0 +1,8 @@
+{
+  "path": "/market-data/crypto/BTCUSD/snapshot",
+  "query": {},
+  "result": {
+    "status": 404,
+    "error": "{\"error_msg\":\"404 Route Not Found\"}\n"
+  }
+}

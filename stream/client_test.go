@@ -28,7 +28,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	imqtt "github.com/shing1211/webullapi4go/internal/mqtt"
+	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 )
 
 // newTestCore returns a core client pointed at a stub HTTP server. It needs
@@ -199,7 +199,7 @@ func TestHandleMessageReportsError(t *testing.T) {
 	c := &Client{}
 	got := make(chan error, 1)
 	c.OnError(func(err error) { got <- err })
-	c.handleMessage(imqtt.Message{Topic: "bogus", Payload: []byte("x")})
+	c.handleMessage(mqtt.Message{Topic: "bogus", Payload: []byte("x")})
 	select {
 	case err := <-got:
 		if !strings.Contains(err.Error(), "unknown topic") {

@@ -37,7 +37,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Client is a Webull trade-event streaming client. It owns a gRPC connection to
@@ -48,10 +48,11 @@ import (
 // after [Client.Run]. The underlying [client.Client] is owned by the caller and
 // is not closed by [Client.Close].
 type Client struct {
-	core   *client.Client
-	cfg    config
-	conn   *grpc.ClientConn
-	events eventsevents.EventServiceClient
+	core    *client.Client
+	cfg     config
+	conn    *grpc.ClientConn
+	events  eventsevents.EventServiceClient
+	metrics *eventMetrics
 
 	closeOnce sync.Once
 
@@ -64,8 +65,10 @@ type Client struct {
 	onPosition []func(*PositionEvent)
 	onOption   []func(*OptionEvent)
 
-	runMu     sync.Mutex
-	runCancel context.CancelFunc
+	runMu      sync.Mutex
+	runCancels map[uint64]context.CancelFunc
+	nextRunID  uint64
+	closed     bool
 }
 
 // New returns an event client bound to cl. The gRPC endpoint is taken from cl's
@@ -97,7 +100,7 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 
 	dialOpts := make([]grpc.DialOption, 0, len(cfg.dialOptions)+1)
 	if cfg.tls {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})))
 	} else {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
@@ -108,10 +111,11 @@ func New(cl *client.Client, opts ...Option) (*Client, error) {
 		return nil, errs.Wrap(errs.CodeInvalidConfig, "events: invalid gRPC target", err)
 	}
 	return &Client{
-		core:   cl,
-		cfg:    cfg,
-		conn:   conn,
-		events: eventsevents.NewEventServiceClient(conn),
+		core:    cl,
+		cfg:     cfg,
+		conn:    conn,
+		events:  eventsevents.NewEventServiceClient(conn),
+		metrics: newEventMetrics(cl.ObservabilityConfig()),
 	}, nil
 }
 
@@ -196,23 +200,32 @@ func (c *Client) Run(ctx context.Context) error {
 	if c == nil || c.conn == nil {
 		return errs.New(errs.CodeInvalidConfig, "events: client is not initialized")
 	}
+	ctx, _ = ensureCorrelationID(ctx)
 	ctx, cancel := context.WithCancel(ctx)
-	c.setRunCancel(cancel)
+	runID, ok := c.registerRun(cancel)
+	if !ok {
+		cancel()
+		return context.Canceled
+	}
 	defer func() {
-		c.setRunCancel(nil)
+		c.finishRun(runID)
 		cancel()
 	}()
 
 	if !c.cfg.autoReconnect {
-		return c.fail(ctx, c.runOnce(ctx))
+		return c.fail(ctx, c.runOnce(ctx, 1))
 	}
 	return c.runReconnecting(ctx)
 }
 
 // runOnce opens one stream and pumps it until it ends, fails, or ctx is
 // cancelled. A clean end of stream is reported as a nil error.
-func (c *Client) runOnce(ctx context.Context) error {
-	if err := c.waitForReady(ctx); err != nil {
+func (c *Client) runOnce(ctx context.Context, attempt int) (err error) {
+	ctx, telemetry := c.startEventAttempt(ctx, attempt)
+	defer func() {
+		telemetry.finish(err)
+	}()
+	if err = c.waitForReady(ctx); err != nil {
 		return err
 	}
 	stream, err := c.open(ctx)
@@ -220,12 +233,12 @@ func (c *Client) runOnce(ctx context.Context) error {
 		return err
 	}
 	for {
-		resp, err := stream.Recv()
-		if err != nil {
-			return c.recvError(ctx, err)
+		resp, recvErr := stream.Recv()
+		if recvErr != nil {
+			return c.recvError(ctx, recvErr)
 		}
-		if err := c.dispatch(resp); err != nil {
-			return err
+		if dispatchErr := c.dispatch(resp); dispatchErr != nil {
+			return dispatchErr
 		}
 	}
 }
@@ -236,7 +249,7 @@ func (c *Client) runOnce(ctx context.Context) error {
 func (c *Client) runReconnecting(ctx context.Context) error {
 	attempt := 0
 	for {
-		err := c.runOnce(ctx)
+		err := c.runOnce(ctx, attempt+1)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -262,21 +275,16 @@ func (c *Client) runReconnecting(ctx context.Context) error {
 	}
 }
 
-// errTerminalStream marks a stream failure caused by a terminal server event
-// that must not be retried even though its transport classification would
-// otherwise look transient.
-var errTerminalStream = errors.New("events: terminal stream event")
-
 // isRetryableStreamError reports whether Run should reconnect after err. A nil
 // error is a clean end of stream and is retryable; a typed transport error is
-// retryable unless it wraps the terminal marker; every other typed error
-// (authentication, permission, account, configuration, unsupported) is
-// terminal.
+// retryable unless it identifies a terminal connection-limit event; every other
+// typed error (authentication, permission, account, configuration, unsupported)
+// is terminal.
 func isRetryableStreamError(err error) bool {
 	if err == nil {
 		return true
 	}
-	if errors.Is(err, errTerminalStream) {
+	if errors.Is(err, errs.ErrConnectionLimitExceeded) {
 		return false
 	}
 	return errs.Is(err, errs.CodeTransport)
@@ -324,15 +332,20 @@ func sleepContext(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-// Close cancels an in-progress [Client.Run] and closes the gRPC connection. It
-// is idempotent and does not close the underlying [client.Client].
+// Close cancels all in-progress [Client.Run] calls and closes the gRPC
+// connection. It is idempotent and does not close the underlying [client.Client].
 func (c *Client) Close() error {
 	var err error
 	c.closeOnce.Do(func() {
 		c.runMu.Lock()
-		cancel := c.runCancel
+		c.closed = true
+		cancels := make([]context.CancelFunc, 0, len(c.runCancels))
+		for _, cancel := range c.runCancels {
+			cancels = append(cancels, cancel)
+		}
+		c.runCancels = nil
 		c.runMu.Unlock()
-		if cancel != nil {
+		for _, cancel := range cancels {
 			cancel()
 		}
 		if c.conn != nil {
@@ -342,10 +355,24 @@ func (c *Client) Close() error {
 	return err
 }
 
-// setRunCancel stores or clears the cancel function of the active Run.
-func (c *Client) setRunCancel(cancel context.CancelFunc) {
+func (c *Client) registerRun(cancel context.CancelFunc) (uint64, bool) {
 	c.runMu.Lock()
-	c.runCancel = cancel
+	defer c.runMu.Unlock()
+	if c.closed {
+		return 0, false
+	}
+	if c.runCancels == nil {
+		c.runCancels = make(map[uint64]context.CancelFunc)
+	}
+	c.nextRunID++
+	id := c.nextRunID
+	c.runCancels[id] = cancel
+	return id, true
+}
+
+func (c *Client) finishRun(id uint64) {
+	c.runMu.Lock()
+	delete(c.runCancels, id)
 	c.runMu.Unlock()
 }
 
@@ -394,6 +421,7 @@ func (c *Client) open(ctx context.Context) (grpc.ServerStreamingClient[eventseve
 	if err != nil {
 		return nil, err
 	}
+	md = c.addEventMetadata(ctx, md)
 	stream, err := c.events.Subscribe(metadata.NewOutgoingContext(ctx, md), req, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, rpcError("events: subscribe", err)
@@ -448,9 +476,9 @@ func (c *Client) dispatch(resp *eventsevents.SubscribeResponse) error {
 	case eventsevents.EventType_AuthError:
 		return errs.New(errs.CodeAuth, "events: authentication failed; verify the App Key, App Secret, and signing parameters")
 	case eventsevents.EventType_NumOfConnExceed:
-		return errs.Wrap(errs.CodeTransport, "events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errTerminalStream)
+		return errs.Wrap(errs.CodeTransport, "events: connection limit exceeded; Webull allows at most 5 concurrent event connections per App Key", errs.ErrConnectionLimitExceeded)
 	case eventsevents.EventType_SubscribeExpired:
-		return errs.New(errs.CodeAuth, "events: subscription expired; reconnect to resume")
+		return errs.Wrap(errs.CodeAuth, "events: subscription expired; reconnect to resume", errs.ErrSubscriptionExpired)
 	default:
 		c.routeDataEvent(resp)
 		return nil

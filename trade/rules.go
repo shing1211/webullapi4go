@@ -14,7 +14,12 @@
 
 package trade
 
-import "strings"
+import (
+	"math/big"
+	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
+)
 
 // marketEquityOrderTypes is the authoritative matrix of equity order types
 // accepted by each supported market. It reflects the Webull Stock Trading API
@@ -27,8 +32,9 @@ import "strings"
 //   - CN (A-share Stock Connect) accepts only LIMIT. A-share trading is
 //     disabled by default server-side and must be enabled by Webull support.
 //
-// The matrix applies to equity orders. Option and futures order-type rules are
-// enforced by their own validation.
+// The matrix applies to equity orders. Option order types are enforced by
+// [OrderRequest.validateOptionRules] and futures order types by
+// [OrderRequest.validateFuturesRules].
 var marketEquityOrderTypes = map[Market][]OrderType{
 	MarketUS: {
 		OrderTypeLimit,
@@ -61,6 +67,35 @@ var marketEquityOrderTypes = map[Market][]OrderType{
 // allowsEquityOrderType reports whether m accepts t for an equity order.
 func (m Market) allowsEquityOrderType(t OrderType) bool {
 	for _, allowed := range marketEquityOrderTypes[m] {
+		if allowed == t {
+			return true
+		}
+	}
+	return false
+}
+
+// marketFuturesOrderTypes is the matrix of futures order types accepted by each
+// futures-capable market. The set is deliberately conservative: only the
+// widely-supported types are enabled until the exact futures support is
+// confirmed.
+var marketFuturesOrderTypes = map[Market][]OrderType{
+	MarketUS: {
+		OrderTypeLimit,
+		OrderTypeMarket,
+		OrderTypeStopLoss,
+		OrderTypeStopLossLimit,
+	},
+	MarketHK: {
+		OrderTypeLimit,
+		OrderTypeMarket,
+		OrderTypeStopLoss,
+		OrderTypeStopLossLimit,
+	},
+}
+
+// allowsFuturesOrderType reports whether m accepts t for a futures order.
+func (m Market) allowsFuturesOrderType(t OrderType) bool {
+	for _, allowed := range marketFuturesOrderTypes[m] {
 		if allowed == t {
 			return true
 		}
@@ -131,9 +166,116 @@ func (r OrderRequest) validateMarketRules(fail func(string, ...any) error) error
 		}
 	}
 
-	if r.OrderType == OrderTypeAtAuction && strings.TrimSpace(r.LimitPrice) != "" {
+	if r.OrderType == OrderTypeAtAuction && r.LimitPrice != nil {
 		return fail("limit_price must not be set for AT_AUCTION orders")
 	}
 
 	return nil
+}
+
+// validateFuturesRules enforces the futures-specific constraints that can be
+// checked before any network call. Futures orders are single-instrument,
+// whole-contract orders, so it rejects the option and equity/HK fields that do
+// not apply and applies the per-market futures order-type matrix:
+//
+//   - support_trading_session is a US-equity session selector and no_party_ids
+//     is Hong Kong equity regulatory reporting; neither applies to futures and
+//     both are rejected;
+//   - option_strategy and legs are option-only and are rejected;
+//   - the order type must be one the market accepts for futures;
+//   - time_in_force must be DAY or GTC; GTD is rejected for futures;
+//   - entrust_type must be QTY, because futures are not sized by total cash
+//     amount;
+//   - quantity must be a positive integer, because futures trade whole
+//     contracts and do not support fractional quantities.
+//
+// fail formats and returns the caller's typed error with the batch prefix
+// already applied, and it returns the first problem found.
+func (r OrderRequest) validateFuturesRules(fail func(string, ...any) error) error {
+	if r.SupportTradingSession != "" {
+		return fail("support_trading_session is not valid for futures orders")
+	}
+	if len(r.NoPartyIDs) > 0 {
+		return fail("no_party_ids is not valid for futures orders")
+	}
+	if r.OptionStrategy != "" {
+		return fail("option_strategy is only valid for OPTION orders")
+	}
+	if len(r.Legs) > 0 {
+		return fail("legs is only valid for OPTION orders")
+	}
+	if !r.Market.allowsFuturesOrderType(r.OrderType) {
+		allowed, known := marketFuturesOrderTypes[r.Market]
+		if !known {
+			// currently reject CN market for futures orders.
+			return fail("futures are not supported for this market")
+		}
+		return fail("order_type %s is not supported for %s futures orders; supported types: %s",
+			r.OrderType, r.Market, orderTypeList(allowed))
+	}
+	switch r.TimeInForce {
+	case TimeInForceDay, TimeInForceGTC:
+	case TimeInForceGTD:
+		return fail("time_in_force GTD is not supported for futures orders")
+	default:
+		return fail("time_in_force %q must be DAY or GTC for futures orders", r.TimeInForce)
+	}
+	if r.EntrustType != EntrustTypeQty {
+		return fail("entrust_type %q must be QTY for futures orders", r.EntrustType)
+	}
+	if !isPositiveIntegerMoney(r.Quantity) {
+		return fail("quantity must be a positive integer for futures orders")
+	}
+	return nil
+}
+
+// validateEventRules enforces event-contract-specific constraints:
+//   - LIMIT orders only
+//   - DAY time-in-force only
+//   - EntrustType must be QTY
+//   - Quantity must be a positive integer (max 50,000)
+//   - No option_strategy or legs
+//   - No support_trading_session or no_party_ids
+func (r OrderRequest) validateEventRules(fail func(string, ...any) error) error {
+	if r.SupportTradingSession != "" {
+		return fail("support_trading_session is not valid for event contract orders")
+	}
+	if len(r.NoPartyIDs) > 0 {
+		return fail("no_party_ids is not valid for event contract orders")
+	}
+	if r.OptionStrategy != "" {
+		return fail("option_strategy is only valid for OPTION orders")
+	}
+	if len(r.Legs) > 0 {
+		return fail("legs is only valid for OPTION orders")
+	}
+	if r.OrderType != OrderTypeLimit {
+		return fail("order_type %s is not supported for event contract orders; only LIMIT is supported", r.OrderType)
+	}
+	if r.TimeInForce != TimeInForceDay {
+		return fail("time_in_force %s is not supported for event contract orders; only DAY is supported", r.TimeInForce)
+	}
+	if r.EntrustType != EntrustTypeQty {
+		return fail("entrust_type %q must be QTY for event contract orders", r.EntrustType)
+	}
+	if !isPositiveIntegerMoney(r.Quantity) {
+		return fail("quantity must be a positive integer for event contract orders")
+	}
+	if r.Quantity != nil {
+		if bi := r.Quantity.BigInt(); bi != nil {
+			max := big.NewInt(50000)
+			if bi.Cmp(max) > 0 {
+				return fail("quantity exceeds the maximum 50000 contracts for event contract orders")
+			}
+		}
+	}
+	return nil
+}
+
+func isPositiveIntegerMoney(m *money.Money) bool {
+	if m == nil {
+		return false
+	}
+	d := m.Decimal()
+	return d.IsPositive() && d.Exponent() >= 0
 }

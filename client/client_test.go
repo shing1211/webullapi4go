@@ -28,7 +28,7 @@ import (
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 const (
@@ -324,6 +324,23 @@ func TestNewEndpointOverrides(t *testing.T) {
 		t.Fatalf("WithBaseURL endpoint = %q, want %q", got, "http://127.0.0.1:9090")
 	}
 
+	// WithBaseURL overrides one field and sets the override flag, so client.New
+	// does not recompute the set: every other endpoint keeps its DefaultConfig
+	// value, which is the production HK host rather than the sandbox one the
+	// region and environment options above asked for. That is the intended
+	// precedence - "override this one address" - and it is also a trap for a
+	// package that routes through DoBroker, because a test server set as the base
+	// URL still leaves BrokerHTTP pointing at production. broker/ and brokerfd/
+	// both hit it, which is why their tests use WithEndpoints.
+	//
+	// Asserted so a change to the override semantics cannot silently turn an
+	// offline test suite into live production traffic.
+	if got := base.Endpoints().BrokerHTTP; got != client.DefaultEndpoints().BrokerHTTP {
+		t.Errorf("WithBaseURL left BrokerHTTP = %q, want the DefaultConfig value %q; "+
+			"if this ever changes, a broker-routed package pointed at a test server "+
+			"would reach production", got, client.DefaultEndpoints().BrokerHTTP)
+	}
+
 	full := client.Endpoints{HTTP: "http://example.test", MQTT: "mqtt.example.test:1883"}
 	ep, err := client.New(
 		client.WithAppKey(testAppKey),
@@ -351,5 +368,238 @@ func TestNewValidatesConfig(t *testing.T) {
 	}
 	if _, err := client.New(client.WithAppKey(testAppKey), client.WithAppSecret(testAppSecret), client.WithBaseURL("not-a-url")); !errs.Is(err, errs.CodeInvalidConfig) {
 		t.Fatalf("New() invalid endpoint error = %v, want invalid_config", err)
+	}
+}
+
+func TestClockDriftCorrection(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	var capturedTimestamp string
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		capturedTimestamp = r.Header.Get(auth.HeaderTimestamp)
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithClockDriftCorrection(true),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	ctx := context.Background()
+
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if capturedTimestamp == "" {
+		t.Fatal("timestamp header was not captured")
+	}
+	ts, err := time.Parse(auth.TimestampFormat, capturedTimestamp)
+	if err != nil {
+		t.Fatalf("time.Parse(%q) error = %v", capturedTimestamp, err)
+	}
+
+	now := time.Now()
+	drift := ts.Sub(now)
+	if drift < -time.Minute || drift > time.Minute {
+		t.Fatalf("captured timestamp drift = %v, want roughly 0 (within 1 minute)", drift)
+	}
+}
+
+func TestWithHTTPTransport(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	customTransport := &http.Transport{
+		MaxIdleConns:        99,
+		MaxIdleConnsPerHost: 50,
+	}
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithHTTPTransport(customTransport),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	cfg := cl.Config()
+	if got := cfg.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost; got != 50 {
+		t.Errorf("MaxIdleConnsPerHost = %d, want 50", got)
+	}
+
+	ctx := context.Background()
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+}
+
+func TestWithResiliencePreset(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithResiliencePreset(client.ProductionPreset),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	ctx := context.Background()
+	err = cl.Do(ctx, http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+}
+
+func TestInterceptorChain(t *testing.T) {
+	t.Parallel()
+
+	var callOrder []string
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		callOrder = append(callOrder, "server")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithInterceptor(func(ctx context.Context, next func(context.Context) error) error {
+			callOrder = append(callOrder, "interceptor-a")
+			return next(ctx)
+		}),
+		client.WithInterceptor(func(ctx context.Context, next func(context.Context) error) error {
+			callOrder = append(callOrder, "interceptor-b")
+			return next(ctx)
+		}),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	err = cl.Do(context.Background(), http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if len(callOrder) != 3 {
+		t.Fatalf("callOrder = %v, want [interceptor-a, interceptor-b, server]", callOrder)
+	}
+	if callOrder[0] != "interceptor-a" || callOrder[1] != "interceptor-b" || callOrder[2] != "server" {
+		t.Errorf("callOrder = %v, want [interceptor-a, interceptor-b, server]", callOrder)
+	}
+}
+
+func TestHooks(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Date", time.Now().UTC().Format(http.TimeFormat))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":86400}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	var hookOrder []string
+	hooks := client.Hooks{
+		OnRequest: func(method, path string) {
+			hookOrder = append(hookOrder, "OnRequest:"+path)
+		},
+		OnLatency: func(attempt int, d time.Duration) {
+			hookOrder = append(hookOrder, "OnLatency")
+		},
+		OnResponse: func(status int, latency time.Duration) {
+			hookOrder = append(hookOrder, "OnResponse")
+		},
+	}
+
+	cl, err := client.New(
+		client.WithAppKey(testAppKey),
+		client.WithAppSecret(testAppSecret),
+		client.WithBaseURL(srv.URL+"/"),
+		client.WithHooks(hooks),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	t.Cleanup(func() { _ = cl.Close() })
+
+	err = cl.Do(context.Background(), http.MethodGet, "/test", nil, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if len(hookOrder) == 0 {
+		t.Fatal("no hooks were called")
+	}
+	if hookOrder[0] != "OnRequest:/test" {
+		t.Errorf("first hook = %q, want OnRequest:/test", hookOrder[0])
 	}
 }

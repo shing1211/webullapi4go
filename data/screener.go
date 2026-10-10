@@ -17,6 +17,9 @@ package data
 import (
 	"context"
 	"net/url"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 // Screener endpoints.
@@ -31,6 +34,22 @@ const (
 	//
 	// Reference: https://developer.webull.hk/apis/docs/reference/get-top-active.md
 	pathTopActives = "/market-data/screeners/top-actives/list"
+	// pathMarketSectors is the market-sectors endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sectors.md
+	pathMarketSectors = "/market-data/screeners/market-sectors/list"
+	// pathMarketSectorDetail is the market-sector detail endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sector-detail.md
+	pathMarketSectorDetail = "/market-data/screeners/market-sectors/get"
+	// pathHighDividend is the high-dividend-ranks endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-high-dividend-ranks.md
+	pathHighDividend = "/market-data/screeners/high-dividend-ranks/list"
+	// pathWeek52HighLow is the week52-high-low endpoint.
+	//
+	// Reference: https://developer.webull.hk/apis/docs/reference/get-week52-high-low.md
+	pathWeek52HighLow = "/market-data/screeners/week52-high-low/list"
 )
 
 // GainersLosersRankType is the time window over which gainers and losers are
@@ -131,6 +150,10 @@ type GainersLosersQuery struct {
 	SortBy ScreenerSortBy
 	// Direction is the sort direction. Empty uses the server default.
 	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // MostActiveQuery parameterizes [Client.GetMostActive]. Category is required;
@@ -144,6 +167,55 @@ type MostActiveQuery struct {
 	RankType MostActiveRankType
 	// SortBy is the secondary sort field. Empty uses the server default of
 	// [ScreenerSortVolume].
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
+}
+
+// MarketSector represents a market sector overview.
+type MarketSector struct {
+	SectorName  string          `json:"sector_name"`
+	ChangeRatio string          `json:"change_ratio"`
+	Volume      string          `json:"volume"`
+	MarketValue string          `json:"market_value"`
+	Stocks      []ScreenerStock `json:"stocks"`
+}
+
+// MarketSectorDetailQuery parameterizes [Client.GetMarketSectorDetail].
+type MarketSectorDetailQuery struct {
+	// SectorName is the sector to query. Required.
+	SectorName string
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
+}
+
+// HighDividendQuery parameterizes [Client.GetHighDividendRank].
+type HighDividendQuery struct {
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
+	SortBy ScreenerSortBy
+	// Direction is the sort direction. Empty uses the server default.
+	Direction SortDirection
+}
+
+// Week52HighLowQuery parameterizes [Client.GetWeek52HighLow].
+type Week52HighLowQuery struct {
+	// Category is the security market. Required.
+	Category StockCategory
+	// SortBy is the secondary sort field. Empty uses the server default.
 	SortBy ScreenerSortBy
 	// Direction is the sort direction. Empty uses the server default.
 	Direction SortDirection
@@ -164,36 +236,64 @@ type ScreenerStock struct {
 	// CurrencyCode is the denomination currency (ISO 4217), for example "USD".
 	CurrencyCode string `json:"currency_code"`
 	// PreClose is the previous trading day's closing price.
-	PreClose string `json:"pre_close"`
+	PreClose money.Money `json:"pre_close"`
 	// Open is the opening price for the current trading day.
-	Open string `json:"open"`
+	Open money.Money `json:"open"`
 	// High is the intraday high for the current trading day.
-	High string `json:"high"`
+	High money.Money `json:"high"`
 	// Low is the intraday low for the current trading day.
-	Low string `json:"low"`
+	Low money.Money `json:"low"`
 	// Close is the latest traded price for the current trading day.
-	Close string `json:"close"`
+	Close money.Money `json:"close"`
 	// Price is the most recent quoted price within the selected time interval.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Change is the absolute price change within the selected time interval.
-	Change string `json:"change"`
+	Change money.Money `json:"change"`
 	// ChangeRatio is the price change percentage within the selected time
 	// interval, as a decimal ratio.
 	ChangeRatio string `json:"change_ratio"`
 	// Volume is the cumulative traded volume for the current day.
 	Volume string `json:"volume"`
 	// Turnover is the cumulative turnover amount in the denomination currency.
-	Turnover string `json:"turnover"`
+	Turnover money.Money `json:"turnover"`
 	// TurnoverRate is the turnover rate as a decimal ratio.
 	TurnoverRate string `json:"turnover_rate"`
 	// MarketValue is the total market capitalization in the denomination
 	// currency.
-	MarketValue string `json:"market_value"`
+	MarketValue money.Money `json:"market_value"`
 	// Amplitude is (high-low)/pre_close as a decimal ratio.
 	Amplitude string `json:"amplitude"`
 	// RelativeVolume10D is the current-day volume divided by the ten-day
 	// average volume.
 	RelativeVolume10D string `json:"relative_volume_10d"`
+
+	// The fields below are declared by the three screener pages that resolve to this
+	// type but not marked required, so they were absent here and a response carrying
+	// them decoded the value to the zero value with no error reported. That is weaker
+	// evidence than a missing-required-name row: those pages publish no required
+	// list, so a name may be optional or conditionally sent, and nothing here asserts
+	// that a live server sends it. Not live-verified: the HK sandbox market data is
+	// limited to AAPL and the screener v2 surface is not reachable there.
+	//
+	// The 52-week page's ChangeRatio52W, Price1W and Price52W are this type's own
+	// ChangeRatio, Price and High over a different window, and the dividend page's
+	// Dividend, ExDate and Yield have no counterpart above. The sector-detail page's
+	// counts are string-typed on the page even though they are counts, and are carried
+	// as string to match. This type already carries InstrumentID, which the
+	// sector-detail page spells Id.
+	Category       string      `json:"category"`
+	Currency       string      `json:"currency"`
+	ChangeRatio52W string      `json:"change_ratio_52w"`
+	Price1W        money.Money `json:"price_1w"`
+	Price52W       money.Money `json:"price_52w"`
+	Dividend       money.Money `json:"dividend"`
+	ExDate         string      `json:"ex_date"`
+	Yield          string      `json:"yield"`
+	PETTM          string      `json:"pe_ttm"`
+	ID             string      `json:"id"`
+	Advanced       string      `json:"advanced"`
+	Declined       string      `json:"declined"`
+	Flat           string      `json:"flat"`
 }
 
 // GetTopGainersLosers retrieves the top gaining or losing US stocks for a
@@ -246,6 +346,116 @@ func (c *Client) GetMostActive(ctx context.Context, q MostActiveQuery) ([]Screen
 
 	var out []ScreenerStock
 	if err := c.get(ctx, pathTopActives, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetMarketSectors retrieves the list of market sectors with their aggregate
+// statistics and constituent stocks.
+//
+// Pass an empty paginationKey for the first page, then the
+// [types.Page.PaginationKey] of the page just read. The cursor is opaque and
+// server-issued, so it is passed back unmodified and cannot be constructed.
+//
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sectors.md
+func (c *Client) GetMarketSectors(ctx context.Context, paginationKey string) (*types.Page[MarketSector], error) {
+	query := url.Values{}
+	if paginationKey != "" {
+		query.Set("pagination_key", paginationKey)
+	}
+
+	var out types.Page[MarketSector]
+	if err := c.get(ctx, pathMarketSectors, query, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetMarketSectorDetail retrieves the constituent stocks of a single market
+// sector, with optional sorting.
+//
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-market-sector-detail.md
+func (c *Client) GetMarketSectorDetail(ctx context.Context, q MarketSectorDetailQuery) (*types.Page[ScreenerStock], error) {
+	query := url.Values{}
+	if q.SectorName != "" {
+		query.Set("sector", q.SectorName)
+	}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+
+	var out types.Page[ScreenerStock]
+	if err := c.get(ctx, pathMarketSectorDetail, query, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetHighDividendRank retrieves US stocks ranked by dividend yield.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-high-dividend-ranks.md
+func (c *Client) GetHighDividendRank(ctx context.Context, q HighDividendQuery) ([]ScreenerStock, error) {
+	query := url.Values{}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	var out []ScreenerStock
+	if err := c.get(ctx, pathHighDividend, query, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetWeek52HighLow retrieves US stocks based on their 52-week high/low
+// performance.
+//
+// Reference: https://developer.webull.hk/apis/docs/reference/get-week52-high-low.md
+func (c *Client) GetWeek52HighLow(ctx context.Context, q Week52HighLowQuery) ([]ScreenerStock, error) {
+	query := url.Values{}
+	if q.Category != "" {
+		query.Set("category", string(q.Category))
+	}
+	if q.SortBy != "" {
+		query.Set("sort_by", string(q.SortBy))
+	}
+	if q.Direction != "" {
+		query.Set("direction", string(q.Direction))
+	}
+
+	var out []ScreenerStock
+	if err := c.get(ctx, pathWeek52HighLow, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

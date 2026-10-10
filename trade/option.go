@@ -28,6 +28,10 @@ type config struct {
 	// maxOrderQuantity, when non-empty, is the advisory cap on a single
 	// order's quantity, as a decimal string.
 	maxOrderQuantity string
+	// autoClientOrderID, when true, causes [Client.PlaceOrder] and
+	// [Client.BatchPlaceOrder] to derive a stable client order identifier for
+	// any order whose ClientOrderID is empty.
+	autoClientOrderID bool
 }
 
 // defaultConfig returns the trade client defaults: both order guardrails are
@@ -41,6 +45,10 @@ type Option func(*config)
 // WithMaxOrderNotional sets an advisory cap on the notional value of a single
 // order, expressed as a non-negative decimal string such as "2500.00". The
 // default is empty, which disables the cap.
+//
+// The cap does not cover multi-leg option orders: each leg is priced
+// separately, so the order has no single top-level notional and the cap is
+// skipped. WithMaxOrderQuantity still applies to multi-leg orders.
 //
 // The guardrail is configuration only in this release; the order methods
 // enforce it before an order is built. WithMaxOrderNotional panics when v is
@@ -74,4 +82,13 @@ func normalizeGuardrail(name, v string) string {
 		panic("trade: " + name + ": " + strconv.Quote(v) + " is not a non-negative decimal number")
 	}
 	return v
+}
+
+// WithAutoClientOrderID controls whether [Client.PlaceOrder] and
+// [Client.BatchPlaceOrder] derive and assign a client order identifier to any
+// order whose ClientOrderID is empty. The default is false (disabled). Derived
+// identifiers are stable for the same logical request across retries, and the
+// caller's request slice is not modified.
+func WithAutoClientOrderID(v bool) Option {
+	return func(c *config) { c.autoClientOrderID = v }
 }

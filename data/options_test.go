@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetOptionTick(t *testing.T) {
@@ -61,7 +62,7 @@ func TestGetOptionTick(t *testing.T) {
 	if got.Symbol != "AAPL260522C00300000" || got.InstrumentID != "470059643" {
 		t.Errorf("identity = %+v", got)
 	}
-	if len(got.Result) != 1 || got.Result[0].Price != "48.07" || got.Result[0].Side != "S" {
+	if len(got.Result) != 1 || got.Result[0].Price.Cmp(money.Must(money.NewFromString("48.07"))) != 0 || got.Result[0].Side != "S" {
 		t.Errorf("ticks = %+v", got.Result)
 	}
 }
@@ -104,10 +105,10 @@ func TestGetOptionSnapshot(t *testing.T) {
 		t.Fatalf("got %d snapshots, want 1", len(got))
 	}
 	snap := got[0]
-	if snap.Symbol != "AAPL260522C00300000" || snap.Price != "47.35" || snap.Bid != "47.345" {
+	if snap.Symbol != "AAPL260522C00300000" || snap.Price.Cmp(money.Must(money.NewFromString("47.35"))) != 0 || snap.Bid.Cmp(money.Must(money.NewFromString("47.345"))) != 0 {
 		t.Errorf("snapshot = %+v", snap)
 	}
-	if snap.StrikePrice != "300.0" || snap.ImpVol != "0.609" || snap.OpenInterest != "14331" {
+	if snap.StrikePrice.Cmp(money.Must(money.NewFromString("300.0"))) != 0 || snap.ImpVol != "0.609" || snap.OpenInterest != "14331" {
 		t.Errorf("greeks/interest = %+v", snap)
 	}
 	if snap.LastTradeTime != 1761131406558 || snap.QuoteTime != 1761131409276 {
@@ -156,8 +157,250 @@ func TestGetOptionBars(t *testing.T) {
 	if len(got) != 1 || got[0].Symbol != "AAPL260522C00300000" {
 		t.Fatalf("bars = %+v", got)
 	}
-	if len(got[0].Result) != 1 || got[0].Result[0].Close != "1.3362" {
+	if len(got[0].Result) != 1 || got[0].Result[0].Close.Cmp(money.Must(money.NewFromString("1.3362"))) != 0 {
 		t.Errorf("bar = %+v", got[0].Result)
+	}
+}
+
+func TestGetOptionContracts(t *testing.T) {
+	t.Parallel()
+
+	const body = `{"data":[{"instrument_id":"470059643",` +
+		`"symbol":"AAPL260116C00300000","underlying_symbol":"AAPL",` +
+		`"option_type":"CALL","strike_price":"300.0","expiration_date":"2026-01-16",` +
+		`"exchange_code":"OPRA","category":"US_OPTION","currency":"USD","lot_size":"100"}],` +
+		`"pagination_key":"page-2"}`
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("method = %q, want GET", r.Method)
+		}
+		if got, want := r.URL.Path, "/trading/instruments/options/contracts/list"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		q := r.URL.Query()
+		if got, want := q.Get("symbol"), "AAPL"; got != want {
+			t.Errorf("symbol = %q, want %q", got, want)
+		}
+		if got, want := q.Get("category"), "US_OPTION"; got != want {
+			t.Errorf("category = %q, want %q", got, want)
+		}
+		if got, want := q.Get("expiration"), "2026-01-16"; got != want {
+			t.Errorf("expiration = %q, want %q", got, want)
+		}
+		if got, want := q.Get("option_type"), "CALL"; got != want {
+			t.Errorf("option_type = %q, want %q", got, want)
+		}
+		if got, want := q.Get("strike_min"), "290"; got != want {
+			t.Errorf("strike_min = %q, want %q", got, want)
+		}
+		if got, want := q.Get("strike_max"), "310"; got != want {
+			t.Errorf("strike_max = %q, want %q", got, want)
+		}
+		if got, want := q.Get("pagination_key"), "page-1"; got != want {
+			t.Errorf("pagination_key = %q, want %q", got, want)
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{
+		Symbol:        "AAPL",
+		Expiration:    "2026-01-16",
+		OptionType:    data.OptionTypeCall,
+		StrikeMin:     "290",
+		StrikeMax:     "310",
+		PaginationKey: "page-1",
+	})
+	if err != nil {
+		t.Fatalf("GetOptionContracts() error = %v", err)
+	}
+	if len(got.Contracts) != 1 {
+		t.Fatalf("got %d contracts, want 1", len(got.Contracts))
+	}
+	con := got.Contracts[0]
+	if con.InstrumentID != "470059643" || con.Symbol != "AAPL260116C00300000" {
+		t.Errorf("identity = %+v", con)
+	}
+	if con.UnderlyingSymbol != "AAPL" || con.OptionType != data.OptionTypeCall {
+		t.Errorf("underlying/type = %+v", con)
+	}
+	if con.StrikePrice != "300.0" || con.ExpirationDate != "2026-01-16" {
+		t.Errorf("strike/expiration = %+v", con)
+	}
+	if con.ExchangeCode != "OPRA" || con.Category != data.OptionCategoryUS {
+		t.Errorf("exchange/category = %+v", con)
+	}
+	if con.Currency != "USD" || con.LotSize != "100" {
+		t.Errorf("currency/lot = %+v", con)
+	}
+	if got.PaginationKey != "page-2" {
+		t.Errorf("paginationKey = %q, want %q", got.PaginationKey, "page-2")
+	}
+}
+
+func TestGetOptionContractsOmitsOptionalParams(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if got, want := q.Get("symbol"), "AAPL"; got != want {
+			t.Errorf("symbol = %q, want %q", got, want)
+		}
+		for _, key := range []string{"expiration", "option_type", "strike_min", "strike_max", "pagination_key"} {
+			if got := q.Get(key); got != "" {
+				t.Errorf("%s = %q, want omitted", key, got)
+			}
+		}
+		_, _ = w.Write([]byte(`{"data":[],"pagination_key":""}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
+	if err != nil {
+		t.Fatalf("GetOptionContracts() error = %v", err)
+	}
+	if len(got.Contracts) != 0 {
+		t.Fatalf("got %d contracts, want 0", len(got.Contracts))
+	}
+}
+
+// TestGetOptionContractsPartialOptionalParams confirms each optional filter is
+// omitted independently and that a call-put selector is forwarded verbatim.
+func TestGetOptionContractsPartialOptionalParams(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if got, want := q.Get("symbol"), "AAPL"; got != want {
+			t.Errorf("symbol = %q, want %q", got, want)
+		}
+		if got, want := q.Get("category"), "US_OPTION"; got != want {
+			t.Errorf("category = %q, want %q", got, want)
+		}
+		if got, want := q.Get("option_type"), "PUT"; got != want {
+			t.Errorf("option_type = %q, want %q", got, want)
+		}
+		if got, want := q.Get("strike_min"), "100"; got != want {
+			t.Errorf("strike_min = %q, want %q", got, want)
+		}
+		for _, key := range []string{"expiration", "strike_max", "pagination_key"} {
+			if got := q.Get(key); got != "" {
+				t.Errorf("%s = %q, want omitted", key, got)
+			}
+		}
+		_, _ = w.Write([]byte(`{"data":[],"pagination_key":""}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	got, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{
+		Symbol:     "AAPL",
+		OptionType: data.OptionTypePut,
+		StrikeMin:  "100",
+	})
+	if err != nil {
+		t.Fatalf("GetOptionContracts() error = %v", err)
+	}
+	if got == nil || len(got.Contracts) != 0 {
+		t.Fatalf("GetOptionContracts() = %+v, want empty result", got)
+	}
+}
+
+// TestOptionEmptyAndMissingData drives every option endpoint with an empty or
+// absent data envelope and asserts the call returns without panic and yields an
+// empty result.
+func TestOptionEmptyAndMissingData(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		path string
+		body string
+		call func(*data.Client) (int, error)
+	}{
+		{
+			name: "tick empty object",
+			path: "/market-data/options/ticks/list",
+			body: `{}`,
+			call: func(c *data.Client) (int, error) {
+				res, err := c.GetOptionTick(context.Background(), data.OptionTickQuery{Symbol: "AAPL260522C00300000"})
+				if res == nil {
+					return 0, err
+				}
+				return len(res.Result), err
+			},
+		},
+		{
+			name: "snapshot null",
+			path: "/market-data/options/snapshots/list",
+			body: `null`,
+			call: func(c *data.Client) (int, error) {
+				res, err := c.GetOptionSnapshot(context.Background(), data.OptionSnapshotQuery{Symbols: []string{"AAPL260522C00300000"}})
+				return len(res), err
+			},
+		},
+		{
+			name: "bars empty object",
+			path: "/market-data/options/bars/list",
+			body: `{}`,
+			call: func(c *data.Client) (int, error) {
+				res, err := c.GetOptionBars(context.Background(), data.OptionBarsQuery{
+					Symbols:  []string{"AAPL260522C00300000"},
+					Timespan: data.OptionBarTimespanD,
+				})
+				return len(res), err
+			},
+		},
+		{
+			name: "contracts missing data",
+			path: "/trading/instruments/options/contracts/list",
+			body: `{}`,
+			call: func(c *data.Client) (int, error) {
+				res, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
+				if res == nil {
+					return 0, err
+				}
+				return len(res.Contracts), err
+			},
+		},
+		{
+			name: "contracts null data",
+			path: "/trading/instruments/options/contracts/list",
+			body: `{"data":null,"pagination_key":""}`,
+			call: func(c *data.Client) (int, error) {
+				res, err := c.GetOptionContracts(context.Background(), data.OptionContractsQuery{Symbol: "AAPL"})
+				if res == nil {
+					return 0, err
+				}
+				return len(res.Contracts), err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.URL.Path; got != tc.path {
+					t.Errorf("path = %q, want %q", got, tc.path)
+				}
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer srv.Close()
+
+			c := newTestClient(t, srv.URL)
+			count, err := tc.call(c)
+			if err != nil {
+				t.Fatalf("call error = %v, want nil", err)
+			}
+			if count != 0 {
+				t.Fatalf("result count = %d, want 0", count)
+			}
+		})
 	}
 }
 

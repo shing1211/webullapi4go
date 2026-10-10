@@ -18,6 +18,8 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathStockDepths is the stock order-book depth endpoint.
@@ -61,7 +63,7 @@ type QuoteBroker struct {
 // QuoteLevel is one side of the order book at a single price.
 type QuoteLevel struct {
 	// Price is the level price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Size is the aggregate quantity at the level, as a decimal string.
 	Size string `json:"size"`
 	// Order lists the contributing market-participant orders.
@@ -76,10 +78,13 @@ type Quote struct {
 	Symbol string `json:"symbol"`
 	// InstrumentID is the unique identifier of the security.
 	InstrumentID string `json:"instrument_id"`
-	// QuoteTime is the quote time, as a Unix timestamp in milliseconds. The
-	// sandbox returns it as a JSON number even though the reference documents
-	// it as a string.
-	QuoteTime int64 `json:"quote_time"`
+	// QuoteTime is the quote time, as a Unix timestamp in milliseconds. It is a
+	// [QuoteTime] rather than an int64 because Webull's own pages publish this
+	// property both ways: the stock and Display Solution depth pages show a quoted
+	// string and the futures and event-contract depth pages show a bare number. An
+	// int64 field decoded the two pages that showed a number and failed the other
+	// two with an error that abandoned the whole response.
+	QuoteTime QuoteTime `json:"quote_time"`
 	// Asks is the ask side of the book, best (lowest) price first.
 	Asks []QuoteLevel `json:"asks"`
 	// Bids is the bid side of the book, best (highest) price first.

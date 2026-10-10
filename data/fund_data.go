@@ -18,27 +18,21 @@ import (
 	"context"
 	"net/url"
 	"strconv"
-	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/types"
 )
 
 // pathFundNav is the fund NAV history endpoint.
-//
-// Path is unconfirmed; guessed based on Webull API patterns.
-const pathFundNav = "/market-data/fund/{symbol}/nav"
+const pathFundNav = "/market-data/fundamentals/fund-net-values/get"
 
 // pathFundInfo is the fund basic info endpoint.
-//
-// Path is unconfirmed; guessed based on Webull API patterns.
-const pathFundInfo = "/market-data/fund/{symbol}/info"
+const pathFundInfo = "/market-data/fundamentals/fund-brief/get"
 
 // pathFundDividends is the fund dividend history endpoint.
-//
-// Path is unconfirmed; guessed based on Webull API patterns.
-const pathFundDividends = "/market-data/fund/{symbol}/dividends"
+const pathFundDividends = "/market-data/fundamentals/fund-dividends/get"
 
 // pathFundList is the fund list by market/category endpoint.
-//
-// Path is unconfirmed; guessed based on Webull API patterns.
 const pathFundList = "/market-data/fund/list"
 
 // FundNavQuery parameterizes [Client.GetFundNav].
@@ -51,24 +45,35 @@ type FundNavQuery struct {
 
 // FundNav represents fund NAV (Net Asset Value) history data.
 type FundNav struct {
-	Symbol         string            `json:"symbol"`
-	Name           string            `json:"name"`
-	Currency       string            `json:"currency"`
-	Exchange       string            `json:"exchange"`
-	Nav            string            `json:"nav"`
-	NavDate        string            `json:"nav_date"`
-	PrevNav        string            `json:"prev_nav"`
-	NavChange      string            `json:"nav_change"`
-	NavChangeRatio string            `json:"nav_change_ratio"`
-	Extra          map[string]string `json:"-"`
+	Symbol         string      `json:"symbol"`
+	Name           string      `json:"name"`
+	Currency       string      `json:"currency"`
+	Exchange       string      `json:"exchange"`
+	Nav            money.Money `json:"nav"`
+	NavDate        string      `json:"nav_date"`
+	PrevNav        money.Money `json:"prev_nav"`
+	NavChange      money.Money `json:"nav_change"`
+	NavChangeRatio string      `json:"nav_change_ratio"`
+
+	// The two fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's NetValue is this type's Nav and its Date is this type's NavDate, so
+	// both sets are carried and a response populates whichever it sends. This type
+	// already carries Currency, which the page's element also declares.
+	NetValue money.Money `json:"net_value"`
+	Date     string      `json:"date"`
 }
 
 // GetFundNav retrieves NAV history for a fund or ETF.
-//
-// Reference: unconfirmed; path guessed.
 func (c *Client) GetFundNav(ctx context.Context, q FundNavQuery) ([]FundNav, error) {
-	path := strings.Replace(pathFundNav, "{symbol}", url.PathEscape(q.Symbol), 1)
 	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	if q.StartDate != "" {
 		query.Set("start_date", q.StartDate)
 	}
@@ -80,7 +85,7 @@ func (c *Client) GetFundNav(ctx context.Context, q FundNavQuery) ([]FundNav, err
 	}
 
 	var out []FundNav
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if err := c.get(ctx, pathFundNav, query, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -93,26 +98,66 @@ type FundInfoQuery struct {
 
 // FundInfo represents basic information for a fund or ETF.
 type FundInfo struct {
-	Symbol        string            `json:"symbol"`
-	Name          string            `json:"name"`
-	Currency      string            `json:"currency"`
-	Exchange      string            `json:"exchange"`
-	Aum           string            `json:"aum"`
-	ExpenseRatio  string            `json:"expense_ratio"`
-	DividendYield string            `json:"dividend_yield"`
-	InceptionDate string            `json:"inception_date"`
-	FundType      string            `json:"fund_type"`
-	Category      string            `json:"category"`
-	Extra         map[string]string `json:"-"`
+	Symbol        string      `json:"symbol"`
+	Name          string      `json:"name"`
+	Currency      string      `json:"currency"`
+	Exchange      string      `json:"exchange"`
+	Aum           money.Money `json:"aum"`
+	ExpenseRatio  string      `json:"expense_ratio"`
+	DividendYield string      `json:"dividend_yield"`
+	InceptionDate string      `json:"inception_date"`
+	FundType      string      `json:"fund_type"`
+	Category      string      `json:"category"`
+
+	// The six fields below are declared by the page but not marked required, so they
+	// were absent here and a response carrying them decoded the value to the zero
+	// value with no error reported. That is weaker evidence than a
+	// missing-required-name row: the page publishes no required list for this call,
+	// so a name may be optional or conditionally sent.
+	//
+	// The page's LaunchDate is the same fact this type spells InceptionDate, so both
+	// are carried. The remaining five have no counterpart above.
+	Issuer              string            `json:"issuer"`
+	Custodian           string            `json:"custodian"`
+	Benchmark           string            `json:"benchmark"`
+	InvestmentObjective string            `json:"investment_objective"`
+	LaunchDate          string            `json:"launch_date"`
+	Managers            []FundInfoManager `json:"managers"`
+}
+
+// FundInfoManager is one manager of a fund.
+//
+// The page declares every field without marking any required, so each may be absent.
+type FundInfoManager struct {
+	// Name is the manager's name.
+	Name string `json:"name"`
+	// Title is the manager's role, for example "Manager".
+	Title string `json:"title"`
+	// StartDate is when the manager took the role, as YYYY-MM-DD.
+	StartDate string `json:"start_date"`
+	// EndDate is when the manager left the role, as YYYY-MM-DD, or empty while
+	// incumbent.
+	EndDate string `json:"end_date"`
+	// IsIncumbent reports whether the manager currently holds the role. The page
+	// documents it as an integer, so it is carried as int64 and a caller reads
+	// Incumbent rather than assuming a bool.
+	IsIncumbent int64 `json:"is_incumbent"`
+	// TenureDays is the manager's tenure in days.
+	TenureDays int64 `json:"tenure_days"`
+	// TenureYears is the manager's tenure in years, as a decimal string.
+	TenureYears string `json:"tenure_years"`
+	// TenureReturn is the return over the manager's tenure, as a decimal string.
+	TenureReturn string `json:"tenure_return"`
 }
 
 // GetFundInfo retrieves basic information for a fund or ETF.
-//
-// Reference: unconfirmed; path guessed.
 func (c *Client) GetFundInfo(ctx context.Context, q FundInfoQuery) (*FundInfo, error) {
-	path := strings.Replace(pathFundInfo, "{symbol}", url.PathEscape(q.Symbol), 1)
+	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	var out FundInfo
-	if err := c.get(ctx, path, nil, &out); err != nil {
+	if err := c.get(ctx, pathFundInfo, query, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -124,28 +169,39 @@ type FundDividendsQuery struct {
 	StartDate string
 	EndDate   string
 	PageSize  int
+	// PaginationKey is the opaque cursor from the previous page's
+	// [types.Page.PaginationKey]. Empty starts at the first page; pass the returned
+	// key unmodified to get the next one.
+	PaginationKey string
 }
 
 // FundDividend represents a fund or ETF dividend event.
 type FundDividend struct {
-	Symbol     string            `json:"symbol"`
-	Name       string            `json:"name"`
-	Currency   string            `json:"currency"`
-	Exchange   string            `json:"exchange"`
-	Amount     string            `json:"amount"`
-	ExDate     string            `json:"ex_date"`
-	PayDate    string            `json:"pay_date"`
-	RecordDate string            `json:"record_date"`
-	Frequency  string            `json:"frequency"`
-	Extra      map[string]string `json:"-"`
+	Symbol     string      `json:"symbol"`
+	Name       string      `json:"name"`
+	Currency   string      `json:"currency"`
+	Exchange   string      `json:"exchange"`
+	Amount     money.Money `json:"amount"`
+	ExDate     string      `json:"ex_date"`
+	PayDate    string      `json:"pay_date"`
+	RecordDate string      `json:"record_date"`
+	Frequency  string      `json:"frequency"`
 }
 
-// GetFundDividends retrieves dividend history for a fund or ETF.
 //
-// Reference: unconfirmed; path guessed.
-func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]FundDividend, error) {
-	path := strings.Replace(pathFundDividends, "{symbol}", url.PathEscape(q.Symbol), 1)
+// **Breaking, in v2.1.35.** The page documents the 200 body as
+// `{"data": [...], "pagination_key": "..."}`, which a bare slice cannot
+// decode, so this method failed outright against a conforming server. It
+// returns a [types.Page] now: a caller reads out.Data instead of out, and
+// passes out.PaginationKey back to fetch the following page. The new form
+// succeeds where the old one could not.
+
+// GetFundDividends retrieves dividend history for a fund or ETF.
+func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) (*types.Page[FundDividend], error) {
 	query := url.Values{}
+	if q.Symbol != "" {
+		query.Set("symbol", q.Symbol)
+	}
 	if q.StartDate != "" {
 		query.Set("start_date", q.StartDate)
 	}
@@ -156,11 +212,15 @@ func (c *Client) GetFundDividends(ctx context.Context, q FundDividendsQuery) ([]
 		query.Set("page_size", strconv.Itoa(q.PageSize))
 	}
 
-	var out []FundDividend
-	if err := c.get(ctx, path, query, &out); err != nil {
+	if q.PaginationKey != "" {
+		query.Set("pagination_key", q.PaginationKey)
+	}
+
+	var out types.Page[FundDividend]
+	if err := c.get(ctx, pathFundDividends, query, &out); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return &out, nil
 }
 
 // FundListQuery parameterizes [Client.GetFundList].
@@ -173,19 +233,16 @@ type FundListQuery struct {
 
 // FundListItem represents a fund or ETF in a list response.
 type FundListItem struct {
-	Symbol        string            `json:"symbol"`
-	Name          string            `json:"name"`
-	Currency      string            `json:"currency"`
-	Exchange      string            `json:"exchange"`
-	FundType      string            `json:"fund_type"`
-	Category      string            `json:"category"`
-	DividendYield string            `json:"dividend_yield"`
-	Extra         map[string]string `json:"-"`
+	Symbol        string `json:"symbol"`
+	Name          string `json:"name"`
+	Currency      string `json:"currency"`
+	Exchange      string `json:"exchange"`
+	FundType      string `json:"fund_type"`
+	Category      string `json:"category"`
+	DividendYield string `json:"dividend_yield"`
 }
 
 // GetFundList retrieves a list of funds or ETFs by market and category.
-//
-// Reference: unconfirmed; path guessed.
 func (c *Client) GetFundList(ctx context.Context, q FundListQuery) ([]FundListItem, error) {
 	query := url.Values{}
 	if q.Market != "" {

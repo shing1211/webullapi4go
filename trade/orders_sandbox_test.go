@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/internal/errs"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 	"github.com/shing1211/webullapi4go/trade"
 )
 
@@ -81,11 +81,11 @@ func sandboxPreviewOrder(accountID string) trade.PlaceOrderRequest {
 				Symbol:                "AAPL",
 				OrderType:             trade.OrderTypeLimit,
 				Side:                  trade.OrderSideBuy,
-				Quantity:              "1",
+				Quantity:              mp("1"),
 				EntrustType:           trade.EntrustTypeQty,
 				TimeInForce:           trade.TimeInForceDay,
 				SupportTradingSession: trade.TradingSessionCore,
-				LimitPrice:            "180.00",
+				LimitPrice:            mp("180.00"),
 			},
 		},
 	}
@@ -126,7 +126,7 @@ func TestSandboxPlaceOrder(t *testing.T) {
 
 	req := sandboxPreviewOrder(accountID)
 	req.NewOrders[0].ClientOrderID = fmt.Sprintf("sdk-place-%d", time.Now().UnixNano())
-	req.NewOrders[0].LimitPrice = "1.00"
+	req.NewOrders[0].LimitPrice = mp("1.00")
 
 	res, err := trading.PlaceOrder(ctx, req)
 	if err != nil {
@@ -179,7 +179,7 @@ func TestSandboxReplaceCancelNonexistent(t *testing.T) {
 	rres, rerr := trading.ReplaceOrder(ctx, trade.ReplaceOrderRequest{
 		AccountID: accountID,
 		ModifyOrders: []trade.ModifyOrderRequest{
-			{ClientOrderID: id, LimitPrice: "1.00"},
+			{ClientOrderID: id, LimitPrice: mp("1.00")},
 		},
 	})
 	if rerr == nil {

@@ -30,6 +30,7 @@ func TestDefaultEndpointsIsHKProduction(t *testing.T) {
 		MQTT:          region.HKProductionMQTT,
 		MQTTWebSocket: region.HKProductionMQTTWebSocket,
 		GRPC:          region.HKProductionGRPC,
+		BrokerHTTP:    region.HKProductionBrokerHTTP,
 	}) {
 		t.Fatalf("DefaultEndpoints() = %+v, want the documented HK production endpoints", got)
 	}
@@ -51,6 +52,7 @@ func TestEndpointsFor(t *testing.T) {
 				MQTT:          "data-api.webull.hk:1883",
 				MQTTWebSocket: "wss://data-api.webull.hk:8883/mqtt",
 				GRPC:          "events-api.webull.hk",
+				BrokerHTTP:    "https://broker-api.webull.hk",
 			},
 		},
 		{
@@ -62,6 +64,7 @@ func TestEndpointsFor(t *testing.T) {
 				MQTT:          "data-api.sandbox.webull.hk:1883",
 				MQTTWebSocket: "wss://data-api.sandbox.webull.hk:8883/mqtt",
 				GRPC:          "events-api.sandbox.webull.hk",
+				BrokerHTTP:    "https://broker-api.sandbox.webull.hk",
 			},
 		},
 		{
@@ -73,6 +76,7 @@ func TestEndpointsFor(t *testing.T) {
 				MQTT:          "data-api.webull.com:1883",
 				MQTTWebSocket: "wss://data-api.webull.com:8883/mqtt",
 				GRPC:          "events-api.webull.com",
+				BrokerHTTP:    "https://broker-api.webull.com",
 			},
 		},
 		{
@@ -84,6 +88,7 @@ func TestEndpointsFor(t *testing.T) {
 				MQTT:          "data-api.sandbox.webull.co.jp:1883",
 				MQTTWebSocket: "wss://data-api.sandbox.webull.co.jp:8883/mqtt",
 				GRPC:          "events-api.sandbox.webull.co.jp",
+				BrokerHTTP:    "https://broker-api.sandbox.webull.co.jp",
 			},
 		},
 		{

@@ -1,0 +1,101 @@
+{
+ "currency": "1",
+ "values": {
+  "cap_surplus_ps": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "debt_to_assets": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "diluted_eps_incl_extra": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "naps": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "net_margin": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "ocf_ps": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "roa": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  },
+  "roe": {
+   "$array": [
+    {
+     "$count": 5,
+     "$shape": {
+      "fiscal_period": -1,
+      "fiscal_year": -1,
+      "value": "1"
+     }
+    }
+   ]
+  }
+ }
+}

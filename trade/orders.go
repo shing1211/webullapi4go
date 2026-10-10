@@ -16,13 +16,17 @@ package trade
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/domain/order"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Stock and option order endpoint paths.
@@ -31,11 +35,19 @@ const (
 	pathOrdersPreview = "/trading/orders/preview"
 	// pathOrdersPlace submits one or more orders.
 	pathOrdersPlace = "/trading/orders/place"
+	// pathOrdersBatchPlace submits multiple orders in a single request.
+	// Maximum 50 orders per request; currently only EQUITY orders are supported.
+	//
+	// Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
+	pathOrdersBatchPlace = "/trading/orders/batch-place"
 )
 
 // maxClientOrderIDLength is the documented maximum length of a client order
 // identifier.
 const maxClientOrderIDLength = 32
+
+// maxBatchOrders is the maximum number of orders in a single batch request.
+const maxBatchOrders = 50
 
 // OrderSide is the intended trading direction of an order.
 type OrderSide string
@@ -104,8 +116,8 @@ const (
 )
 
 // ComboType identifies the role an order plays within a combo order.
-// OTO, OCO, and OTOCO are equity-only; their leg-count rules are enforced in a
-// later release.
+// OTO, OCO, and OTOCO are equity-only; their composition rules are enforced by
+// [PlaceOrderRequest.validateComboRules].
 type ComboType string
 
 // Combo types accepted by the trading API.
@@ -206,7 +218,7 @@ const (
 )
 
 // OrderLeg is one leg of an option order. It is only populated for option
-// orders; validation of the leg set is added in a later release.
+// orders; the leg set is validated by [OrderRequest.Validate].
 type OrderLeg struct {
 	// InstrumentType is the kind of instrument the leg references.
 	InstrumentType InstrumentType `json:"instrument_type"`
@@ -216,14 +228,14 @@ type OrderLeg struct {
 	Symbol string `json:"symbol"`
 	// Side is the intended direction of the leg.
 	Side OrderSide `json:"side"`
-	// StrikePrice is the option strike, as a decimal string.
-	StrikePrice string `json:"strike_price,omitempty"`
+	// StrikePrice is the option strike price.
+	StrikePrice *money.Money `json:"strike_price,omitempty"`
 	// OptionExpireDate is the option expiry in yyyy-MM-dd form.
 	OptionExpireDate string `json:"option_expire_date,omitempty"`
 	// OptionType is whether the leg is a call or a put.
 	OptionType OptionType `json:"option_type,omitempty"`
-	// Quantity is the leg quantity, as a decimal string.
-	Quantity string `json:"quantity,omitempty"`
+	// Quantity is the leg quantity.
+	Quantity *money.Money `json:"quantity,omitempty"`
 }
 
 // PartyID identifies a party to a Hong Kong order for regulatory reporting.
@@ -239,8 +251,7 @@ type PartyID struct {
 	PartyRole string `json:"party_role"`
 }
 
-// OrderRequest is a single order within a [PlaceOrderRequest]. Numeric values
-// are strings to preserve precision.
+// OrderRequest is a single order within a [PlaceOrderRequest].
 //
 // The fields required for every order are ClientOrderID, ComboType,
 // InstrumentType, Market, Symbol, OrderType, Side, EntrustType, and
@@ -261,9 +272,9 @@ type OrderRequest struct {
 	OrderType OrderType `json:"order_type"`
 	// Side is the intended trading direction.
 	Side OrderSide `json:"side"`
-	// Quantity is the order quantity, as a decimal string. Required when
-	// EntrustType is QTY; ignored when EntrustType is AMOUNT.
-	Quantity string `json:"quantity,omitempty"`
+	// Quantity is the order quantity. Required when EntrustType is QTY;
+	// ignored when EntrustType is AMOUNT.
+	Quantity *money.Money `json:"quantity,omitempty"`
 	// EntrustType is whether the order is sized by quantity or cash amount.
 	EntrustType EntrustType `json:"entrust_type"`
 	// TimeInForce is how long the order remains active.
@@ -271,24 +282,23 @@ type OrderRequest struct {
 	// SupportTradingSession restricts a US order to a trading session. It is
 	// optional; the API applies its own default when it is empty.
 	SupportTradingSession TradingSession `json:"support_trading_session,omitempty"`
-	// LimitPrice is the limit price, as a decimal string. Required for
-	// LIMIT, STOP_LOSS_LIMIT, and TOUCH_LMT orders.
-	LimitPrice string `json:"limit_price,omitempty"`
-	// StopPrice is the trigger price, as a decimal string. Required for
-	// STOP_LOSS, STOP_LOSS_LIMIT, TOUCH_MKT, and TOUCH_LMT orders.
-	StopPrice string `json:"stop_price,omitempty"`
-	// TotalCashAmount is the cash amount, as a decimal string. Required when
-	// EntrustType is AMOUNT.
-	TotalCashAmount string `json:"total_cash_amount,omitempty"`
+	// LimitPrice is the limit price. Required for LIMIT, STOP_LOSS_LIMIT,
+	// and TOUCH_LMT orders.
+	LimitPrice *money.Money `json:"limit_price,omitempty"`
+	// StopPrice is the trigger price. Required for STOP_LOSS, STOP_LOSS_LIMIT,
+	// TOUCH_MKT, and TOUCH_LMT orders.
+	StopPrice *money.Money `json:"stop_price,omitempty"`
+	// TotalCashAmount is the cash amount. Required when EntrustType is AMOUNT.
+	TotalCashAmount *money.Money `json:"total_cash_amount,omitempty"`
 	// TriggerPriceType is the market price a touch or stop order triggers on.
 	TriggerPriceType TriggerPriceType `json:"trigger_price_type,omitempty"`
 	// TrailingType is how TrailingStopStep is expressed.
 	TrailingType TrailingType `json:"trailing_type,omitempty"`
-	// TrailingStopStep is the trailing spread, as a decimal string.
-	TrailingStopStep string `json:"trailing_stop_step,omitempty"`
+	// TrailingStopStep is the trailing spread.
+	TrailingStopStep *money.Money `json:"trailing_stop_step,omitempty"`
 	// TrailingLimitPriceOffset is the offset between the triggered stop price
-	// and the submitted limit price, as a decimal string.
-	TrailingLimitPriceOffset string `json:"trailing_limit_price_offset,omitempty"`
+	// and the submitted limit price.
+	TrailingLimitPriceOffset *money.Money `json:"trailing_limit_price_offset,omitempty"`
 	// ExpireDate is the GTD expiry in yyyy-MM-dd form. Required when
 	// TimeInForce is GTD.
 	ExpireDate string `json:"expire_date,omitempty"`
@@ -330,10 +340,10 @@ type PlaceOrderResult struct {
 // differ based on execution.
 type PreviewResult struct {
 	// EstimatedCost is the estimated capital required for the order.
-	EstimatedCost string `json:"estimated_cost"`
+	EstimatedCost money.Money `json:"estimated_cost"`
 	// EstimatedTransactionFee is the estimated transaction fee, including
 	// exchange, clearing, and commission fees.
-	EstimatedTransactionFee string `json:"estimated_transaction_fee"`
+	EstimatedTransactionFee money.Money `json:"estimated_transaction_fee"`
 }
 
 // Validate reports whether r is well formed. It checks the required fields, the
@@ -355,7 +365,7 @@ func (r OrderRequest) validate(prefix string) error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 
@@ -366,7 +376,7 @@ func (r OrderRequest) validate(prefix string) error {
 		return fail("combo_type %q is not one of %s", r.ComboType, comboTypeList)
 	}
 	if !r.InstrumentType.valid() {
-		return fail("instrument_type %q must be EQUITY, OPTION or FUTURES", r.InstrumentType)
+		return fail("instrument_type %q must be EQUITY, OPTION, FUTURES or EVENT", r.InstrumentType)
 	}
 	if !r.Market.valid() {
 		return fail("market %q must be US, HK or CN", r.Market)
@@ -392,43 +402,54 @@ func (r OrderRequest) validate(prefix string) error {
 	if r.TrailingType != "" && !r.TrailingType.valid() {
 		return fail("trailing_type %q must be AMOUNT or PERCENTAGE", r.TrailingType)
 	}
-	if err := r.validateMarketRules(fail); err != nil {
-		return err
-	}
-	if err := r.validateOptionRules(fail); err != nil {
-		return err
+	switch r.InstrumentType {
+	case InstrumentTypeEquity, InstrumentTypeOption:
+		if err := r.validateMarketRules(fail); err != nil {
+			return err
+		}
+		if err := r.validateOptionRules(fail); err != nil {
+			return err
+		}
+	case InstrumentTypeFutures:
+		if err := r.validateFuturesRules(fail); err != nil {
+			return err
+		}
+	case InstrumentTypeEvent:
+		if err := r.validateEventRules(fail); err != nil {
+			return err
+		}
 	}
 
 	switch r.EntrustType {
 	case EntrustTypeQty:
-		if strings.TrimSpace(r.Quantity) == "" {
+		if r.Quantity == nil {
 			return fail("quantity is required when entrust_type is QTY")
 		}
-		if !isPositiveDecimal(r.Quantity) {
-			return fail("quantity %q must be a positive decimal number", r.Quantity)
+		if !r.Quantity.IsPositive() {
+			return fail("quantity must be a positive decimal number")
 		}
 	case EntrustTypeAmount:
-		if strings.TrimSpace(r.TotalCashAmount) == "" {
+		if r.TotalCashAmount == nil {
 			return fail("total_cash_amount is required when entrust_type is AMOUNT")
 		}
-		if !isPositiveDecimal(r.TotalCashAmount) {
-			return fail("total_cash_amount %q must be a positive decimal number", r.TotalCashAmount)
+		if !r.TotalCashAmount.IsPositive() {
+			return fail("total_cash_amount must be a positive decimal number")
 		}
 	default:
 		return fail("entrust_type %q must be QTY or AMOUNT", r.EntrustType)
 	}
 
-	if r.OrderType.needsLimitPrice() && strings.TrimSpace(r.LimitPrice) == "" {
+	if r.OrderType.needsLimitPrice() && r.LimitPrice == nil {
 		return fail("limit_price is required for %s orders", r.OrderType)
 	}
-	if r.OrderType.needsStopPrice() && strings.TrimSpace(r.StopPrice) == "" {
+	if r.OrderType.needsStopPrice() && r.StopPrice == nil {
 		return fail("stop_price is required for %s orders", r.OrderType)
 	}
 	if r.OrderType.isTrailing() {
 		if r.TrailingType == "" {
 			return fail("trailing_type is required for %s orders", r.OrderType)
 		}
-		if strings.TrimSpace(r.TrailingStopStep) == "" {
+		if r.TrailingStopStep == nil {
 			return fail("trailing_stop_step is required for %s orders", r.OrderType)
 		}
 	}
@@ -497,23 +518,119 @@ func (c *Client) PreviewOrder(ctx context.Context, req PlaceOrderRequest) (*Prev
 // [WithMaxOrderQuantity] to bound what can be sent.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/common-order-place.md
-func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*PlaceOrderResult, error) {
-	if err := req.Validate(); err != nil {
+func (c *Client) PlaceOrder(ctx context.Context, req PlaceOrderRequest) (*order.Order, error) {
+	prepared, err := c.preparePlaceRequest(req)
+	if err != nil {
 		return nil, err
 	}
-	if err := c.enforceGuardrails(req); err != nil {
+	if err := prepared.Validate(); err != nil {
 		return nil, err
 	}
-	var out PlaceOrderResult
-	if err := c.do(ctx, http.MethodPost, pathOrdersPlace, nil, req, &out); err != nil {
+	if err := c.enforceGuardrails(prepared); err != nil {
 		return nil, err
 	}
+	var out order.PlaceOrderResult
+	if err := c.do(ctx, http.MethodPost, pathOrdersPlace, nil, prepared, &out); err != nil {
+		return nil, err
+	}
+	o := &order.Order{
+		PlaceOrderResult: out,
+		AccountID:        prepared.AccountID,
+		Machine:          order.New(order.StatePending),
+	}
+	return c.registerOrderWithKey(o, prepared.AccountID, prepared.NewOrders[0].ClientOrderID), nil
+}
+
+// BatchPlaceOrderResult carries the result for one order within a batch.
+//
+// The documented element of batch_orders carries client_order_id, order_id,
+// error_code and message; ErrorCode and Message are what a caller reads when one
+// order in a batch is rejected, and without them a partial failure was
+// indistinguishable from a success that returned no identifier.
+type BatchPlaceOrderResult struct {
+	// ClientOrderID echoes the caller-supplied order identifier.
+	ClientOrderID string `json:"client_order_id"`
+	// OrderID is the system-generated order identifier.
+	OrderID string `json:"order_id"`
+	// ErrorCode is the rejection code when this order in the batch failed, and is
+	// omitted on success.
+	ErrorCode string `json:"error_code,omitempty"`
+	// Message is the human-readable rejection reason, omitted on success.
+	Message string `json:"message,omitempty"`
+}
+
+// BatchPlaceOrderResponse is the response of [Client.BatchPlaceOrder].
+//
+// The page documents total, success, failed and batch_orders, and marks all four
+// required. The four counts are what a caller needs to learn how much of a batch was
+// placed; without them the only way to find out was to count BatchOrders, and a
+// partial failure looked like a success.
+//
+// Results is the SDK's own spelling and appears on no page. It is kept because
+// removing it would break callers, and a response that honours the documentation
+// leaves it empty; BatchOrders is the documented field to read.
+type BatchPlaceOrderResponse struct {
+	// Results is the SDK's own spelling, on no documented page. Prefer
+	// BatchOrders.
+	Results []BatchPlaceOrderResult `json:"results"`
+	// Total is the number of orders in the request.
+	Total int64 `json:"total"`
+	// Success is the number placed successfully.
+	Success int64 `json:"success"`
+	// Failed is the number rejected.
+	Failed int64 `json:"failed"`
+	// BatchOrders carries the per-order result, including the failure reason for
+	// orders that were rejected.
+	BatchOrders []BatchPlaceOrderResult `json:"batch_orders"`
+}
+
+// BatchPlaceOrder submits multiple orders in a single request and returns
+// a result for each order. The request is validated and the configured
+// order guardrails are enforced before any network call.
+//
+// Maximum 50 orders per request; currently only EQUITY orders are supported.
+// Each order must have ComboType NORMAL (combo orders are not supported
+// in batch mode).
+//
+// Reference: https://developer.webull.com/apis/docs/reference/order-batch-place.md
+func (c *Client) BatchPlaceOrder(ctx context.Context, req PlaceOrderRequest) (*BatchPlaceOrderResponse, error) {
+	prepared, err := c.preparePlaceRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := prepared.Validate(); err != nil {
+		return nil, err
+	}
+	if err := c.enforceGuardrails(prepared); err != nil {
+		return nil, err
+	}
+	if len(prepared.NewOrders) > maxBatchOrders {
+		return nil, errs.New(errs.CodeInvalidConfig,
+			fmt.Sprintf("batch place supports at most %d orders, got %d", maxBatchOrders, len(prepared.NewOrders)))
+	}
+	for i := range prepared.NewOrders {
+		o := &prepared.NewOrders[i]
+		if o.InstrumentType != InstrumentTypeEquity {
+			return nil, errs.New(errs.CodeInvalidConfig,
+				fmt.Sprintf("new_orders[%d]: instrument_type %q is not supported in batch mode; only EQUITY is allowed", i, o.InstrumentType))
+		}
+		if o.ComboType != ComboTypeNormal {
+			return nil, errs.New(errs.CodeInvalidConfig,
+				fmt.Sprintf("new_orders[%d]: combo_type %q is not supported in batch mode; only NORMAL is allowed", i, o.ComboType))
+		}
+	}
+	var out BatchPlaceOrderResponse
+	if err := c.do(ctx, http.MethodPost, pathOrdersBatchPlace, nil, prepared, &out); err != nil {
+		return nil, err
+	}
+	c.registerBatchResults(prepared, out.Results)
 	return &out, nil
 }
 
 // enforceGuardrails applies the configured order caps to every order in req. It
 // runs before the network call and returns a typed [errs.Error] with
-// [errs.CodeInvalidConfig] when an order exceeds a cap.
+// [errs.CodeInvalidConfig] when an order exceeds a cap. The outer code remains
+// invalid_config for compatibility; the error also wraps [errs.ErrOrderGuardrail].
 //
 // The quantity cap compares each order's quantity. The notional cap compares
 // total_cash_amount for AMOUNT orders, and quantity times limit_price for orders
@@ -525,7 +642,7 @@ func (c *Client) enforceGuardrails(req PlaceOrderRequest) error {
 		if err := c.enforceOrderGuardrails(&req.NewOrders[i]); err != nil {
 			var e *errs.Error
 			if errors.As(err, &e) {
-				return errs.New(e.Code, fmt.Sprintf("new_orders[%d]: %s", i, e.Message))
+				return errs.Wrap(e.Code, fmt.Sprintf("new_orders[%d]: %s", i, e.Message), err)
 			}
 			return err
 		}
@@ -535,12 +652,13 @@ func (c *Client) enforceGuardrails(req PlaceOrderRequest) error {
 
 // enforceOrderGuardrails applies the configured caps to a single order.
 func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
-	if c.cfg.maxOrderQuantity != "" && strings.TrimSpace(o.Quantity) != "" {
-		if qty, ok := parseDecimal(o.Quantity); ok {
-			if max, ok := parseDecimal(c.cfg.maxOrderQuantity); ok && qty.Cmp(max) > 0 {
-				return errs.New(errs.CodeInvalidConfig,
-					fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity))
-			}
+	if c.cfg.maxOrderQuantity != "" && o.Quantity != nil {
+		qtyRat := o.Quantity.Rat()
+		maxRat, ok := money.ParseDecimal(c.cfg.maxOrderQuantity)
+		if ok && qtyRat.Cmp(maxRat) > 0 {
+			return errs.Wrap(errs.CodeInvalidConfig,
+				fmt.Sprintf("quantity %s exceeds the configured maximum %s", o.Quantity, c.cfg.maxOrderQuantity),
+				errs.ErrOrderGuardrail)
 		}
 	}
 	if c.cfg.maxOrderNotional == "" {
@@ -550,54 +668,44 @@ func (c *Client) enforceOrderGuardrails(o *OrderRequest) error {
 	if !ok {
 		return nil
 	}
-	max, ok := parseDecimal(c.cfg.maxOrderNotional)
+	max, ok := money.ParseDecimal(c.cfg.maxOrderNotional)
 	if !ok {
 		return nil
 	}
 	if notional.Cmp(max) > 0 {
-		return errs.New(errs.CodeInvalidConfig,
-			fmt.Sprintf("order notional %s exceeds the configured maximum %s", notional.FloatString(2), c.cfg.maxOrderNotional))
+		return errs.Wrap(errs.CodeInvalidConfig,
+			fmt.Sprintf("order notional %s exceeds the configured maximum %s", notional.FloatString(2), c.cfg.maxOrderNotional),
+			errs.ErrOrderGuardrail)
 	}
 	return nil
 }
 
 // orderNotional returns the notional value of o and whether it could be
 // computed. AMOUNT orders use total_cash_amount; other orders use quantity
-// times limit_price when both parse as decimals.
+// times limit_price.
+//
+// A multi-leg option order prices each leg separately in Legs, so the
+// top-level order carries no single quantity and price; no notional can be
+// computed and the guardrail is skipped.
 func orderNotional(o *OrderRequest) (*big.Rat, bool) {
+	if len(o.Legs) > 1 {
+		return nil, false
+	}
 	if o.EntrustType == EntrustTypeAmount {
-		return parseDecimal(o.TotalCashAmount)
+		if o.TotalCashAmount == nil {
+			return nil, false
+		}
+		return o.TotalCashAmount.Rat(), true
 	}
-	if strings.TrimSpace(o.Quantity) == "" || strings.TrimSpace(o.LimitPrice) == "" {
+	if o.Quantity == nil || o.LimitPrice == nil {
 		return nil, false
 	}
-	qty, ok := parseDecimal(o.Quantity)
-	if !ok {
-		return nil, false
-	}
-	price, ok := parseDecimal(o.LimitPrice)
-	if !ok {
-		return nil, false
-	}
-	return new(big.Rat).Mul(qty, price), true
+	return new(big.Rat).Mul(o.Quantity.Rat(), o.LimitPrice.Rat()), true
 }
 
-// parseDecimal parses a trimmed decimal string exactly. It reports false when s
-// is not a number, including the empty string.
-func parseDecimal(s string) (*big.Rat, bool) {
-	r, ok := new(big.Rat).SetString(strings.TrimSpace(s))
-	return r, ok
-}
-
-// isPositiveDecimal reports whether s is a decimal number greater than zero.
-func isPositiveDecimal(s string) bool {
-	r, ok := parseDecimal(s)
-	return ok && r.Sign() > 0
-}
-
-// validClientOrderID reports whether id contains only the characters the API
+// ValidClientOrderID reports whether id contains only the characters the API
 // allows in a client order identifier: letters, digits, hyphen, and underscore.
-func validClientOrderID(id string) bool {
+func ValidClientOrderID(id string) bool {
 	for i := 0; i < len(id); i++ {
 		switch c := id[i]; {
 		case c >= 'A' && c <= 'Z':
@@ -611,10 +719,44 @@ func validClientOrderID(id string) bool {
 	return true
 }
 
+// charset64 is the set of characters allowed in a client order identifier.
+const charset64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+// NewClientOrderID returns a new random client order identifier. It generates a
+// fresh 20-character string from [crypto/rand], giving approximately 118 bits of
+// entropy, well within the 32-character limit enforced by [OrderRequest.Validate]
+// and the Webull API.
+func NewClientOrderID() (string, error) {
+	b := make([]byte, 15)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating client order id: %w", err)
+	}
+	result := make([]byte, 20)
+	for i := 0; i < 15; i++ {
+		result[i] = charset64[int(b[i])&63]
+	}
+	for i := 15; i < 20; i++ {
+		var j byte
+		if _, err := rand.Read([]byte{j}); err != nil {
+			return "", fmt.Errorf("generating client order id: %w", err)
+		}
+		result[i] = charset64[int(j)&63]
+	}
+	return string(result), nil
+}
+
+// ClientOrderIDFrom returns a deterministic client order identifier derived from
+// content by taking the first 32 hexadecimal characters of its SHA-256 digest.
+// The result is valid according to [validClientOrderID] and the Webull API.
+func ClientOrderIDFrom(content []byte) string {
+	h := sha256.Sum256(content)
+	return fmt.Sprintf("%x", h[:16])
+}
+
 // valid reports whether t is a recognized instrument type.
 func (t InstrumentType) valid() bool {
 	switch t {
-	case InstrumentTypeEquity, InstrumentTypeOption, InstrumentTypeFutures:
+	case InstrumentTypeEquity, InstrumentTypeOption, InstrumentTypeFutures, InstrumentTypeEvent:
 		return true
 	default:
 		return false
@@ -738,4 +880,130 @@ func (t TrailingType) valid() bool {
 	default:
 		return false
 	}
+}
+
+// NewPlaceOrderRequest is a convenience constructor for a [PlaceOrderRequest]
+// with one or more orders. The accountID field is required; each order must
+// still have a non-empty ClientOrderID (or use [WithAutoClientOrderID]).
+func NewPlaceOrderRequest(accountID string, orders ...OrderRequest) PlaceOrderRequest {
+	return PlaceOrderRequest{
+		AccountID: accountID,
+		NewOrders: orders,
+	}
+}
+
+// NewEquityOrder returns a new US equity limit order with sensible defaults:
+// ComboType NORMAL, InstrumentType EQUITY, Market US, EntrustType QTY,
+// TimeInForce DAY, SupportTradingSession CORE. The caller must supply a
+// ClientOrderID (or enable [WithAutoClientOrderID]), a symbol, a side, and
+// a quantity; a limit price should be set on the returned struct before
+// submission.
+func NewEquityOrder(symbol string, side OrderSide, qty *money.Money) OrderRequest {
+	return OrderRequest{
+		ComboType:             ComboTypeNormal,
+		InstrumentType:        InstrumentTypeEquity,
+		Market:                MarketUS,
+		Symbol:                symbol,
+		Side:                  side,
+		Quantity:              qty,
+		EntrustType:           EntrustTypeQty,
+		TimeInForce:           TimeInForceDay,
+		SupportTradingSession: TradingSessionCore,
+	}
+}
+
+// EquityOrderBuilder is a fluent builder for a US equity [OrderRequest].
+// See [NewEquityOrderBuilder].
+type EquityOrderBuilder struct {
+	symbol      string
+	side        OrderSide
+	quantity    *money.Money
+	orderType   OrderType
+	limitPrice  *money.Money
+	stopPrice   *money.Money
+	timeInForce TimeInForce
+}
+
+// NewEquityOrderBuilder starts a fluent builder for a US equity order.
+// symbol is the ticker, side is Buy or Sell, and quantity is the number of shares.
+func NewEquityOrderBuilder(symbol string, side OrderSide, quantity *money.Money) *EquityOrderBuilder {
+	return &EquityOrderBuilder{
+		symbol:      symbol,
+		side:        side,
+		quantity:    quantity,
+		orderType:   OrderTypeLimit,
+		timeInForce: TimeInForceDay,
+	}
+}
+
+// LimitPrice sets the limit price for a LIMIT order.
+func (b *EquityOrderBuilder) LimitPrice(v *money.Money) *EquityOrderBuilder {
+	b.limitPrice = v
+	return b
+}
+
+// StopPrice sets the stop price for a STOP order.
+func (b *EquityOrderBuilder) StopPrice(v *money.Money) *EquityOrderBuilder {
+	b.stopPrice = v
+	return b
+}
+
+// TimeInForce sets the time-in-force. Defaults to DAY.
+func (b *EquityOrderBuilder) TimeInForce(v TimeInForce) *EquityOrderBuilder {
+	b.timeInForce = v
+	return b
+}
+
+// Market sets the order type to MARKET (no price required).
+func (b *EquityOrderBuilder) Market() *EquityOrderBuilder {
+	b.orderType = OrderTypeMarket
+	return b
+}
+
+// Build validates the builder state and returns a populated [OrderRequest].
+// It panics if the order is malformed.
+func (b *EquityOrderBuilder) Build() OrderRequest {
+	if b.symbol == "" {
+		panic("trade: EquityOrderBuilder: symbol is required")
+	}
+	if !b.side.valid() {
+		panic("trade: EquityOrderBuilder: side must be BUY or SELL")
+	}
+	if b.quantity == nil || b.quantity.IsZero() || b.quantity.IsNegative() {
+		panic("trade: EquityOrderBuilder: quantity must be a positive decimal")
+	}
+	if !b.orderType.valid() {
+		panic("trade: EquityOrderBuilder: invalid order type")
+	}
+
+	switch b.orderType {
+	case OrderTypeLimit:
+		if b.limitPrice == nil || b.limitPrice.IsZero() || b.limitPrice.IsNegative() {
+			panic("trade: EquityOrderBuilder: LIMIT order requires a positive limit price")
+		}
+	case OrderTypeMarket:
+		if b.limitPrice != nil && !b.limitPrice.IsZero() {
+			panic("trade: EquityOrderBuilder: MARKET order must not have a limit price")
+		}
+	}
+
+	req := OrderRequest{
+		ComboType:             ComboTypeNormal,
+		InstrumentType:        InstrumentTypeEquity,
+		Market:                MarketUS,
+		Symbol:                b.symbol,
+		Side:                  b.side,
+		Quantity:              b.quantity,
+		OrderType:             b.orderType,
+		EntrustType:           EntrustTypeQty,
+		TimeInForce:           b.timeInForce,
+		SupportTradingSession: TradingSessionCore,
+	}
+	if b.limitPrice != nil && !b.limitPrice.IsZero() {
+		req.LimitPrice = b.limitPrice
+	}
+	if b.stopPrice != nil && !b.stopPrice.IsZero() {
+		req.StopPrice = b.stopPrice
+	}
+	return req
 }

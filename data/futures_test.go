@@ -79,6 +79,39 @@ func TestGetFuturesInstruments(t *testing.T) {
 	}
 }
 
+func TestGetFuturesInstrumentsNumericUnit(t *testing.T) {
+	t.Parallel()
+
+	const body = `[{"symbol":"HSIZ5","instrument_id":"119540372","exchange_code":"HKEX","code":"HSIZ","name":"Hang Seng Index Futures Dec 2025","product_class_id":2,"product_class_name":"Index","status":"OC","currency":"HKD","contract_month":"202512","settlement_date":"2025-12-29","size":"50.0","unit":1,"min_tick":"1.0","first_notice_date":"","last_notice_date":"","first_trading_date":"2024-12-02","last_trading_date":"2025-12-23","contract_type":"MONTHLY","settlement":"Cash"}]`
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.Path, "/trading/instruments/futures/contracts/list"; got != want {
+			t.Errorf("path = %q, want %q", got, want)
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	got, err := c.GetFuturesInstruments(context.Background(), data.FuturesInstrumentQuery{
+		Category: data.FuturesCategoryHK,
+		Code:     "HSIZ",
+	})
+	if err != nil {
+		t.Fatalf("GetFuturesInstruments() error = %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d instruments, want 1", len(got))
+	}
+	inst := got[0]
+	if inst.Unit.String() != "1" {
+		t.Errorf("Unit = %q, want %q", inst.Unit.String(), "1")
+	}
+	if inst.MinTick != "1.0" {
+		t.Errorf("MinTick = %q, want %q", inst.MinTick, "1.0")
+	}
+}
+
 func TestGetFuturesProductCodes(t *testing.T) {
 	t.Parallel()
 

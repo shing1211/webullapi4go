@@ -7,6 +7,14 @@ full financial statements.
 All fundamentals endpoints live in the `data` package alongside the rest of the
 Market Data HTTP API and share the same authentication and transport.
 
+!!! note "Prerequisites"
+    - A [Webull account](https://developer.webull.hk/apis/docs/sdk#test-accounts) (sandbox or production)
+    - Go 1.26+
+    - An authenticated client — see [Authentication](authentication.md)
+
+!!! tip "Error handling"
+    All SDK functions return `error`. See [Errors](errors.md) for the typed error model, transient vs permanent classification, and retry patterns.
+
 ## Coverage
 
 | Group | Methods |

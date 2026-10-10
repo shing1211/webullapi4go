@@ -29,13 +29,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/shing1211/webullapi4go/client"
 	"github.com/shing1211/webullapi4go/data"
 )
 
 func main() {
+	if os.Getenv("WEBULL_APP_KEY") == "" {
+		fmt.Println("example: WEBULL_APP_KEY not set, skipping")
+		return
+	}
+
 	cl, err := client.New(client.WithEnv())
 	if err != nil {
 		log.Fatal(err)

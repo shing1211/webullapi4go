@@ -1,0 +1,260 @@
+{
+  "baselineCommit": "8472236",
+  "policy": "The per-DTO comparison in conformance/shapes.go reports every documented divergence it finds. This file records the ones the current tree has, each with a reason and a pointer to where the defect is written down. The gate in conformance/divergence_test.go passes when the observed set EXACTLY equals the set below, and fails in both directions: a divergence not listed here is a new defect and fails immediately, and a listed entry that no longer reproduces also fails, because a fixed defect and a check that changed meaning look identical from the gate and both need a person to look at the tree. Editing this file is the whole of the workflow for adopting a change, and it is a hand edit on purpose: nothing in a test run writes it. An entry with an empty reason is a suppressed finding and LoadBaseline refuses to accept one.",
+  "notes": {
+    "scope": "193 documented endpoints carry a committed fixture. 154 are resolved to a Go type here and 39 are accounted for, not skipped: 29 name a broker/ symbol, which is a separate Go module and therefore not importable from the root module without a go.mod change, and 10 are the docgen manifest's em dash, an endpoint deliberately mapped to no SDK symbol. Of the 154 resolved rows, 5 are reported not comparable; see the notComparable note. Every broker/ row is therefore NOT covered by this instrument.",
+    "notComparable": "5 of the 154 resolved rows claim nothing at all, because the SDK method sends a path other than the one the page documents and the page is therefore not that call's contract. A schema difference between a page and a call that is not the one the page documents is not a defect claim about this SDK, so folding it into either conforming or divergent would misreport it. They are counted in coverage.notComparable and printed with both paths by TestObservedDivergenceReport. The rows are: brokerfd.GetAccountsSummary on broker-fd-us/GET-broker-assets-summaries-get, data.GetStockInstruments on trading/GET-trading-instruments-stocks-profiles-list, data.GetDisplaySnapshot on display-solution/POST-market-data-stocks-snapshots-list, and client.CreateToken and client.CheckToken on the two authentication pages. The first three had 8 recorded rows between them, which this change removes; the two authentication rows had none. The path defects themselves are unaffected and stay recorded elsewhere: TestDefectivePathRowsAreDocumented lists all 5, and the GetDisplaySnapshot path defect is live-blocked SDK defect item 19.",
+    "nameCoverageIsAFloor": "The 122 missing-required-name rows and the 104 missing-declared-name rows are both floors, not totals. The name checks consider the union of json tags at every depth of the compared type, because encoding/json flattens a response body into one name space, so a documented name the SDK carries only inside a nested object counts as covered. Nothing here records which names that applies to. For the required half it is printed: the required-name-depth skip in TestObservedDivergenceReport names every required name that reached a tag only from below the level the page declares it at, per row. It is deliberately not printed for the declared half, because tagsOf is called with the slice type on an array row, so the element's own fields land one level down and the same test would fire on nearly every declared name of every array row as a false \"reached from below\". Depth scoping is deliberately not enforced on either check, because a documented name the SDK reaches one level down still decodes and reporting it would trade a floor for a class of false positives.",
+    "declaredNameEvidence": "The 104 missing-declared-name rows over 34 rows, and the single declared-inventory-empty row, come from a second name check that runs only where the page publishes no required list. It is a separate kind and a separate check rather than an extension of the required half because the evidence is weaker and a baseline entry has to keep that readable: a required name is a promise the page makes, and a declared name is a description of one response, so a name absent from a page that does not mark it required may be optional, conditionally sent, or simply absent from the example the page chose. Each such row is a real silent-zero defect of the same shape as the 122 required ones -- including names that cost a caller money, eps_est and net_value and pe_ttm and dividend among them -- but none is of the same certainty, and the reasons say so per entry.",
+    "declaredNameNotSuppressed": "68 of the 104 sit on rows that also record a top-level-shape-mismatch, and 26 of those are the data and pagination_key pair that a bare-array SDK cannot carry. They are recorded rather than suppressed, and the reason is a dead end worth recording. The obvious suppression would drop every declared name on a shape-mismatched row, but that row set is not homogeneous: brokerfd.ListFDAccounts declares 2 names against a page of 6, so its object is an envelope and its names are the wrapper, while data.GetDSLatestNews declares 6 against a page of 6, so its object is the payload and its 5 missing names are a second, independent defect -- one of the four pages that document a single item on a path ending -list. data.GetMarketSectorDetail is both at once, carrying 4 content names beside 2 wrapper keys. Suppressing per row discards the content names, and no per-name test exists: the manifest records no type per declared name, and propertyNameCountInFixture is 0 on these rows because the committed minimal instances are empty, so nothing distinguishes a wrapper key from a payload field. The overlap is counted here instead, which is the same treatment the 29 decode-failure entries already get.",
+    "declaredNameGuards": "Three checks guard the declared half, and each one is load-bearing rather than decorative. A map decodes every documented name and declares none of them, so a missing tag on one is the harness's error and not a finding: data.GetBalanceSheet, data.GetCashFlow and data.GetIncomeStatement decode into a free-form map and their pages declare 105 names between them, so without the guard 68% of the whole finding set would have been false positives. A page that declares names at a level other than the one the row is read at is a skip and not a finding, because an array of scalars has no element object to name. And the check is tag-only: the required half also reports a name missing from the committed instance, but the generator builds that instance from required names alone, so every declared name would be absent from it and that half would report 100% false positives.",
+    "declaredInventoryEmpty": "brokerfd.ListAccountForms on broker-fd-us/GET-broker-forms-list is recorded as declared-inventory-empty, one row and one entry. Its page declares no property name at all, so neither name check had anything to look at and it is not a page that examined clean, it is a page nobody can examine. Filing it as a pass would have made a hole in the evidence base read as coverage, which is the specific failure this instrument exists to remove. It is a documentation gap rather than an SDK defect, and resolving it needs a written answer from Webull or one captured body.",
+    "decodeIsWeakest": "decodes-without-error is the weakest check: a decode that succeeds is consistent with a type that ignores every documented name, and a decode that fails is usually the same defect a name or shape check already named. Its 29 entries are recorded so the count is stable, not because they are 29 new defects; most duplicate a shape or name entry for the same symbol. Each of those 29 details is written from what the harness already knows -- the compared Go type, and the documented top-level kind or element type or leaf type it could not accept -- and not from encoding/json's error message, because detail is part of an entry's identity and the decoder's wording is not stable across Go releases. An earlier version of this file quoted that message verbatim, and a later Go release rephrasing it turned all 29 entries at once into a new divergence and an entry that no longer reproduces. Nothing in any detail or reason here may quote a toolchain- or platform-dependent string: an OS message, a filesystem path and a decoder's phrasing are all diagnostics, and a diagnostic belongs in the report, not in an identity.",
+    "waivers": "No entry is waived. An earlier version of this file waived the two quote_time leaf-type rows on the reasoning that data/quotes.go:81-84 records the sandbox sending a JSON number, so retyping the field to string would be a regression. That reasoning was wrong on both rows. On data.GetQuotes the method cites at data/quotes.go:93 the very page the harness read, which declares quote_time as type string and requires it, so the SDK contradicts a contract it names; and the sandbox observation is scoped to one environment, where a published type does not stop applying. On data.GetDisplayDepth there was no evidence at all: that is the Display Solution host, which returns 403 at host level here, and an observation about the HK sandbox says nothing about it. Both are now recorded as ordinary open defects. The reason remains required and non-empty so that a finding can never be dropped by leaving the field blank -- but a required reason is not a true one, and these two rows are the case that proved it: a false reason satisfied the guard perfectly, repeated identically across both entries.",
+    "notInStatus": "5 of these 285 divergences are written up row by row in IMPLEMENTATION_STATUS.md, and all 5 are the one finding that document already named: the three brokerfd.GetFDPositions missing-required-name rows and the two brokerfd.GetFDAssetsDetail rows, each with a recordedIn naming live-blocked SDK defect item 20. The data.GetDisplaySnapshot defect is item 19, but it is a path defect rather than a row in this file, so it contributes no entry here and the notComparable note is where it lives. The other 280 are now written up as a class, in item 21 of the same document and in the subsection that precedes it, so the status documents no longer under-report the divergence set: that write-up groups all 285 rows by check with row and symbol counts, names the worst-affected symbols, states the two caveats that keep those counts honest -- the missing-required-name count is a floor rather than a total, and 19 of the 27 container-kind rows are indeterminate -- and gives per-class unblock requirements. It replaces the earlier reading that the five live-blocked SDK defects are the complete list of known divergences, which was true only of the request side and of one response DTO. The write-up is class-level and deliberately not row-level: per-row detail stays in this file, and the recordedIn of those 175 rows is unchanged, and the 105 rows added by the declared-name check carry their own recordedIn naming item 21 plus the weaker evidence, so each of them still states that no status-document entry exists for it. That sentence is about a row-level record, which is not what the class write-up provides, so the two are not in conflict and a reader who searches the status document for one row's symbol will not find it. Belonging to a documented class is also not being individually triaged. No one has decided, for any of the 19 indeterminate container-kind rows, whether the page or the type is the wrong one; the class write-up records them as open rather than settling them, and one live body or one written answer from Webull would.",
+    "tableIsManual": "The symbol-to-type table in conformance/symbols.go is hand written and is the instrument's weakest point. It is asserted against the manifest in both directions by TestSymbolTableCoversTheManifest, so a table hole fails the build rather than quietly reducing coverage, and every entry is resolved and checked by TestSymbolTableResolvesItsDecodeTargets. Six of its entries name a response envelope the SDK package does not export, which cannot be written as a reflect.TypeOf call at all; those are read from the SDK sources by conformance/envelopes.go, which fails closed on a field it cannot represent and whose rebuilt type is compared field by field against the declaration on every run. An earlier version of the table named the public projection several of those methods return instead, which compared a tagless struct against the page and reported 12 rows the SDK does not have."
+  },
+  "coverage": {
+    "fixtures": 193,
+    "compared": 154,
+    "unmapped": [],
+    "outOfScope": [
+      "broker.CancelOrder",
+      "broker.CreateCashJournal",
+      "broker.CreateFXExchange",
+      "broker.CreateInstantExchange",
+      "broker.CreateInstantFunding",
+      "broker.CreatePositionJournal",
+      "broker.CreateVirtualAccount",
+      "broker.GetBalance",
+      "broker.GetCashActivities",
+      "broker.GetCashJournalDetail",
+      "broker.GetCorporateActionsDetail",
+      "broker.GetFXExchangeDetail",
+      "broker.GetFXRate",
+      "broker.GetInstantExchangeDetail",
+      "broker.GetInstantFundingDetail",
+      "broker.GetOpenOrders",
+      "broker.GetOrderDetail",
+      "broker.GetOrderHistory",
+      "broker.GetPositionJournalDetail",
+      "broker.GetPositions",
+      "broker.GetStockInstruments",
+      "broker.GetStockLocate",
+      "broker.GetTradeCalendar",
+      "broker.GetVirtualAccount",
+      "broker.ListVirtualAccounts",
+      "broker.PlaceOrder",
+      "broker.PreviewOrder",
+      "broker.ReplaceOrder",
+      "broker.UpdateVirtualAccount"
+    ],
+    "noSymbolRows": 10,
+    "notComparable": 5,
+    "symbolsInTable": 156
+  },
+  "entries": [
+    {
+      "symbol": "brokerfd.GetAgreementDetail",
+      "fixture": "broker-fd-us/GET-broker-agreements-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into brokerfd.Agreement: the documented top level is array and brokerfd.Agreement decodes it as object",
+      "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetAgreementDetail",
+      "fixture": "broker-fd-us/GET-broker-agreements-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is array, brokerfd.Agreement decodes it as object",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
+      "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []brokerfd.FDCorporateAction: the documented top level is object and []brokerfd.FDCorporateAction decodes it as array",
+      "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDCorporateActions",
+      "fixture": "broker-fd-us/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []brokerfd.FDCorporateAction decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
+      "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDOrderDetail",
+      "fixture": "broker-fd-us/GET-broker-orders-get",
+      "kind": "missing-required-name",
+      "name": "combo_type",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect, and a retag would be the wrong fix. The two names come from the documented response of GET /broker/orders/get, which is the LIST envelope: an object with combo_type and an orders array. GetFDOrderDetail reconciles to that same page because the docgen manifest maps it there, so this fixture describes a list rather than the single order a detail call returns. Tagging combo_type and orders on FDOrder would put two envelope fields on a one-order type, would make this gate green while the detail call still cannot read either name, and would corrupt FDOrder for the seven other methods that decode it legitimately. The honest fix is a wrapper for the list method and is a separate decision, because the same page cannot describe both a single order and a list and the manifest gives no way to tell which shape a detail call actually receives. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credential is available here. No other symbol shares this fixture, so the two rows are the whole of the required-name class that remains.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDOrderDetail",
+      "fixture": "broker-fd-us/GET-broker-orders-get",
+      "kind": "missing-required-name",
+      "name": "orders",
+      "detail": "no json tag in brokerfd.FDOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect, and a retag would be the wrong fix. The two names come from the documented response of GET /broker/orders/get, which is the LIST envelope: an object with combo_type and an orders array. GetFDOrderDetail reconciles to that same page because the docgen manifest maps it there, so this fixture describes a list rather than the single order a detail call returns. Tagging combo_type and orders on FDOrder would put two envelope fields on a one-order type, would make this gate green while the detail call still cannot read either name, and would corrupt FDOrder for the seven other methods that decode it legitimately. The honest fix is a wrapper for the list method and is a separate decision, because the same page cannot describe both a single order and a list and the manifest gives no way to tell which shape a detail call actually receives. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credential is available here. No other symbol shares this fixture, so the two rows are the whole of the required-name class that remains.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDTransferFees",
+      "fixture": "broker-fd-us/GET-broker-fees-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []brokerfd.TransferFee: the documented top level is object and []brokerfd.TransferFee decodes it as array",
+      "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.GetFDTransferFees",
+      "fixture": "broker-fd-us/GET-broker-fees-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []brokerfd.TransferFee decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold at all, so this call fails loudly at decode time rather than returning zeroes. Same package as live-blocked SDK defect items 16 and 17, but this is a per-DTO row and is not among them. Not live-verified: Broker FD returns 404 in the HK sandbox and no US credentials are available here.",
+      "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.ListAccountForms",
+      "fixture": "broker-fd-us/GET-broker-forms-list",
+      "kind": "declared-inventory-empty",
+      "detail": "the page publishes no required list and declares no property name, so no name on it could be compared against the SDK at all",
+      "reason": "Gap in the evidence base rather than a defect in the SDK. This page declares no property name at all, neither required nor otherwise, so no name on it could be compared against any SDK type and neither name check had anything to look at. Recorded so the row does not read as examined clean when it was not examined. Resolving it needs a written answer from Webull or one captured body, and not an SDK change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -> \"Response contract\" item 21 records the class (mirrored at docs/implementation-status.md); unlike a required name this one is not marked required by the page, so it may be optional, and no IMPLEMENTATION_STATUS.md row exists for this symbol"
+    },
+    {
+      "symbol": "brokerfd.ListAccountForms",
+      "fixture": "broker-fd-us/GET-broker-forms-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []brokerfd.AccountForm: the documented element type is string and the []brokerfd.AccountForm element is object",
+      "reason": "The decode failure is the same disagreement the shape or name check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "items 16 and 17 cover the package, not this DTO (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "brokerfd.ListAccountForms",
+      "fixture": "broker-fd-us/GET-broker-forms-list",
+      "kind": "element-type-mismatch",
+      "detail": "documented element type is string, []brokerfd.AccountForm element is object (brokerfd.AccountForm)",
+      "reason": "The page documents an array of form identifiers and the SDK decodes an array of form objects, so the documented body cannot be decoded. Same Broker FD surface as live-blocked SDK defect items 16 and 17; the element-kind disagreement itself is not recorded there.",
+      "recordedIn": "items 16 and 17 (mirrored at docs/implementation-status.md); no IMPLEMENTATION_STATUS.md entry yet: this row is a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetCapitalFlow",
+      "fixture": "fundamentals/GET-market-data-fundamentals-capital-flows-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.CapitalFlowEntry: the documented top level is object and []data.CapitalFlowEntry decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetCapitalFlow",
+      "fixture": "fundamentals/GET-market-data-fundamentals-capital-flows-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.CapitalFlowEntry decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.CapitalFlowEntry decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSLatestNews",
+      "fixture": "display-solution/GET-market-data-news-latest-news-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.DSNewsSummaryItem decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.DSNewsSummaryItem decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSMarketNews",
+      "fixture": "display-solution/GET-market-data-news-market-news-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.DSNewsSummaryItem decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.DSNewsSummaryItem decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSNewsSummary",
+      "fixture": "display-solution/POST-market-data-news-summaries-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.DSNewsSummaryItem decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.DSNewsSummaryItem decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.DSNewsSummaryItem: the documented top level is object and []data.DSNewsSummaryItem decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetDSSymbolNews",
+      "fixture": "display-solution/GET-market-data-news-symbol-news-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.DSNewsSummaryItem decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.DSNewsSummaryItem decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetLogos",
+      "fixture": "display-solution/POST-market-data-fundamentals-logos-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []data.Logo: the documented top level is object and []data.Logo decodes it as array",
+      "reason": "The decode failure is the same disagreement a sharper check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetLogos",
+      "fixture": "display-solution/POST-market-data-fundamentals-logos-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []data.Logo decodes it as array",
+      "reason": "Open defect, not waived. The page documents a response container the type this method decodes cannot hold, so the documented body cannot be decoded into it. Found by comparing the documented top level against the type the method decodes into: documented top level is object, []data.Logo decodes it as array. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "no IMPLEMENTATION_STATUS.md entry yet: a new finding of the per-DTO comparison, recorded here first"
+    },
+    {
+      "symbol": "data.GetStockProfilesV3",
+      "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into data.instrumentProfilesV3Resp: the documented top level is array and data.instrumentProfilesV3Resp decodes it as object",
+      "reason": "The decode failure is the same disagreement the shape check already named for this symbol, recorded separately because it is what a caller actually sees. Check 4 is the weakest of the four and adds no new defect.",
+      "recordedIn": "the same two sources as the shape row for this symbol: data/instrument_v3.go:28 and data/instrument_v3.go:42 against the page the manifest names; no IMPLEMENTATION_STATUS.md entry yet"
+    },
+    {
+      "symbol": "data.GetStockProfilesV3",
+      "fixture": "display-solution/POST-market-data-instruments-stocks-profiles-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is array, data.instrumentProfilesV3Resp decodes it as object",
+      "reason": "Open defect, not waived, and the disagreement is the SDK's own rather than the harness's. The method's comment at data/instrument_v3.go:28 states that the v3 endpoint returns a {data, pagination_key} envelope, and data/instrument_v3.go:42 declares the envelope the method decodes, while the page the manifest names documents a bare array. One of the two sources is wrong about the wire; this entry records that it is not established which, which is not the same as recording that there is nothing to decide. A call to the endpoint returns a body one of these two shapes cannot decode. Not live-verified: the endpoint has not been called with credentials that reach it in this environment.",
+      "recordedIn": "data/instrument_v3.go:28 (the method's comment stating the endpoint returns a {data, pagination_key} envelope) and data/instrument_v3.go:42 (the envelope it decodes); the page the manifest names, developer.webull.hk/apis/docs/reference/market-display-solution-data-api/list-using-get.md, which documents a bare array; no IMPLEMENTATION_STATUS.md entry yet"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+ "$array": [
+  {
+   "$count": 2,
+   "$shape": {
+    "amount": "1",
+    "currency": "1",
+    "declare_date": "1",
+    "div_type": "1",
+    "ex_div_date": "1",
+    "market": "1",
+    "pay_date": "1",
+    "record_date": "1",
+    "symbol": "1"
+   }
+  }
+ ]
+}

@@ -1,0 +1,137 @@
+# Dependency updates for webullapi4go.
+#
+# gomod keeps third-party dependencies current in the root and nested modules;
+# github-actions keeps CI actions current. Both run weekly and open pull requests
+# automatically.
+
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "gomod"
+    directory: "/broker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "gomod"
+    directory: "/examples/watchlist-cmd"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "gomod"
+    directory: "/examples/broker-probe"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "gomod"
+    directory: "/examples/futures-probe"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "gomod"
+    directory: "/examples/options-multi-leg"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gomod"
+    # The OpenTelemetry Go modules are released in lockstep: otel, otel/metric,
+    # otel/trace, otel/sdk, and otel/sdk/metric must share one version, and every
+    # nested module inherits the root pins transitively. Grouping them keeps
+    # Dependabot from opening one pull request per module for a single release,
+    # and from bumping the core modules while leaving the SDK modules behind.
+    # go.opentelemetry.io/auto/sdk is intentionally excluded; it is released
+    # independently of the otel modules.
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/otel*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"

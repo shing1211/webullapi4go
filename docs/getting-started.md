@@ -5,11 +5,28 @@ first call.
 
 ## Install
 
+The current hardening is recorded in repository tag `v2.1.4`. The module path
+remains `github.com/shing1211/webullapi4go` and stays on the v1 import path **by
+decision**; no `/v2` migration is planned. Because the import path carries no
+major-version suffix, the module proxy serves only the `v1.x` line, so an
+unqualified `go get` installs `v1.1.1` — which predates the tagged hardening —
+and the `v2.1.4` tag is not a published module version. To install the current
+tree, pin a commit:
+
 ```sh
-go get github.com/shing1211/webullapi4go
+go get github.com/shing1211/webullapi4go@78c164c
 ```
 
-The module requires Go 1.26 or newer and has no cgo dependencies.
+Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
+the time of writing). To pin the released v1.x line instead:
+
+```sh
+go get github.com/shing1211/webullapi4go@v1.1.1
+```
+
+A commit pin moves only when you change it, whereas a branch reference such as
+`@main` tracks the newest code. The module requires Go 1.26 or newer and has no
+cgo dependencies.
 
 ## Credentials
 
@@ -59,7 +76,7 @@ https://api.sandbox.webull.hk
 ```
 
 Webull publishes shared test accounts in its
-[getting-started guide](https://developer.webull.com/apis/docs/getting-started)
+[getting-started guide](https://developer.webull.hk/apis/docs/getting-started)
 so you can try the API without applying for access. Only the host above belongs
 in committed material. App keys, app secrets, and access tokens are per-account
 secrets and must be supplied through the environment or your own secret store,
@@ -117,6 +134,23 @@ func main() {
 `data.New` takes the public `*client.Client`, so signing, retries, rate limiting,
 and error handling are shared across every request. For streaming, see
 [Streaming](streaming.md).
+
+## Common first-call failures
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `UNAUTHORIZED: http 401` | Bad app key or secret | Check `WEBULL_APP_KEY` and `WEBULL_APP_SECRET` — no trailing whitespace |
+| `INVALID_TOKEN: http 417` | Token failure, or another business failure using status 417 | Check the API message: verify token/region for a token error; do not assume every 417 is token-related |
+| Token stays `PENDING` | Production 2FA not completed | In production, complete the Webull App verification within 5 minutes; in sandbox, tokens are `NORMAL` immediately |
+| `FORBIDDEN: http 403` | Missing entitlement | The endpoint requires a paid subscription (e.g., Footprint, Display Solution) |
+| `417 Invalid Symbol` | Symbol not in sandbox | Sandbox data is limited to `AAPL`; try that symbol first |
+| Connection refused | Wrong host or network | Verify `WEBULL_ENVIRONMENT` is `sandbox`; check firewall and DNS |
+
+The SDK maps every HTTP 417 to the historical `INVALID_TOKEN` code so existing
+callers remain compatible, but Webull also uses 417 for unsupported categories,
+invalid symbols, and rejected trading strategies. Use `Error.Status` and the
+human-readable `Error.Message` for diagnosis; do not match the message text in
+program logic.
 
 ## Next steps
 

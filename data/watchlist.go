@@ -16,6 +16,7 @@ package data
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 )
@@ -137,6 +138,29 @@ type SuccessResponse struct {
 	Success bool `json:"success"`
 }
 
+type BoolOrSuccess struct {
+	Success bool
+}
+
+func (b *BoolOrSuccess) UnmarshalJSON(data []byte) error {
+	if string(data) == "true" {
+		b.Success = true
+		return nil
+	}
+	if string(data) == "false" {
+		b.Success = false
+		return nil
+	}
+	var obj struct {
+		Success bool `json:"success"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	b.Success = obj.Success
+	return nil
+}
+
 // watchlistIDRequest is the JSON body shared by the body-only watchlist
 // operations that take a single identifier.
 type watchlistIDRequest struct {
@@ -169,23 +193,23 @@ func (c *Client) CreateWatchlist(ctx context.Context, params CreateWatchlistPara
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/update-watchlist.md
 func (c *Client) UpdateWatchlist(ctx context.Context, params UpdateWatchlistParams) (*SuccessResponse, error) {
-	var out SuccessResponse
+	var out BoolOrSuccess
 	if err := c.do(ctx, http.MethodPost, pathWatchlistUpdate, nil, params, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return &SuccessResponse{Success: out.Success}, nil
 }
 
 // DeleteWatchlist deletes the watchlist identified by watchlistID.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/delete-watchlist.md
 func (c *Client) DeleteWatchlist(ctx context.Context, watchlistID string) (*SuccessResponse, error) {
-	var out SuccessResponse
+	var out BoolOrSuccess
 	body := watchlistIDRequest{WatchlistID: watchlistID}
 	if err := c.do(ctx, http.MethodPost, pathWatchlistDelete, nil, body, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return &SuccessResponse{Success: out.Success}, nil
 }
 
 // GetWatchlistInstruments retrieves the instruments held in watchlistID.
@@ -204,22 +228,22 @@ func (c *Client) GetWatchlistInstruments(ctx context.Context, watchlistID string
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/add-watchlist-instruments.md
 func (c *Client) AddWatchlistInstruments(ctx context.Context, params WatchlistInstrumentsParam) (*SuccessResponse, error) {
-	var out SuccessResponse
+	var out BoolOrSuccess
 	if err := c.do(ctx, http.MethodPost, pathWatchlistInstrumentsAdd, nil, params, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return &SuccessResponse{Success: out.Success}, nil
 }
 
 // RemoveWatchlistInstruments removes instruments from a watchlist.
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/remove-watchlist-instruments.md
 func (c *Client) RemoveWatchlistInstruments(ctx context.Context, params WatchlistInstrumentsParam) (*SuccessResponse, error) {
-	var out SuccessResponse
+	var out BoolOrSuccess
 	if err := c.do(ctx, http.MethodPost, pathWatchlistInstrumentsRemove, nil, params, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return &SuccessResponse{Success: out.Success}, nil
 }
 
 // UpdateWatchlistInstruments changes the sort order of instruments in a
@@ -227,9 +251,9 @@ func (c *Client) RemoveWatchlistInstruments(ctx context.Context, params Watchlis
 //
 // Reference: https://developer.webull.hk/apis/docs/reference/update-watchlist-instruments.md
 func (c *Client) UpdateWatchlistInstruments(ctx context.Context, params WatchlistInstrumentsParam) (*SuccessResponse, error) {
-	var out SuccessResponse
+	var out BoolOrSuccess
 	if err := c.do(ctx, http.MethodPost, pathWatchlistInstrumentsUpdate, nil, params, &out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	return &SuccessResponse{Success: out.Success}, nil
 }

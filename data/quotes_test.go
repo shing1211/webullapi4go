@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetQuotes(t *testing.T) {
@@ -72,7 +73,7 @@ func TestGetQuotes(t *testing.T) {
 		t.Fatalf("asks/bids lengths = %d/%d, want 1/1", len(got.Asks), len(got.Bids))
 	}
 	ask := got.Asks[0]
-	if ask.Price != "13.9" || ask.Size != "5" {
+	if ask.Price.Cmp(money.Must(money.NewFromString("13.9"))) != 0 || ask.Size != "5" {
 		t.Errorf("ask = %+v", ask)
 	}
 	if len(ask.Order) != 1 || ask.Order[0].MPID != "NSDQ" || ask.Order[0].Size != "5" {

@@ -1,0 +1,533 @@
+{
+  "policy": "The per-DTO comparison in conformance/shapes.go reports every documented divergence it finds, and this file records the ones the broker/ module has, so the Broker API HK surface is measured by the same code as the root module rather than left out of scope. The gate passes when the observed set is EXACTLY the set below and fails in both directions: a divergence not listed is a new defect, and a listed entry that no longer reproduces is either a fix or a check that changed meaning, which are indistinguishable from here. Every entry carries a reason and a recordedIn; loadBrokerBaseline refuses a file whose entries lack either, because an entry with an empty reason is a suppressed finding wearing a comment and one with no recordedIn is merely known with nowhere to read about it. Requiring a reason does not make a reason true, and the reasons here are held to that by review rather than by the schema.",
+  "coverage": {
+    "rows": 29,
+    "compared": 28,
+    "envelopes": 2,
+    "noBody": 1,
+    "notComparable": 0
+  },
+  "entries": [
+    {
+      "symbol": "broker.CreateInstantExchange",
+      "fixture": "broker-hk/POST-broker-funding-instant-exchanges-create",
+      "kind": "missing-required-name",
+      "name": "from_amount",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires from_amount and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreateInstantExchange",
+      "fixture": "broker-hk/POST-broker-funding-instant-exchanges-create",
+      "kind": "missing-required-name",
+      "name": "instant_exchange_id",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instant_exchange_id and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreateInstantExchange",
+      "fixture": "broker-hk/POST-broker-funding-instant-exchanges-create",
+      "kind": "missing-required-name",
+      "name": "to_amount",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires to_amount and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreateInstantFunding",
+      "fixture": "broker-hk/POST-broker-funding-instant-funding-create",
+      "kind": "missing-required-name",
+      "name": "instant_funding_id",
+      "detail": "no json tag in broker.InstantFunding, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instant_funding_id and no json tag in broker.InstantFunding carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreateInstantFunding",
+      "fixture": "broker-hk/POST-broker-funding-instant-funding-create",
+      "kind": "missing-required-name",
+      "name": "type",
+      "detail": "no json tag in broker.InstantFunding, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires type and no json tag in broker.InstantFunding carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreatePositionJournal",
+      "fixture": "broker-hk/POST-broker-journals-position-journals-create",
+      "kind": "missing-required-name",
+      "name": "instrument_type",
+      "detail": "no json tag in broker.PositionJournal, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instrument_type and no json tag in broker.PositionJournal carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreatePositionJournal",
+      "fixture": "broker-hk/POST-broker-journals-position-journals-create",
+      "kind": "missing-required-name",
+      "name": "market",
+      "detail": "no json tag in broker.PositionJournal, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires market and no json tag in broker.PositionJournal carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.CreateVirtualAccount",
+      "fixture": "broker-hk/POST-broker-accounts-virtual-accounts-create",
+      "kind": "missing-required-name",
+      "name": "client_request_id",
+      "detail": "no json tag in broker.VirtualAccount, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires client_request_id and no json tag in broker.VirtualAccount carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCashActivities",
+      "fixture": "broker-hk/GET-broker-activities-cash-activities-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []broker.CashActivity: the documented top level is object and []broker.CashActivity decodes it as array",
+      "reason": "Recorded for count stability, not as an independent defect. the documented instance does not unmarshal into []broker.CashActivity: the documented top level is object and []broker.CashActivity decodes it as array. A decode failure is the same disagreement a sharper check on this symbol already named, and it is the weakest of the checks: a decode that succeeds is consistent with a type that ignores every documented name. No separate work is attached to this row. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; this row is a restatement of another row on the same symbol (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCashActivities",
+      "fixture": "broker-hk/GET-broker-activities-cash-activities-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in broker.CashActivity, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares data but does not mark it required, and no json tag in broker.CashActivity carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCashActivities",
+      "fixture": "broker-hk/GET-broker-activities-cash-activities-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in broker.CashActivity, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in broker.CashActivity carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCashActivities",
+      "fixture": "broker-hk/GET-broker-activities-cash-activities-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []broker.CashActivity decodes it as array",
+      "reason": "Open defect on the published schema, and it fails loudly rather than silently, which is the distinction that keeps this class separate from the two name classes above. documented top level is object, []broker.CashActivity decodes it as array. The method sends the path the page documents, so the documented shape is this call's contract. Note that []broker.CashActivity is the type the method's var out declares, which for a method that decodes an envelope and returns its Data field is the envelope, not the public projection the caller receives. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []broker.CorporateActionDetail: the documented top level is object and []broker.CorporateActionDetail decodes it as array",
+      "reason": "Recorded for count stability, not as an independent defect. the documented instance does not unmarshal into []broker.CorporateActionDetail: the documented top level is object and []broker.CorporateActionDetail decodes it as array. A decode failure is the same disagreement a sharper check on this symbol already named, and it is the weakest of the checks: a decode that succeeds is consistent with a type that ignores every documented name. No separate work is attached to this row. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; this row is a restatement of another row on the same symbol (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "category",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares category but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "country_code",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares country_code but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_id",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares event_id but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_type",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares event_type but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "event_version",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares event_version but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "final_pay_date",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares final_pay_date but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "from",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares from but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "instrument_id",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares instrument_id but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "issuer_country_code",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares issuer_country_code but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "listing_country_of_code",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares listing_country_of_code but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "payment_date",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares payment_date but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "missing-declared-name",
+      "name": "to",
+      "detail": "no json tag in broker.CorporateActionDetail, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares to but does not mark it required, and no json tag in broker.CorporateActionDetail carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetCorporateActionsDetail",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-corporate-actions-get",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []broker.CorporateActionDetail decodes it as array",
+      "reason": "Open defect on the published schema, and it fails loudly rather than silently, which is the distinction that keeps this class separate from the two name classes above. documented top level is object, []broker.CorporateActionDetail decodes it as array. The method sends the path the page documents, so the documented shape is this call's contract. Note that []broker.CorporateActionDetail is the type the method's var out declares, which for a method that decodes an envelope and returns its Data field is the envelope, not the public projection the caller receives. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetInstantExchangeDetail",
+      "fixture": "broker-hk/GET-broker-funding-instant-exchanges-get",
+      "kind": "missing-required-name",
+      "name": "from_amount",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires from_amount and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetInstantExchangeDetail",
+      "fixture": "broker-hk/GET-broker-funding-instant-exchanges-get",
+      "kind": "missing-required-name",
+      "name": "instant_exchange_id",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instant_exchange_id and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetInstantExchangeDetail",
+      "fixture": "broker-hk/GET-broker-funding-instant-exchanges-get",
+      "kind": "missing-required-name",
+      "name": "to_amount",
+      "detail": "no json tag in broker.InstantExchange, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires to_amount and no json tag in broker.InstantExchange carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetInstantFundingDetail",
+      "fixture": "broker-hk/GET-broker-funding-instant-funding-get",
+      "kind": "missing-required-name",
+      "name": "instant_funding_id",
+      "detail": "no json tag in broker.InstantFunding, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instant_funding_id and no json tag in broker.InstantFunding carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetInstantFundingDetail",
+      "fixture": "broker-hk/GET-broker-funding-instant-funding-get",
+      "kind": "missing-required-name",
+      "name": "type",
+      "detail": "no json tag in broker.InstantFunding, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires type and no json tag in broker.InstantFunding carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOpenOrders",
+      "fixture": "broker-hk/GET-broker-orders-open-orders-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []broker.BrokerOrder: the documented top level is object and []broker.BrokerOrder decodes it as array",
+      "reason": "Recorded for count stability, not as an independent defect. the documented instance does not unmarshal into []broker.BrokerOrder: the documented top level is object and []broker.BrokerOrder decodes it as array. A decode failure is the same disagreement a sharper check on this symbol already named, and it is the weakest of the checks: a decode that succeeds is consistent with a type that ignores every documented name. No separate work is attached to this row. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; this row is a restatement of another row on the same symbol (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOpenOrders",
+      "fixture": "broker-hk/GET-broker-orders-open-orders-list",
+      "kind": "missing-required-name",
+      "name": "client_order_id",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires client_order_id and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOpenOrders",
+      "fixture": "broker-hk/GET-broker-orders-open-orders-list",
+      "kind": "missing-required-name",
+      "name": "orders",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires orders and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOpenOrders",
+      "fixture": "broker-hk/GET-broker-orders-open-orders-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []broker.BrokerOrder decodes it as array",
+      "reason": "Open defect on the published schema, and it fails loudly rather than silently, which is the distinction that keeps this class separate from the two name classes above. documented top level is object, []broker.BrokerOrder decodes it as array. The method sends the path the page documents, so the documented shape is this call's contract. Note that []broker.BrokerOrder is the type the method's var out declares, which for a method that decodes an envelope and returns its Data field is the envelope, not the public projection the caller receives. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderDetail",
+      "fixture": "broker-hk/GET-broker-orders-get",
+      "kind": "missing-required-name",
+      "name": "client_order_id",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires client_order_id and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderDetail",
+      "fixture": "broker-hk/GET-broker-orders-get",
+      "kind": "missing-required-name",
+      "name": "orders",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires orders and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderHistory",
+      "fixture": "broker-hk/GET-broker-orders-historical-orders-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []broker.BrokerOrder: the documented top level is object and []broker.BrokerOrder decodes it as array",
+      "reason": "Recorded for count stability, not as an independent defect. the documented instance does not unmarshal into []broker.BrokerOrder: the documented top level is object and []broker.BrokerOrder decodes it as array. A decode failure is the same disagreement a sharper check on this symbol already named, and it is the weakest of the checks: a decode that succeeds is consistent with a type that ignores every documented name. No separate work is attached to this row. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; this row is a restatement of another row on the same symbol (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderHistory",
+      "fixture": "broker-hk/GET-broker-orders-historical-orders-list",
+      "kind": "missing-required-name",
+      "name": "client_order_id",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires client_order_id and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderHistory",
+      "fixture": "broker-hk/GET-broker-orders-historical-orders-list",
+      "kind": "missing-required-name",
+      "name": "orders",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires orders and no json tag in broker.BrokerOrder carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetOrderHistory",
+      "fixture": "broker-hk/GET-broker-orders-historical-orders-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []broker.BrokerOrder decodes it as array",
+      "reason": "Open defect on the published schema, and it fails loudly rather than silently, which is the distinction that keeps this class separate from the two name classes above. documented top level is object, []broker.BrokerOrder decodes it as array. The method sends the path the page documents, so the documented shape is this call's contract. Note that []broker.BrokerOrder is the type the method's var out declares, which for a method that decodes an envelope and returns its Data field is the envelope, not the public projection the caller receives. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetPositionJournalDetail",
+      "fixture": "broker-hk/GET-broker-journals-position-journals-get",
+      "kind": "missing-required-name",
+      "name": "instrument_type",
+      "detail": "no json tag in broker.PositionJournal, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires instrument_type and no json tag in broker.PositionJournal carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetPositionJournalDetail",
+      "fixture": "broker-hk/GET-broker-journals-position-journals-get",
+      "kind": "missing-required-name",
+      "name": "market",
+      "detail": "no json tag in broker.PositionJournal, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires market and no json tag in broker.PositionJournal carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetPositions",
+      "fixture": "broker-hk/GET-broker-assets-positions-list",
+      "kind": "missing-required-name",
+      "name": "option_strategy",
+      "detail": "no json tag in broker.positionsResponse, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires option_strategy and no json tag in broker.positionsResponse carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetPositions",
+      "fixture": "broker-hk/GET-broker-assets-positions-list",
+      "kind": "missing-required-name",
+      "name": "position_id",
+      "detail": "no json tag in broker.positionsResponse, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires position_id and no json tag in broker.positionsResponse carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockInstruments",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-profiles-list",
+      "kind": "decode-failure",
+      "detail": "the documented instance does not unmarshal into []broker.StockInstrument: the documented top level is object and []broker.StockInstrument decodes it as array",
+      "reason": "Recorded for count stability, not as an independent defect. the documented instance does not unmarshal into []broker.StockInstrument: the documented top level is object and []broker.StockInstrument decodes it as array. A decode failure is the same disagreement a sharper check on this symbol already named, and it is the weakest of the checks: a decode that succeeds is consistent with a type that ignores every documented name. No separate work is attached to this row. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; this row is a restatement of another row on the same symbol (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockInstruments",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "data",
+      "detail": "no json tag in broker.StockInstrument, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares data but does not mark it required, and no json tag in broker.StockInstrument carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockInstruments",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-profiles-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in broker.StockInstrument, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in broker.StockInstrument carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockInstruments",
+      "fixture": "broker-hk/GET-broker-instruments-stocks-profiles-list",
+      "kind": "top-level-shape-mismatch",
+      "detail": "documented top level is object, []broker.StockInstrument decodes it as array",
+      "reason": "Open defect on the published schema, and it fails loudly rather than silently, which is the distinction that keeps this class separate from the two name classes above. documented top level is object, []broker.StockInstrument decodes it as array. The method sends the path the page documents, so the documented shape is this call's contract. Note that []broker.StockInstrument is the type the method's var out declares, which for a method that decodes an envelope and returns its Data field is the envelope, not the public projection the caller receives. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockLocate",
+      "fixture": "broker-hk/GET-broker-instruments-stock-locates-get",
+      "kind": "missing-declared-name",
+      "name": "available_num",
+      "detail": "no json tag in broker.StockLocate, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares available_num but does not mark it required, and no json tag in broker.StockLocate carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockLocate",
+      "fixture": "broker-hk/GET-broker-instruments-stock-locates-get",
+      "kind": "missing-declared-name",
+      "name": "short_interest_rate",
+      "detail": "no json tag in broker.StockLocate, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares short_interest_rate but does not mark it required, and no json tag in broker.StockLocate carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockLocate",
+      "fixture": "broker-hk/GET-broker-instruments-stock-locates-get",
+      "kind": "missing-declared-name",
+      "name": "short_type",
+      "detail": "no json tag in broker.StockLocate, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares short_type but does not mark it required, and no json tag in broker.StockLocate carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetStockLocate",
+      "fixture": "broker-hk/GET-broker-instruments-stock-locates-get",
+      "kind": "missing-declared-name",
+      "name": "shortable",
+      "detail": "no json tag in broker.StockLocate, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares shortable but does not mark it required, and no json tag in broker.StockLocate carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetTradeCalendar",
+      "fixture": "broker-hk/GET-broker-master-data-trading-calendars-list",
+      "kind": "missing-required-name",
+      "name": "is_settlement_day",
+      "detail": "no json tag in broker.TradeCalendar, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires is_settlement_day and no json tag in broker.TradeCalendar carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.GetTradeCalendar",
+      "fixture": "broker-hk/GET-broker-master-data-trading-calendars-list",
+      "kind": "missing-required-name",
+      "name": "is_trading_day",
+      "detail": "no json tag in broker.TradeCalendar, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires is_trading_day and no json tag in broker.TradeCalendar carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.ListVirtualAccounts",
+      "fixture": "broker-hk/GET-broker-accounts-virtual-accounts-list",
+      "kind": "missing-declared-name",
+      "name": "pagination_key",
+      "detail": "no json tag in broker.virtualAccountsResponse, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares pagination_key but does not mark it required, and no json tag in broker.virtualAccountsResponse carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.PlaceOrder",
+      "fixture": "broker-hk/POST-broker-orders-place",
+      "kind": "missing-declared-name",
+      "name": "client_order_id",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares client_order_id but does not mark it required, and no json tag in broker.BrokerOrder carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.ReplaceOrder",
+      "fixture": "broker-hk/POST-broker-orders-replace",
+      "kind": "missing-declared-name",
+      "name": "client_order_id",
+      "detail": "no json tag in broker.BrokerOrder, so the documented value decodes to the zero value",
+      "reason": "Open finding on the published schema, on weaker evidence than a required-name row. The page for this call declares client_order_id but does not mark it required, and no json tag in broker.BrokerOrder carries it, so a response containing it would decode the value to its zero value and report no error. Because the page does not mark the name required it may be optional or conditionally sent, so this is a weaker claim than a required name and is recorded as an open divergence rather than as a defect of the same certainty. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    },
+    {
+      "symbol": "broker.UpdateVirtualAccount",
+      "fixture": "broker-hk/POST-broker-accounts-virtual-accounts-update",
+      "kind": "missing-required-name",
+      "name": "client_request_id",
+      "detail": "no json tag in broker.VirtualAccount, so the documented value decodes to the zero value",
+      "reason": "Open defect on the published schema, not waived. The page for this call requires client_request_id and no json tag in broker.VirtualAccount carries it, so a conforming response decodes the value to its zero value and reports no error. The method sends the path the page documents, so the published schema is this call's contract and the missing tag is a defect rather than a naming choice. Broker API HK returns 401 ROUTE_NOT_PERMITTED in the HK sandbox because the app lacks the required scope, so no live response body can be captured here and none of these rows is live-verified. Fixing one needs a production or US-scoped Broker credential, or a written answer from Webull, and in the direction a probe establishes: a page and a type that disagree cannot both be right, and this file records which of the two the SDK is on without deciding which should change.",
+      "recordedIn": "IMPLEMENTATION_STATUS.md -\u003e \"Response contracts across the API surface\" item 21, which records the class rather than the row; no row exists for this symbol, and the full account is in broker/conformance-divergences.json (mirrored at docs/implementation-status.md)"
+    }
+  ]
+}

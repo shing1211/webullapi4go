@@ -18,22 +18,24 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
-	imqtt "github.com/shing1211/webullapi4go/internal/mqtt"
+	"go.opentelemetry.io/otel/metric"
+
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
 )
 
 // Default streaming parameters. Most mirror the low-level MQTT defaults.
 const (
 	// DefaultKeepAlive is the MQTT keep-alive interval.
-	DefaultKeepAlive = imqtt.DefaultKeepAlive
+	DefaultKeepAlive = mqtt.DefaultKeepAlive
 	// DefaultConnectTimeout bounds a single MQTT connection attempt.
-	DefaultConnectTimeout = imqtt.DefaultConnectTimeout
+	DefaultConnectTimeout = mqtt.DefaultConnectTimeout
 	// DefaultWriteTimeout bounds writing an MQTT control packet.
-	DefaultWriteTimeout = imqtt.DefaultWriteTimeout
+	DefaultWriteTimeout = mqtt.DefaultWriteTimeout
 	// DefaultMessageChannelDepth is the inbound message buffer size.
-	DefaultMessageChannelDepth = imqtt.DefaultMessageChannelDepth
+	DefaultMessageChannelDepth = mqtt.DefaultMessageChannelDepth
 	// DefaultMaxReconnectInterval caps the reconnect backoff.
-	DefaultMaxReconnectInterval = imqtt.DefaultMaxReconnectInterval
+	DefaultMaxReconnectInterval = mqtt.DefaultMaxReconnectInterval
 	// DefaultResubscribeTimeout bounds the whole re-subscription sequence
 	// issued after a reconnect.
 	DefaultResubscribeTimeout = 30 * time.Second
@@ -44,18 +46,20 @@ type Option func(*config)
 
 // config is the resolved streaming configuration.
 type config struct {
-	sessionID           string
-	mqttURL             string
-	websocket           bool
-	keepAlive           time.Duration
-	connectTimeout      time.Duration
-	writeTimeout        time.Duration
-	messageChannelDepth uint
-	cleanSession        bool
-	autoReconnect       bool
-	autoResubscribe     bool
-	resubscribeTimeout  time.Duration
-	tlsConfig           *tls.Config
+	sessionID              string
+	mqttURL                string
+	websocket              bool
+	keepAlive              time.Duration
+	connectTimeout         time.Duration
+	writeTimeout           time.Duration
+	messageChannelDepth    uint
+	cleanSession           bool
+	autoReconnect          bool
+	autoResubscribe        bool
+	resubscribeTimeout     time.Duration
+	healthWatchdogInterval time.Duration
+	tlsConfig              *tls.Config
+	meter                  metric.Meter
 }
 
 // defaultConfig returns the streaming defaults.
@@ -205,4 +209,20 @@ func WithResubscribeTimeout(d time.Duration) Option {
 // configuration.
 func WithTLSConfig(tc *tls.Config) Option {
 	return func(cfg *config) { cfg.tlsConfig = tc }
+}
+
+// WithHealthWatchdog sets the interval at which the client checks message
+// throughput. If no data message (quote, snapshot, or tick) arrives within this
+// window, the connection transitions to [StateDegraded]; it recovers to
+// [StateConnected] automatically when a message arrives. A zero interval
+// (the default) disables the watchdog.
+func WithHealthWatchdog(interval time.Duration) Option {
+	return func(cfg *config) { cfg.healthWatchdogInterval = interval }
+}
+
+// WithMeter overrides the core client's OpenTelemetry meter for stream metrics
+// (reconnects and channel drops). A nil value inherits the core client's meter,
+// including its nil default; a non-nil value explicitly overrides it.
+func WithMeter(m metric.Meter) Option {
+	return func(cfg *config) { cfg.meter = m }
 }

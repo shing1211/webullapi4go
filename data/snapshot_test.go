@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 func TestGetSnapshot(t *testing.T) {
@@ -78,16 +79,16 @@ func TestGetSnapshot(t *testing.T) {
 		t.Fatalf("got %d snapshots, want 1", len(got))
 	}
 	s := got[0]
-	if s.Symbol != "AAPL" || s.InstrumentID != "913256135" || s.Price != "100" {
+	if s.Symbol != "AAPL" || s.InstrumentID != "913256135" || s.Price.Cmp(money.Must(money.NewFromString("100"))) != 0 {
 		t.Errorf("identity/price = %+v", s)
 	}
 	if s.LastTradeTime != 1640688000000 || s.ExtendHourLastTradeTime != 1640688000000 || s.OvnLastTradeTime != 1640688000000 {
 		t.Errorf("timestamps not decoded: %+v", s)
 	}
-	if s.EPS != "7.465" || s.EPSTTM != "7.465" || s.BPS != "4.991" || s.LotSize != "1" {
+	if s.EPS.Cmp(money.Must(money.NewFromString("7.465"))) != 0 || s.EPSTTM.Cmp(money.Must(money.NewFromString("7.465"))) != 0 || s.BPS.Cmp(money.Must(money.NewFromString("4.991"))) != 0 || s.LotSize != "1" {
 		t.Errorf("fundamental fields = %+v", s)
 	}
-	if s.OvnPrice != "100.25" || s.OvnAskSize != "5" || s.OvnBidSize != "7" {
+	if s.OvnPrice.Cmp(money.Must(money.NewFromString("100.25"))) != 0 || s.OvnAskSize != "5" || s.OvnBidSize != "7" {
 		t.Errorf("overnight fields = %+v", s)
 	}
 }

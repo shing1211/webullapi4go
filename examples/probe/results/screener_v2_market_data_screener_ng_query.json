@@ -1,0 +1,19 @@
+{
+  "path": "/market-data/screener/ng/query",
+  "body": {
+    "filter": {
+      "field": "price",
+      "operator": "gt",
+      "value": "100"
+    },
+    "sort": {
+      "field": "price",
+      "direction": "DESC"
+    },
+    "page_size": 5
+  },
+  "result": {
+    "status": 404,
+    "error": "{\"error_msg\":\"404 Route Not Found\"}\n"
+  }
+}

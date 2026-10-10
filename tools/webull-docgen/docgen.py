@@ -1,0 +1,540 @@
+# Copyright 2026 shing1211
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Generate the Webull API documentation artifacts.
+
+Targets:
+  reference       SDK-mapped endpoint pages (docs/webull-api/<area>.md)
+  master          verbatim Webull guides and reference (docs/webull-api/master-*.md,
+                  docs/webull-api/reference/*.md)
+  reconciliation  SDK <-> official API coverage table (docs/reconciliation.md)
+
+Usage:
+  python docgen.py reference|master|reconciliation|all
+"""
+import argparse
+import datetime
+import json
+import os
+import re
+import sys
+
+import _common as c
+
+HK_LLMS = "https://developer.webull.hk/apis/llms.txt"
+US_LLMS = "https://developer.webull.com/apis/llms.txt"
+
+BANNER = ("> ⚠️ **Generated file — do not edit.** Regenerate with "
+          "`python tools/webull-docgen/docgen.py <target>` "
+          "(`reference`, `master`, `reconciliation` or `all`).")
+
+
+# --------------------------------------------------------------------------
+# Target: SDK-mapped reference pages
+# --------------------------------------------------------------------------
+def generate_reference():
+    os.makedirs(c.REFERENCE_OUT, exist_ok=True)
+    for area, (title, blurb, eps) in c.AREAS.items():
+        parts = ["# %s" % title, "", BANNER, "", blurb, "",
+                 "[<- Webull API Reference](../webull-api.md)", ""]
+        for (label, url, sdk, note) in eps:
+            try:
+                parts.append(c.render_endpoint(label, url, sdk, note))
+            except Exception as exc:  # noqa: BLE001
+                parts.append("### %s\n\n*Error generating: %s* — [official page](%s)\n"
+                             % (label, exc, url))
+            sys.stderr.write(".")
+            sys.stderr.flush()
+        with open(os.path.join(c.REFERENCE_OUT, area + ".md"), "w", encoding="utf-8") as fh:
+            fh.write("\n".join(parts) + "\n")
+    print("\nwrote reference pages (%d areas)" % len(c.AREAS))
+    c.report_fetch_failures()
+
+
+# --------------------------------------------------------------------------
+# Target: verbatim master guides + reference
+# --------------------------------------------------------------------------
+def generate_master():
+    now = datetime.date.today().isoformat()
+    os.makedirs(c.MASTER_OUT, exist_ok=True)
+
+    guides = [
+        "# Webull OpenAPI — Master Guides (verbatim)",
+        "",
+        BANNER,
+        "",
+        "> Verbatim snapshot of Webull's published OpenAPI **guides**. No "
+        "SDK-specific content. Prices/sizes are strings on the wire; see the "
+        "endpoint fields in [Master Reference](master-reference.md).",
+        "",
+        "| | |",
+        "|---|---|",
+        "| **Snapshot** | %s |" % now,
+        "| **Sources** | [developer.webull.hk](%s) and [developer.webull.com](%s) |" % (HK_LLMS, US_LLMS),
+        "| **Contents** | Getting started, authentication, market data, trading, broker, connect, errors, FAQ, changelog, AI tools |",
+        "| **Refresh** | `python docgen.py master` (re-fetches the `.md` variant of each official page). |",
+        "",
+        "[<- Webull API Reference](../webull-api.md)",
+        "",
+    ]
+    for section, pages in c.GUIDE_SECTIONS:
+        guides.append("## %s" % section)
+        guides.append("")
+        for label, url in pages:
+            try:
+                body = c.render_verbatim_page(url)
+            except Exception as exc:  # noqa: BLE001
+                body = "*Unavailable: %s*" % exc
+            if not body:
+                body = c.fetch_failure_note(url)
+            guides.append("### %s" % label)
+            guides.append("")
+            guides.append("> Source: <%s>" % url)
+            guides.append("")
+            guides.append(body)
+            guides.append("")
+    with open(os.path.join(c.MASTER_OUT, "master-guides.md"), "w", encoding="utf-8") as fh:
+        fh.write("\n".join(guides) + "\n")
+    print("wrote master-guides.md")
+
+    ref = [
+        "# Webull OpenAPI — Master Reference (verbatim)",
+        "",
+        BANNER,
+        "",
+        "> Verbatim snapshot of every Webull-published **endpoint definition** "
+        "(OpenAPI schema), split by area. No SDK-specific content. See "
+        "[Master Guides](master-guides.md) for authentication, streaming "
+        "protocol, trading rules and error codes.",
+        "",
+        "| | |",
+        "|---|---|",
+        "| **Snapshot** | %s |" % now,
+        "| **Sources** | [developer.webull.hk](%s) and [developer.webull.com](%s) |" % (HK_LLMS, US_LLMS),
+        "| **Scope** | All documented endpoints, HTTP and gRPC |",
+        "| **Refresh** | `python docgen.py master` |",
+        "",
+        "[<- Webull API Reference](../webull-api.md)",
+        "",
+        "## Areas",
+        "",
+    ]
+    for area, (title, blurb, eps) in c.AREAS.items():
+        ref.append("- [%s](reference/%s.md) — %d endpoints" % (title, area, len(eps)))
+    ref.append("")
+    with open(os.path.join(c.MASTER_OUT, "master-reference.md"), "w", encoding="utf-8") as fh:
+        fh.write("\n".join(ref) + "\n")
+    print("wrote master-reference.md (index)")
+
+    refdir = os.path.join(c.MASTER_OUT, "reference")
+    os.makedirs(refdir, exist_ok=True)
+    for area, (title, blurb, eps) in c.AREAS.items():
+        parts = [
+            "# %s — Verbatim Reference" % title,
+            "",
+            BANNER,
+            "",
+            "> %s" % blurb,
+            "",
+            "> Verbatim snapshot of Webull's published OpenAPI definitions. No "
+            "SDK-specific content.",
+            "",
+            "[<- Master Reference](../master-reference.md) · "
+            "[<- Webull API Reference](../../webull-api.md)",
+            "",
+        ]
+        for (label, url, sdk, note) in eps:
+            try:
+                body = c.render_verbatim_page(url)
+            except Exception as exc:  # noqa: BLE001
+                body = "*Unavailable: %s*" % exc
+            if not body:
+                body = c.fetch_failure_note(url)
+            parts.append("## %s" % label)
+            parts.append("")
+            parts.append("> Source: <%s>" % url)
+            parts.append("")
+            parts.append(body)
+            parts.append("")
+        with open(os.path.join(refdir, area + ".md"), "w", encoding="utf-8") as fh:
+            fh.write("\n".join(parts) + "\n")
+    print("wrote reference/*.md (%d files)" % len(c.AREAS))
+    c.report_fetch_failures()
+
+
+# --------------------------------------------------------------------------
+# Target: reconciliation
+# --------------------------------------------------------------------------
+def _reference_urls_from_llms(text):
+    urls = []
+    for line in text.splitlines():
+        m = re.search(r"\((https?://[^)]+)\)", line)
+        if not m:
+            continue
+        u = c.norm_url(m.group(1))
+        if "/reference/" not in u:
+            continue
+        if not u.endswith(".md"):
+            u = u.rstrip("/") + ".md"
+        urls.append(u)
+    return list(dict.fromkeys(urls))
+
+
+def _summary_paths_from_llms(text):
+    out = {}
+    for line in text.splitlines():
+        m = re.search(r"\((https?://[^)]+)\)\s*:\s*(GET|POST|PUT|DELETE)\s+(/\S+)", line)
+        if m:
+            out[c.norm_url(m.group(1))] = m.group(3)
+    return out
+
+
+def _endpoint_info(url):
+    try:
+        spec = c.extract_json(c.fetch(url))
+    except Exception:  # noqa: BLE001
+        return None
+    if not spec:
+        return None
+    return {"method": (spec.get("method") or "").upper(), "path": spec.get("path", "")}
+
+
+_CATEGORY_RULES = [
+    ("Connect API (OAuth)", lambda p: "/oauth2" in p),
+    ("Crypto", lambda p: "/crypto" in p),
+    ("Display Event Contracts", lambda p: "event-contracts" in p),
+    ("Fund Data", lambda p: re.search(r"/fundamentals/fund-", p) is not None),
+    ("Authentication (Display client token)", lambda p: "/auth/client-tokens" in p),
+    ("Trading", lambda p: p.startswith("/trading")),
+    ("Broker FD (US)", lambda p: p.startswith("/broker-fd")),
+    ("Broker HK", lambda p: p.startswith("/broker")),
+    ("Market Data", lambda p: p.startswith("/market-data")),
+]
+
+
+def _category_for(path):
+    for name, rule in _CATEGORY_RULES:
+        if rule(path):
+            return name
+    return "Other"
+
+
+# (status key, per-entry label, summary row label) in report order. The summary
+# table is generated from this list, so every per-entry status is counted exactly
+# once and the rows always add up to the implemented total.
+# `no-openapi` and `unmapped` are documentation/manifest facts rather than SDK
+# path defects, which is why they have their own rows instead of being folded
+# into the unresolved count.
+_STATUSES = [
+    ("match", "✅ match", "✅ Path matches OpenAPI JSON"),
+    ("summary", "🟡 SDK matches docs summary, not OpenAPI JSON", "🟡 Matches docs summary only"),
+    ("differs", "⚠️ path differs from both", "⚠️ Path differs from both"),
+    ("no-sdk-path", "❓ SDK path unresolved", "❓ Unresolved SDK path"),
+    ("no-openapi", "📄 no OpenAPI schema on page",
+     "📄 No OpenAPI schema on page (gRPC page, not a REST endpoint)"),
+    ("unmapped", "➖ no SDK symbol", "➖ No SDK symbol (manifest entry unmapped)"),
+    ("intentional", "ℹ️ intentionally not implemented", "ℹ️ Intentionally not implemented"),
+]
+
+_STATUS_LABELS = {key: entry for key, entry, _ in _STATUSES}
+
+
+def _status_row(status):
+    return _STATUS_LABELS.get(status, status)
+
+
+def _summary_rows(counts):
+    return ["| %s | %d |" % (summary, counts.get(key, 0))
+            for key, _, summary in _STATUSES]
+
+
+def _reconcile_data():
+    consts = c.parse_consts()
+
+    hk_llms = c.fetch(HK_LLMS)
+    us_llms = c.fetch(US_LLMS)
+    summary = {}
+    summary.update(_summary_paths_from_llms(hk_llms))
+    summary.update(_summary_paths_from_llms(us_llms))
+
+    areas_url_to_entry = {}
+    for area, (title, blurb, eps) in c.AREAS.items():
+        for (label, url, sdk, note) in eps:
+            areas_url_to_entry[url] = (area, label, sdk, note)
+
+    llms_urls = set(_reference_urls_from_llms(hk_llms)) | set(_reference_urls_from_llms(us_llms))
+    official_all = {}
+    for url in sorted(llms_urls | set(areas_url_to_entry)):
+        info = _endpoint_info(url)
+        if info:
+            official_all[url] = info
+
+    implemented_keys = set()
+    for url in areas_url_to_entry:
+        info = official_all.get(url)
+        if info:
+            implemented_keys.add((info["method"], c.normalise_path(info["path"])))
+
+    rows = []
+    for url, (area, label, sdk, note) in areas_url_to_entry.items():
+        info = official_all.get(url)
+        sdk_path, sdk_const = c.resolve_method_path(sdk, consts)
+        summ = summary.get(url)
+        if sdk in c.NOT_IMPLEMENTED:
+            status = "intentional"
+        elif sdk == c.UNMAPPED:
+            # The manifest records no SDK symbol on purpose, so there is no SDK
+            # path to resolve; report it as unmapped instead of unresolved.
+            status = "unmapped"
+        elif info is None:
+            status = "no-openapi"
+        elif not sdk_path:
+            status = "no-sdk-path"
+        else:
+            ns, nj = c.normalise_path(sdk_path), c.normalise_path(info["path"])
+            if ns == nj:
+                status = "match"
+            elif summ and ns == c.normalise_path(summ):
+                status = "summary"
+            else:
+                status = "differs"
+        rows.append((area, label, url, sdk, sdk_path, sdk_const,
+                     info["method"] if info else "", info["path"] if info else "",
+                     summ or "", status, note))
+
+    uniq = {}
+    for url, info in official_all.items():
+        if not info["path"]:
+            continue
+        uniq.setdefault((info["method"], c.normalise_path(info["path"])), []).append((url, info))
+
+    gaps_by_cat = {}
+    for key, urls in uniq.items():
+        if key in implemented_keys:
+            continue
+        hk = [u for u, _ in urls if "developer.webull.hk" in u]
+        ref = (hk or [u for u, _ in urls])[0]
+        canon = next(info["path"] for u, info in urls if u == ref)
+        gaps_by_cat.setdefault(_category_for(canon), []).append((key[0], canon, ref))
+
+    counts = {}
+    for r in rows:
+        counts[r[9]] = counts.get(r[9], 0) + 1
+    return rows, gaps_by_cat, counts
+
+
+def generate_changes():
+    """Emit a machine-readable change list for the differing paths."""
+    rows, gaps_by_cat, counts = _reconcile_data()
+    changes = []
+    for (area, label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note) in rows:
+        if status != "differs":
+            continue
+        changes.append({
+            "area": area,
+            "label": label,
+            "sdk_func": sdk,
+            "sdk_const": sdk_const,
+            "sdk_path": sdk_path,
+            "official_method": omethod,
+            "official_path": opath,
+            "reference": url,
+        })
+    cache = c.cache_dir()
+    os.makedirs(cache, exist_ok=True)
+    out = os.path.join(cache, "changes.json")
+    # cache_dir and the skipped pages travel with the change list: the file records
+    # which evidence the run actually saw, so a report rendered from a partial or
+    # unexpected cache is identifiable after the fact.
+    with open(out, "w", encoding="utf-8") as fh:
+        json.dump({"count": len(changes), "changes": changes,
+                   "cache_dir": cache,
+                   "fetch_failures": [{"reference": url, "attempts": attempts,
+                                       "error": "%s: %s" % (type(exc).__name__, exc)}
+                                      for url, attempts, exc in c.fetch_failures()]},
+                  fh, indent=2)
+    print("wrote %s (%d changes)" % (out, len(changes)))
+    c.report_fetch_failures()
+
+
+_MANIFEST_URLS = {url
+                  for area, (title, blurb, eps) in c.AREAS.items()
+                  for (label, url, sdk, note) in eps}
+_INDEX_URLS = (HK_LLMS, US_LLMS)
+
+
+def _abort_on_incomplete_evidence():
+    """Refuse to render a verdict from evidence this run failed to read.
+
+    Two classes of skipped page change what the report claims, so both abort the
+    write rather than producing an artifact that still looks complete:
+
+    * a page the manifest maps, or either ``llms.txt`` index. A manifest page
+      supplies its own row, so losing it rewrites that row's status; an index
+      supplies every summary path and the whole reference-page set, so losing one
+      collapses the status partition — ``summary=4 differs=1`` degrades to
+      ``summary=0 differs=5`` with the row count, the totals and the strict
+      build all unchanged, so nothing downstream reveals the loss.
+    * any other page that failed for a reason that could be an outage, since it
+      would understate the ``gaps`` total.
+
+    A permanent ``404`` on a non-manifest page is deliberately not fatal: those
+    are the pages Webull's indexes list without publishing a ``.md`` variant, so
+    every run loses them identically and the report is as complete as the source
+    allows. Exempting them is what keeps this target producible at all.
+
+    Refusing to write is the proportionate answer because the file is a coverage
+    claim: a partial run would assert less coverage than it checked and still
+    pass every gate. The other targets mark the gap in the page instead, because
+    there a lost page thins documentation rather than changing a verdict.
+    """
+    fatal = []
+    for url, attempts, exc in c.fetch_failures():
+        if url in _MANIFEST_URLS or url in _INDEX_URLS or not c.is_permanent_absence(exc):
+            fatal.append((url, attempts, exc))
+    if not fatal:
+        return
+    detail = "\n".join("  %s (%d attempts): %s: %s"
+                       % (url, attempts, type(exc).__name__, exc)
+                       for url, attempts, exc in fatal)
+    c.report_fetch_failures()
+    raise SystemExit(
+        "reconciliation: not writing %s. %d page(s) could not be read after %d "
+        "attempts each, and this report has no degraded mode:\n%s\n"
+        "A manifest page or an llms.txt index changes a status, and any other "
+        "read failure may still be an outage, so a partial run would assert less "
+        "coverage than it checked and still pass every gate. Re-run when the "
+        "pages are reachable, and confirm the status partition before "
+        "committing." % (c.RECON_OUT, len(fatal), c.FETCH_ATTEMPTS, detail))
+
+
+def generate_reconciliation():
+    rows, gaps_by_cat, counts = _reconcile_data()
+    _abort_on_incomplete_evidence()
+    gaps_total = sum(len(v) for v in gaps_by_cat.values())
+
+    # Fail loudly rather than emit a summary that silently drops a status: the
+    # status rows below come from _STATUSES, so any status missing from that
+    # list would under-count and break the sum against the implemented total.
+    unknown = sorted(set(counts) - set(_STATUS_LABELS))
+    if unknown:
+        raise SystemExit("reconciliation: status(es) absent from _STATUSES: %s"
+                         % ", ".join(unknown))
+
+    def render(label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note):
+        lines = ["### %s" % label, "", "| | |", "|---|---|"]
+        lines.append("| **SDK** | `%s` |" % sdk)
+        if omethod and opath:
+            lines.append("| **Official (OpenAPI JSON)** | `%s %s` |" % (omethod, opath))
+        else:
+            lines.append("| **Official** | _no OpenAPI schema_ |")
+        if summ:
+            lines.append("| **Official (llms.txt summary)** | `%s` |" % summ)
+        if sdk_path:
+            lines.append("| **SDK path** | `%s` (%s) |" % (sdk_path, sdk_const or "?"))
+        lines.append("| **Status** | %s |" % _status_row(status))
+        if note:
+            lines.append("| **Note** | %s |" % note)
+        lines.append("")
+        lines.append("Reference: [%s](%s)" % (url.rsplit("/", 1)[-1], url))
+        lines.append("")
+        return "\n".join(lines)
+
+    out = [
+        "# SDK ↔ Webull API Reconciliation",
+        "",
+        BANNER,
+        "",
+        "> Reconciles every implemented `webullapi4go` function against the "
+        "official Webull OpenAPI. **Official (OpenAPI JSON)** is the canonical "
+        "path embedded in the docs; **Official (llms.txt summary)** is the path "
+        "in Webull's machine-readable index (they disagree for some endpoints). "
+        "**SDK path** is what the code actually calls.",
+        "",
+        "| | |",
+        "|---|---|",
+        "| **Snapshot** | %s |" % datetime.date.today().isoformat(),
+        "| **Sources** | [HK llms.txt](%s), [US llms.txt](%s) |" % (HK_LLMS, US_LLMS),
+        "| **Implemented endpoints** | %d |" % len(rows),
+        "| **Documented-only endpoints (gaps)** | %d |" % gaps_total,
+    ]
+    # The no-openapi label is not exhaustive of the schema-less pages: _reconcile_data
+    # tests the unmapped branch before the no-openapi branch, so a page that is both
+    # schema-less and unmapped is counted once, as unmapped. Those pages are
+    # indistinguishable from a schema whose JSON yields no `path` in the row tuple,
+    # so the page count is stated as a snapshot figure rather than derived. The
+    # label count itself is interpolated so it cannot drift from the table above.
+    out += _summary_rows(counts)
+    out += [
+        "",
+        "> **Unresolved SDK path** is the only status that means the SDK path "
+        "could not be read from the code. **No OpenAPI schema on page** records "
+        "an official page that embeds no REST definition (gRPC documentation), "
+        "and **No SDK symbol** records a manifest entry deliberately left "
+        "unmapped; neither implies a defect in the SDK. The %d above is a label "
+        "count, not a page count: 7 pages embed no OpenAPI schema, and the 4 "
+        "that the manifest also maps to no SDK symbol are recorded as unmapped, "
+        "since that status is evaluated first and each row is counted exactly "
+        "once." % counts.get("no-openapi", 0),
+        "",
+        "## Implemented endpoints",
+        "",
+    ]
+    current = None
+    for area, label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note in rows:
+        if area != current:
+            current = area
+            out.append("## %s" % c.AREAS[area][0])
+            out.append("")
+        out.append(render(label, url, sdk, sdk_path, sdk_const, omethod, opath, summ, status, note))
+
+    out.append("## Documented but not implemented")
+    out.append("")
+    out.append("Unique official endpoints (deduplicated by method and path) that "
+               "`webullapi4go` does not implement. Duplicate HK/US references to "
+               "the same endpoint are collapsed into one row.")
+    out.append("")
+    for cat in sorted(gaps_by_cat):
+        out.append("### %s" % cat)
+        out.append("")
+        out.append("| Method | Path | Reference |")
+        out.append("|---|---|---|")
+        for method, path, ref in sorted(gaps_by_cat[cat]):
+            out.append("| %s | `%s` | [%s](%s) |" % (method, path, ref.rsplit("/", 1)[-1], ref))
+        out.append("")
+
+    with open(c.RECON_OUT, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(out) + "\n")
+    print("wrote %s (implemented=%d gaps=%d %s)"
+          % (c.RECON_OUT, len(rows), gaps_total,
+             " ".join("%s=%d" % (key, counts.get(key, 0)) for key, _, _ in _STATUSES)))
+    c.report_fetch_failures()
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Webull API documentation generator")
+    ap.add_argument("target", choices=["reference", "master", "reconciliation", "changes", "all"])
+    args = ap.parse_args()
+    if args.target in ("reference", "all"):
+        generate_reference()
+    if args.target in ("master", "all"):
+        generate_master()
+    if args.target in ("reconciliation", "all"):
+        generate_reconciliation()
+    if args.target in ("changes", "all"):
+        generate_changes()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-09-29
+goal: Eliminate the silent empty InstrumentID observed in the HK live capture
+  while preserving compatibility with instrument_id responses.

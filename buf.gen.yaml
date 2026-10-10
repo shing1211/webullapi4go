@@ -12,8 +12,10 @@ plugins:
     opt:
       - paths=source_relative
       - Mwebull/trade/events/v1/events.proto=github.com/shing1211/webullapi4go/gen/webull/trade/events/v1;eventsevents
+      - Mwebull/brokerfd/events/v1/events.proto=github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1;eventsevents
   - local: protoc-gen-go-grpc
     out: gen
     opt:
       - paths=source_relative
       - Mwebull/trade/events/v1/events.proto=github.com/shing1211/webullapi4go/gen/webull/trade/events/v1;eventsevents
+      - Mwebull/brokerfd/events/v1/events.proto=github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1;eventsevents

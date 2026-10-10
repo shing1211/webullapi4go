@@ -20,7 +20,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/internal/errs"
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/pkg/domain/order"
+	errs "github.com/shing1211/webullapi4go/pkg/errors"
 )
 
 // Order modification endpoint paths.
@@ -46,21 +48,21 @@ type ModifyOrderRequest struct {
 	// TimeInForce changes how long the order remains active.
 	TimeInForce TimeInForce `json:"time_in_force,omitempty"`
 	// Quantity changes the order quantity, as a decimal string.
-	Quantity string `json:"quantity,omitempty"`
+	Quantity *money.Money `json:"quantity,omitempty"`
 	// ExpireDate changes the GTD expiry in yyyy-MM-dd form. It is relevant only
 	// when TimeInForce is GTD.
 	ExpireDate string `json:"expire_date,omitempty"`
 	// LimitPrice changes the limit price, as a decimal string.
-	LimitPrice string `json:"limit_price,omitempty"`
+	LimitPrice *money.Money `json:"limit_price,omitempty"`
 	// StopPrice changes the trigger price, as a decimal string.
-	StopPrice string `json:"stop_price,omitempty"`
+	StopPrice *money.Money `json:"stop_price,omitempty"`
 	// TrailingType changes how TrailingStopStep is expressed.
 	TrailingType TrailingType `json:"trailing_type,omitempty"`
 	// TrailingStopStep changes the trailing spread, as a decimal string.
-	TrailingStopStep string `json:"trailing_stop_step,omitempty"`
+	TrailingStopStep *money.Money `json:"trailing_stop_step,omitempty"`
 	// TrailingLimitPriceOffset changes the offset between the triggered stop
 	// price and the submitted limit price, as a decimal string.
-	TrailingLimitPriceOffset string `json:"trailing_limit_price_offset,omitempty"`
+	TrailingLimitPriceOffset *money.Money `json:"trailing_limit_price_offset,omitempty"`
 	// TriggerPriceType changes the market price a touch or stop order triggers
 	// on.
 	TriggerPriceType TriggerPriceType `json:"trigger_price_type,omitempty"`
@@ -141,7 +143,7 @@ func (r ModifyOrderRequest) validate(prefix string) error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 	if r.TimeInForce != "" && !r.TimeInForce.valid() {
@@ -173,7 +175,7 @@ func (r CancelOrderRequest) Validate() error {
 		return fail("client_order_id is required")
 	case len(r.ClientOrderID) > maxClientOrderIDLength:
 		return fail("client_order_id must be at most %d characters, got %d", maxClientOrderIDLength, len(r.ClientOrderID))
-	case !validClientOrderID(r.ClientOrderID):
+	case !ValidClientOrderID(r.ClientOrderID):
 		return fail("client_order_id %q may contain only letters, digits, '-' and '_'", r.ClientOrderID)
 	}
 	return nil
@@ -183,6 +185,11 @@ func (r CancelOrderRequest) Validate() error {
 // identifier, and returns the resulting identifiers. The request is validated
 // before any network call, so a malformed request never reaches the API.
 //
+// ReplaceOrder checks the local order state before sending: if the order is in a
+// terminal state (filled, cancelled, failed, or expired) the API call is skipped
+// and an error with [errs.CodeInvalidTransition] is returned. Replacing a
+// confirmed order is permitted (it re-submits the order).
+//
 // Only the fields set on each [ModifyOrderRequest] are changed. ReplaceOrder
 // can mutate live orders; callers should confirm the order identifiers first.
 //
@@ -191,9 +198,21 @@ func (c *Client) ReplaceOrder(ctx context.Context, req ReplaceOrderRequest) (*Re
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	for _, m := range req.ModifyOrders {
+		if o, ok := c.getOrder(req.AccountID, m.ClientOrderID); ok && o != nil && o.Machine != nil {
+			state := o.Machine.State()
+			if order.IsTerminal(state) {
+				return nil, errs.Wrap(errs.CodeInvalidTransition,
+					fmt.Sprintf("order %s is %s: cannot replace", m.ClientOrderID, state), nil)
+			}
+		}
+	}
 	var out ReplaceOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersReplace, nil, req, &out); err != nil {
 		return nil, err
+	}
+	for _, m := range req.ModifyOrders {
+		c.applyTrackedEvent(req.AccountID, m.ClientOrderID, order.EventReplace)
 	}
 	return &out, nil
 }
@@ -201,6 +220,12 @@ func (c *Client) ReplaceOrder(ctx context.Context, req ReplaceOrderRequest) (*Re
 // CancelOrder cancels the order in req, matched by client order identifier, and
 // returns the resulting identifiers. The request is validated before any
 // network call, so a malformed request never reaches the API.
+//
+// CancelOrder checks the local order state before sending: if the order is in a
+// terminal state (filled, cancelled, failed, or expired) the API call is skipped
+// and an error with [errs.CodeInvalidTransition] is returned. This saves a
+// round-trip to a circuit-breaker-protected endpoint for orders that cannot be
+// cancelled.
 //
 // CancelOrder can mutate live orders. The v3 endpoint identifies an order by
 // [CancelOrderRequest.ClientOrderID]; the [CancelOrderResult.OrderID] is only
@@ -211,9 +236,37 @@ func (c *Client) CancelOrder(ctx context.Context, req CancelOrderRequest) (*Canc
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	if o, ok := c.getOrder(req.AccountID, req.ClientOrderID); ok && o != nil && o.Machine != nil {
+		state := o.Machine.State()
+		if order.IsTerminal(state) {
+			return nil, errs.Wrap(errs.CodeInvalidTransition,
+				fmt.Sprintf("order %s is %s: cannot cancel", req.ClientOrderID, state), nil)
+		}
+	}
 	var out CancelOrderResult
 	if err := c.do(ctx, http.MethodPost, pathOrdersCancel, nil, req, &out); err != nil {
 		return nil, err
 	}
+	c.applyTrackedEvent(req.AccountID, req.ClientOrderID, order.EventCancel)
 	return &out, nil
+}
+
+// NewCancelOrderRequest is a convenience constructor for a [CancelOrderRequest].
+func NewCancelOrderRequest(accountID, clientOrderID string) CancelOrderRequest {
+	return CancelOrderRequest{
+		AccountID:     accountID,
+		ClientOrderID: clientOrderID,
+	}
+}
+
+// NewModifyOrderRequest is a convenience constructor for a [ReplaceOrderRequest]
+// targeting a single order. Set modifier fields on the returned request's
+// [ModifyOrderRequest] before passing it to [Client.ReplaceOrder].
+func NewModifyOrderRequest(accountID, clientOrderID string) ReplaceOrderRequest {
+	return ReplaceOrderRequest{
+		AccountID: accountID,
+		ModifyOrders: []ModifyOrderRequest{
+			{ClientOrderID: clientOrderID},
+		},
+	}
 }

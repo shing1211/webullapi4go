@@ -16,9 +16,12 @@ package data
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/shing1211/webullapi4go/pkg/domain/money"
 )
 
 // pathStockTicks is the stock tick-by-tick endpoint.
@@ -48,7 +51,7 @@ type Tick struct {
 	// string.
 	Time string `json:"time"`
 	// Price is the executed trade price, as a decimal string.
-	Price string `json:"price"`
+	Price money.Money `json:"price"`
 	// Volume is the executed trade volume, as a decimal string.
 	Volume string `json:"volume"`
 	// Side is the aggressor side. Documented values include "B", "S", "G",
@@ -61,9 +64,44 @@ type StockTicks struct {
 	// Symbol is the security symbol.
 	Symbol string `json:"symbol"`
 	// InstrumentID is the unique identifier of the security.
+	//
+	// Webull documents instrument_id and the futures sandbox sends
+	// instrumentId, so decoding accepts both. The field name and the marshalled
+	// member stay instrument_id: see UnmarshalJSON.
 	InstrumentID string `json:"instrument_id"`
 	// Result is the list of executed trades, newest first.
 	Result []Tick `json:"result"`
+}
+
+// UnmarshalJSON decodes InstrumentID from either instrument_id or instrumentId.
+//
+// encoding/json matches a member name exactly and then case-insensitively, and an
+// underscore is not a case, so a response sending instrumentId leaves the field at
+// its zero value with no error: the caller reads "" and nothing says a value was
+// missed. The two spellings are both real observations of the same identifier, so
+// both are accepted.
+//
+// Decoding goes through an alias so it does not recurse, and the camelCase member
+// is read by a separate field rather than by walking the bytes, which leaves Tick
+// and money.Money on the stdlib path and cannot change how they decode.
+//
+// instrument_id wins when a body carries both, because that is the name the SDK
+// documents and marshals. Marshaling is untouched: the struct tags are still what
+// encoding/json writes, so the wire form a caller observes is unchanged.
+func (t *StockTicks) UnmarshalJSON(data []byte) error {
+	type alias StockTicks
+	var wire struct {
+		alias
+		InstrumentIDCamel string `json:"instrumentId"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	*t = StockTicks(wire.alias)
+	if t.InstrumentID == "" {
+		t.InstrumentID = wire.InstrumentIDCamel
+	}
+	return nil
 }
 
 // GetTick retrieves tick-by-tick trade data for a single symbol.

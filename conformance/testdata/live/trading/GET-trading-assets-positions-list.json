@@ -1,0 +1,17 @@
+{
+ "$array": [
+  {
+   "$count": 1,
+   "$shape": {
+    "cost_price": "1",
+    "currency": "1",
+    "instrument_type": "1",
+    "last_price": "1",
+    "position_id": "1",
+    "quantity": "1",
+    "symbol": "1",
+    "unrealized_profit_loss": "1"
+   }
+  }
+ ]
+}
