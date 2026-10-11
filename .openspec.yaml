@@ -1,0 +1,7 @@
+# OpenSpec project-level configuration.
+# See https://docs.openspec.dev/
+
+# skip_specs declares, per change, the spec artifacts the change intentionally
+# skips. An artifact whose spec is listed here is treated as satisfied (skipped)
+# during validation and archival, not as missing.
+skip_specs: {}

@@ -14,6 +14,9 @@
 
 // Package broker provides the Webull Broker API HTTP client for HK.
 //
+// Stability: Experimental — live verification blocked; HK sandbox returns 401 ROUTE_NOT_PERMITTED
+// (scope not granted). See IMPLEMENTATION_STATUS.md.
+//
 // A Client is constructed from the public client, so signing, token handling,
 // retries, and rate limiting are shared with the rest of the SDK:
 //

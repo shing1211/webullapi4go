@@ -14,6 +14,9 @@
 
 // Package brokerfd provides the Webull Broker FD (US) API client.
 //
+// Stability: Experimental — live verification blocked; no US sandbox credentials available.
+// HK sandbox returns 404 (US-only surface). See IMPLEMENTATION_STATUS.md.
+//
 // A Client is constructed from the public client, so signing, token handling,
 // retries, and rate limiting are shared with the rest of the SDK:
 //

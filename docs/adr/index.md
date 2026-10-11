@@ -53,6 +53,9 @@ pros/cons), `Decision`, `Rationale`, `Consequences`, `Risks and Unknowns`,
 |-----|-------|--------|------|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted | 2026-09-18 |
 | [0002](0002-grpc-event-protobuf-strategy.md) | gRPC event protobuf strategy | Accepted | 2026-09-18 |
+| [0003](0003-error-taxonomy.md) | Error taxonomy | Accepted | 2026-10-11 |
+| [0004](0004-resilience-defaults.md) | Resilience defaults | Accepted | 2026-10-11 |
+| [0005](0005-module-path.md) | Module path and import versioning | Accepted | 2026-10-11 |
 
 New decisions get the next number and must not rewrite an accepted ADR; supersede it with
 a new record instead.

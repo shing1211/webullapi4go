@@ -21,6 +21,9 @@
 // HMAC-SHA1 signed request, then used as Authorization: Bearer header.
 //
 // Reference: https://developer.webull.hk/apis/docs/market-data-api/Hosted-Display-Solution
+//
+// Stability: Experimental — live verification blocked; requires Display Solution entitlement.
+// The branding host returns HTTP 403. See IMPLEMENTATION_STATUS.md.
 package display
 
 import (
