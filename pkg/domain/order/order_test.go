@@ -418,6 +418,7 @@ func TestFromWebullStatus(t *testing.T) {
 		{status: "PARTIAL_FILLED", want: StatePartialFilled},
 		{status: "FILLED", want: StateFilled},
 		{status: "CANCELLED", want: StateCancelled},
+		{status: "CANCELED", want: StateCancelled}, // venue spelling (one L)
 		{status: "FAILED", want: StateFailed},
 		{status: "EXPIRED", want: StateExpired},
 		{status: "UNRECOGNIZED", want: StateUnknown},
