@@ -14,7 +14,7 @@
 
 package trade
 
-import "github.com/shing1211/webullapi4go/pkg/domain/money"
+import "github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 
 // Market identifies a tradable market for order routing and instrument
 // lookup.

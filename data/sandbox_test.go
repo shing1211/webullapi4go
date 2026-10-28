@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // TestSandboxStockInstruments calls the shared Webull sandbox and asserts that

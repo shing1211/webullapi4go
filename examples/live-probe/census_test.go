@@ -29,7 +29,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // The census must be testable without a credential, because a test that needs

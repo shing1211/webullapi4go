@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/webull"
+	"github.com/shing1211/webullapi4go/v2/client"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/webull"
 )
 
 var (

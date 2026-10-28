@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 type v1SlogRecord struct {

@@ -24,7 +24,7 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/shing1211/webullapi4go/internal/auth"
+	"github.com/shing1211/webullapi4go/v2/internal/auth"
 )
 
 const metadataSignature = "x-signature"

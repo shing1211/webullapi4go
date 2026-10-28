@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	pkgerrs "github.com/shing1211/webullapi4go/pkg/errors"
+	pkgerrs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 func TestConfigValidate(t *testing.T) {

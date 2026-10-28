@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // Client exposes the Webull Broker HTTP API. It is a thin, typed layer on top

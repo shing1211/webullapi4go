@@ -24,9 +24,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/order"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/trade"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/order"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 func TestTrackedOrderRegistryIsolatesAccounts(t *testing.T) {

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // 76 declared names across 17 symbols reached no field on their response types. Each

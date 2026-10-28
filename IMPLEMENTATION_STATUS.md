@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-30
 
-- Latest repository tag: **`v2.1.39`** (2026-09-30)
+- Latest repository tag: **`v2.2.0`** (2026-10-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -10,11 +10,10 @@ Last updated: 2026-09-30
   stale. For the record: `v2.1.1` and `v2.1.3` carry the hardening code, `v2.1.5`
   is the last tag to change any SDK `.go` file, and nothing from `v2.1.6` onward has
   changed SDK code — only the conformance harness, fixtures and documents.
-- Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
-  **by decision**; no `/v2` migration is planned
-- Installable version: **`v1.1.1`** — the module proxy serves only the `v1.x`
-  line, so `v2.x` tags are not installable with `go get`. Consume newer work by
-  pinning a commit
+- Module path: **`github.com/shing1211/webullapi4go/v2`**, moved to the /v2 import path
+  **by decision**; the `/v2` migration is complete
+- Installable version: **`v2.2.0`** — the module proxy serves the `v2.x` line.
+  Earlier `v2.1.x` repository tags were removed.
 - Offline evidence recorded 2026-09-26: module-aware race/vet checks passed;
   `make cover` measured 73.6% aggregate root coverage and 80.8% in nested
   `broker/` (measurements, not behavior guarantees)
@@ -123,8 +122,8 @@ live-verified.
 
 The `v2.x` rows below are repository-tag records, not published Go-semver v2
 modules; `v2.1.17` is the current authorized repository tag and earlier rows are
-historical. The root module path remains `github.com/shing1211/webullapi4go` and
-stays on the v1 import path by decision.
+historical. The root module path remains `github.com/shing1211/webullapi4go/v2` and
+uses the /v2 import path by decision.
 
 | Version | Date | Scope | Status |
 |---|---|---|---|
@@ -292,8 +291,8 @@ The first four were found by static analysis on 2026-09-26 and item 20 on 2026-0
 - **What that changes.** The path was previously the tidiest-looking part of a large breaking change and is now the least likely to be part of the fix: aligning it to the OpenAPI JSON would move away from the spelling an official source documents. The recorded unblock is unchanged, because the *request* problems below are untouched by this: the documented request is a required JSON body whose only required property is a `category_symbols` array, while the SDK models one category with one flat symbol list and encodes it as query parameters. Those are still the real work, and they still need the paid entitlement to confirm which contract the host honours.
     - Impact: `data.GetDisplaySnapshot`; the four sibling Display endpoints are aligned.
     - Size, restated: larger than a path-and-verb change, and correcting the request is a **breaking public API change**. The documented request is a JSON body whose `requestBody` is `required: true`, and whose only required property is `category_symbols` — an **array** whose items each require a `category` string enum and a `symbols` **array of strings**, at most 100 symbols per query. `extend_hour_required` and `overnight_required` are documented as **strings** defaulting to `"false"`. The SDK models one category with one flat symbol list (`data/snapshot.go:35-47`) and encodes it as query parameters (`data/display_quotes.go:52-60`): `:54` comma-joins `Symbols` into a single string rather than sending a JSON array, `:57` sends one flat `category` rather than a list of `{category, symbols}` objects, and `:63` sends a GET rather than the documented POST. The array-versus-scalar and GET-versus-POST mismatches are therefore the real work, and the path alone is the smallest part of it. The two flags are the one part already type-compatible: `strconv.FormatBool` at `data/display_quotes.go:59-60` emits `"true"`/`"false"`, which coincides with the documented string type.
-    - Breaking element: `data.SnapshotQuery` is the public parameter type of both `GetDisplaySnapshot` (`data/display_quotes.go:51`) and `GetSnapshot` (`data/snapshot.go:142`), so moving it to the documented `category_symbols` array breaks every consumer of either method, not only the Display one. That makes the fix semver-major for a module deliberately held on the v1 import path.
-    - Minimal fix: not a patch, and not a maintainer-mechanical change either. Aligning the request needs a new public request shape — a changed `data.SnapshotQuery` or a separate Display-specific type — which requires a maintainer decision on how to version a breaking change on a module that stays on the v1 path: an added field with a deprecation window, a new method alongside the retained old one, or a `/v2` migration that has so far been declined by decision. The path can still be aligned once probed. **The interim recommendation is done**, and this line previously read as if it were still pending: commit `3478a6f` (2026-09-27) added the explicit unverified marker, so the divergence is not silent. The `pathDSSnapshot` constant now carries a comment naming it the one unverified constant in the block and stating that only a probe against the Display host can settle it, and the `GetDisplaySnapshot` GoDoc states that the verb and request shape are unverified for the same reason. What is left undecided is the request shape itself, not whether the SDK says it is unverified.
+    - Breaking element: `data.SnapshotQuery` is the public parameter type of both `GetDisplaySnapshot` (`data/display_quotes.go:51`) and `GetSnapshot` (`data/snapshot.go:142`), so moving it to the documented `category_symbols` array breaks every consumer of either method, not only the Display one. That makes the fix semver-major for a module deliberately held on the /v2 import path.
+    - Minimal fix: not a patch, and not a maintainer-mechanical change either. Aligning the request needs a new public request shape — a changed `data.SnapshotQuery` or a separate Display-specific type — which requires a maintainer decision on how to version a breaking change on a module that uses the /v2 path: an added field with a deprecation window, a new method alongside the retained old one, or a `/v2` migration that has so far been declined by decision. The path can still be aligned once probed. **The interim recommendation is done**, and this line previously read as if it were still pending: commit `3478a6f` (2026-09-27) added the explicit unverified marker, so the divergence is not silent. The `pathDSSnapshot` constant now carries a comment naming it the one unverified constant in the block and stating that only a probe against the Display host can settle it, and the `GetDisplaySnapshot` GoDoc states that the verb and request shape are unverified for the same reason. What is left undecided is the request shape itself, not whether the SDK says it is unverified.
     - Unblock: a paid Display Solution entitlement; the host returns `403` without one. Probing alone does not resolve which contract the host honours, because the reference page is self-contradictory — its `operationId` is `snapshotUsingGET` while its `method` is `post` — and a second cached page for the same path, `reference/snapshot.md`, documents that path as `method: get` with flat `symbols` and `category` query parameters. Which contract applies to a Display Solution client is a question for Webull.
     - Citation scope: every `file:line` in this list is anchored to the cited file as it stood on 2026-09-27 — the `data/display_quotes.go` numbers in item 19, the `tools/webull-docgen/_common.py` numbers in item 17, and any `tools/webull-docgen/docgen.py` numbers — because a comment insertion shifts every line below it. A single 4-line comment added above the `broker-fd-us` manifest entries in one release invalidated both `_common.py` citations in item 17, and a second pass that corrected one of them left it one line short, so re-check these against the file after any edit to it rather than assuming they still hold.
 20. **RESOLVED: `brokerfd.GetFDPositions` now receives all eight required response properties, and a second silent defect in the same type was found and fixed on the way.** The request is correct: `GetFDPositions` (`brokerfd/assets.go:92-100`) requests `pathFDAssetsPositions` (`brokerfd/assets.go:27`), which is exactly the documented `GET /broker/assets/positions/list`, so the reconciliation row renders as a clean `✅ match` and emits no signal — the same path-only limitation recorded in the caveat above, which compares path strings and cannot observe a response schema at all. The defect is entirely on the response side. The documented `200` for that path is a `type: array` whose `items` require eight properties — `cost_price`, `currency`, `instrument_type`, `last_price`, `position_id`, `quantity`, `symbol`, `unrealized_profit_loss` — while `FDPosition` (`brokerfd/assets.go:98-121`) declares tags for `position_id`, `account_id`, `symbol`, `quantity`, `average_cost`, `market_value`, `unrealized_pl`, `realized_pl`, `instrument_type`, `currency`. **Three of the eight required names had no matching tag**: `cost_price` (the struct has `average_cost`), `last_price` (the struct has `market_value`), and `unrealized_profit_loss` (the struct has `unrealized_pl`).

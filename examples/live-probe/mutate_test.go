@@ -31,7 +31,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // The mutating gate is a safety property, so every case here asserts on the

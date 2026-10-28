@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
+	"github.com/shing1211/webullapi4go/v2/client"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
+	mqtt "github.com/shing1211/webullapi4go/v2/pkg/transport/mqtt"
 )
 
 func TestStreamHardeningDropOldestRemovesTheOldestBufferedMessage(t *testing.T) {

@@ -23,9 +23,9 @@ import (
 	"testing"
 	"time"
 
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
-	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/clock"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/retry"
 )
 
 type retryRecordingClock struct {

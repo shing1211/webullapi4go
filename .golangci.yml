@@ -117,7 +117,7 @@ formatters:
       simplify: true
     goimports:
       local-prefixes:
-        - github.com/shing1211/webullapi4go
+        - github.com/shing1211/webullapi4go/v2
   exclusions:
     generated: lax
     paths:

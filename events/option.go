@@ -19,7 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // Default connection parameters.

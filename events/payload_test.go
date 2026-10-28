@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/events"
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/events"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/trade/events/v1"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // orderEventJSON is a representative order status-change payload, modelled on a

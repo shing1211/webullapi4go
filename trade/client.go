@@ -41,8 +41,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/pkg/domain/order"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/order"
 )
 
 // Client exposes the Webull Trading HTTP API. It is a thin, typed layer on top

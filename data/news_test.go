@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 func TestGetNewsSummary(t *testing.T) {

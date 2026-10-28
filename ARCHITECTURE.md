@@ -355,10 +355,9 @@ flowchart TB
   intentionally impose head-of-line latency until cancellation or close.
 - Broker FD events remain raw-only, omit response metadata from `OnData`, expose
   no public raw-subscribe-bitmask option, and support one active `Run`.
-- The module stays on the v1 import path by decision; no `/v2` migration is
-  planned. `v2.x` Git tags are repository-only and are not installable Go
-  modules, so the module proxy serves only the `v1.x` line and `v1.1.1` is the
-  newest installable version. Consume newer work by pinning a commit.
+- The module path is `github.com/shing1211/webullapi4go/v2`; the first
+  installable Go-semver v2 tag is `v2.2.0`. Earlier `v2.1.x` repository tags
+  were removed.
 - The 2026-09-26 generated reconciliation has four summary-only matches and one
   path differing from both sources, with `0` unresolved SDK paths; zero
   documented-only endpoint gaps is not a zero-discrepancy claim. The 20

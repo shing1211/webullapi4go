@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"

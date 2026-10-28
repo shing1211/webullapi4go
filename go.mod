@@ -1,4 +1,4 @@
-module github.com/shing1211/webullapi4go
+module github.com/shing1211/webullapi4go/v2
 
 go 1.26.0
 

@@ -6,7 +6,7 @@ type: project
 
 ## Identity
 
-- **Module**: `github.com/shing1211/webullapi4go`
+- **Module**: `github.com/shing1211/webullapi4go/v2`
 - **Type**: Go SDK (idiomatic, typed client)
 - **Latest tag**: `v2.1.39` (docs); installable `v1.1.1` line
 - **Go version**: 1.26+ (no cgo)
@@ -19,7 +19,7 @@ Provides typed HTTP, MQTT, and gRPC clients for Webull's trading, market data, a
 
 ## What this project is NOT
 
-- Not a published v2 module — import path stays on v1 by decision
+- Published v2 module from v2.2.0 — import path migrated to /v2
 - Not live-verified end-to-end — HK sandbox tested, US production access unavailable
 
 ## Feature areas

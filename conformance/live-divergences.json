@@ -54,7 +54,7 @@
       "fixture": "display-solution/GET-market-data-screeners-gainers-losers-list",
       "direction": "live-sdk",
       "kind": "decode-failure",
-      "detail": "the compared body's instance does not unmarshal into types.Page[github.com/shing1211/webullapi4go/data.ScreenerStock]: no name, shape or leaf check disagrees, so the rejection is at a name or a type that none of the three checks compares",
+      "detail": "the compared body's instance does not unmarshal into types.Page[github.com/shing1211/webullapi4go/v2/data.ScreenerStock]: no name, shape or leaf check disagrees, so the rejection is at a name or a type that none of the three checks compares",
       "reason": "The sandbox answered a bare JSON array and the SDK decodes types.Page[data.ScreenerStock], so the response does not decode. This is a top-level-kind mismatch and it is invisible to the documented comparison by construction: the page and the documented fixture agree with the SDK type, so that run is green. A caller on this endpoint gets an error or an empty page where the screener's rows are. It is recorded rather than fixed because the fix depends on which is right -- the SDK decoding the bare payload, or the endpoint wrapping it -- and the live response is evidence about the server, not a specification.",
       "unblock": "A decision from Webull on whether this endpoint is paginated, plus a US production or sandbox credential to confirm the shape is not region-specific. The HK sandbox cannot settle it: Display Solution needs a paid subscription and its host returns 403 even with valid credentials.",
       "bucket": "live-only"
@@ -64,7 +64,7 @@
       "fixture": "display-solution/GET-market-data-screeners-top-actives-list",
       "direction": "live-sdk",
       "kind": "decode-failure",
-      "detail": "the compared body's instance does not unmarshal into types.Page[github.com/shing1211/webullapi4go/data.ScreenerStock]: no name, shape or leaf check disagrees, so the rejection is at a name or a type that none of the three checks compares",
+      "detail": "the compared body's instance does not unmarshal into types.Page[github.com/shing1211/webullapi4go/v2/data.ScreenerStock]: no name, shape or leaf check disagrees, so the rejection is at a name or a type that none of the three checks compares",
       "reason": "Identical in kind to data.GetDisplayGainersLosers and for the same reason: the sandbox answered a bare array and the SDK decodes a paginated page type. Recorded separately because it is a separate endpoint with a separate response and a separate fix, and merging the two would make one endpoint's repair close the other's finding.",
       "unblock": "The same decision and the same credential as data.GetDisplayGainersLosers: the endpoint's pagination contract from Webull, and a Display Solution entitlement the HK sandbox does not grant.",
       "bucket": "live-only"

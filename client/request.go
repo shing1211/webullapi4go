@@ -29,11 +29,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/auth"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/pkg/observability"
-	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
-	"github.com/shing1211/webullapi4go/pkg/transport"
+	"github.com/shing1211/webullapi4go/v2/internal/auth"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/observability"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/retry"
+	"github.com/shing1211/webullapi4go/v2/pkg/transport"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"

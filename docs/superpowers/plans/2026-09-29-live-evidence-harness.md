@@ -24,7 +24,7 @@
 - **Existing conformance code is not modified.** The live path reuses `CompareBody` as-is. `known-divergences.json` is not written by any task here.
 - **Apache-2.0 header** on every new hand-written `.go` file, copied from a neighbouring file. `Copyright 2026 shing1211`.
 - **gofmt clean** for the whole tree, including the new nested module, on every commit.
-- **`goimports` local-prefixes `github.com/shing1211/webullapi4go`**: stdlib first, blank line, then local module imports last.
+- **`goimports` local-prefixes `github.com/shing1211/webullapi4go/v2`**: stdlib first, blank line, then local module imports last.
 - **Licence headers and GoDoc on every exported identifier**, GoDoc starting with the identifier name and explaining behaviour rather than restating the signature.
 - **Non-goal:** fixing any of the 25 remaining baseline rows. Credentials cannot settle them.
 - **A type skeleton is already a valid fixture input, and that is why Task 5 needs no new comparison code.** `conformance.jsonKind` (`shapes.go:361`) classifies decoded values by kind, and `leafSamples` (`shapes.go:1068`) already reasons with kind-level literals like `"1"` and `1`. So a skeleton fed to `CompareBody` produces the same names and leaf kinds a real body would. An implementer who writes a second comparison routine is duplicating five checks that already work.
@@ -52,7 +52,7 @@ Input classes and conditions the spec implies that a naive implementation would 
 
 | Path | Responsibility |
 |---|---|
-| `go.mod` | Module `github.com/shing1211/webullapi4go/examples/live-probe`, with a `replace` to the repo root, mirroring `examples/broker-probe/go.mod`. |
+| `go.mod` | Module `github.com/shing1211/webullapi4go/v2/examples/live-probe`, with a `replace` to the repo root, mirroring `examples/broker-probe/go.mod`. |
 | `skeleton.go` | `Skeletonify(raw []byte) (any, error)` — reduces a decoded body to names, kinds and nesting. The only file that knows how a kind is named. |
 | `skeleton_test.go` | Table tests for `Skeletonify`, including the number/string and null cases. |
 | `params.go` | `Param(name string, spec ParamSpec) any` — the §5.5 resolution order. |
@@ -95,13 +95,13 @@ The foundation everything else depends on, and the only component that decides w
 `go.mod` (mirror `examples/broker-probe/go.mod`):
 
 ```
-module github.com/shing1211/webullapi4go/examples/live-probe
+module github.com/shing1211/webullapi4go/v2/examples/live-probe
 
 go 1.26
 
-require github.com/shing1211/webullapi4go v0.0.0
+require github.com/shing1211/webullapi4go/v2 v0.0.0
 
-replace github.com/shing1211/webullapi4go => ../..
+replace github.com/shing1211/webullapi4go/v2 => ../..
 ```
 
 `skeleton_test.go`, table-driven, with these cases — **the first two are the Review Focus cases 1 and 2 and must be explicit**:

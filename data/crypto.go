@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // Crypto market-data and instrument endpoints. Documented on the US site.

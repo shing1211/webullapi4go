@@ -24,11 +24,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/pkg/observability"
-	mqtt "github.com/shing1211/webullapi4go/pkg/transport/mqtt"
+	"github.com/shing1211/webullapi4go/v2/client"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/observability"
+	mqtt "github.com/shing1211/webullapi4go/v2/pkg/transport/mqtt"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"

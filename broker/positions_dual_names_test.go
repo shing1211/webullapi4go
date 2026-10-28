@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/broker"
+	"github.com/shing1211/webullapi4go/v2/broker"
 )
 
 // The documented response for `GET /broker/assets/positions/list` requires

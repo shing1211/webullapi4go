@@ -11,7 +11,7 @@ data/                           Market Data HTTP endpoints (typed requests and r
 stream/                         Market Data streaming over MQTT (reconnect + resubscribe)
 trade/                          Trading HTTP API: accounts, balances, positions, orders, rules
 events/                         Trading events over gRPC (order, position, option streams)
-broker/                         Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go => ../`)
+broker/                         Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go/v2 => ../`)
 brokerfd/                       Broker FD US HTTP endpoints
 brokerfd/events/                Broker FD events over gRPC + protobuf payloads
 display/                        Display Solution client-token authentication
@@ -76,7 +76,7 @@ authoritative; regenerate derived docs with
 - Official Python SDK (see `THIRD_PARTY_NOTICES.md`):
   <https://github.com/webull-inc/webull-openapi-python-sdk>
 - Project docs site: <https://shing1211.github.io/webullapi4go/>
-- Go package docs: <https://pkg.go.dev/github.com/shing1211/webullapi4go>
+- Go package docs: <https://pkg.go.dev/github.com/shing1211/webullapi4go/v2>
   (per-package table in `docs/api.md`)
 
 ## Build, test, and lint
@@ -240,7 +240,7 @@ make generate
   intent, invariants, and non-obvious decisions. The project deliberately omits
   inline comments where the code is self-explanatory.
 - **Formatting.** `gofmt`/`goimports` with `local-prefixes:
-  github.com/shing1211/webullapi4go`, so the local module imports form the last
+  github.com/shing1211/webullapi4go/v2`, so the local module imports form the last
   import group. Run gofmt before finishing.
 - **Testing.** Add `_test.go` coverage for behavior changes. Prefer table-driven
   tests. Integration tests that touch the network live behind build-independent
@@ -284,19 +284,15 @@ make generate
   require editing it. The request, OMS, streaming, event-telemetry, and
   documentation hardening was introduced in `v2.1.1` (2026-09-25) and has been
   carried since by authorized repository Git patch releases, which are Git tags
-  and not published Go-semver v2 modules. The root module path remains
-  `github.com/shing1211/webullapi4go`; the module stays on the v1 import path
-  **by decision** and no `/v2` migration is planned. Go-semver-compatible v2
-  module publication is therefore not pending: it is declined. Because the
-  import path carries no major-version suffix, the module proxy serves only the
-  `v1.x` line, `v2.x` Git tags are not installable with `go get`, and `v1.1.1`
-  is the newest installable version. Work after that tag is consumed by pinning
-  a commit, as in `go get github.com/shing1211/webullapi4go@<commit>`. Treat any
-  future claim that a `v2.x` tag can be installed as inaccurate.
-- A `/v2` migration is a breaking change that alters every consumer import path
-  and the meaning of the historical tags. Do not migrate the module path
-  implicitly; it requires explicit maintainer approval and a documented
-  migration. The current hardening was not newly live-verified.
+  carried since by authorized repository Git patch releases. The module path is
+  `github.com/shing1211/webullapi4go/v2`; the `/v2` migration is complete and
+  the first installable Go-semver v2 tag is `v2.2.0`. The 66 prior `v2.1.x`
+  repository tags declared the pre-migration module path and were not
+  installable; they have been deleted from both remotes. `go get
+  github.com/shing1211/webullapi4go/v2@latest` installs `v2.2.0`.
+- The `/v2` migration is a breaking change that altered every consumer import
+  path. It was performed with explicit maintainer approval and documented in
+  ADR 0006. The current hardening was not newly live-verified.
 - **v1.1.0 brought full documented-endpoint coverage**: every documented
   endpoint is implemented. The generated 2026-09-26 reconciliation snapshot
   reports 209 implemented endpoints, 0 documented-only gaps, and the partition

@@ -17,8 +17,8 @@ package data_test
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // Test credentials used only to exercise request signing against httptest

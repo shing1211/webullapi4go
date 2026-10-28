@@ -8,9 +8,9 @@ default to no-op providers or no logging.
     REST and core stream telemetry has a historical baseline. Trading/Broker FD
     event attempt telemetry and the current request/OMS/stream hardening are
     tagged in repository `v2.1.4`, implemented, and offline-tested; they were
-    not newly live-verified. `v2.1.4` is a repository patch release, not a
-    published Go-semver v2 module; the module stays on the v1 import path by
-    decision, so `v2.x` tags are repository-only.
+    not newly live-verified. The module path is
+    `github.com/shing1211/webullapi4go/v2` and the first installable v2 tag is
+    `v2.2.0`; earlier `v2.1.x` repository tags were removed.
 
 ## Minimal configuration
 
@@ -31,7 +31,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"

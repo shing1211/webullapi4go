@@ -31,7 +31,7 @@ paths, so validate any order with `PreviewOrder` before placing it. See
 The examples below assume this trusted-constant helper is available:
 
 ```go
-import "github.com/shing1211/webullapi4go/pkg/domain/money"
+import "github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 
 func moneyPtr(value string) *money.Money {
     parsed := money.MustNew(value)
@@ -246,7 +246,7 @@ required and selects the order; `TimeInForce`, `Quantity`, `LimitPrice`,
 and `ClientOrderID`. `BatchPlaceOrder` registers every successful result. The
 pair is the lookup key, so the same client order ID in two accounts does not
 collide. The snippets use `errs` as the alias for
-`github.com/shing1211/webullapi4go/pkg/errors`.
+`github.com/shing1211/webullapi4go/v2/pkg/errors`.
 
 ```go
 tracked, ok := trading.GetTrackedOrder(accountID, placed.ClientOrderID)
@@ -268,8 +268,8 @@ a domain event, then apply it through the trading client:
 
 ```go
 import (
-    "github.com/shing1211/webullapi4go/events"
-    "github.com/shing1211/webullapi4go/pkg/domain/order"
+    "github.com/shing1211/webullapi4go/v2/events"
+    "github.com/shing1211/webullapi4go/v2/pkg/domain/order"
 )
 
 ev.OnOrder(func(e *events.OrderEvent) {
@@ -994,4 +994,4 @@ place/cancel test additionally requires `WEBULL_TRADE_MUTATE=1`. See
 - [Authentication](authentication.md) — signing and tokens.
 - [Sandbox](sandbox.md) — environments, test credentials, limitations.
 - [Trading Events](events.md) — real-time order, position, and option status over gRPC; the counterpart to the trading HTTP API.
-- [`trade` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/trade) — full API.
+- [`trade` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/trade) — full API.

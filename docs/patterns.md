@@ -110,7 +110,7 @@ and response values and `*money.Money` for optional and request values. Raw
 `decimal.Decimal` is not the DTO API.
 
 ```go
-import "github.com/shing1211/webullapi4go/pkg/domain/money"
+import "github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 
 quantity := money.MustNew("100")
 limitPrice := money.MustNew("150.25")
@@ -173,8 +173,8 @@ Import the standard library as `errors` and the SDK package with an alias:
 import (
     "errors"
 
-    "github.com/shing1211/webullapi4go/client"
-    errs "github.com/shing1211/webullapi4go/pkg/errors"
+    "github.com/shing1211/webullapi4go/v2/client"
+    errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 ```
 

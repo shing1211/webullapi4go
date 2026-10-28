@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/broker"
+	"github.com/shing1211/webullapi4go/v2/broker"
 )
 
 func TestGetStockInstruments(t *testing.T) {

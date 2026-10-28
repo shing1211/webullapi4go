@@ -16,13 +16,13 @@ documented endpoint to its Go method, request fields and response fields.
   SDK symbol).
 
 Go type references live on pkg.go.dev:
-[`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) ·
-[`data`](https://pkg.go.dev/github.com/shing1211/webullapi4go/data) ·
-[`trade`](https://pkg.go.dev/github.com/shing1211/webullapi4go/trade) ·
-[`broker`](https://pkg.go.dev/github.com/shing1211/webullapi4go/broker) ·
-[`brokerfd`](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd) ·
-[`stream`](https://pkg.go.dev/github.com/shing1211/webullapi4go/stream) ·
-[`events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/events).
+[`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/client) ·
+[`data`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/data) ·
+[`trade`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/trade) ·
+[`broker`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/broker) ·
+[`brokerfd`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/brokerfd) ·
+[`stream`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/stream) ·
+[`events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/events).
 
 ## How to read an entry
 

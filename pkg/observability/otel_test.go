@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 func TestDefaultConfigCreatesUsableNoopHandles(t *testing.T) {

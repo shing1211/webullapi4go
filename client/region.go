@@ -14,7 +14,7 @@
 
 package client
 
-import "github.com/shing1211/webullapi4go/internal/region"
+import "github.com/shing1211/webullapi4go/v2/internal/region"
 
 // Region identifies a Webull OpenAPI deployment region. It is a public mirror
 // of the internal region identifier so that external callers never need to

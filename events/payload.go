@@ -17,8 +17,8 @@ package events
 import (
 	"encoding/json"
 
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/trade/events/v1"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // contentTypeJSON is the MIME type the server uses for event payloads that are

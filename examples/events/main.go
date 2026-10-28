@@ -38,8 +38,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/events"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/events"
 )
 
 func main() {

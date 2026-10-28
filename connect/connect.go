@@ -25,7 +25,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 const (

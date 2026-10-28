@@ -15,7 +15,7 @@ module is deferred, so use a checkout of this repository and the local module
 replacement rather than assuming that an unqualified `go get` installs the
 current tree.
 The `broker/go.mod` file contains
-`replace github.com/shing1211/webullapi4go => ../`.
+`replace github.com/shing1211/webullapi4go/v2 => ../`.
 
 ## Construct
 
@@ -57,6 +57,6 @@ bk := broker.New(cl)
 
 ## Related
 
-- [`broker` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/broker)
+- [`broker` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/broker)
 - [Getting Started](getting-started.md)
 - [Authentication](authentication.md)

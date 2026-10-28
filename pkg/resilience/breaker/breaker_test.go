@@ -25,8 +25,8 @@ import (
 
 	"go.opentelemetry.io/otel/metric/noop"
 
-	"github.com/shing1211/webullapi4go/pkg/resilience/breaker"
-	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/breaker"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/clock"
 )
 
 type stateTransition struct {

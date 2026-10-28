@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	"github.com/shing1211/webullapi4go/pkg/domain/order"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/order"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // Order modification endpoint paths.

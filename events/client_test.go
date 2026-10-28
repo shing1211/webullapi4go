@@ -26,10 +26,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/events"
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/events"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/trade/events/v1"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // capture holds what the fake server observed for one Subscribe call.

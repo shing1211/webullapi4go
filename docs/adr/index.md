@@ -55,7 +55,8 @@ pros/cons), `Decision`, `Rationale`, `Consequences`, `Risks and Unknowns`,
 | [0002](0002-grpc-event-protobuf-strategy.md) | gRPC event protobuf strategy | Accepted | 2026-09-18 |
 | [0003](0003-error-taxonomy.md) | Error taxonomy | Accepted | 2026-10-11 |
 | [0004](0004-resilience-defaults.md) | Resilience defaults | Accepted | 2026-10-11 |
-| [0005](0005-module-path.md) | Module path and import versioning | Accepted | 2026-10-11 |
+| [0005](0005-module-path.md) | Module path and import versioning | Superseded by ADR-0006 | 2026-10-11 |
+| [0006](0006-migrate-to-v2-module-path.md) | Migrate to /v2 module path | Accepted | 2026-10-28 |
 
 New decisions get the next number and must not rewrite an accepted ADR; supersede it with
 a new record instead.

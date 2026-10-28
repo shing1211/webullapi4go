@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // The three fuzz targets existed with one seed each, all the literal

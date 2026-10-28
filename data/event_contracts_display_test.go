@@ -20,8 +20,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/data"
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/data"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 func eventServer(t *testing.T, wantPath, body string) *httptest.Server {

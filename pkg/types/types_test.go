@@ -17,7 +17,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/pkg/types"
+	"github.com/shing1211/webullapi4go/v2/pkg/types"
 )
 
 func TestMarketString(t *testing.T) {

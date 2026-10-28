@@ -16,11 +16,11 @@ error taxonomy is required for production-grade error handling.
 
 ## Decision
 
-All SDK errors implement the shared [`Error`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/errors#Error) interface defined in `pkg/errors/errors.go`.
+All SDK errors implement the shared [`Error`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/errors#Error) interface defined in `pkg/errors/errors.go`.
 
 An `Error` carries:
 
-- A stable [`Code`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/errors#Code) — a `string` machine-readable classification.
+- A stable [`Code`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/errors#Code) — a `string` machine-readable classification.
 - A human-readable `Message`.
 - An optional wrapped `Cause` (`error`).
 

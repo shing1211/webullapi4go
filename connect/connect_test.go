@@ -23,8 +23,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/connect"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/connect"
 )
 
 func newTestConnect(t *testing.T, baseURL string) *connect.Client {

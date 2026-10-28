@@ -17,7 +17,7 @@ package region_test
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/internal/region"
+	"github.com/shing1211/webullapi4go/v2/internal/region"
 )
 
 func TestDefaultEndpointsIsHKProduction(t *testing.T) {

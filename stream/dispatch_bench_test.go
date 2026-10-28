@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
 )
 
 // These benchmarks measure the synchronous dispatch path only. They exist to

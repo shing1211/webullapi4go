@@ -41,8 +41,8 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/display"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/display"
 )
 
 // Client exposes the Webull Market Data HTTP API. It is a thin, typed layer on

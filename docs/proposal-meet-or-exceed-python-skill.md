@@ -19,13 +19,13 @@
 ### 1.1 Module identity
 
 ```
-Module        github.com/shing1211/webullapi4go
-Import path   v1 (retained by decision; no /v2 migration planned)
+Module        github.com/shing1211/webullapi4go/v2
+Import path   v2 (migrated to /v2 in v2.2.0)
 License       Apache-2.0
 Go            1.26+, no cgo
 ```
 
-The tagged tree is not an installable published Go-semver v2 module. Consumers needing current work pin a commit; consumers wanting the released line use the `v1.x` proxy version. See `README.md` § Install.
+The first installable Go-semver v2 tag is `v2.2.0`; install with `go get github.com/shing1211/webullapi4go/v2@latest`. See `README.md` § Install.
 
 ### 1.2 Regions
 
@@ -115,7 +115,7 @@ The path is `/openapi/market-data/stock/snapshot` and the verb is GET. Both offi
 The reference page is self-contradictory (`operationId` indicates GET against `method: post`), so the verb is genuinely ambiguous. The request-shape mismatch is not: the documented request is a JSON body carrying an **array** of `{category, symbols}` objects, while the SDK models one category with one flat symbol list encoded as query parameters. Correcting this changes the public parameter type, which is shared by two public methods.
 
 - **Impact**: `data.GetDisplaySnapshot`; the fix is a breaking public API change.
-- **Minimal fix**: not a patch. Requires a maintainer decision on how to version a breaking change on a module that remains on the v1 import path — an added field with a deprecation window, a new method alongside the retained one, or a `/v2` migration.
+- **Minimal fix**: not a patch. Requires a maintainer decision on how to version a breaking change on a module that remains on the /v2 import path — an added field with a deprecation window, a new method alongside the retained one, or a `/v2` migration.
 - **Unblock**: a Display Solution entitlement. Probing alone cannot settle it, because the provider documentation contradicts itself and a second cached page documents the opposite contract.
 
 ### 3.5 `brokerfd.GetFDPositions` response DTO cannot receive required properties

@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
-	"github.com/shing1211/webullapi4go/pkg/resilience/retry"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/clock"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/retry"
 )
 
 type backoffBarrierClock struct {

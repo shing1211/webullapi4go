@@ -38,9 +38,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	"github.com/shing1211/webullapi4go/stream"
+	"github.com/shing1211/webullapi4go/v2/client"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
+	"github.com/shing1211/webullapi4go/v2/stream"
 )
 
 const (

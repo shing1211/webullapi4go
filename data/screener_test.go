@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 const screenerBody = `[{"instrument_id":"913256135","symbol":"AAPL",` +

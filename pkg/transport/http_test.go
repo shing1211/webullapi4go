@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/transport"
+	"github.com/shing1211/webullapi4go/v2/pkg/transport"
 )
 
 var _ transport.Doer = (*transport.Client)(nil)

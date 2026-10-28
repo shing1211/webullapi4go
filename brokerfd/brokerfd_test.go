@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 func TestGetAccountsSummary(t *testing.T) {

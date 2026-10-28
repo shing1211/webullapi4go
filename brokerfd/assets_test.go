@@ -21,8 +21,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 func TestGetFDAssetsSummary(t *testing.T) {

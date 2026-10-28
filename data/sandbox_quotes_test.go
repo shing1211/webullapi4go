@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // TestSandboxQuotes exercises the market-data endpoints added in T4.2 against

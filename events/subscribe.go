@@ -17,7 +17,7 @@ package events
 import (
 	"time"
 
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/trade/events/v1"
 )
 
 // SubscribeType is the bitmask of event categories requested in a

@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // pathStockBarsList is the historical-bars endpoint.

@@ -82,8 +82,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/client"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/client"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // report is what census.json holds.

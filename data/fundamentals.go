@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // Fundamental-data endpoints.

@@ -17,8 +17,8 @@ package trade_test
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/trade"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 // Test credentials used only to exercise request signing against httptest

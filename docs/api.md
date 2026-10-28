@@ -8,25 +8,25 @@ miss.
 
 | Package | Purpose |
 |---|---|
-| [`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client) | Core configuration, signing, tokens, HTTP transport, request pipeline, and resilience |
-| [`data`](https://pkg.go.dev/github.com/shing1211/webullapi4go/data) | Market Data HTTP endpoints and DTOs |
-| [`stream`](https://pkg.go.dev/github.com/shing1211/webullapi4go/stream) | Market Data MQTT streaming, reconnect, health, and channels |
-| [`trade`](https://pkg.go.dev/github.com/shing1211/webullapi4go/trade) | Trading HTTP endpoints and local OMS integration |
-| [`events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/events) | Trading events over gRPC |
-| [`connect`](https://pkg.go.dev/github.com/shing1211/webullapi4go/connect) | OAuth 2.0 authorization-code flow |
-| [`display`](https://pkg.go.dev/github.com/shing1211/webullapi4go/display) | Display Solution client-token service |
-| [`broker`](https://pkg.go.dev/github.com/shing1211/webullapi4go/broker) | Broker API HK; separate Go module |
-| [`brokerfd`](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd) | Broker FD US HTTP endpoints |
-| [`brokerfd/events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd/events) | Broker FD events over gRPC |
-| [`webull`](https://pkg.go.dev/github.com/shing1211/webullapi4go/webull) | Optional thin aliases for core client types and options |
-| [`pkg/errors`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/errors) | Typed errors, stable codes, and sentinels |
-| [`pkg/observability`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/observability) | OTel handles, helpers, and shared instruments |
-| [`pkg/resilience`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/resilience) | Retry, rate limit, circuit breaker, and clock primitives |
-| [`pkg/transport`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/transport) | Public HTTP and MQTT transport |
-| [`pkg/domain/money`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/domain/money) | Public `Money` decimal wrapper |
-| [`pkg/domain/order`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/domain/order) | Concurrency-safe order state machine and status reconciliation |
-| [`pkg/types`](https://pkg.go.dev/github.com/shing1211/webullapi4go/pkg/types) | Shared public market and instrument types |
-| [`gen/webull`](https://pkg.go.dev/github.com/shing1211/webullapi4go/gen/webull) | Committed generated protobuf packages |
+| [`client`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/client) | Core configuration, signing, tokens, HTTP transport, request pipeline, and resilience |
+| [`data`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/data) | Market Data HTTP endpoints and DTOs |
+| [`stream`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/stream) | Market Data MQTT streaming, reconnect, health, and channels |
+| [`trade`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/trade) | Trading HTTP endpoints and local OMS integration |
+| [`events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/events) | Trading events over gRPC |
+| [`connect`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/connect) | OAuth 2.0 authorization-code flow |
+| [`display`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/display) | Display Solution client-token service |
+| [`broker`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/broker) | Broker API HK; separate Go module |
+| [`brokerfd`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/brokerfd) | Broker FD US HTTP endpoints |
+| [`brokerfd/events`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/brokerfd/events) | Broker FD events over gRPC |
+| [`webull`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/webull) | Optional thin aliases for core client types and options |
+| [`pkg/errors`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/errors) | Typed errors, stable codes, and sentinels |
+| [`pkg/observability`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/observability) | OTel handles, helpers, and shared instruments |
+| [`pkg/resilience`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/resilience) | Retry, rate limit, circuit breaker, and clock primitives |
+| [`pkg/transport`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/transport) | Public HTTP and MQTT transport |
+| [`pkg/domain/money`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/domain/money) | Public `Money` decimal wrapper |
+| [`pkg/domain/order`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/domain/order) | Concurrency-safe order state machine and status reconciliation |
+| [`pkg/types`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/pkg/types) | Shared public market and instrument types |
+| [`gen/webull`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/gen/webull) | Committed generated protobuf packages |
 
 The root service packages are canonical. `pkg/` contains shared foundations,
 not relocated services. The `webull` package is a convenience alias layer; it

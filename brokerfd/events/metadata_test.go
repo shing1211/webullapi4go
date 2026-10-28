@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/brokerfd/events/v1"
 )
 
 // TestOnDataEventDeliversRequestMetadata covers the additive metadata surface:

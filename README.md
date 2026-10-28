@@ -1,15 +1,12 @@
 # webullapi4go
 
 An idiomatic Go SDK for the [Webull OpenAPI](https://developer.webull.hk/apis/docs/).
-It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The latest
-repository tag is **`v2.1.4`** (2026-09-26); the current request, OMS,
-streaming, telemetry, and documentation hardening is tagged in repository
-`v2.1.4` and was introduced in `v2.1.1`. This is a repository patch release, not a published Go-semver v2
-module: the root module path remains `github.com/shing1211/webullapi4go` and
-stays on the v1 import path **by decision**, with no `/v2` migration planned.
-The tagged tree is therefore not an installable published v2 module.
+It provides typed clients for Webull's HTTP, MQTT, and gRPC services. The module
+path is `github.com/shing1211/webullapi4go/v2` and the first installable
+Go-semver v2 tag is **`v2.2.0`**. Earlier `v2.1.x` repository tags declared the
+pre-migration module path and were not installable; they have been removed.
 
-- Module: `github.com/shing1211/webullapi4go`
+- Module: `github.com/shing1211/webullapi4go/v2`
 - Documentation: https://shing1211.github.io/webullapi4go/
 - License: Apache-2.0
 - Requires Go 1.26 or newer; no cgo.
@@ -35,27 +32,17 @@ not mean every endpoint is live-verified; see the
 
 ## Install
 
-The module path is `github.com/shing1211/webullapi4go` and does not include the
-`/v2` suffix required by Go's semantic import versioning; it stays that way by
-decision, and no `/v2` migration is planned. The module proxy therefore serves
-only the `v1.x` line. The `v2.1.4` repository tag does not make the tagged tree
-installable, and an unqualified `go get` installs `v1.1.1`, which predates it.
-
-To install the current tree, pin a commit:
+The module path is `github.com/shing1211/webullapi4go/v2`, carrying the `/v2`
+suffix required by Go's semantic import versioning. Install the latest release:
 
 ```sh
-go get github.com/shing1211/webullapi4go@78c164c
+go get github.com/shing1211/webullapi4go/v2@latest
 ```
 
-Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
-the time of writing). A commit pin moves only when you change it, whereas
-`@main` tracks the newest code.
-
-To pin the released v1.x line instead:
-
-```sh
-go get github.com/shing1211/webullapi4go@v1.1.1
-```
+The first installable Go-semver v2 tag is `v2.2.0`. Earlier `v2.1.x` repository
+tags declared the pre-migration module path and were not installable; they have
+been removed. A commit pin (`@<sha>`) or branch ref (`@main`) still work for a
+specific tree.
 
 The `broker/` package is a separate Broker API HK module. Its `go.mod` replaces
 the root module with `../`; it is not a nested package that root
@@ -72,8 +59,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 func main() {
@@ -113,9 +100,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/shing1211/webullapi4go/client"
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
-	"github.com/shing1211/webullapi4go/stream"
+	"github.com/shing1211/webullapi4go/v2/client"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
+	"github.com/shing1211/webullapi4go/v2/stream"
 )
 
 func main() {
@@ -164,8 +151,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/trade"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 func main() {
@@ -205,8 +192,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/events"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/events"
 )
 
 func main() {
@@ -356,7 +343,7 @@ it as a token failure.
 | `events` | Canonical Trading Events gRPC client |
 | `connect` | OAuth 2.0 authorization-code flow for third-party apps (US only) |
 | `display` | Display Solution client-to-server authentication and token management |
-| `broker` | Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go => ../`) |
+| `broker` | Broker API HK (separate Go module; `broker/go.mod`: `replace github.com/shing1211/webullapi4go/v2 => ../`) |
 | `brokerfd` | Broker FD US HTTP endpoints (accounts, orders, funding, instruments, etc.) |
 | `brokerfd/events` | Broker FD US events over gRPC |
 | `webull` | Optional thin aliases for the core client; service clients remain in their root packages |
@@ -385,18 +372,18 @@ it as a token failure.
 
 The next version number is intentionally unassigned for future work. The
 current hardening is represented by repository tag `v2.1.4`. The module-path
-decision is settled (stay on the v1 import path, no `/v2` migration); live
+decision is settled (stay on the /v2 import path, no `/v2` migration); live
 verification remains a separate follow-up decision. See
 [CHANGELOG.md](CHANGELOG.md) and [PLAN.md](PLAN.md) for the decision record.
 
 ## Links
 
 - Documentation: https://shing1211.github.io/webullapi4go/
-- API reference: https://pkg.go.dev/github.com/shing1211/webullapi4go
-- `data` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/data
-- `stream` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/stream
-- `trade` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/trade
-- `events` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/events
+- API reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/v2
+- `data` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/data
+- `stream` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/stream
+- `trade` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/trade
+- `events` reference: https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/events
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](docs/adr/index.md)
 - Implementation status: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)

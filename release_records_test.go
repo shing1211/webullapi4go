@@ -49,7 +49,7 @@ import (
 // period for which the record has actually been kept per release. Moving it earlier
 // would require backfilling; TestReleaseRecordCutoffNamesATag exists so the constant
 // cannot be quietly raised past the newest tag to make the gate pass vacuously.
-const recordsCompleteFrom = "v2.1.10"
+const recordsCompleteFrom = "v2.2.0"
 
 // statusDocHeaders are the two documents whose "Latest repository tag" line is
 // asserted. They are kept in step by hand and this is what checks that they are.

@@ -22,10 +22,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/trade"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 const cashActivityJSON = `{"id":"ACT1","account_id":"ACC1","account_number":"10010048",` +

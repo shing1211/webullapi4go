@@ -29,7 +29,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // This file exists because six of the SDK's response envelopes are unexported,
@@ -418,7 +418,7 @@ func isExportedIdent(name string) bool {
 // Together they are what tells the SDK's source tree apart from a directory that
 // merely happens to contain a data/ package.
 const (
-	modulePath = "github.com/shing1211/webullapi4go"
+	modulePath = "github.com/shing1211/webullapi4go/v2"
 	goModName  = "go.mod"
 )
 

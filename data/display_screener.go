@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/shing1211/webullapi4go/pkg/types"
+	"github.com/shing1211/webullapi4go/v2/pkg/types"
 )
 
 // Display Solution screener endpoints. These use the Display Solution host

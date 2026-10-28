@@ -31,9 +31,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/events"
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/trade/events/v1"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/events"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/trade/events/v1"
 )
 
 type metadataServer struct {

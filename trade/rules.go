@@ -18,7 +18,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // marketEquityOrderTypes is the authoritative matrix of equity order types

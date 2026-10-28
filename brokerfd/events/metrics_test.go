@@ -23,8 +23,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
-	"github.com/shing1211/webullapi4go/client"
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
+	"github.com/shing1211/webullapi4go/v2/client"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/brokerfd/events/v1"
 )
 
 func newBrokerEventMetricReader(t *testing.T) (*sdkmetric.ManualReader, *sdkmetric.MeterProvider) {

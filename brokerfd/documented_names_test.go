@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // 58 required names across 18 Broker FD symbols reached no field on their response

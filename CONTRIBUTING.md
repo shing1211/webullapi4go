@@ -1,6 +1,6 @@
 # Contributing to webullapi4go
 
-Thanks for your interest in `github.com/shing1211/webullapi4go`, a public Go SDK
+Thanks for your interest in `github.com/shing1211/webullapi4go/v2`, a public Go SDK
 for the Webull OpenAPI. This document explains how to set up a development
 environment, the standards we expect, and where to get help.
 

@@ -3,10 +3,10 @@
 Last updated: 2026-09-25
 
 Status: **Current request, OMS, streaming, event-telemetry, and documentation
-hardening is tagged in repository `v2.1.4` (2026-09-26) and offline-tested. It
-is a repository patch release, not a published Go-semver v2 module, and was
-not newly live-verified.** The root module path is unchanged and stays on the v1
-import path by decision, with no `/v2` migration planned.
+hardening is offline-tested and was not newly live-verified.** The module path
+is `github.com/shing1211/webullapi4go/v2`; the `/v2` migration is complete and
+the first installable tag is `v2.2.0`. Earlier `v2.1.x` repository tags were
+removed.
 
 ## Architecture baseline
 
@@ -164,9 +164,9 @@ build. The local Makefile gates remain the release verification source.
 - CI does not enforce nested coverage or a strict docs build; root aggregate
   coverage percentages are measurements, not correctness guarantees.
 - The repository patch release is recorded as `v2.1.4`; the root module remains
-  on `github.com/shing1211/webullapi4go` and stays on the v1 import path by
+  on `github.com/shing1211/webullapi4go/v2` and uses the /v2 import path by
   decision, so `v2.x` tags are not installable Go-semver v2 modules and
-  `v1.1.1` is the newest installable version. A `/v2` migration is declined
+  `v1.1.1` is the newest installable version. The `/v2` migration is complete
   rather than deferred; it would require a breaking import-path change and
   explicit maintainer approval.
 

@@ -17,7 +17,7 @@ package broker
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 func TestNewWithNoOptions(t *testing.T) {

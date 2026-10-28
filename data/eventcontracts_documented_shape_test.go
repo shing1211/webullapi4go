@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // Three event-contract endpoints decoded one nesting level too deep, or the wrong

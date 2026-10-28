@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // Reading the cursor is half of pagination; sending it is the other half, and the

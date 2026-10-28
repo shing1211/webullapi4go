@@ -22,8 +22,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
-	"github.com/shing1211/webullapi4go/client"
-	marketdatav1 "github.com/shing1211/webullapi4go/gen/webull/marketdata/v1"
+	"github.com/shing1211/webullapi4go/v2/client"
+	marketdatav1 "github.com/shing1211/webullapi4go/v2/gen/webull/marketdata/v1"
 )
 
 func newStreamMetricReader(t *testing.T) (*sdkmetric.ManualReader, *sdkmetric.MeterProvider) {

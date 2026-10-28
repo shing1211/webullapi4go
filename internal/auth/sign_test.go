@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/internal/auth"
+	"github.com/shing1211/webullapi4go/v2/internal/auth"
 )
 
 // testHeaders returns a deterministic signing header set used by the

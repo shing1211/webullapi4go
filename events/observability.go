@@ -31,8 +31,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	grpcstatus "google.golang.org/grpc/status"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/pkg/observability"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/pkg/observability"
 )
 
 const (

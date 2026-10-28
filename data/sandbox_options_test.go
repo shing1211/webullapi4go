@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // sandboxOptionSymbol is the AAPL call contract used by the Webull

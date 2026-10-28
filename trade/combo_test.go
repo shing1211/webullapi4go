@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/trade"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 // comboOrder returns a well-formed US equity order for a combo role. The prices

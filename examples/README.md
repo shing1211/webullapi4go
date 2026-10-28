@@ -17,7 +17,7 @@ Those targets cover the root module plus `broker/`,
 ## Credentials
 
 Every example constructs its client with
-[`client.WithEnv()`](https://pkg.go.dev/github.com/shing1211/webullapi4go/client#WithEnv),
+[`client.WithEnv()`](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/client#WithEnv),
 which reads:
 
 | Variable | Purpose |

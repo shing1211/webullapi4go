@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/conformance"
+	"github.com/shing1211/webullapi4go/v2/conformance"
 )
 
 // The status documents quote their own divergence counts, and those numbers are the

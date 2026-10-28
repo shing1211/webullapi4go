@@ -31,7 +31,7 @@ import (
     "errors"
     "fmt"
 
-    errs "github.com/shing1211/webullapi4go/pkg/errors"
+    errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 func classify(err error) error {
@@ -190,9 +190,9 @@ error model:
 import (
     "errors"
 
-    "github.com/shing1211/webullapi4go/pkg/domain/order"
-    errs "github.com/shing1211/webullapi4go/pkg/errors"
-    "github.com/shing1211/webullapi4go/trade"
+    "github.com/shing1211/webullapi4go/v2/pkg/domain/order"
+    errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+    "github.com/shing1211/webullapi4go/v2/trade"
 )
 
 state, err := trading.ApplyOrderEvent(accountID, clientOrderID, order.EventAcknowledge)

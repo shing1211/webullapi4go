@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/internal/auth"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/internal/auth"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 const (

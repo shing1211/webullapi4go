@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/clock"
 )
 
 type Limiter struct {

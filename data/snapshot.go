@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // pathStockSnapshots is the stock snapshot endpoint.

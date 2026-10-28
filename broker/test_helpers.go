@@ -17,7 +17,7 @@ package broker
 import (
 	"net/http"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 func NewTestClient(baseURL string) (*Client, error) {

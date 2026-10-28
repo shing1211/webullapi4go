@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
-	"github.com/shing1211/webullapi4go/pkg/observability"
-	"github.com/shing1211/webullapi4go/pkg/transport"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/observability"
+	"github.com/shing1211/webullapi4go/v2/pkg/transport"
 )
 
 // Client is the Webull OpenAPI HTTP client. It owns the resolved [Config] and

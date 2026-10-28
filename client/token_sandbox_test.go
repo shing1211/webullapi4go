@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // TestSandboxToken creates an access token against the shared Webull sandbox and

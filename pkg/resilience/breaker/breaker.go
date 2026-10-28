@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/shing1211/webullapi4go/pkg/resilience/clock"
+	"github.com/shing1211/webullapi4go/v2/pkg/resilience/clock"
 )
 
 var ErrOpen = errors.New("circuit breaker is open")

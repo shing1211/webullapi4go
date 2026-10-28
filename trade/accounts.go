@@ -20,8 +20,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 // Trading account and asset endpoint paths.

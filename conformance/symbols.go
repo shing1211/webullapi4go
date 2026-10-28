@@ -20,14 +20,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/brokerfd"
-	"github.com/shing1211/webullapi4go/connect"
-	"github.com/shing1211/webullapi4go/data"
-	"github.com/shing1211/webullapi4go/display"
-	"github.com/shing1211/webullapi4go/internal/auth"
-	"github.com/shing1211/webullapi4go/pkg/domain/order"
-	"github.com/shing1211/webullapi4go/pkg/types"
-	"github.com/shing1211/webullapi4go/trade"
+	"github.com/shing1211/webullapi4go/v2/brokerfd"
+	"github.com/shing1211/webullapi4go/v2/connect"
+	"github.com/shing1211/webullapi4go/v2/data"
+	"github.com/shing1211/webullapi4go/v2/display"
+	"github.com/shing1211/webullapi4go/v2/internal/auth"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/order"
+	"github.com/shing1211/webullapi4go/v2/pkg/types"
+	"github.com/shing1211/webullapi4go/v2/trade"
 )
 
 // This file is the harness's weak point, and it is written out longhand rather

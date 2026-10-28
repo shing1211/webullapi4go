@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
 )
 
 // pathStockTicks is the stock tick-by-tick endpoint.

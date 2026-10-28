@@ -22,7 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/broker"
+	"github.com/shing1211/webullapi4go/v2/broker"
 )
 
 func TestGetFXRate(t *testing.T) {

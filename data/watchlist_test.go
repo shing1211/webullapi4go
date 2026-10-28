@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 // decodeRequestBody reads r's JSON body into out, failing the test on error.

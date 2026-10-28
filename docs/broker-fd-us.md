@@ -53,7 +53,7 @@ exposes lifecycle callbacks plus raw data delivery. It does not decode Broker
 FD data into typed event structs.
 
 ```go
-import "github.com/shing1211/webullapi4go/brokerfd/events"
+import "github.com/shing1211/webullapi4go/v2/brokerfd/events"
 
 ec, err := events.New(cl,
     events.WithAccounts([]string{"<account-id>"}), // optional
@@ -144,7 +144,7 @@ outcome `error` even though it is not an `OnError` callback. See
 
 ## Related
 
-- [`brokerfd` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd)
-- [`brokerfd/events` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/brokerfd/events)
+- [`brokerfd` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/brokerfd)
+- [`brokerfd/events` reference](https://pkg.go.dev/github.com/shing1211/webullapi4go/v2/brokerfd/events)
 - [Getting Started](getting-started.md)
 - [Authentication](authentication.md)

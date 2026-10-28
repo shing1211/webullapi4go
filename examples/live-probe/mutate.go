@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // MutateOptInEnv names the environment variable that is the FIRST of the two

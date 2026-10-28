@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 // Two servers, deliberately: one stands for the Broker host and one for the core

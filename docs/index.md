@@ -8,7 +8,7 @@ The latest repository tag is **`v2.1.4`** (2026-09-26). Current
 request-pipeline, OMS, streaming, event-telemetry, and documentation hardening
 is tagged in repository `v2.1.4`, implemented, and offline-tested; it is not
 presented as live-verified. This is a repository patch release, not a
-Go-semver-compatible v2 module: the module path stays on the v1 import path by
+Go-semver-compatible v2 module: the module path uses the /v2 import path by
 decision, so `v2.x` tags are repository-only. See the
 [implementation status](implementation-status.md) and
 [changelog](https://github.com/shing1211/webullapi4go/blob/main/CHANGELOG.md).
@@ -66,26 +66,17 @@ superseded and closed. Public financial DTOs use `money.Money` or
 
 ## Install
 
-The current hardening is recorded in repository tag `v2.1.4`. The repository's
-module path remains `github.com/shing1211/webullapi4go` and stays on the v1
-import path **by decision**; no `/v2` migration is planned. The module proxy
-serves only the `v1.x` line, so an unqualified `go get` installs `v1.1.1` and
-the `v2.1.4` tag is not a published module version. To install the current tree,
-pin a commit:
+The module path is `github.com/shing1211/webullapi4go/v2`. Install the latest
+release:
 
 ```sh
-go get github.com/shing1211/webullapi4go@78c164c
+go get github.com/shing1211/webullapi4go/v2@latest
 ```
 
-Go resolves that to a pseudo-version (`v1.1.2-0.20260926035012-78c164c22fc5` at
-the time of writing). To pin the released v1.x line instead:
-
-```sh
-go get github.com/shing1211/webullapi4go@v1.1.1
-```
-
-A commit pin moves only when you change it, whereas a branch reference such as
-`@main` tracks the newest code. Requires Go 1.26 or newer.
+The first installable Go-semver v2 tag is `v2.2.0`. Earlier `v2.1.x` repository
+tags declared the pre-migration module path and were not installable; they have
+been removed. A commit pin (`@<sha>`) or branch ref (`@main`) still work for a
+specific tree. Requires Go 1.26 or newer.
 
 ## Quickstart
 
@@ -96,8 +87,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/shing1211/webullapi4go/client"
-	"github.com/shing1211/webullapi4go/data"
+	"github.com/shing1211/webullapi4go/v2/client"
+	"github.com/shing1211/webullapi4go/v2/data"
 )
 
 func main() {
@@ -172,7 +163,7 @@ export WEBULL_ENVIRONMENT="sandbox"
 
 ## Links
 
-- Source and issues: [github.com/shing1211/webullapi4go](https://github.com/shing1211/webullapi4go)
+- Source and issues: [github.com/shing1211/webullapi4go/v2](https://github.com/shing1211/webullapi4go)
 - Questions and ideas: [GitHub Discussions](https://github.com/shing1211/webullapi4go/discussions)
 - Architecture decisions: [ADR index](adr/index.md)
 - Official Webull docs: [developer.webull.hk](https://developer.webull.hk/apis/docs/)

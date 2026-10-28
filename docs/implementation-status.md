@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-30
 
-- Latest repository tag: **`v2.1.39`** (2026-09-30)
+- Latest repository tag: **`v2.2.0`** (2026-10-28)
 - Current hardening: **last declared in repository `v2.1.4`**; introduced in `v2.1.1`.
   This is the release at which the hardening was last *re-declared*, not the newest
   tag carrying SDK code — those differ, because `v2.1.4` changed no `.go` file at
@@ -10,11 +10,10 @@ Last updated: 2026-09-30
   stale. For the record: `v2.1.1` and `v2.1.3` carry the hardening code, `v2.1.5`
   is the last tag to change any SDK `.go` file, and nothing from `v2.1.6` onward has
   changed SDK code — only the conformance harness, fixtures and documents.
-- Module path: **`github.com/shing1211/webullapi4go`**, kept on the v1 import path
-  **by decision**; no `/v2` migration is planned
-- Installable version: **`v1.1.1`** — the module proxy serves only the `v1.x`
-  line, so `v2.x` tags are not installable with `go get`. Consume newer work by
-  pinning a commit
+- Module path: **`github.com/shing1211/webullapi4go/v2`**, moved to the /v2 import path
+  **by decision**; the `/v2` migration is complete
+- Installable version: **`v2.2.0`** — the module proxy serves the `v2.x` line.
+  Earlier `v2.1.x` repository tags were removed.
 - Offline evidence recorded 2026-09-26: module-aware race/vet checks passed;
   `make cover` measured 73.6% aggregate root coverage and 80.8% in nested
   `broker/` (measurements, not guarantees)
@@ -145,8 +144,8 @@ live-verified.
 
 The `v2.x` rows below are repository-tag records, not published Go-semver v2
 modules; `v2.1.17` is the current authorized repository tag and earlier rows are
-historical. The root module path remains `github.com/shing1211/webullapi4go` and
-stays on the v1 import path by decision.
+historical. The root module path remains `github.com/shing1211/webullapi4go/v2` and
+uses the /v2 import path by decision.
 
 | Version | Scope |
 |---|---|
@@ -410,7 +409,7 @@ confirmed without it.
   (`data/snapshot.go:142`), so moving it to the documented array breaks every
   consumer of either method. Minimal fix: not a patch — it needs a new public
   request shape, and therefore a maintainer decision on how to version a
-  breaking change on a module that stays on the v1 import path (an added field
+  breaking change on a module that uses the /v2 import path (an added field
   with a deprecation window, a new method alongside the retained old one, or a
    `/v2` migration declined by decision so far). The path can still be aligned
    once probed. The explicit unverified marker this line used to recommend

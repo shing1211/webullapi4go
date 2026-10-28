@@ -19,8 +19,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shing1211/webullapi4go/pkg/domain/money"
-	"github.com/shing1211/webullapi4go/pkg/types"
+	"github.com/shing1211/webullapi4go/v2/pkg/domain/money"
+	"github.com/shing1211/webullapi4go/v2/pkg/types"
 )
 
 // Event contract instrument discovery endpoints.

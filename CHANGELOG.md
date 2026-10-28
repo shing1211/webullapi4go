@@ -4,12 +4,29 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version labels follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-The `v2.x` entries below preserve repository Git-tag facts. The module stays on
-the v1 import path by decision, so the module proxy serves only the `v1.x` line
-and these tags are not published Go-semver v2 modules; `v1.1.1` remains the
-newest installable version.
+The `v2.x` entries below preserve repository Git-tag facts. The module path is
+`github.com/shing1211/webullapi4go/v2`; the first installable Go-semver v2 tag
+is `v2.2.0`. Earlier `v2.1.x` repository tags declared the pre-migration module
+path and were not installable; they have been deleted from both remotes.
 
 ## [Unreleased]
+
+## [2.2.0] - 2026-10-28
+
+### Changed
+
+- **BREAKING: `/v2` module path migration.** The module path changed from
+  `github.com/shing1211/webullapi4go` to `github.com/shing1211/webullapi4go/v2`.
+  Every import statement, `go.mod` declaration, `replace` directive,
+  `buf.gen.yaml` M mapping, and `golangci-lint` `local-prefixes` carries the
+  `/v2` suffix. Consumers must update all import paths. See ADR 0006.
+
+### Removed
+
+- The 66 `v2.1.x` repository tags (`v2.1.2`–`v2.1.40`) declared the
+  pre-migration module path and were not installable; they have been deleted
+  from both remotes (`origin` and `gitee`) so `@latest` resolves cleanly to
+  `v2.2.0`.
 
 ## [2.1.39] - 2026-09-30
 

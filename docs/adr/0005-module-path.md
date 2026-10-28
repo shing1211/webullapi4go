@@ -1,5 +1,5 @@
 ---
-Status: Accepted
+Status: Superseded by ADR-0006
 Date: 2026-10-11
 Deciders: maintainer
 ---

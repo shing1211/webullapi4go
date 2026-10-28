@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/shing1211/webullapi4go/broker"
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/broker"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 func main() {

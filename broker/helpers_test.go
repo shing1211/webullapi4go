@@ -17,8 +17,8 @@ package broker_test
 import (
 	"testing"
 
-	"github.com/shing1211/webullapi4go/broker"
-	"github.com/shing1211/webullapi4go/client"
+	"github.com/shing1211/webullapi4go/v2/broker"
+	"github.com/shing1211/webullapi4go/v2/client"
 )
 
 func newTestClient(t *testing.T, baseURL string) *client.Client {

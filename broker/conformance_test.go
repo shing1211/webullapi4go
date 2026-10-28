@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shing1211/webullapi4go/conformance"
+	"github.com/shing1211/webullapi4go/v2/conformance"
 )
 
 // This module carries the Broker API HK surface, which is a separate Go module and

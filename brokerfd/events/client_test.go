@@ -27,9 +27,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/shing1211/webullapi4go/client"
-	eventsevents "github.com/shing1211/webullapi4go/gen/webull/brokerfd/events/v1"
-	errs "github.com/shing1211/webullapi4go/pkg/errors"
+	"github.com/shing1211/webullapi4go/v2/client"
+	eventsevents "github.com/shing1211/webullapi4go/v2/gen/webull/brokerfd/events/v1"
+	errs "github.com/shing1211/webullapi4go/v2/pkg/errors"
 )
 
 type capture struct {
