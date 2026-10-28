@@ -209,6 +209,11 @@ const (
 	OrderStatusSubmitted OrderStatus = "SUBMITTED"
 	// OrderStatusCancelled was cancelled before completing.
 	OrderStatusCancelled OrderStatus = "CANCELLED"
+	// OrderStatusCanceled is the venue's own spelling (one L). The SDK
+	// constant uses two L's ("CANCELLED"), but the venue sends "CANCELED".
+	// Both are mapped by FromWebullStatus; this constant lets callers
+	// compare against the venue's word directly.
+	OrderStatusCanceled OrderStatus = "CANCELED"
 	// OrderStatusFilled completed in full.
 	OrderStatusFilled OrderStatus = "FILLED"
 	// OrderStatusFailed was rejected or failed.

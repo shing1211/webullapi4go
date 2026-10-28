@@ -370,7 +370,7 @@ func FromWebullStatus(s string) State {
 		return StatePartialFilled
 	case "FILLED":
 		return StateFilled
-	case "CANCELLED":
+	case "CANCELLED", "CANCELED":
 		return StateCancelled
 	case "FAILED":
 		return StateFailed
